@@ -29,6 +29,14 @@ The table below is an operator checklist, not evidence that these settings are e
 
 GitHub documents [repository security settings](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-security-and-analysis-settings-for-your-repository), [secure Actions use](https://docs.github.com/en/actions/reference/security/secure-use), and [ruleset options](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets). Recheck supported controls when GitHub changes its interface or plan features.
 
+## Configuration checkpoint — October 16, 2026
+
+GitHub settings showed private vulnerability reporting, dependency graph, Dependabot vulnerability and malware alerts, and Dependabot security update proposals enabled. Secret scanning and push protection were already enabled. Actions were restricted to this owner's repositories and GitHub-authored actions, with full-length SHA pins required. Default workflow permissions were read-only, Actions pull-request creation/approval permission was off, and every external contributor's fork workflow required approval.
+
+The active **Protect main releases** ruleset targets the default branch `main`, with no bypass actors. It requires a pull request, resolved conversations, linear history, current branches, and the three named checks from **GitHub Actions**. Force pushes and branch deletion are blocked. Required approvals are zero because the current maintainer cannot independently approve their own change; this does not establish independent review. Both CodeQL jobs and all 125 tests passed on the security pull request. Recheck results after any new commit.
+
+Cloudflare's build command and `dist` output were saved and verified in a successful security preview. That preview passed all 125 tests, retained the closed production API entry, and excluded development file contents. Source-only URLs may return the homepage through Cloudflare's fallback. The custom-domain production deployment must be verified after merging; preview success alone is insufficient.
+
 ## Release procedure
 
 1. Keep credentials and real school records out of source, branches, issues, previews, build logs, and test fixtures. Use synthetic examples. Check the proposed diff for unintended files and permission changes.

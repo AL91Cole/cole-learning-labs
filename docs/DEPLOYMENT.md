@@ -12,8 +12,8 @@ Cole Learning Labs uses static HTML, CSS, and browser ES modules served by Cloud
 | Git integration | Authorized for selected repositories; existing connection preserved |
 | Production branch | `main` |
 | Framework preset | None |
-| Build command | Security release target: `npm run check && npm test && npm run build`; verify saved project settings and successful deployment |
-| Build output directory | Security release target: `dist`; verify saved project settings and successful deployment |
+| Build command | `npm run check && npm test && npm run build`; saved in Pages and verified in the security preview build log |
+| Build output directory | `dist`; saved in Pages; preview published only the reviewed public artifact |
 | Root directory | Repository root |
 | Classroom production entry | Hardcoded privacy gate closed; 503 before settings, D1, or identity lookup; environment/email changes cannot unlock it |
 | Classroom provisioning | No first approved teacher email, D1 database, or Access application provisioned |
@@ -43,6 +43,8 @@ Independent HTTPS testing passed certificate validation and returned HTTP 200 th
 The two web DNS records are proxied CNAMEs to `cole-learning-labs.pages.dev`. The zone has seven records in total; the existing mail and verification records remain intact. Cloudflare's DDoS status is confirmed from its dashboard. This is not a claim of configured custom WAF or rate-limit rules: both have zero rules in use, and the managed-rules view shows none created.
 
 ## 1. Build and verify the native deployment
+
+The repository security release preview `bb8d0564` completed on October 16, 2026 using Node 24.13.1, all 125 tests passing with no skips, and the 22-file public manifest. HTTPS checks verified the headers, privacy-gated API, browser assets, and exclusion of source-only files. Cloudflare's fallback returns homepage HTML for absent paths; a 200 response at a development-file address is not proof that the source file is published. Production still requires verification after the merge.
 
 In **Workers & Pages → Pages**, use the existing `cole-learning-labs` project. Keep framework preset **None**, production branch **main**, and root directory at the repository root. Use Node **24**, build command **`npm run check && npm test && npm run build`**, and build output directory **`dist`**. The committed `.node-version` selects the supported runtime.
 
