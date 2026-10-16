@@ -1,8 +1,16 @@
-# Optional classroom service
+# Classroom workflows and the optional connected service
 
 The repository includes a classroom API and a teacher/student portal. This is prepared functionality, **not a production-approved or activated student-record service**. The deployed entry point has a hard release lock. No D1 database, Access application, or first approved teacher email was provisioned for this release. Alan Cole's CTE teaching remains a future goal.
 
-The independent public labs remain browser-local. Real classroom joining, server drafts, submissions, and grades are unavailable in this release. In a future approved release, students would explicitly join an enabled classroom before that workflow sends assignment work to its server. A fictional portal demo is separate from real class data. Do not enter real student records into a demonstration.
+The independent public labs begin in browser memory; optional device saving and ordinary local exports require an explicit learner action. Real classroom joining, server drafts, submissions, and grades are unavailable in this release. In a future approved release, students would explicitly join an enabled classroom before that workflow sends assignment work to its server. A fictional portal demo is separate from real class data. Do not enter real student records into a demonstration.
+
+## Use Google Classroom without importing a roster
+
+Teachers can post the public lab link in their existing school Classroom assignment. A normal Google Classroom share link can help create that post; it shares only the public lab URL and does not connect this site to the Classroom API. Do not add aliases, class codes, keys, grades, reports, Google user IDs, or school student IDs to URLs. Students complete the local lab, then attach their chosen report directly to the district's assignment. Teachers use the student's identity and grading controls within Classroom. No Google roster, student email, OAuth token, or grade passback is received by this site through this workflow.
+
+An optional browser-only tool at `/secure-reports.html` is **available for fictional-data evaluation**. It lets a teacher create a passphrase-protected private reporting key (`.cllkey`) and a public key (`.cllpub`), and let students encrypt report content and a neutral alias into a local `.cllreport` file before manual submission. Nothing is uploaded by the tool. Do not upload a private key or passphrase to Classroom, GitHub, a website setting, or a support request. Share only the public key through an approved school channel and verify its intended recipient.
+
+Real use of encrypted reports needs school approval for this workflow, key custody, verification, backup/recovery, recipients, and retention. The school and Google still control Classroom identity and metadata; ciphertext does not hide those relationships from them. Decrypted reports are visible on the teacher's device. This tool is not an audited guarantee of teacher-exclusive access and does not activate the central service. See [the student-data design](STUDENT-DATA-DESIGN.md) for the data inventory, cryptographic design, limits, and operating requirements, and [Google's supported sharing flow](https://developers.google.com/workspace/classroom/guides/sharebutton).
 
 ## Production privacy release lock
 
@@ -49,7 +57,7 @@ After removing an address from `TEACHER_EMAILS`, redeploy the changed configurat
 
 These behavior specifications describe the integration-tested backend. Production classroom endpoints remain locked off.
 
-- A class code admits a **new** classroom membership. A teacher-assigned alias is a display label, not proof of identity; aliases may repeat. The server distinguishes learners with opaque random identifiers. Teachers should distribute aliases and supervise joining. This system does not verify school enrollment or a learner's real-world identity.
+- A class code admits a **new** classroom membership. Joining accepts only `{code}`. The server generates a cryptographically random neutral alias in the form `Learner-XXXX-XXXX`, using a nonconfusable character alphabet, and returns it with the session. A client-supplied alias, name, email, school ID, or other unexpected join field is rejected before enrollment. The alias is a display label, not proof of identity or account recovery; the server distinguishes learners with separate opaque random identifiers. Teachers supervise joining and keep any identity mapping in the district's approved system. This system does not verify school enrollment or a learner's real-world identity.
 - Joining issues a 256-bit random, host-only `HttpOnly; Secure; SameSite=Strict` session cookie. Only its SHA-256 hash is stored in D1. JavaScript cannot read the token. Possession of that browser session is the student's access credential; a class code, alias, URL, or student ID alone cannot open another learner's work.
 - One browser profile has one active classroom session. Joining a different class requires leaving the current session. Logging out revokes that session. **There is no alias-based account recovery or automatic device transfer.** A lost or logged-out session requires a new membership; it cannot recover old work. Export required reports first. Teachers can still review previously submitted work while the class remains available.
 - Each class expires 90 days after creation. Student sessions expire with the class; the deadline is absolute and does not extend on activity. The API denies expired access immediately. Cleanup runs after a later authorized teacher session or teacher API request, throttled to one attempt per minute per database binding in each worker isolate, with concurrent requests sharing a cleanup promise. Anonymous, invalid-authentication, student, and disabled-service requests do not trigger expiry deletion. Deleting a class immediately cascades through its students, sessions, assignments, drafts, and submissions in the application database. Provider backups and recovery windows are separate; this code does not promise a precise physical-erasure deadline. A district requiring scheduled purging must arrange and verify maintenance beyond request-triggered cleanup.
@@ -57,7 +65,9 @@ These behavior specifications describe the integration-tested backend. Productio
 
 ## Stored data and boundaries
 
-D1 stores teacher email/class ownership, class name/code, alias/membership identifiers, hashed student session tokens, assignments, draft work, immutable submitted work, teacher-entered grades and feedback, and timestamps. Work may contain simulation state, evidence, notes, reflection, and action logs. Avoid real names, email addresses, school IDs, passwords, health/disability information, and confidential school material in aliases and free text. A pseudonym can still be identifying to a school; treat classroom records accordingly.
+D1 would store teacher email/class ownership, class name/code, server-generated alias/membership identifiers, hashed student session tokens, assignments, draft work, immutable submitted work, teacher-entered grades and feedback, and timestamps. No production database is provisioned. Work may contain simulation state, evidence, notes, reflection, and action logs. The prepared API rejects unexpected request fields and unknown/identity/credential fields in structured work. Its allowed work fields are limited to `state`, `evidence`, `questions`, `events`, `plan`, `notes`, `reflection`, `verified`, and `closed`, with per-lab state and bounded event fields. A schema check cannot reliably detect every personal detail in arbitrary free text: do not enter names, email addresses, school IDs, passwords, health/disability information, or confidential school material. A pseudonym plus work can still identify a student; treat those records accordingly.
+
+This backend has not implemented teacher-held report encryption. Provider encryption and authenticated access must not be described as preventing all operator/provider access to plaintext. The optional local encrypted-file workflow is separate from D1 and does not change the production release lock. No Google API client, roster import, student Google login, or automatic grading connection is configured.
 
 The application does not execute uploaded code or student commands, call a live AI model, or offer file attachments/public student galleries. Work is a bounded JSON object, not a trusted executable. Student-supplied completion/verification is self-reported practice evidence; it is **not an anti-cheat certification**. Teachers manually review and grade a submitted version. Saving a later draft cannot alter that submitted snapshot or its teacher grade.
 
@@ -70,7 +80,7 @@ API responses are private/no-store and do not grant CORS access. All mutations r
 | Active classes per approved teacher | 10 |
 | Memberships per class, including lost sessions | 100 |
 | Assigned lab choices | The 15 supported lab IDs; one assignment per lab per class |
-| Class name / alias / assignment title | 100 / 40 / 120 characters |
+| Class name / generated alias / assignment title | 100 characters / server-generated `Learner-XXXX-XXXX` / 120 characters |
 | Work per saved draft or submitted snapshot | 64 KiB of JSON; bounded nesting, lists, strings, and keys |
 | Individual work string / teacher feedback | 16,000 / 4,000 characters |
 | Submitted snapshots per learner/assignment | 5, with repeat submission of the same draft idempotent |
@@ -84,7 +94,7 @@ All paths below begin with `/api`. This is the prepared handler's contract; the 
 | Method and path | Request / result |
 | --- | --- |
 | `GET /session` | `{enabled:true,role:'guest'}`; teacher adds `teacher:{email}`; student adds `student:{id,alias,classId}`, `classroom:{id,name,locked,expiresAt}`, and `assignments` |
-| `POST /student/join` | `{code,alias}` → student session result and secure cookie |
+| `POST /student/join` | `{code}` only → server-generated neutral alias, student session result, and secure cookie; client identity/alias fields are rejected |
 | `POST /student/logout` | `{}` plus `X-Classroom-Student` header for an active student → `{loggedOut:true}`; revoke cookie session |
 | `GET /student/work/:assignmentId` | Requires `X-Classroom-Student` header → `{assignment,draft,submissions}` for the matching authenticated student only |
 | `PUT /student/work/:assignmentId` | `{expectedStudentId,expectedVersion,work}` → `{draft}`; new work starts at expected version 0 |
@@ -99,7 +109,7 @@ All paths below begin with `/api`. This is the prepared handler's contract; the 
 | `GET /teacher/classes/:id/students/:studentId` | `{student,work:[{assignmentId,labId,draft,submissions}]}` |
 | `PATCH /teacher/classes/:id/submissions/:id` | `{expectedRevision,grade,feedback,status}` → `{submission}`; status `graded` or `returned`, grade 0–100 (nullable when returned) |
 
-An assignment is `{id,labId,title,createdAt}`. A draft is `{version,work,updatedAt}`, starting as `{version:0,work:null,updatedAt:null}`. A submission is `{id,assignmentId,studentId,draftVersion,revision,work,createdAt,status,grade,feedback,gradedAt}`. All timestamps are ISO strings; absent grading dates are null. A submission's work/draft version is immutable; its grading metadata uses an independent `revision`. `expectedStudentId` and `X-Classroom-Student` must equal the opaque student ID returned by the validated session. A missing/mismatched assertion returns 409 `student_session_changed`, before work is read or changed; a guest logout with no active student can still clear an old cookie. On a session mismatch, preserve local work and reopen the classroom. On a draft/revision conflict, reload and review the current version instead of silently overwriting another view.
+An assignment is `{id,labId,title,createdAt}`. A draft is `{version,work,updatedAt}`, starting as `{version:0,work:null,updatedAt:null}`. A submission is `{id,assignmentId,studentId,draftVersion,revision,work,createdAt,status,grade,feedback,gradedAt}`. All timestamps are ISO strings; absent grading dates are null. A submission's work/draft version is immutable; its grading metadata uses an independent `revision`. `expectedStudentId` and `X-Classroom-Student` must equal the opaque application membership ID returned by the validated session, never a school ID or Google user ID. A missing/mismatched assertion returns 409 `student_session_changed`, before work is read or changed; a guest logout with no active student can still clear an old cookie. On a session mismatch, preserve local work and reopen the classroom. On a draft/revision conflict, reload and review the current version instead of silently overwriting another view. Unexpected or identifying structured fields return a generic 400 privacy rejection without echoing their values; this is schema minimization, not a general free-text PII detector.
 
 ## Verification and stopping collection
 

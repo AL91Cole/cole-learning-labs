@@ -1,4 +1,5 @@
 /** Optional, fail-closed classroom service. Public simulations remain independent. */
+import { SCENARIOS } from '../../src/scenarios.js';
 // Production release lock. Only a reviewed code release may change this after the
 // applicable privacy, legal, district-agreement, and operational requirements are met.
 // Environment variables, request values, and runtime options cannot approve a release.
@@ -81,6 +82,12 @@ function joinCode() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return 'CLL-' + Array.from(crypto.getRandomValues(new Uint8Array(12)), x => alphabet[x & 31]).join('');
 }
+function learnerAlias() {
+  // These labels contain no roster identifier and are never access credentials.
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const random = Array.from(crypto.getRandomValues(new Uint8Array(8)), x => alphabet[x & 31]).join('');
+  return `Learner-${random.slice(0, 4)}-${random.slice(4)}`;
+}
 function normalizeCode(value) {
   if (typeof value !== 'string' || value.length > 40) fail(400, 'invalid_code', 'Enter the class code supplied by your teacher.');
   const code = value.trim().toUpperCase().replaceAll(' ', '');
@@ -97,27 +104,63 @@ function text(value, max, name, optional = false) {
 function only(body, allowed) {
   if (!plain(body) || Object.keys(body).some(k => !allowed.includes(k))) fail(400, 'invalid_input', 'The request contains unsupported fields.');
 }
-function workPayload(value) {
-  if (!plain(value)) fail(400, 'invalid_work', 'Work must be a JSON object.');
-  let count = 0;
-  const visit = (node, depth) => {
-    if (++count > 8000 || depth > 20) fail(400, 'invalid_work', 'The work structure is too large or deeply nested.');
-    if (node === null || typeof node === 'boolean' || (typeof node === 'number' && Number.isFinite(node))) return;
-    if (typeof node === 'string') {
-      if (node.length > 16_000 || /\u0000/.test(node)) fail(400, 'invalid_work', 'A work field is too long.');
-      return;
-    }
-    if (Array.isArray(node)) {
-      if (node.length > 1000) fail(400, 'invalid_work', 'A work list is too long.');
-      node.forEach(child => visit(child, depth + 1)); return;
-    }
-    if (!plain(node) || Object.keys(node).length > 200) fail(400, 'invalid_work', 'Invalid work structure.');
-    for (const [key, child] of Object.entries(node)) {
-      if (key.length > 100 || ['__proto__', 'constructor', 'prototype'].includes(key)) fail(400, 'invalid_work', 'Unsupported work field.');
-      visit(child, depth + 1);
-    }
-  };
-  visit(value, 0);
+const invalidWork = () => fail(400, 'invalid_work', 'Use the supported lab work format and field limits.');
+const privateWorkField = () => fail(400, 'privacy_violation', 'Identity, credential, and unsupported fields cannot be saved as lab work. Use fictional information in the supported lab fields.');
+const workString = max => value => typeof value === 'string' && value.length <= max && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value);
+const workBoolean = value => typeof value === 'boolean';
+const workCount = value => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000;
+const workEnum = values => value => values.includes(value);
+const workList = (check, max) => value => Array.isArray(value) && value.length <= max && value.every(check);
+function workFields(value, schema) {
+  if (!plain(value)) invalidWork();
+  // Check every record's complete shape before accepting any of its values.
+  // This also excludes nested identity mappings and provider credentials; text
+  // remains learner-authored and is not claimed to be automatically de-identified.
+  if (Object.keys(value).some(key => !Object.hasOwn(schema, key))) privateWorkField();
+  for (const [key, field] of Object.entries(value)) if (!schema[key](field)) invalidWork();
+  return true;
+}
+const workRecord = schema => value => workFields(value, schema);
+const hardwareParts = ['monitor', 'rear', 'power', 'board', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'sata', 'atx', 'eps', 'gpu-power', 'sata-power', 'front'];
+const hardwareActions = [
+  'power-off', 'unplug', 'plug-in', 'boot', 'video-gpu', 'video-board', 'open-document', 'close-document',
+  'seat-ram', 'unseat-ram', 'disconnect-sata', 'install-original', 'choose-nvme',
+  'install-board', 'install-cpu', 'install-cooler', 'install-ram', 'install-gpu', 'install-drive',
+  'connect-atx', 'connect-cpu-power', 'connect-gpu-power', 'connect-sata', 'connect-sata-power', 'connect-front-panel',
+  ...hardwareParts.map(part => `inspect-${part}`)
+];
+const hardwareStateFields = {
+  ...Object.fromEntries(['pcOn', 'acConnected', 'boardInstalled', 'cpuInstalled', 'coolerInstalled', 'ramSeated', 'gpuInstalled', 'atxConnected', 'cpuPowerConnected', 'gpuPowerConnected', 'frontPanelConnected', 'originalDriveInstalled', 'sataDataConnected', 'sataPowerConnected', 'booted', 'documentOpened'].map(key => [key, workBoolean])),
+  videoPort: workEnum(['board', 'gpu']), selectedDrive: workEnum(['sata', 'nvme']),
+  view: workEnum(['bench', 'internals', 'rear', 'display']), selectedPart: workEnum(hardwareParts),
+  evidence: workList(workEnum(hardwareParts), hardwareParts.length), actions: workList(workEnum(hardwareActions), 250), bootCount: workCount
+};
+const workspaceCommonFields = {
+  tested: workBoolean, workspaceEdits: workCount, checkRuns: workCount,
+  results: workList(workRecord({ label: workString(300), ok: workBoolean }), 10)
+};
+const workspaceStateFields = {
+  'NET-201': Object.fromEntries(['ip', 'mask', 'gateway', 'dns'].map(key => [key, workString(64)])),
+  'NET-202': { network: workEnum(['School-Guest', 'Staff-Lab']), folder: workEnum(['All folders', 'Project Materials', 'No folders']), permission: workEnum(['Full control', 'Modify', 'Read', 'None', 'Administrator', 'Edit all folders', 'Read only', 'No access']) },
+  'NET-203': { recovery: workEnum(['Keep current update', 'Roll back KB-LAB-17', 'Reset and erase files']), status: workEnum(['Stopped', 'Running']), startup: workEnum(['Disabled', 'Manual', 'Automatic']) },
+  'AI-301': { prompt: workString(3000), audit: workList(workString(300), 20) },
+  'AI-302': { claims: workList(workEnum(['unreviewed', 'supported', 'unsupported', 'biased']), 3), ticketA: workEnum(['unreviewed', 'Display / cable', 'Password reset', 'User effort']), ticketB: workEnum(['unreviewed', 'Display / cable', 'Password reset', 'User effort']) },
+  'AI-303': { secret: workEnum(['hardcoded', 'environment']), query: workEnum(['concatenated', 'parameterized']), authorization: workEnum(['signed-in', 'hidden', 'owner']) },
+  'SEC-401': { message: workEnum(['urgent', 'routine']), verdict: workEnum(['unreviewed', 'safe', 'phishing']), flags: workList(workEnum(['sender', 'destination', 'urgency']), 3), permission: workEnum(['Full control', 'Modify', 'Read', 'None', 'Administrator', 'Edit all folders', 'Read only', 'No access']) },
+  'SEC-402': { events: workList(workEnum(['EVT-101', 'EVT-102', 'EVT-103', 'EVT-104']), 4), source: workString(64), port: workEnum(['', '23', '443', '53']), keepHttps: workBoolean },
+  'SEC-403': { scope: workBoolean, patch: workEnum(['none', 'hidden', 'owner']), requested: workEnum(['101', '102']), observed: workBoolean, history: workList(workString(300), 8), response: value => value === null || workFields(value, { status: workEnum([200, 403]), id: workEnum(['101', '102']), owner: workEnum(['learner-101', 'learner-102']), body: workString(2000) }) }
+};
+function workPayload(value, labId) {
+  const scenario = SCENARIOS.find(item => item.id === labId);
+  if (!scenario) invalidWork();
+  const stateFields = scenario.track === 'hardware' ? { ...hardwareStateFields, caseId: workEnum([labId]) } : { ...workspaceCommonFields, ...workspaceStateFields[labId] };
+  workFields(value, {
+    state: workRecord(stateFields),
+    evidence: workList(workEnum(scenario.clues.map(clue => clue.id)), scenario.clues.length),
+    questions: workList(index => Number.isInteger(index) && index >= 0 && index < scenario.questions.length, scenario.questions.length),
+    events: workList(workRecord({ time: workString(40), message: workString(600), kind: workEnum(['info', 'warning', 'success']) }), 100),
+    plan: workString(2000), notes: workString(4000), reflection: workString(2000), verified: workBoolean, closed: workBoolean
+  });
   const json = JSON.stringify(value);
   if (encoder.encode(json).byteLength > MAX_WORK) fail(413, 'work_too_large', 'Work must be 64 KiB or smaller.');
   return json;
@@ -258,8 +301,8 @@ async function maintainExpired(db, binding, now) {
 async function handleStudent(request, db, path, body, now) {
   const method = request.method;
   if (path === '/student/join' && method === 'POST') {
-    only(body, ['code', 'alias']);
-    const alias = text(body.alias, 40, 'a classroom alias');
+    only(body, ['code']);
+    const alias = learnerAlias();
     const bucket = await hash(`${Math.floor(now / 600_000)}:${request.headers.get('CF-Connecting-IP') || 'unknown'}`);
     const attempts = await first(db, `INSERT INTO join_limits(bucket, attempts, expires_at) VALUES(?,1,?)
       ON CONFLICT(bucket) DO UPDATE SET attempts=attempts+1 RETURNING attempts`, bucket, now + 3_600_000);
@@ -305,7 +348,7 @@ async function handleStudent(request, db, path, body, now) {
       return response({ assignment: assignmentJSON(assignment), draft: draftJSON(await first(db, 'SELECT * FROM drafts WHERE student_id=? AND assignment_id=?', student.student_id, assignmentId)), submissions: (await all(db, 'SELECT * FROM submissions WHERE student_id=? AND assignment_id=? ORDER BY draft_version DESC', student.student_id, assignmentId)).map(submissionJSON) });
     }
     if (!integer(body.expectedVersion)) fail(400, 'invalid_version', 'A valid expected draft version is required.');
-    const json = workPayload(body.work);
+    const json = workPayload(body.work, assignment.lab_id);
     let result;
     if (body.expectedVersion === 0) {
       result = await run(db, `INSERT OR IGNORE INTO drafts(student_id,assignment_id,work_json,version,updated_at)

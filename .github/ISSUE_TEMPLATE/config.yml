@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/AL91Cole/cole-learning-labs/security/advisories/new
+    about: Use the private reporting channel. Do not include student records, credentials, reporting keys, or passphrases.

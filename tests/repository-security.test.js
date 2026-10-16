@@ -49,14 +49,35 @@ test('public browser security limits scripts, connections, forms, and embedded c
   for (const [route, headers] of rules) {
     if (!headers.has('content-security-policy')) continue;
     const csp = cspDirectives(headers.get('content-security-policy'));
-    for (const name of ['default-src', 'script-src', 'font-src', 'connect-src', 'form-action']) {
+    const localReport = ['/secure-reports', '/secure-reports.html'].includes(route);
+    for (const name of ['default-src', 'script-src', 'font-src']) {
       assert.deepEqual(csp.get(name), ["'self'"], `${route}: ${name} must stay same-origin`);
     }
+    for (const name of ['connect-src', 'form-action']) {
+      assert.deepEqual(csp.get(name), localReport ? ["'none'"] : ["'self'"], `${route}: ${name} must match its reviewed data boundary`);
+    }
+    assert.deepEqual(csp.get('style-src'), localReport ? ["'self'"] : ["'self'", "'unsafe-inline'"], `${route}: unexpected stylesheet policy`);
     for (const name of ['object-src', 'base-uri', 'frame-src']) {
       assert.deepEqual(csp.get(name), ["'none'"], `${route}: ${name} must remain disabled`);
     }
     assert.deepEqual(csp.get('img-src'), ["'self'", 'data:'], `${route}: unexpected image provider`);
     assert.ok(csp.has('upgrade-insecure-requests'), `${route}: insecure resource upgrade is required`);
+  }
+});
+
+test('local report exchange denies network connections, form submissions, framing, caching, and proxy transformation', () => {
+  const rules = headerRules(read('_headers'));
+  for (const route of ['/secure-reports', '/secure-reports.html']) {
+    const headers = rules.get(route);
+    assert.ok(headers, `${route}: both clean and HTML report entry points need an explicit privacy boundary`);
+    const cache = new Set((headers.get('cache-control') || '').split(',').map(value => value.trim()));
+    for (const directive of ['private', 'no-store', 'no-transform']) assert.ok(cache.has(directive), `${route}: ${directive} is required`);
+    assert.ok(!cache.has('public'), `${route}: local report exchange cannot be marked publicly cacheable`);
+    const csp = cspDirectives(headers.get('content-security-policy'));
+    for (const directive of ['connect-src', 'form-action', 'frame-ancestors', 'frame-src', 'object-src']) {
+      assert.deepEqual(csp.get(directive), ["'none'"], `${route}: ${directive} must remain disabled`);
+    }
+    assert.deepEqual(csp.get('script-src'), ["'self'"], `${route}: only reviewed local scripts may run`);
   }
 });
 

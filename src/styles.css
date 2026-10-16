@@ -71,3 +71,21 @@
   .lab-shell button,.lab-shell a.button,.menu-toggle,.library-options select,.search-box input{min-height:48px}
   .footer-links a{padding:10px 0}
 }
+.work-privacy{margin:0 0 20px;padding:20px 24px;background:#102c35;border:1px solid #2f7379;border-radius:12px;color:#e5f2f3;overflow-wrap:anywhere}
+.work-privacy>strong{display:block;font-size:1rem;color:#79eadb}
+.work-privacy p{font-size:.88rem;line-height:1.55;margin:8px 0 12px;color:#cadbdd}
+.work-privacy .button-row{gap:8px;flex-wrap:wrap}
+.work-privacy button,.work-privacy a.lab-tool{min-height:44px}
+.work-privacy a{color:#91ede1}
+.work-privacy-confirm{border-top:1px solid #46777a;margin-top:16px;padding-top:12px}
+.work-privacy-confirm label,.privacy-checkbox{display:flex;align-items:flex-start;gap:10px;font-size:.95rem;line-height:1.5;margin:14px 0}
+.work-privacy-confirm input[type=checkbox],.privacy-checkbox input[type=checkbox]{flex:0 0 auto;width:20px;height:20px;margin:2px 0 0}
+.work-privacy [hidden],#lab-dialog [hidden]{display:none!important}
+.report-encryption,.report-plain{border:1px solid #44636e;border-radius:10px;padding:16px;margin:18px 0}
+.report-encryption h3{margin-top:0}
+.report-encryption p,.report-plain p{font-size:.94rem;line-height:1.6}
+.report-fingerprint{font-family:monospace;overflow-wrap:anywhere;background:#071820;padding:12px;color:#a1f2e3}
+.report-plain summary{cursor:pointer;min-height:44px;padding:10px 0;font-weight:700}
+#lab-dialog input[type=file]{max-width:100%;font-size:16px;min-height:44px}
+#lab-dialog a[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+@media(max-width:640px){.work-privacy{padding:16px}.work-privacy .button-row>*{flex:1 1 100%;text-align:center}.report-encryption,.report-plain{padding:12px}#lab-dialog .button-row>*{max-width:100%;white-space:normal}}

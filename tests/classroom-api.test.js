@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { handleClassroomRequest, onRequest } from '../functions/api/[[path]].js';
+import { SCENARIOS } from '../src/scenarios.js';
+import { normalizeLabRecord } from '../src/records.js';
+import { applyHardwareAction } from '../src/hardware.js';
+import { applyWorkspaceAction } from '../src/workspaces.js';
 
 let DatabaseSync;
 try { ({ DatabaseSync } = await import('node:sqlite')); } catch { /* Node 20 has no built-in SQLite. */ }
@@ -78,8 +82,8 @@ async function fixture(t) {
   async function assign(classroom, labId = 'INC-101', token = teacher) {
     const result = await request(`/teacher/classes/${classroom.id}/assignments`, { method: 'POST', body: { labId }, token }); assert.equal(result.status, 201, JSON.stringify(result.data)); return result.data.assignment;
   }
-  async function join(classroom, alias = 'Blue Finch') {
-    const result = await request('/student/join', { method: 'POST', body: { code: classroom.code, alias } }); assert.equal(result.status, 201, JSON.stringify(result.data)); return result;
+  async function join(classroom) {
+    const result = await request('/student/join', { method: 'POST', body: { code: classroom.code } }); assert.equal(result.status, 201, JSON.stringify(result.data)); return result;
   }
   return { db, env, runtime, fetches, teacher, otherTeacher, request, makeClass, assign, join, setTime: value => { time = value; } };
 }
@@ -180,7 +184,7 @@ sqlTest('teacher class ownership, supported assignment IDs, and strict input fie
   const list = await f.request('/teacher/classes', { token: f.otherTeacher }); assert.deepEqual(list.data.classes, []);
 });
 
-sqlTest('student join issues a high-entropy HttpOnly cookie, stores only its hash, and never recovers work by alias', async t => {
+sqlTest('student join generates a neutral alias, issues a high-entropy HttpOnly cookie, and stores only its hash', async t => {
   const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom);
   const a = await f.join(classroom);
   assert.match(a.cookie, new RegExp(`^${COOKIE_NAME}=[A-Za-z0-9_-]{43}$`));
@@ -188,19 +192,36 @@ sqlTest('student join issues a high-entropy HttpOnly cookie, stores only its has
   assert.equal(JSON.stringify(a.data).includes(a.cookie.split('=')[1]), false);
   const stored = f.db.sqlite.prepare('SELECT token_hash FROM student_sessions').get().token_hash;
   assert.match(stored, /^[a-f0-9]{64}$/); assert.notEqual(stored, a.cookie.split('=')[1]);
+  assert.match(a.data.student.alias, /^Learner-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
   assert.equal(a.data.student.classId, classroom.id); assert.equal(a.data.classroom.name, classroom.name);
   assert.equal(a.data.assignments[0].id, assignment.id); assert.equal('code' in a.data.classroom, false);
-  const b = await f.join(classroom, 'Blue Finch'); assert.notEqual(a.data.student.id, b.data.student.id);
+  const b = await f.join(classroom); assert.notEqual(a.data.student.id, b.data.student.id);
+  assert.notEqual(a.data.student.alias, b.data.student.alias);
   const session = await f.request('/session', { cookie: a.cookie }); assert.equal(session.data.student.id, a.data.student.id);
   const logout = await f.request('/student/logout', { method: 'POST', cookie: a.cookie, body: {} }); assert.match(logout.response.headers.get('Set-Cookie'), /Max-Age=0/);
   assert.equal((await f.request('/student/work/' + assignment.id, { cookie: a.cookie })).status, 401);
-  const rejoin = await f.join(classroom, 'Blue Finch'); assert.notEqual(rejoin.data.student.id, a.data.student.id);
+  const rejoin = await f.join(classroom); assert.notEqual(rejoin.data.student.id, a.data.student.id);
+});
+
+sqlTest('student enrollment refuses client aliases and identity fields before writing enrollment data', async t => {
+  const f = await fixture(t); const classroom = await f.makeClass();
+  const writesBefore = f.db.writes.length;
+  for (const identity of [{ alias: 'Learner-AB12-CD34' }, { alias: 'Real Student Name' }, { email: 'private@example.edu' }, { name: 'Real Student Name' }, { studentId: 'school-123456' }, { googleId: 'classroom-identity' }, { accessToken: 'private-token' }]) {
+    const rejected = await f.request('/student/join', { method: 'POST', body: { code: classroom.code, ...identity } });
+    assert.equal(rejected.status, 400); assert.equal(rejected.cookie, null);
+    assert.equal(JSON.stringify(rejected.data).includes(Object.values(identity)[0]), false);
+  }
+  assert.equal(f.db.writes.length, writesBefore);
+  assert.equal(f.db.sqlite.prepare('SELECT COUNT(*) AS n FROM students').get().n, 0);
+  const admitted = await f.join(classroom);
+  const cannotRecover = await f.request('/student/join', { method: 'POST', body: { code: classroom.code, alias: admitted.data.student.alias } });
+  assert.equal(cannotRecover.status, 400); assert.equal(cannotRecover.cookie, null);
 });
 
 sqlTest('students can access only their own work and assignments in their class', async t => {
   const f = await fixture(t); const aClass = await f.makeClass(); const aAssignment = await f.assign(aClass);
   const bClass = await f.makeClass('Other class', f.otherTeacher); const bAssignment = await f.assign(bClass, 'INC-102', f.otherTeacher);
-  const alice = await f.join(aClass, 'A'); const bob = await f.join(aClass, 'B'); const outsider = await f.join(bClass, 'C');
+  const alice = await f.join(aClass); const bob = await f.join(aClass); const outsider = await f.join(bClass);
   const saved = await f.request('/student/work/' + aAssignment.id, { method: 'PUT', cookie: alice.cookie, body: { expectedVersion: 0, work: { notes: 'Alice only' } } }); assert.equal(saved.status, 200);
   assert.equal((await f.request('/student/work/' + bAssignment.id, { cookie: alice.cookie })).status, 404);
   assert.equal((await f.request('/student/work/' + aAssignment.id, { cookie: outsider.cookie })).status, 404);
@@ -212,7 +233,7 @@ sqlTest('students can access only their own work and assignments in their class'
 
 sqlTest('draft versions prevent stale overwrite and submitted work stays immutable through save and grading', async t => {
   const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom); const student = await f.join(classroom);
-  const path = '/student/work/' + assignment.id; const work = { notes: 'Evidence', state: { power: 'off' }, verified: true, closed: true, grade: 100 };
+  const path = '/student/work/' + assignment.id; const work = { notes: 'Evidence', state: { pcOn: false, bootCount: 0 }, verified: true, closed: true };
   const first = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work } }); assert.equal(first.data.draft.version, 1);
   const stale = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work: { notes: 'stale' } } }); assert.equal(stale.status, 409);
   assert.equal((await f.request('/student/submit', { method: 'POST', cookie: student.cookie, body: { assignmentId: assignment.id, expectedVersion: 2 } })).status, 409);
@@ -231,9 +252,88 @@ sqlTest('draft versions prevent stale overwrite and submitted work stays immutab
   const summary = await f.request(`/teacher/classes/${classroom.id}`, { token: f.teacher }); assert.equal(summary.data.progress[0].grade, 82.5); assert.equal(summary.data.progress[0].version, 2);
 });
 
+sqlTest('every supported normalized simulation record fits its assigned lab schema without losing false or zero values', async t => {
+  const f = await fixture(t); const classroom = await f.makeClass(); const student = await f.join(classroom);
+  for (const scenario of SCENARIOS) {
+    const assignment = await f.assign(classroom, scenario.id);
+    const path = '/student/work/' + assignment.id;
+    const work = normalizeLabRecord(scenario, {
+      state: {}, evidence: scenario.clues.map(clue => clue.id), questions: scenario.questions.map((_, index) => index),
+      events: [{ time: new Date(NOW).toISOString(), message: 'Inspected the fictional investigation.', kind: 'info' }],
+      notes: 'Fictional evidence only.', plan: 'Compare the supplied clues.', reflection: 'Explain the test result.', verified: false, closed: false
+    });
+    const saved = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work } });
+    assert.equal(saved.status, 200, scenario.id + ': ' + JSON.stringify(saved.data));
+    assert.deepEqual(saved.data.draft.work, work);
+    assert.equal(saved.data.draft.work.verified, false); assert.equal(saved.data.draft.work.closed, false);
+    if (scenario.track === 'hardware') {
+      work.state = applyHardwareAction(scenario.id, work.state, 'inspect-power').state;
+      assert.equal(work.state.bootCount, 0);
+    } else {
+      assert.equal(work.state.workspaceEdits, 0); assert.equal(work.state.checkRuns, 0);
+      if (scenario.id === 'SEC-403') {
+        work.state = applyWorkspaceAction(scenario.id, work.state, 'acknowledge-scope', true).state;
+        work.state = applyWorkspaceAction(scenario.id, work.state, 'fetch-record', '102').state;
+        work.state = applyWorkspaceAction(scenario.id, work.state, 'set-authorization', 'owner').state;
+        work.state = applyWorkspaceAction(scenario.id, work.state, 'fetch-record', '102').state;
+        assert.equal(work.state.response.status, 403);
+      }
+      work.state = applyWorkspaceAction(scenario.id, work.state, 'run-check').state;
+    }
+    const updated = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 1, work } });
+    assert.equal(updated.status, 200, scenario.id + ': ' + JSON.stringify(updated.data));
+    assert.deepEqual(updated.data.draft.work, work);
+  }
+});
+
+sqlTest('unsupported identity and provider fields are refused throughout work before any draft write', async t => {
+  const f = await fixture(t); const classroom = await f.makeClass(); const student = await f.join(classroom);
+  const hardware = await f.assign(classroom); const security = await f.assign(classroom, 'SEC-403');
+  const sentinel = 'PRIVATE_VALUE_NEVER_ECHOED';
+  const forbidden = [
+    { email: sentinel }, { name: sentinel }, { studentId: sentinel }, { access_token: sentinel }, { grade: 100 }, { arbitrary: {} },
+    { state: { email: sentinel } }, { state: { prompt: sentinel } },
+    { state: { results: [{ label: 'Fictional test', ok: true, refreshToken: sentinel }] } },
+    { events: [{ time: '', message: 'Fictional event', kind: 'info', googleUserId: sentinel }] },
+    { state: { response: { status: 200, id: '101', owner: 'learner-101', body: 'Fictional record', identity: { email: sentinel } } } },
+    JSON.parse('{"state":{"__proto__":{"email":"PRIVATE_VALUE_NEVER_ECHOED"}}}')
+  ];
+  const writesBefore = f.db.writes.length;
+  for (const work of forbidden) {
+    const assignment = Object.hasOwn(work.state || {}, 'response') || Object.hasOwn(work.state || {}, 'results') ? security : hardware;
+    const rejected = await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work } });
+    assert.equal(rejected.status, 400); assert.equal(rejected.data.error, 'privacy_violation');
+    assert.equal(JSON.stringify(rejected.data).includes(sentinel), false);
+  }
+  assert.equal(f.db.writes.length, writesBefore);
+  assert.equal(f.db.sqlite.prepare('SELECT COUNT(*) AS n FROM drafts').get().n, 0);
+  assert.equal((await f.request('/student/work/' + hardware.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work: { notes: 'Fictional lab observation.', state: { pcOn: false, bootCount: 0 }, verified: false, closed: false } } })).status, 200);
+});
+
+sqlTest('work fields enforce actual record types, list limits, and the assigned scenario', async t => {
+  const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom); const student = await f.join(classroom);
+  const invalid = [
+    { notes: 'x'.repeat(4001) }, { plan: 'x'.repeat(2001) }, { reflection: 'x'.repeat(2001) },
+    { verified: 1 }, { closed: 'false' }, { questions: ['0'] }, { questions: [99] }, { evidence: ['not-a-clue'] },
+    { events: [{ message: 'x'.repeat(601) }] }, { events: [{ kind: 'error' }] },
+    { state: { pcOn: 'false' } }, { state: { caseId: 'INC-102' } }, { state: { bootCount: -1 } },
+    { state: { bootCount: 1.5 } }, { state: { actions: ['not-a-simulation-action'] } },
+    { events: Array.from({ length: 101 }, () => ({ message: 'Fictional event' })) }
+  ];
+  for (const work of invalid) {
+    const rejected = await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work } });
+    assert.equal(rejected.status, 400); assert.equal(rejected.data.error, 'invalid_work');
+  }
+  const oversized = { notes: 'n'.repeat(4000), plan: 'p'.repeat(2000), reflection: 'r'.repeat(2000), events: Array.from({ length: 100 }, () => ({ message: 'x'.repeat(600) })) };
+  assert.ok(Buffer.byteLength(JSON.stringify(oversized)) > 65_536);
+  const rejected = await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work: oversized } });
+  assert.equal(rejected.status, 413);
+  assert.equal(f.db.sqlite.prepare('SELECT COUNT(*) AS n FROM drafts').get().n, 0);
+});
+
 sqlTest('cookie changes across tabs cannot read, save, submit, or log out another expected student session', async t => {
   const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom);
-  const alice = await f.join(classroom, 'A'); const bob = await f.join(classroom, 'B');
+  const alice = await f.join(classroom); const bob = await f.join(classroom);
   const path = '/student/work/' + assignment.id;
   await f.request(path, { method: 'PUT', cookie: alice.cookie, body: { expectedVersion: 0, work: { notes: 'Alice private draft' } } });
   await f.request(path, { method: 'PUT', cookie: bob.cookie, body: { expectedVersion: 0, work: { notes: 'Bob private draft' } } });
@@ -256,7 +356,7 @@ sqlTest('cookie changes across tabs cannot read, save, submit, or log out anothe
 sqlTest('class summaries project small typed indicators without transferring full near-limit drafts', async t => {
   const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom); const student = await f.join(classroom);
   const sentinel = 'PRIVATE_DRAFT_CONTENT_';
-  const work = { plan: sentinel + 'p'.repeat(15900), notes: 'n'.repeat(16000), reflection: 'r'.repeat(16000), padding: 'x'.repeat(16000), evidence: ['clue-a', 'clue-b'], verified: true, closed: 1 };
+  const work = { plan: sentinel + 'p'.repeat(1900), notes: 'n'.repeat(4000), reflection: 'r'.repeat(2000), events: Array.from({ length: 85 }, () => ({ time: new Date(NOW).toISOString(), message: 'x'.repeat(600), kind: 'info' })), evidence: ['screen', 'video'], verified: true, closed: false };
   assert.ok(Buffer.byteLength(JSON.stringify(work)) > 63_000);
   assert.equal((await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work } })).status, 200);
   f.db.reads.length = 0;
@@ -265,18 +365,19 @@ sqlTest('class summaries project small typed indicators without transferring ful
   assert.deepEqual(summary.data.progress[0].selfReported, { verified: true, closed: false, evidenceCount: 2 });
   assert.equal(JSON.stringify(summary.data).includes(sentinel), false);
   assert.ok(f.db.reads.every(read => read.bytes < 16_000), 'Summary queries must not transfer a full draft from SQL into the worker.');
-  assert.equal((await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 1, work: { evidence: 'not-an-array', verified: 1, closed: true } } })).status, 200);
+  assert.equal((await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 1, work: { evidence: 'not-an-array', verified: 1, closed: true } } })).status, 400);
+  assert.equal((await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 1, work: { evidence: [], verified: false, closed: true } } })).status, 200);
   const typed = await f.request(`/teacher/classes/${classroom.id}`, { token: f.teacher });
   assert.deepEqual(typed.data.progress[0].selfReported, { verified: false, closed: true, evidenceCount: 0 });
   const detail = await f.request(`/teacher/classes/${classroom.id}/students/${student.data.student.id}`, { token: f.teacher });
-  assert.deepEqual(detail.data.work[0].draft.work, { evidence: 'not-an-array', verified: 1, closed: true });
+  assert.deepEqual(detail.data.work[0].draft.work, { evidence: [], verified: false, closed: true });
 });
 
 sqlTest('class locks block joins and student writes while preserving review access', async t => {
   const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom); const student = await f.join(classroom);
   await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work: { notes: 'Keep' } } });
   const lock = await f.request(`/teacher/classes/${classroom.id}`, { method: 'PATCH', token: f.teacher, body: { locked: true } }); assert.equal(lock.data.classroom.locked, true);
-  assert.equal((await f.request('/student/join', { method: 'POST', body: { code: classroom.code, alias: 'New' } })).status, 409);
+  assert.equal((await f.request('/student/join', { method: 'POST', body: { code: classroom.code } })).status, 409);
   assert.equal((await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 1, work: {} } })).status, 409);
   assert.equal((await f.request('/student/submit', { method: 'POST', cookie: student.cookie, body: { assignmentId: assignment.id, expectedVersion: 1 } })).status, 409);
   assert.equal((await f.request('/student/work/' + assignment.id, { cookie: student.cookie })).data.draft.work.notes, 'Keep');
@@ -295,7 +396,7 @@ sqlTest('request, work, metadata, class-count, and membership bounds are enforce
   assert.equal((await f.request('/teacher/classes', { method: 'POST', token: f.teacher, body: { name: 'Eleven' } })).status, 409);
   const insert = f.db.sqlite.prepare('INSERT INTO students(id,class_id,alias,joined_at) VALUES(?,?,?,?)');
   for (let n = 1; n < 100; n++) insert.run(crypto.randomUUID(), classroom.id, 'Alias', NOW);
-  assert.equal((await f.request('/student/join', { method: 'POST', body: { code: classroom.code, alias: 'One too many' } })).status, 409);
+  assert.equal((await f.request('/student/join', { method: 'POST', body: { code: classroom.code } })).status, 409);
 });
 
 sqlTest('classes and sessions expire after ninety days; class deletion cascades through all student work', async t => {
@@ -321,11 +422,11 @@ sqlTest('classes and sessions expire after ninety days; class deletion cascades 
 sqlTest('join throttling and draft snapshot limits are server enforced', async t => {
   const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom); const student = await f.join(classroom);
   for (let version = 0; version < 6; version++) {
-    assert.equal((await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: version, work: { attempt: version } } })).status, 200);
+    assert.equal((await f.request('/student/work/' + assignment.id, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: version, work: { state: { bootCount: version } } } })).status, 200);
     const result = await f.request('/student/submit', { method: 'POST', cookie: student.cookie, body: { assignmentId: assignment.id, expectedVersion: version + 1 } });
     assert.equal(result.status, version < 5 ? 201 : 409);
   }
   const bucket = f.db.sqlite.prepare('SELECT bucket FROM join_limits').get().bucket;
   f.db.sqlite.prepare('UPDATE join_limits SET attempts=600 WHERE bucket=?').run(bucket);
-  assert.equal((await f.request('/student/join', { method: 'POST', body: { code: classroom.code, alias: 'Later' } })).status, 429);
+  assert.equal((await f.request('/student/join', { method: 'POST', body: { code: classroom.code } })).status, 429);
 });

@@ -21,11 +21,12 @@ All 15 labs include mission checkpoints, feedback tied to the current simulation
 
 AI activities use authored examples and local rule checks, with no live AI API. Security work stays inside fixed fictional simulations. The site does not scan real systems or execute student commands or uploaded code.
 
-## Two classroom workflows
+## Lab and submission workflows
 
 | Workflow | Available behavior | Where work goes |
 | --- | --- | --- |
-| Independent practice | Public labs, browser resume, copy and `.txt` report export | Lab records remain in that browser unless the user exports or shares them |
+| Independent practice | Public labs start in page memory; explicit optional device save/resume/clear; ordinary report copy and `.txt` export | No account or upload; optional saved progress and ordinary exports are unencrypted |
+| Manual encrypted reports | Optional browser-only teacher key creation and local `.cllreport` encryption/decryption at `secure-reports.html` | The learner manually submits an encrypted file through the school's approved assignment system; this site does not upload reports or keys |
 | Fictional classroom demo | Inspect sample aliases, progress, notes, a submitted report, and try manual feedback | Demo changes stay in page memory and disappear on reload; no real class or grade is created |
 | Optional connected classroom | Prepared implementation; production is locked pending privacy release review | No production classroom-record processing in this release; a future reviewed release would require explicit enrollment |
 
@@ -53,18 +54,25 @@ Portfolio and lab pages use hash navigation and can be served statically.
 | `classroom.html` | Independent/classroom choice, student entry, and fictional demo |
 | `teacher/index.html` | Server-authorized teacher classroom or fictional demo |
 | `school-it.html` | School IT review, hosting/data practices, and filter-review information; readable without JavaScript |
+| `secure-reports.html` | Optional local encrypted-file exchange; no roster, Google OAuth, automatic upload, or central storage |
 
 A static host supports independent practice and the demo. A future reviewed classroom release would also need the configured Cloudflare Pages Functions service; the ordinary local preview server does not emulate D1 or Access. Production classroom requests remain blocked even if those settings are supplied.
 
 ## Progress, sharing, and teacher review
 
-Independent work uses `localStorage` scoped to the browser profile and website origin. Export before changing devices, profiles, or addresses, clearing site data, or leaving a shared profile. A preview address, `pages.dev`, apex, and `www` have separate storage origins. Changing hosts while preserving the same scheme, hostname, and port does not itself change that origin.
+Independent practice starts in the current page's memory. It does not automatically read or resume old saved work, and saving is not assumed from a previous visit. A learner may explicitly choose to save progress on the device or resume a saved copy. Device saving uses unencrypted `localStorage`, scoped to the browser profile and website origin. Anyone with access to that profile may be able to read it. Stopping future saving does not erase an earlier saved copy; use the clear-local-work control before sharing a device. Resetting one ticket, clearing saved work, deleting downloads, and removing an assignment submission are separate actions.
 
-Copy or download a report and submit it manually through Google Classroom, Microsoft Teams, or the school’s chosen process. There is no automatic LMS connection. Keep the export until receipt is confirmed; the independent local store is not a gradebook.
+Export needed work before changing devices, profiles, or addresses, clearing site data, or leaving a shared profile. A preview address, `pages.dev`, apex, and `www` have separate storage origins. Changing hosts while preserving the same scheme, hostname, and port does not itself change that origin. The operator cannot recover local work.
+
+Copy or download an ordinary plaintext report and submit it manually through Google Classroom, Microsoft Teams, or the school's chosen process. A teacher may share only the public lab URL using an ordinary Google Classroom share link. This is not a Classroom API connection: no Google student sign-in, roster import, automated submission, or grade sync is configured. Keep the export until receipt is confirmed; the independent local store is not a gradebook.
+
+For a school-approved encrypted-file process, use [the local report tool](secure-reports.html). The teacher creates a passphrase-encrypted private `.cllkey` file and a public `.cllpub` file in the browser. Students verify the intended public key, encrypt their report and a random neutral learner code locally, then attach only the `.cllreport` file directly in the district's assignment system. The teacher opens the downloaded attachment locally with the matching private key and passphrase. Never upload private keys, passphrases, student reports, rosters, or identity maps to this public repository, a preview, an issue, or a support message.
+
+Encryption protects file contents for holders of the corresponding key and passphrase; it does not prove a teacher role or student authorship. Google and authorized school personnel retain their permitted access to Classroom identities and submission metadata. Decrypted work is visible on the reviewer's endpoint, and compromised endpoints or changed website code can expose information. The school must approve key distribution, verification, authorized key holders, recovery, retention, devices, and the submission process. This tool has not received an independent cryptographic audit or legal certification. See [Student-data design](docs/STUDENT-DATA-DESIGN.md).
 
 The prepared workflow below describes a possible future, privacy-approved source release; it is unavailable in production now:
 
-- A learner explicitly joins with a class code and teacher-assigned alias. Only then can assigned drafts be shared. The lab shows a classroom connection and save/submission controls.
+- A learner explicitly joins with a class code only. The server assigns a cryptographically random `Learner-XXXX-XXXX` alias; client names, emails, school IDs, and chosen aliases are rejected. Only then can assigned drafts be shared. The lab shows a classroom connection and save/submission controls. This prepared connected backend does not implement teacher-held encryption of stored work.
 - Classroom work uses a separate browser namespace for the class and membership. It does not silently import independent work. Choosing an independent-labs link on the portal removes the active sharing flag without deleting saved work.
 - A browser session is the learner’s credential. A class code or alias cannot recover a lost or logged-out session or transfer it to another device. Export important reports first.
 - The teacher roster refreshes about every 15 seconds while the validated teacher view is visible. Updates can be paused. Polling patches progress summaries and roster rows, preserving typed grading feedback; work details refresh on request.
@@ -115,6 +123,8 @@ Syntax checks cover the application, server modules, and scripts. Tests cover si
 | `classroom.html`, `teacher/index.html` | Student and teacher entry points |
 | `src/classroom-portal.js`, `src/classroom-portal.css` | Classroom UI and memory-only fictional demo |
 | `src/classroom-client.js` | Explicitly joined assignment sharing and separate local storage scope |
+| `src/local-work.js`, `src/work-controls.js` | Memory-first practice, explicit device persistence/resume, and clear-work controls |
+| `secure-reports.html`, `src/secure-reports.js`, `src/report-crypto.js` | Local key files and manually exchanged encrypted reports; no application upload |
 | `functions/api/[[path]].js`, `migrations/0001_classrooms.sql` | Optional classroom API and database structure |
 | `school-it.html`, `src/school.css` | School technology review page |
 | `scripts/serve.mjs`, `scripts/check.mjs` | Static preview and syntax verification |
@@ -124,6 +134,7 @@ Syntax checks cover the application, server modules, and scripts. Tests cover si
 | `docs/TEACHING.md` | Lesson preparation, assessment, and classroom workflows |
 | `docs/CLASSROOM-SETUP.md` | Prepared backend setup and operational boundaries |
 | `docs/PRIVACY-RELEASE-GATE.md` | Blocking privacy evidence, operational gaps, and reviewed-release requirements |
+| `docs/STUDENT-DATA-DESIGN.md` | Data inventory, aliases, manual Classroom workflow, key custody, and access limitations |
 | `_headers`, `_routes.json` | Cloudflare response policies and API routing |
 | `docs/DEPLOYMENT.md` | Hosting, domains, HTTPS, and release verification |
 
@@ -140,6 +151,8 @@ The `20261016-privacy1` source release keeps the production classroom gate close
 ## Before classroom use
 
 Complete a representative repair and a lab from every other pathway. Check all 15 entry points, filters, keyboard focus, touch controls, zoom, resume/reset, report copy/download, and back/forward navigation. Review the fictional classroom demo, grade/return flow, and disabled-service behavior. Development verification of the prepared handler should use fictional teacher/student sessions to check ownership, isolation, locking, expiry/deletion, stale versions, and failure recovery. It does not replace the blocking privacy review or permit real enrollment.
+
+Check that a fresh page does not read old work, device saving/resume require explicit choices, and clear-local-work removes saved copies without claiming to erase downloads or school submissions. For encrypted reports, use fictional test data to verify intended-key decryption, wrong keys/passphrases, corrupted files, file-size limits, no network or storage writes, and clear-page behavior. Do not create or commit real school keys or test with actual student records.
 
 The labs support guided practice and teacher judgment. Completion is learning evidence to discuss; it is not professional certification or a replacement for required hands-on instruction.
 
