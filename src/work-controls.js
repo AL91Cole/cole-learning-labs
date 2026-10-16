@@ -4,8 +4,11 @@ export function workStatus(record, manager) {
 }
 export function mountWorkControls({host, manager, getStore, replaceStore, onChange, onClear, scenarioId}) {
   if (!host) return;
+  const wasOpen=host.querySelector('details')?.open===true;
   host.replaceChildren();host.className='work-privacy';
   const title=node('strong', manager.persistent ? 'Device saving is on' : 'Private session · device saving is off');
+  const options=node('details');options.open=wasOpen;
+  const summary=node('summary','Saving, reports & privacy options');
   const info=node('p', 'Keep real names, emails, student IDs, passwords, and private school details out of notes. This controls local saving; any approved connected-classroom sharing is separate.');
   const saved=node('p', !manager.persistent&&manager.hasSaved() ? 'An earlier saved copy exists on this browser. It is not loaded into this private session.' : '');
   const controls=node('div',null,'button-row');
@@ -35,11 +38,12 @@ export function mountWorkControls({host, manager, getStore, replaceStore, onChan
     else if(requested==='resume'){const restored=manager.resume();if(restored)replaceStore(restored);else status.textContent='Saved work could not be read. Private work is still on this page.';}
     else if(manager.enable(getStore()))onChange();else status.textContent='Device saving is unavailable. Export your private work before leaving.';
   });
-  host.append(title,info,saved,controls,confirm,status);
+  options.append(summary,info,saved,controls,confirm,status);
+  host.append(title,options);
   if (/^(?:INC-10[1-6]|NET-20[1-3]|AI-30[1-3]|SEC-40[1-3])$/.test(scenarioId||'')) {
     const share=node('a','Assign this public lab through Google Classroom ↗');
     share.href='https://classroom.google.com/share?url='+encodeURIComponent('https://www.colelearninglabs.com/#lab/'+scenarioId);
     share.target='_blank';share.rel='noopener noreferrer';
-    const help=node('p','Only the public lab URL is shared when you open Google. No notes, alias, class code, grades, or roster are included. ');help.append(share);host.append(help);
+    const help=node('p','Only the public lab URL is shared when you open Google. No notes, alias, class code, grades, or roster are included. ');help.append(share);options.append(help);
   }
 }

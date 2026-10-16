@@ -117,7 +117,7 @@ Syntax checks cover the application, server modules, and scripts. Tests cover si
 | File | Responsibility |
 | --- | --- |
 | `index.html`, `src/app.js`, `src/styles.css` | Portfolio, routes, reports, and lab shell |
-| `src/scenarios.js` | All 15 assignments and rubric criteria |
+| `src/scenarios.js` | All 15 student assignments; no teacher rubrics or answer keys |
 | `src/hardware.js`, `src/hardware.css` | Virtual hardware bench, checkpoints, and coaching |
 | `src/workspaces.js`, `src/workspaces.css` | Network/OS, AI, and security workspaces and coaching |
 | `classroom.html`, `teacher/index.html` | Student and teacher entry points |

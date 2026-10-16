@@ -129,3 +129,29 @@
   .ws-coach-content details details{margin-left:8px}
 }
 @media (pointer:coarse){.ws-coach summary{min-height:48px}}
+
+/* Keep the same short instruction pattern above every practice workspace. */
+.ws-start{margin:0 0 18px;padding:3px 20px;background:#12283b;border:1px solid #39576e;border-radius:10px;min-width:0}
+.ws-start>summary{padding:12px 0;min-height:48px;box-sizing:border-box;font-size:.93rem;font-weight:600;line-height:1.6;color:#f0f8fc;cursor:pointer;touch-action:manipulation}
+.ws-start>summary>span{font-size:.75rem;font-weight:400;color:#adc8da;display:inline-block;margin-left:10px}
+.ws-start>summary:focus-visible{outline:2px solid #8cebd9;outline-offset:3px;border-radius:3px}
+.ws-start-content{padding:5px 0 15px}
+.ws-start ol{list-style:none;counter-reset:workspace-step;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:0;padding:0}
+.ws-start li{counter-increment:workspace-step;position:relative;padding-left:33px;min-width:0;font-size:.85rem;line-height:1.7;color:#c3d7e4;overflow-wrap:anywhere}
+.ws-start li:before{content:counter(workspace-step);position:absolute;left:0;top:1px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#285961;color:#e5fff7;font-size:.79rem;font-weight:700}
+.ws-start li>b{display:block;color:#e8f7fa;line-height:1.6;margin:0 0 5px}
+.ws-start li>span{display:block}
+.ws-start-content>p{margin:16px 0 0;padding-top:13px;border-top:1px solid #2d4b60;font-size:.79rem;line-height:1.7;color:#adc8da}
+.ws-test-results>p{font-size:.85rem;line-height:1.7;color:#b7d0df;margin:0 0 15px}
+.ws-test-results li>span{text-transform:none;min-width:62px;text-align:center;white-space:nowrap}
+.larger-reading .ws-start li,.larger-reading .ws-start-content>p,.larger-reading .ws-test-results>p{font-size:1rem}
+@container workspace (max-width:780px){
+  .ws-start{padding:3px 18px}
+  .ws-start ol{grid-template-columns:minmax(0,1fr);gap:13px}
+  .ws-start li{padding-left:35px}
+  .ws-start li>b{margin-bottom:2px}
+}
+@container workspace (max-width:520px){
+  .ws-start{padding:3px 16px}
+  .ws-test-results li{flex-wrap:wrap}
+}

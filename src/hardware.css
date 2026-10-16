@@ -74,6 +74,22 @@
 .hw-svg-closeup .hw-bench-annotation { display: none; }
 
 /* State-based missions and optional coaching; the equipment model remains the source of truth. */
+.hw-controls-label { flex-basis: 100%; color: #b7d0dc; font-size: 13px; font-weight: 650; line-height: 1.5; }
+.hw-canvas-help { margin: 0; padding: 10px 16px; border-bottom: 1px solid var(--hw-line); color: #b1c7d4; background: #10212f; font-size: 13px; line-height: 1.55; }
+.hw-help { border-top: 1px solid #35515c; }
+.hw-help summary { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 11px 0; color: #bededb; font-size: 13px; font-weight: 600; cursor: pointer; touch-action: manipulation; list-style: none; }
+.hw-help summary::-webkit-details-marker { display: none; }
+.hw-help summary::after { content: '+'; margin-left: auto; color: #75d6c1; font-size: 21px; font-weight: 400; line-height: 1; }
+.hw-help[open] summary::after { content: '−'; }
+.hw-help summary:focus-visible { outline: 3px solid #8af3dd; outline-offset: 2px; border-radius: 4px; }
+.hw-help ol { margin: 0; padding: 0 0 0 21px; color: #bad0dc; font-size: 14px; line-height: 1.7; }
+.hw-help li { padding: 0 0 12px 3px; }
+.hw-help strong { color: #e2efef; }
+.hw-help em { font-style: normal; color: #ddedeb; font-weight: 600; }
+.hw-help > p { margin: 0; padding: 0 0 15px; color: #a9c5d2; font-size: 13px; line-height: 1.7; }
+.hw-change-heading { display: grid; gap: 4px; margin: 16px 0 11px; padding-top: 13px; border-top: 1px solid #324b5d; }
+.hw-change-heading strong { color: #dae9ef; font-size: 14px; font-weight: 650; }
+.hw-change-heading span { color: #a5becd; font-size: 13px; line-height: 1.6; }
 .hw-mission { padding: 17px 18px 0; border-bottom: 1px solid #2b4354; background: linear-gradient(125deg, #142d35, #111f2d 72%); }
 .hw-mission-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .hw-mission-heading > div { min-width: 0; }

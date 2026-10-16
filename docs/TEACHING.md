@@ -41,7 +41,7 @@ Adjust timing for reading needs and complexity. One well-explained investigation
 
 ## Assess reasoning and outcome
 
-Every lab includes a Teacher Rubric panel. Adapt its criteria to your lesson; the simulation’s success indicator is not an automatic grade.
+Student labs do not include a Teacher Rubric panel or bundled grading criteria. Keep your rubrics and answer keys in your school’s authenticated teacher resources, and distribute them only to authorized educators. Previously published criteria may remain in public repository history and must not be treated as confidential. The simulation’s success indicator is not an automatic grade. See [Teacher rubric storage](TEACHER-RUBRICS.md).
 
 | Criterion | Evidence to look for |
 | --- | --- |
