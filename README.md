@@ -27,11 +27,13 @@ AI activities use authored examples and local rule checks, with no live AI API. 
 | --- | --- | --- |
 | Independent practice | Public labs, browser resume, copy and `.txt` report export | Lab records remain in that browser unless the user exports or shares them |
 | Fictional classroom demo | Inspect sample aliases, progress, notes, a submitted report, and try manual feedback | Demo changes stay in page memory and disappear on reload; no real class or grade is created |
-| Optional connected classroom | Prepared code for explicit class enrollment, assigned drafts, submissions, and teacher review | If configured and explicitly joined, assigned work is shared with that class’s server and teacher |
+| Optional connected classroom | Prepared implementation; production is locked pending privacy release review | No production classroom-record processing in this release; a future reviewed release would require explicit enrollment |
 
-**Real classroom enrollment and server storage are not activated for this release.** No first approved teacher email has been chosen, and no D1 database or Cloudflare Access application has been provisioned. Independent labs and the fictional demo work without those services.
+**Real classroom-record processing is blocked by a hardcoded production privacy release gate.** The Cloudflare `onRequest` entry returns HTTP 503 with `classroom_privacy_review_required` before configuration, database access, or identity-key retrieval. No first approved teacher email has been chosen, and no D1 database or Cloudflare Access application has been provisioned. Independent labs, local exports, and the memory-only fictional demo remain available.
 
-The API rejects requests until all required configuration is valid: `CLASSROOM_ENABLED` must be exactly `true`, `CLASSROOM_DB` must be a migrated D1 binding, and `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, and the explicit `TEACHER_EMAILS` allowlist must be set. A binding or a client-side role alone cannot enable or authorize a class. See [Classroom setup](docs/CLASSROOM-SETUP.md) before any activation or collection of real classroom records.
+A teacher email, environment variable, database binding, or user checkbox **cannot unlock the production gate**. A future classroom release requires documented privacy/legal review, applicable school agreements, provider restrictions, rights and incident processes, necessary retention, verified operational controls, and a reviewed source-code release. Review [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) first; applicable COPPA, New York §2-d/Part 121, FERPA, and jurisdiction-specific obligations have not been declared satisfied. No global legal approval or certification is claimed.
+
+The separate prepared handler also requires `CLASSROOM_ENABLED=true`, migrated `CLASSROOM_DB`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, and the explicit `TEACHER_EMAILS` allowlist. Those technical settings support development and testing; they are not privacy approval. [Classroom setup](docs/CLASSROOM-SETUP.md) documents that implementation.
 
 ## Pages and entry points
 
@@ -52,7 +54,7 @@ Portfolio and lab pages use hash navigation and can be served statically.
 | `teacher/index.html` | Server-authorized teacher classroom or fictional demo |
 | `school-it.html` | School IT review, hosting/data practices, and filter-review information; readable without JavaScript |
 
-A static host supports independent practice and the demo. A real connected classroom additionally needs the configured Cloudflare Pages Functions service; the ordinary local preview server does not emulate D1 or Access.
+A static host supports independent practice and the demo. A future reviewed classroom release would also need the configured Cloudflare Pages Functions service; the ordinary local preview server does not emulate D1 or Access. Production classroom requests remain blocked even if those settings are supplied.
 
 ## Progress, sharing, and teacher review
 
@@ -60,7 +62,7 @@ Independent work uses `localStorage` scoped to the browser profile and website o
 
 Copy or download a report and submit it manually through Google Classroom, Microsoft Teams, or the school’s chosen process. There is no automatic LMS connection. Keep the export until receipt is confirmed; the independent local store is not a gradebook.
 
-If connected mode is later activated:
+The prepared workflow below describes a possible future, privacy-approved source release; it is unavailable in production now:
 
 - A learner explicitly joins with a class code and teacher-assigned alias. Only then can assigned drafts be shared. The lab shows a classroom connection and save/submission controls.
 - Classroom work uses a separate browser namespace for the class and membership. It does not silently import independent work. Choosing an independent-labs link on the portal removes the active sharing flag without deleting saved work.
@@ -70,13 +72,15 @@ If connected mode is later activated:
 - Submission captures an immutable version of saved work. A later draft does not rewrite that submission or its grade. Teachers inspect evidence and reasoning, enter grades and feedback manually, and may return work for revision.
 - A class lock pauses new joins, draft changes, and submissions. Existing learners can read/export work and feedback. The teacher can review or grade; class deletion requires explicit confirmation.
 
+The prepared code’s 90-day class expiry is a development default, not an approved necessary retention period. Later-request cleanup is not verified scheduled purging; necessary deadlines, early return/deletion, backup expiry, and deletion evidence remain blocking work in [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md).
+
 Use fictional scenario information. Keep real passwords, health information, private student records, and confidential incidents out of free text. An alias does not make classroom records anonymous to the school. [Teaching guidance](docs/TEACHING.md) covers preparation and assessment.
 
 ## School devices, accessibility, and review
 
 The responsive workspaces provide PC close-up and labeled component controls, section shortcuts, keyboard alternatives, optional larger text, and touch controls. Form text is at least 16px; key controls have minimum targets of 44–48px. Mission hints use keyboard-accessible disclosures.
 
-Earlier Chrome viewport checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. This classroom/mission release passed 108 automated tests with no skips, all 15 Chrome lab entry checks at 1366 × 768, a complete hardware repair with reload/resume, state-based network feedback, and an HTTPS classroom demo review. The tablet teacher review at 768 × 1024 had no page-level horizontal overflow and used 16px feedback text. The HTTPS preview served the new security policies and rejected real classroom enrollment with HTTP 503. **Actual Microsoft Edge browser testing has not been completed; no Edge browser is connected to the verification session.** Shared browser technology does not substitute for an Edge test. Preview representative work on an actual managed Chromebook and the school’s supported Edge device before teaching.
+Earlier Chrome viewport checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. The privacy release passed 110 automated tests with no skips, including production-gate checks. Previous browser verification covered all 15 Chrome lab entry checks at 1366 × 768, a complete hardware repair with reload/resume, state-based network feedback, and an HTTPS classroom demo review. The tablet teacher review at 768 × 1024 had no page-level horizontal overflow and used 16px feedback text. The HTTPS preview served the new security policies and rejected real classroom enrollment with HTTP 503. **Actual Microsoft Edge browser testing has not been completed; no Edge browser is connected to the verification session.** Shared browser technology does not substitute for an Edge test. Preview representative work on an actual managed Chromebook and the school’s supported Edge device before teaching.
 
 Share [School IT review](school-it.html) with the district for educational-purpose, browser, data, and GoGuardian category/allow-rule review. School filtering policies control access; hosting security, a category suggestion, or this page cannot guarantee that a school will allow the site. No blanket school approval, accessibility certification, FERPA/COPPA compliance, or immunity from security flaws is claimed.
 
@@ -97,7 +101,7 @@ npm run check
 npm test
 ```
 
-Syntax checks cover the application, server modules, and scripts. Tests cover simulation state and verification, mission feedback and hints, saved-work handling, and the classroom API’s authentication, ownership, versioning, limits, and SQL behavior. Test results are not a deployment-security certification. A static preview returns an unavailable-service view for real classroom operations; it must not imitate a configured backend.
+Syntax checks cover the application, server modules, and scripts. Tests cover simulation state and verification, mission feedback and hints, saved-work handling, and the prepared classroom handler’s authentication, ownership, versioning, limits, and SQL behavior. Separate production-entry tests verify that the privacy gate blocks configuration, database, and identity access. Integration tests intentionally call the prepared handler; passing them neither activates production nor establishes legal compliance. A static preview returns an unavailable-service view for real classroom operations.
 
 ## Source layout
 
@@ -114,7 +118,8 @@ Syntax checks cover the application, server modules, and scripts. Tests cover si
 | `school-it.html`, `src/school.css` | School technology review page |
 | `scripts/serve.mjs`, `scripts/check.mjs` | Static preview and syntax verification |
 | `docs/TEACHING.md` | Lesson preparation, assessment, and classroom workflows |
-| `docs/CLASSROOM-SETUP.md` | Default-off backend setup and operational boundaries |
+| `docs/CLASSROOM-SETUP.md` | Prepared backend setup and operational boundaries |
+| `docs/PRIVACY-RELEASE-GATE.md` | Blocking privacy evidence, operational gaps, and reviewed-release requirements |
 | `_headers`, `_routes.json` | Cloudflare response policies and API routing |
 | `docs/DEPLOYMENT.md` | Hosting, domains, HTTPS, and release verification |
 
@@ -126,11 +131,11 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-These source changes prepare mission coaching and optional classroom functionality. They do not provision or activate a classroom service. Follow [Deployment guidance](docs/DEPLOYMENT.md) for current publishing and response checks, and [Classroom setup](docs/CLASSROOM-SETUP.md) for a separately approved activation.
+The `20261016-privacy1` source release keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 
-Complete a representative repair and a lab from every other pathway. Check all 15 entry points, filters, keyboard focus, touch controls, zoom, resume/reset, report copy/download, and back/forward navigation. Review the fictional classroom demo, grade/return flow, and disabled-service behavior. Before any enabled classroom deployment, use separate fictional teacher/student sessions to verify ownership, isolation, locking, expiry/deletion, stale versions, and failure recovery.
+Complete a representative repair and a lab from every other pathway. Check all 15 entry points, filters, keyboard focus, touch controls, zoom, resume/reset, report copy/download, and back/forward navigation. Review the fictional classroom demo, grade/return flow, and disabled-service behavior. Development verification of the prepared handler should use fictional teacher/student sessions to check ownership, isolation, locking, expiry/deletion, stale versions, and failure recovery. It does not replace the blocking privacy review or permit real enrollment.
 
 The labs support guided practice and teacher judgment. Completion is learning evidence to discuss; it is not professional certification or a replacement for required hands-on instruction.
 

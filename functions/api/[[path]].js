@@ -1,4 +1,8 @@
 /** Optional, fail-closed classroom service. Public simulations remain independent. */
+// Production release lock. Only a reviewed code release may change this after the
+// applicable privacy, legal, district-agreement, and operational requirements are met.
+// Environment variables, request values, and runtime options cannot approve a release.
+const CLASSROOM_PRIVACY_REVIEW_APPROVED = false;
 const DAY = 86_400_000;
 const RETENTION = 90 * DAY;
 const COOKIE = '__Host-cll_student';
@@ -419,8 +423,8 @@ async function handleTeacher(request, db, path, body, teacher, now) {
   fail(404, 'not_found', 'API route not found.');
 }
 
-/** Exported for real SQL/crypto integration tests; production always uses the defaults. */
-export async function handleRequest(context, dependencies = {}) {
+/** Prepared backend for explicit integration tests and a future reviewed release. */
+export async function handleClassroomRequest(context, dependencies = {}) {
   const { request, env } = context;
   const cfg = config(env || {});
   if (!cfg) return response({ enabled: false, error: 'classroom_unconfigured', message: 'Online classrooms are not configured. Public labs and local report exports remain available.' }, 503);
@@ -459,4 +463,11 @@ export async function handleRequest(context, dependencies = {}) {
   }
 }
 
-export const onRequest = context => handleRequest(context);
+export const onRequest = context => {
+  if (!CLASSROOM_PRIVACY_REVIEW_APPROVED) return response({
+    enabled: false,
+    error: 'classroom_privacy_review_required',
+    message: 'Connected classrooms are unavailable while privacy, school agreement, and operational requirements await review. Public labs and local report exports remain available.'
+  }, 503);
+  return handleClassroomRequest(context);
+};

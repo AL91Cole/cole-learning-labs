@@ -35,7 +35,7 @@ Set expectations for hint use before the lesson. For example, ask a learner to p
 2. **Model the process — 5 minutes.** Inspect a clue and predict one test. Show the mission coach without completing the assigned repair.
 3. **Investigate — 20 minutes.** Learners work independently or in pairs. Ask “What did you observe?”, “What does that suggest?”, and “How will you check?”
 4. **Explain and verify — 5 minutes.** Require a conclusion, supporting evidence, and a current verification of the original task.
-5. **Export or submit and debrief — 5 minutes.** Use a local report and the chosen classroom process. If a real connected class has separately been approved and activated, learners can also submit a fixed version for teacher review.
+5. **Export or submit and debrief — 5 minutes.** Use a local report and the chosen classroom process. The prepared connected workflow could submit a fixed version only after a future privacy-approved source release; that service is blocked in production now.
 
 Adjust timing for reading needs and complexity. One well-explained investigation is a useful lesson outcome.
 
@@ -67,13 +67,15 @@ Open [Classroom options](../classroom.html) or [Teacher classroom](../teacher/in
 
 The demo lets an educator inspect a draft and submitted report, review evidence and reflection, enter sample feedback and a manual grade, return work for revision, and try class controls. Changes remain in page memory only. Reloading or reopening the demo restores its sample data. No real membership, uploaded work, or official grade is created. Do not enter real student details into the demo.
 
-## Optional real classrooms: prepared, not activated
+## Optional real classrooms: blocked pending privacy release review
 
-**Real enrollment and classroom record storage are disabled for this release.** No first teacher login email has been chosen. No D1 database or Cloudflare Access application has been provisioned. The portal shows unavailable/access-required states instead of a pretend teacher login or shared PIN.
+**The production classroom API is hardcoded closed for this release.** Its actual Cloudflare entry returns HTTP 503 `classroom_privacy_review_required` before reading service settings, D1, or identity keys. No first teacher email, D1 database, or Access application has been provisioned. Independent labs, manual report exports, and the fictional demo remain available.
 
-An approved operator must configure all of the following before enabling the service: `CLASSROOM_ENABLED=true`, migrated `CLASSROOM_DB` binding, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, and an explicit `TEACHER_EMAILS` allowlist. The server checks the signed teacher identity and class ownership. A district review and the acceptance checks in [Classroom setup](CLASSROOM-SETUP.md) must precede collection of real records.
+A teacher email or environment setting cannot unlock it. The [Privacy release requirements](PRIVACY-RELEASE-GATE.md) require evidence of applicable legal and district review, school agreements, necessary data purposes, provider restrictions, notices/authority, rights processes, security operations, and verified retention/deletion. A reviewed source-code release is also required before that gate can change. COPPA, New York §2-d/Part 121, FERPA, or worldwide compliance has not been certified or declared complete.
 
-When an approved classroom is enabled:
+The separate prepared implementation uses `CLASSROOM_ENABLED=true`, a migrated `CLASSROOM_DB`, Access configuration, and an explicit `TEACHER_EMAILS` allowlist. These are technical prerequisites for that implementation, not permission to collect records. Its integration tests call the prepared handler explicitly. See [Classroom setup](CLASSROOM-SETUP.md) for development details.
+
+The following describes the prepared workflow for a possible future reviewed release, not a current enrollment option:
 
 1. The verified teacher creates a class and selects assignments from the 15 supported labs. Distribute its code and teacher-assigned aliases through the classroom process.
 2. A learner explicitly joins. An alias is a display label, not verified identity or a recovery credential. A browser has one class session; a lost or logged-out session cannot be recovered using the alias or code. Use separate assigned profiles and export important work.
@@ -84,13 +86,13 @@ When an approved classroom is enabled:
 
 The roster shows in-lab drafts and submission status, not webcams, microphone audio, screens, other tabs, browsing history, or activity in other applications. It is neither proctoring nor proof of attendance, attention, independent work, or mastery.
 
-Prepared classes expire 90 days after creation. Access is denied after expiry; application cleanup occurs on a subsequent authorized teacher request, not a guaranteed scheduled physical-erasure deadline. Provider backups and recovery periods are separate. See [Classroom setup](CLASSROOM-SETUP.md) for exact limits, retention, and operational responsibilities.
+The prepared code’s 90-day class expiry is a development default, not an approved or demonstrated necessary retention period. It denies expired access and attempts later-request cleanup; it does not provide verified scheduled destruction. Purpose/contract-specific deadlines, scheduled purging, early return/deletion, backup expiry, and deletion evidence remain blocking work. Provider backups and recovery periods are separate. Keep production closed until the gaps in [Privacy release requirements](PRIVACY-RELEASE-GATE.md) are resolved.
 
 ## Device, accessibility, and school IT preparation
 
 The responsive lab includes a PC close-up view, labeled component selector, section shortcuts, keyboard alternatives, larger text, and controls sized for touch. Inputs use at least 16px text. Use these supports alongside vocabulary help, paired discussion, extra time, or an oral explanation.
 
-Earlier Chrome layout checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. The current mission/classroom release passed 108 automated checks without skips and all 15 Chrome lab entry checks at 1366 × 768. A complete hardware repair, reload/resume, network feedback, optional hints preserving an unsaved setting, and the HTTPS fictional teacher review were exercised. The teacher review at 768 × 1024 had no page-level horizontal overflow and a 16px feedback field. **Microsoft Edge has not been tested in an actual connected Edge browser session.** Do not treat shared browser technology as an Edge test or a guarantee that a school-managed Chromebook behaves the same way.
+Earlier Chrome layout checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. The privacy release passed 110 automated checks without skips, including production-gate tests. Previous Chrome verification covered all 15 lab entry checks at 1366 × 768. A complete hardware repair, reload/resume, network feedback, optional hints preserving an unsaved setting, and the HTTPS fictional teacher review were exercised. The teacher review at 768 × 1024 had no page-level horizontal overflow and a 16px feedback field. **Microsoft Edge has not been tested in an actual connected Edge browser session.** Do not treat shared browser technology as an Edge test or a guarantee that a school-managed Chromebook behaves the same way.
 
 Before a lesson:
 
@@ -102,7 +104,7 @@ Before a lesson:
 
 Cloudflare Pages serves the site and processes normal request/security metadata, potentially including IP address, request path, browser, and traffic information. Independent labs do not upload lab records; explicitly joined enabled classrooms do send assigned work and aliases to the class service. HTTPS, an alias, or a login does not establish blanket FERPA/COPPA or district compliance. Do not describe the platform as collecting or sharing no information.
 
-Use fictional scenario information. Do not enter real names, passwords, health information, private student records, or confidential incidents in aliases, prompts, notes, demo feedback, or public issues. School authorization, notices, data terms, retention, export/correction, and incident handling need review before connected mode is used.
+Use fictional scenario information. Do not enter real names, passwords, health information, private student records, or confidential incidents in aliases, prompts, notes, demo feedback, or public issues. School authorization, notices, data terms, retention, export/correction, and incident handling require evidence and review before a future source release could permit connected records. Student and educator information is restricted to documented, necessary educational/security purposes; sale, rental, advertising use, behavioral profiling, AI-model training, and unrelated secondary uses are prohibited.
 
 ## Boundaries for cybersecurity and AI
 

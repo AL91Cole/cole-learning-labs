@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { handleRequest } from '../functions/api/[[path]].js';
+import { handleClassroomRequest, onRequest } from '../functions/api/[[path]].js';
 
 let DatabaseSync;
 try { ({ DatabaseSync } = await import('node:sqlite')); } catch { /* Node 20 has no built-in SQLite. */ }
@@ -67,7 +67,7 @@ async function fixture(t) {
     if (token) h.set('Cf-Access-Jwt-Assertion', token);
     if (cookie) h.set('Cookie', cookie);
     if (method !== 'GET') { if (origin !== null) h.set('Origin', origin); h.set('Content-Type', 'application/json'); }
-    const response = await handleRequest({ request: new Request(`${ORIGIN}/api${path}`, { method, headers: h, ...(body !== undefined ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {}) }), env: selectedEnv }, dependencies);
+    const response = await handleClassroomRequest({ request: new Request(`${ORIGIN}/api${path}`, { method, headers: h, ...(body !== undefined ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {}) }), env: selectedEnv }, dependencies);
     const data = await response.json(); const responseCookie = response.headers.get('Set-Cookie')?.split(';')[0] || null;
     if (responseCookie && data.role === 'student') knownSessions.set(responseCookie, data.student.id);
     return { response, status: response.status, data, cookie: responseCookie };
@@ -84,11 +84,35 @@ async function fixture(t) {
   return { db, env, runtime, fetches, teacher, otherTeacher, request, makeClass, assign, join, setTime: value => { time = value; } };
 }
 
-test('missing or malformed configuration fails closed without touching a database', async () => {
+test('actual production entry stays privacy-locked despite complete configuration or forged approval flags', async () => {
+  let databaseCalls = 0;
+  const env = {
+    CLASSROOM_ENABLED: 'true', CLASSROOM_PRIVACY_REVIEW_APPROVED: 'true', CLASSROOM_PRODUCTION_APPROVED: true,
+    CLASSROOM_DB: { prepare() { databaseCalls++; throw new Error('Production must not touch D1.'); }, withSession() { databaseCalls++; throw new Error('Production must not create D1 sessions.'); } },
+    CF_ACCESS_TEAM_DOMAIN: TEAM, CF_ACCESS_AUD: AUD, TEACHER_EMAILS: 'teacher@example.edu'
+  };
+  const token = await jwt();
+  for (const [path, method] of [['/session','GET'], ['/teacher/classes','POST'], ['/student/join','POST'], ['/student/work/11111111-1111-1111-1111-111111111111','PUT'], ['/student/submit','POST'], ['/student/logout','POST']]) {
+    const response = await onRequest({ request: new Request(`${ORIGIN}/api${path}`, { method, headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'Cf-Access-Jwt-Assertion': token }, ...(method !== 'GET' ? { body: '{}' } : {}) }), env, releaseApproved: true }, { releaseApproved: true, fetch: () => { throw new Error('Production must not fetch JWKS.'); } });
+    assert.equal(response.status, 503); assert.equal(response.headers.get('Set-Cookie'), null);
+    const body = await response.json(); assert.equal(body.enabled, false); assert.equal(body.error, 'classroom_privacy_review_required');
+  }
+  assert.equal(databaseCalls, 0);
+});
+
+test('production privacy lock returns before inspecting context, environment, authentication, or runtime configuration', async () => {
+  let touched = 0;
+  const trap = new Proxy({}, { get() { touched++; throw new Error('No production context/configuration may be read while locked.'); } });
+  const response = await onRequest(trap, trap);
+  assert.equal(response.status, 503); assert.equal((await response.json()).error, 'classroom_privacy_review_required');
+  assert.equal(touched, 0);
+});
+
+test('prepared backend missing or malformed configuration fails closed without touching a database', async () => {
   let touched = false;
   const db = { prepare() { touched = true; throw new Error('must not run'); } };
   for (const env of [{}, { CLASSROOM_DB: db }, { CLASSROOM_ENABLED: 'false', CLASSROOM_DB: db, CF_ACCESS_TEAM_DOMAIN: TEAM, CF_ACCESS_AUD: AUD, TEACHER_EMAILS: 'teacher@example.edu' }, { CLASSROOM_ENABLED: 'true', CLASSROOM_DB: db, CF_ACCESS_TEAM_DOMAIN: 'https://evil.example', CF_ACCESS_AUD: AUD, TEACHER_EMAILS: 'teacher@example.edu' }, { CLASSROOM_ENABLED: 'true', CLASSROOM_DB: db, CF_ACCESS_TEAM_DOMAIN: TEAM, CF_ACCESS_AUD: AUD, TEACHER_EMAILS: '' }, { CLASSROOM_ENABLED: 'true', CLASSROOM_DB: db, CF_ACCESS_TEAM_DOMAIN: TEAM, CF_ACCESS_AUD: AUD, TEACHER_EMAILS: 'teacher@example.edu,garbage' }]) {
-    const result = await handleRequest({ request: new Request(`${ORIGIN}/api/session`), env });
+    const result = await handleClassroomRequest({ request: new Request(`${ORIGIN}/api/session`), env });
     assert.equal(result.status, 503); assert.equal((await result.json()).enabled, false);
   }
   assert.equal(touched, false);
@@ -113,7 +137,7 @@ sqlTest('same-origin mutations and JSON are required, with private non-CORS resp
   const f = await fixture(t);
   for (const origin of [null, 'https://evil.example', 'null']) assert.equal((await f.request('/teacher/classes', { method: 'POST', token: f.teacher, origin, body: { name: 'X' } })).status, 403);
   assert.equal((await f.request('/teacher/classes', { method: 'POST', token: f.teacher, body: { name: 'X' }, headers: { 'Sec-Fetch-Site': 'cross-site' } })).status, 403);
-  const response = await handleRequest({ request: new Request(`${ORIGIN}/api/teacher/classes`, { method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'text/plain', 'Cf-Access-Jwt-Assertion': f.teacher }, body: '{}' }), env: f.env }, f.runtime);
+  const response = await handleClassroomRequest({ request: new Request(`${ORIGIN}/api/teacher/classes`, { method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'text/plain', 'Cf-Access-Jwt-Assertion': f.teacher }, body: '{}' }), env: f.env }, f.runtime);
   assert.equal(response.status, 415);
   const get = await f.request('/session');
   assert.equal(get.data.role, 'guest'); assert.equal(get.response.headers.get('Access-Control-Allow-Origin'), null);

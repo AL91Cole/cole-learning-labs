@@ -106,7 +106,7 @@ export function attachClassroomLab({ scenarioId, record, onRestore, storageKey =
       let data;
       try { data = await response.json(); } catch { throw new Error('The classroom service did not return a valid response. Export your report to keep a copy.'); }
       if (!response.ok) {
-        const error = new Error(response.status === 503 ? 'Connected classrooms are not configured yet. No draft was uploaded; independent labs and report exports remain available.' : response.status === 401 ? 'Your classroom session has ended. Export your report before returning to the classroom page.' : response.status === 409 ? `${data.message || 'The draft changed or your teacher paused classroom changes.'} Your local work is still here; refresh the classroom before trying again.` : data.message || data.error || 'Classroom request failed. Your local work is still available.');
+        const error = new Error(response.status === 503 ? 'Connected classrooms are unavailable during privacy and school approval review. No draft was uploaded; independent labs and report exports remain available.' : response.status === 401 ? 'Your classroom session has ended. Export your report before returning to the classroom page.' : response.status === 409 ? `${data.message || 'The draft changed or your teacher paused classroom changes.'} Your local work is still here; refresh the classroom before trying again.` : data.message || data.error || 'Classroom request failed. Your local work is still available.');
         error.status = response.status; throw error;
       }
       return data;

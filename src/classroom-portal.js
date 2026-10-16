@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261016-schools2';
+import { SCENARIOS } from './scenarios.js?release=20261016-privacy1';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';

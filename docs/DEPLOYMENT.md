@@ -1,6 +1,6 @@
 # Deploying Cole Learning Labs with Cloudflare Pages
 
-Cole Learning Labs uses static HTML, CSS, and browser ES modules served by Cloudflare Pages. GitHub remains the source repository. Independent labs and the fictional classroom demo need no database or live AI API. An optional Pages Functions classroom API is included but rejects requests until its teacher identity, database, and enablement settings are explicitly configured. No real teacher workspace, D1 database, or Access application is provisioned for this release. See [Classroom setup](CLASSROOM-SETUP.md) before activation.
+Cole Learning Labs uses static HTML, CSS, and browser ES modules served by Cloudflare Pages. GitHub remains the source repository. Independent labs and the fictional classroom demo need no database or live AI API. A prepared Pages Functions classroom implementation is included, but its actual production `onRequest` entry is hardcoded closed. It returns HTTP 503 `classroom_privacy_review_required` before configuration, D1, or identity-key retrieval. No teacher email, D1 database, or Access application is provisioned for this release. Environment settings cannot unlock the gate; see [Privacy release requirements](PRIVACY-RELEASE-GATE.md).
 
 ## Verified deployment status
 
@@ -15,7 +15,8 @@ Cole Learning Labs uses static HTML, CSS, and browser ES modules served by Cloud
 | Build command | `exit 0` |
 | Build output directory | `.` |
 | Root directory | Repository root |
-| Classroom environment | Unconfigured; real enrollment and server storage disabled |
+| Classroom production entry | Hardcoded privacy gate closed; 503 before settings, D1, or identity lookup; environment/email changes cannot unlock it |
+| Classroom provisioning | No first approved teacher email, D1 database, or Access application provisioned |
 | Initial deployment | Succeeded |
 | Pages address | [cole-learning-labs.pages.dev](https://cole-learning-labs.pages.dev) |
 | Canonical hostname | [www.colelearninglabs.com](https://www.colelearninglabs.com); Pages Active, SSL enabled, strict HTTPS request returned 200 |
@@ -99,7 +100,7 @@ Check the actual HTTPS preview and production response headers, module MIME type
 
 ### Release cache behavior
 
-The entry URL `src/app.js?release=20261016-schools2`, every internal source-module import, and every HTML script/stylesheet link use the same release query. This prevents returning browsers from combining a new entry with older modules or styles that were cached under the previous four-hour policy. Updating only the entry query is insufficient when dependencies add exports. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`, allowing modules to be stored but requiring revalidation before reuse. Check the response after future deployments.
+The entry URL `src/app.js?release=20261016-privacy1`, every internal source-module import, and every HTML script/stylesheet link use the same release query. This prevents returning browsers from combining a new entry with older modules or styles that were cached under the previous four-hour policy. Updating only the entry query is insufficient when dependencies add exports. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`, allowing modules to be stored but requiring revalidation before reuse. Check the response after future deployments.
 
 In the Cloudflare zone, **Caching → Configuration → Browser Cache TTL** is set to **Respect Existing Headers**. This preserves the application's cache policy; the default four-hour browser setting can override a shorter origin policy. The live HTTPS application response was verified with `max-age=0, must-revalidate` after saving this setting. Refreshing code does not require deleting saved lab progress. See [Cloudflare's browser cache guidance](https://developers.cloudflare.com/cache/how-to/edge-browser-cache-ttl/).
 
@@ -127,15 +128,19 @@ Progress belongs to a browser profile and origin: scheme, hostname, and port. Th
 
 Export needed reports before changing the classroom entry address or clearing site data; no automatic cross-origin transfer or report import is implied. Use a cache-only refresh when appropriate instead of deleting local storage that may contain student work.
 
-All deployed static files and the source repository are public. Keep credentials, private student records, and confidential school material out of commits and site assets. Independent practice does not upload lab reports. If a connected classroom is separately configured and explicitly joined, it can store assigned drafts, submitted snapshots, and manual grades in private D1 records. Those records do not belong in the repository or static assets.
+All deployed static files and the source repository are public. Keep credentials, private student records, and confidential school material out of commits and site assets. Independent practice does not upload lab reports. Only a future reviewed source release, followed by approved configuration and explicit enrollment, could permit assigned drafts, submitted snapshots, and manual grades in private D1 records. Production processing is blocked now. Those records must never appear in the repository, static assets, public previews, or fictional demo.
 
 ## Optional classroom deployment boundary
 
-`functions/api/[[path]].js` is compiled by Pages during deployment; there is no dependency installation or application build command. `_routes.json` routes only `/api/*` into Functions. With missing configuration, the API must return HTTP 503 with `enabled:false`, not a pretend successful save. Verify this against a real HTTPS preview after adding Functions.
+`functions/api/[[path]].js` is compiled by Pages during deployment; there is no dependency installation or application build command. `_routes.json` routes only `/api/*` into Functions. The actual production `onRequest` must return HTTP 503 with `enabled:false` and `error: classroom_privacy_review_required` regardless of environment settings. Verify this against the HTTPS preview and production release. It must not reach request-context settings, D1, or identity-key retrieval. A successful static deployment does not activate the prepared handler.
 
-Keep preview environments unconfigured and isolated from any future production database and teacher identity settings. A fictional demo is enough for public review. Before activation, follow [Classroom setup](CLASSROOM-SETUP.md), apply the migration, configure a narrowly scoped teacher Access application and explicit owner allowlist, and test fictional accounts across separate browser profiles. No client-only PIN or role setting grants teacher access.
+Keep the hardcoded gate closed in production and previews, and keep preview environments isolated from any future school database or teacher identity configuration. Teacher emails, `CLASSROOM_ENABLED=true`, D1 bindings, Access audiences, class codes, and user checkboxes do not constitute approval and cannot unlock this release.
 
-The prepared API denies access to expired classes after 90 days. Physical cleanup runs on later authorized teacher requests, throttled to one attempt per minute per database binding and worker isolate; it is not scheduled erasure. Provider backups have separate recovery periods. District requirements for retention, agreements, identity recovery, operational monitoring, and managed-device acceptance need review before collecting real records.
+Before considering any change, complete the evidence and blocking work in [Privacy release requirements](PRIVACY-RELEASE-GATE.md): applicable COPPA, New York §2-d/Part 121, FERPA and other jurisdiction review; required school agreements; necessary purposes and fields; provider restrictions; rights and incident processes; and verified security and retention operations. Record the review scope and findings. No completed legal certification or global approval exists. Only a reviewed source-code release may change the production boundary after that evidence is complete.
+
+[Classroom setup](CLASSROOM-SETUP.md) documents the separate prepared handler, technical configuration, and fictional integration tests. Those tests deliberately bypass the production entry for development coverage; they do not grant approval or enable enrollment. Continue testing the production gate separately, including hostile or apparently complete configuration that must still be rejected. No client-only PIN or role grants teacher access.
+
+The prepared API’s 90-day expiry is an experimental development default, not an approved necessary retention period. Later authorized-request cleanup, throttled per binding/isolate, is not scheduled erasure. Purpose/contract-specific retention, verified scheduled purging, early return/deletion, rights requests, backup/recovery expiry, and destruction evidence remain blocking gaps. Provider backups have separate recovery periods. Do not provision a database for real records or change the production gate until those operational requirements and the legal/district evidence have been reviewed.
 
 Use Node.js 22.13.0 or newer for local checks; the SQL tests use `node:sqlite` and this release was checked with Node 24. The local preview intentionally returns unavailable for classroom API calls. Chrome viewport testing does not establish actual Edge or school-network compatibility. No connected Edge browser or real managed Chromebook was available for this verification.
 
