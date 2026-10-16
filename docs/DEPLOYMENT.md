@@ -93,6 +93,8 @@ Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'
 
 Scripts and connections are limited to the site's own origin. Existing illustrated components use inline style attributes, so the style policy permits those; the script policy does not permit inline scripts or evaluation. The teacher route adds `frame-ancestors 'none'` and private/no-store caching. Public lab pages retain the option to be embedded by a school LMS. API responses set their own security and no-store headers because Pages `_headers` does not configure Functions responses. HSTS omits subdomains and preload.
 
+HTML responses at `/`, `/classroom`, `/school-it`, and `/teacher/*` include `Cache-Control: no-transform` to prevent Cloudflare's automatic performance-beacon injection. The Pages project's Web Analytics is disabled. A public-domain browser check exposed a proxy-injected beacon despite that project setting; the public HTML response must therefore be checked as well as the dashboard. This does not disable Cloudflare's normal hosting/security request metadata. [Cloudflare automatic setup and no-transform](https://developers.cloudflare.com/web-analytics/get-started/).
+
 Check the actual HTTPS preview and production response headers, module MIME types, navigation, and console before treating a release as verified. A security header is one control, not a school approval, filter override, or security certification. [Cloudflare headers documentation](https://developers.cloudflare.com/pages/configuration/headers/).
 
 ### Release cache behavior

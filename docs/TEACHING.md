@@ -90,7 +90,7 @@ Prepared classes expire 90 days after creation. Access is denied after expiry; a
 
 The responsive lab includes a PC close-up view, labeled component selector, section shortcuts, keyboard alternatives, larger text, and controls sized for touch. Inputs use at least 16px text. Use these supports alongside vocabulary help, paired discussion, extra time, or an oral explanation.
 
-Earlier Chrome layout checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. The current mission/classroom release passed 104 automated checks without skips and all 15 Chrome lab entry checks at 1366 × 768. A complete hardware repair, reload/resume, network feedback, optional hints preserving an unsaved setting, and the HTTPS fictional teacher review were exercised. The teacher review at 768 × 1024 had no page-level horizontal overflow and a 16px feedback field. **Microsoft Edge has not been tested in an actual connected Edge browser session.** Do not treat shared browser technology as an Edge test or a guarantee that a school-managed Chromebook behaves the same way.
+Earlier Chrome layout checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. The current mission/classroom release passed 108 automated checks without skips and all 15 Chrome lab entry checks at 1366 × 768. A complete hardware repair, reload/resume, network feedback, optional hints preserving an unsaved setting, and the HTTPS fictional teacher review were exercised. The teacher review at 768 × 1024 had no page-level horizontal overflow and a 16px feedback field. **Microsoft Edge has not been tested in an actual connected Edge browser session.** Do not treat shared browser technology as an Edge test or a guarantee that a school-managed Chromebook behaves the same way.
 
 Before a lesson:
 
@@ -111,3 +111,4 @@ Security activity is limited to the supplied fictional systems and actions. Comp
 Ask learners to describe the defensive lesson, explain the fix, retest both intended and denied behavior, and communicate uncertainty. For the authorization lab, a hidden link alone is not a permission check; the owner must retain access while another learner’s record is denied.
 
 AI activities use authored artifacts and visible local checks. No live AI model is contacted. The prompt checker has bounded rules and cannot assess every privacy or accuracy risk. Students remain responsible for comparing claims with sources and explaining their decisions.
+
