@@ -4,6 +4,17 @@ export const WORK_PREFIX = 'cole-learning-labs:v2';
 export const CLEAR_WORK_KEY = 'cole-learning-labs:clear-local-work';
 const ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
 
+// Initial simulation state exists as soon as a lab opens. Warn for learner work,
+// including clue/question-only investigations, rather than that default state.
+export function hasPrivateWork(record) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return false;
+  if (record.verified === true || record.closed === true) return true;
+  if (['plan', 'notes', 'reflection'].some(field => typeof record[field] === 'string' && record[field].trim().length > 0)) return true;
+  if (Array.isArray(record.evidence) && record.evidence.some(value => typeof value === 'string' && value.trim().length > 0)) return true;
+  if (Array.isArray(record.questions) && record.questions.some(value => Number.isInteger(value) && value >= 0)) return true;
+  return Array.isArray(record.events) && record.events.some(event => typeof event?.message === 'string' && event.message.trim().length > 0);
+}
+
 export function normalizeWorkCollection(scenarios, value) {
   const labs = value?.version === 2 && value.labs && typeof value.labs === 'object' && !Array.isArray(value.labs) ? value.labs : {};
   const clean = {};

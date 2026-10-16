@@ -1,12 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {SCENARIOS} from '../src/scenarios.js';
-import {createWorkStorage, normalizeWorkCollection, WORK_PREFIX, CLEAR_WORK_KEY} from '../src/local-work.js';
+import {createWorkStorage, normalizeWorkCollection, hasPrivateWork, WORK_PREFIX, CLEAR_WORK_KEY} from '../src/local-work.js';
+import {normalizeLabRecord} from '../src/records.js';
 const sample = () => ({version:2,labs:{'INC-101':{notes:'Fictional investigation notes',state:{}}}});
 function storage() {
   const data = new Map();
   return {data,get length(){return data.size;},key(i){return [...data.keys()][i]??null;},getItem(k){return data.get(k)??null;},setItem(k,v){data.set(k,v);},removeItem(k){data.delete(k);}};
 }
+test('clue-only and question-only investigations count as private work that should warn before leaving', () => {
+  for (const scenario of SCENARIOS) {
+    const clueOnly = normalizeLabRecord(scenario, { evidence: [scenario.clues[0].id] });
+    assert.equal(hasPrivateWork(clueOnly), true, `${scenario.id}: collected clue`);
+    const questionOnly = normalizeLabRecord(scenario, { questions: [0] });
+    assert.equal(hasPrivateWork(questionOnly), true, `${scenario.id}: first question at index zero`);
+  }
+});
+test('opening each default lab does not trigger a private-work warning', () => {
+  for (const scenario of SCENARIOS) {
+    const record = normalizeLabRecord(scenario);
+    assert.ok(Object.keys(record.state).length > 0, `${scenario.id}: nonempty initial simulation state`);
+    assert.equal(hasPrivateWork(record), false, `${scenario.id}: no learner actions yet`);
+  }
+});
+test('learner writing, action history, verification, and ticket delivery each count as private work', () => {
+  for (const record of [{ plan: 'A fictional explanation' }, { notes: 'Observed virtual power' }, { reflection: 'Check the original task' }, { events: [{ message: 'Moved virtual cable' }] }, { verified: true }, { closed: true }]) {
+    assert.equal(hasPrivateWork(record), true);
+  }
+});
+test('private-work detection is pure and ignores malformed, blank, and false completion values', () => {
+  const record = Object.freeze({ state: Object.freeze({ initialized: true }), evidence: Object.freeze([]), questions: Object.freeze([]), events: Object.freeze([]), plan: '', notes: '', reflection: '', verified: false, closed: false });
+  assert.equal(hasPrivateWork(record), false);
+  for (const value of [null, undefined, [], 'text', { evidence: [null, ' '] }, { questions: [null, -1, '0'] }, { events: [{ message: ' ' }] }, { notes: ' \n ', verified: 'true', closed: 'false' }]) assert.equal(hasPrivateWork(value), false);
+});
 test('private session is default and neither reads nor writes saved work automatically', () => {
   let calls=0;
   const manager=createWorkStorage({storage:{getItem(){calls++;throw Error();},setItem(){calls++;throw Error();}},key:WORK_PREFIX,scenarios:SCENARIOS});

@@ -4,26 +4,28 @@ import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces
 import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261016-student-privacy2';
 import {normalizeLabRecord} from './records.js?release=20261016-student-privacy2';
 import {privacyPage} from './privacy.js?release=20261016-student-privacy2';
-import {createWorkStorage,CLEAR_WORK_KEY} from './local-work.js?release=20261016-student-privacy2';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261016-student-privacy2';
 import {mountWorkControls,workStatus} from './work-controls.js?release=20261016-student-privacy2';
 
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
 const esc = value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const STORAGE_KEY=classroomStorageKey();
+let storageKey=classroomStorageKey();
 const tracks={hardware:{name:'Hardware & ServiceDesk',short:'Hardware',symbol:'◈',color:'teal',description:'Work the bench. Trace symptoms, inspect components, and bring a computer back to life.'},network:{name:'Networking & operating systems',short:'Networks & OS',symbol:'⌘',color:'blue',description:'Follow the connection. Work with addresses, permissions, networks, and system services.'},ai:{name:'AI literacy & audit',short:'AI & ethics',symbol:'✳',color:'violet',description:'Question the output. Protect privacy, check evidence, and examine the code.'},security:{name:'Ethical cybersecurity',short:'Cybersecurity',symbol:'◇',color:'amber',description:'Investigate responsibly. Triage an incident, reduce access, and patch a simulated weakness.'}};
 let store={version:2,labs:{}};
 let storageAvailable=true;
 let deviceStorage;try{deviceStorage=localStorage;}catch{storageAvailable=false;}
-const workStorage=createWorkStorage({storage:deviceStorage,key:STORAGE_KEY,scenarios:SCENARIOS});
+let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});
+let classroomSharingPaused=false;
 let reportCleanup=null;
 let currentLab=null,libraryTrack='all',libraryGrade='all',libraryQuery='',noticeTimer,classroomConnection=null;
 function save(){storageAvailable=workStorage.save(store);if(!storageAvailable)showNotice('Device saving is unavailable. Export your private work before leaving.');classroomConnection?.schedule();}
-function bindWorkPrivacy(s){mountWorkControls({host:$('#work-privacy'),manager:workStorage,getStore:()=>store,scenarioId:s.id,replaceStore:value=>{store=value;renderRoute();},onClear:cleared=>{classroomConnection?.dispose();classroomConnection=null;store={version:2,labs:{}};renderRoute();showNotice(cleared?'Local lab data cleared. Downloads and previously submitted records are separate.':'This page’s work is cleared, but device deletion could not be confirmed. Clear this site’s data in browser settings before sharing the profile.');},onChange:()=>{bindWorkPrivacy(s);const status=$('.save-status');if(status)status.textContent=workStatus(recordFor(s),workStorage);}});}
-window.addEventListener('storage',event=>{if(event.key===CLEAR_WORK_KEY&&event.newValue){workStorage.pause();classroomConnection?.dispose();classroomConnection=null;store={version:2,labs:{}};renderRoute();showNotice('Local lab data was cleared in another tab. This page has stopped saving and sharing.');}});
+function resetLocalSession(){workStorage.pause();classroomConnection?.dispose();classroomConnection=null;classroomSharingPaused=true;storageKey=WORK_PREFIX;workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});store={version:2,labs:{}};renderRoute();}
+function bindWorkPrivacy(s){mountWorkControls({host:$('#work-privacy'),manager:workStorage,getStore:()=>store,scenarioId:s.id,replaceStore:value=>{store=value;renderRoute();},onClear:cleared=>{resetLocalSession();showNotice(cleared?'Local lab data cleared. Downloads and previously submitted records are separate.':'This page’s work is cleared, but device deletion could not be confirmed. Clear this site’s data in browser settings before sharing the profile.');},onChange:()=>{bindWorkPrivacy(s);const status=$('.save-status');if(status)status.textContent=workStatus(recordFor(s),workStorage);}});}
+window.addEventListener('storage',event=>{if(event.key===CLEAR_WORK_KEY&&event.newValue){resetLocalSession();showNotice('Local lab data was cleared in another tab. This page has stopped saving and sharing.');}});
 window.addEventListener('pagehide',()=>{reportCleanup?.();reportCleanup=null;classroomConnection?.dispose();if(!workStorage.persistent){store={version:2,labs:{}};$('#main')?.replaceChildren();}});
 window.addEventListener('pageshow',event=>{if(event.persisted)renderRoute();});
-window.addEventListener('beforeunload',event=>{if(!workStorage.persistent&&Object.values(store.labs).some(r=>r.plan||r.notes||r.reflection||r.events?.length)){event.preventDefault();event.returnValue='';}});
+window.addEventListener('beforeunload',event=>{if(!workStorage.persistent&&Object.values(store.labs).some(hasPrivateWork)){event.preventDefault();event.returnValue='';}});
 function showNotice(message){const n=$('#notice');n.textContent=message;n.hidden=false;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>{n.hidden=true;},5000);}
 function recordFor(scenario){const existing=Object.hasOwn(store.labs,scenario.id)?store.labs[scenario.id]:null;return store.labs[scenario.id]=normalizeLabRecord(scenario,existing);}
 function countComplete(){return SCENARIOS.filter(s=>store.labs[s.id]?.closed===true).length;}
@@ -66,7 +68,7 @@ $('#reading-toggle').addEventListener('click',e=>{const on=$('.lab-shell').class
 $('#focus-toggle').addEventListener('click',e=>{const on=$('.lab-shell').classList.toggle('focus-mode');e.target.setAttribute('aria-pressed',String(on));e.target.textContent=on?'Show investigation panels':'Focus bench';});
 $$('[data-lab-section]').forEach(button=>button.addEventListener('click',()=>{const target=$(button.dataset.labSection);if(!target)return;if(!target.classList.contains('bench-column')){$('.lab-shell').classList.remove('focus-mode');$('#focus-toggle').setAttribute('aria-pressed','false');$('#focus-toggle').textContent='Focus bench';}target.focus({preventScroll:true});target.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}));
 $('#report-button').addEventListener('click',()=>openReport(s,r));$('#rubric-button').addEventListener('click',()=>openRubric(s));
-$('#reset-ticket').addEventListener('click',()=>{$('#reset-confirm').hidden=false;});$('#cancel-reset').addEventListener('click',()=>{$('#reset-confirm').hidden=true;});$('#confirm-reset').addEventListener('click',()=>{delete store.labs[s.id];save();renderRoute();});$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());refreshStatus();classroomConnection=attachClassroomLab({scenarioId:s.id,record:r,storageKey:STORAGE_KEY,onRestore:work=>{store.labs[s.id]=normalizeLabRecord(s,work);save();renderRoute();}});
+$('#reset-ticket').addEventListener('click',()=>{$('#reset-confirm').hidden=false;});$('#cancel-reset').addEventListener('click',()=>{$('#reset-confirm').hidden=true;});$('#confirm-reset').addEventListener('click',()=>{delete store.labs[s.id];save();renderRoute();});$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());refreshStatus();classroomConnection=classroomSharingPaused?null:attachClassroomLab({scenarioId:s.id,record:r,storageKey,onRestore:work=>{store.labs[s.id]=normalizeLabRecord(s,work);save();renderRoute();}});
 }
 function reportText(s,r){return `COLE LEARNING LABS — INVESTIGATION REPORT\n${s.id} · ${s.title}\nGrades ${s.grade} · ${tracks[s.track].name}\nStatus: ${r.closed?'DELIVERED':r.verified?'TECHNICALLY VERIFIED — TICKET OPEN':'IN PROGRESS'}\n\nORIGINAL TASK\n${s.goal}\n\nEVIDENCE\n${r.evidence.map(id=>'- '+(s.clues.find(c=>c.id===id)?.text||id)).join('\n')||'No evidence recorded.'}\n\nWORKING EXPLANATION\n${r.plan||'Not recorded.'}\n\nTEST NOTES\n${r.notes||'Not recorded.'}\n\nACTION LOG\n${r.events.map(e=>'- '+e.message).join('\n')||'No actions recorded.'}\n\nREFLECTION\n${r.reflection||'Not recorded.'}\n\nThis is a simulated learning activity. Private-session work stays on this page unless exported or explicitly saved on this device. If you explicitly join an enabled classroom, assigned lab drafts and submitted snapshots may be shared with that teacher. Technical progress is student-reported; teachers review and grade submissions.\n`;}
 function openReport(s,r){
