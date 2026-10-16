@@ -1,5 +1,5 @@
-import { normalizeHardwareState } from './hardware.js?release=20261016-student-privacy2';
-import { normalizeWorkspaceState } from './workspaces.js?release=20261016-student-privacy2';
+import { normalizeHardwareState } from './hardware.js?release=20261016-student-guide3';
+import { normalizeWorkspaceState } from './workspaces.js?release=20261016-student-guide3';
 
 // Local storage and uploaded drafts are data, never trusted HTML or object shapes.
 export function normalizeLabRecord(scenario, value) {

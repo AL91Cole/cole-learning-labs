@@ -23,3 +23,7 @@ dist/
 *.cllreport
 student-records/
 classroom-exports/
+
+# Private educator assessments belong outside this public repository.
+private-teacher-materials/
+teacher-rubrics/
