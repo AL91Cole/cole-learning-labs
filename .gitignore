@@ -6,3 +6,15 @@ node_modules/
 Thumbs.db
 *.log
 coverage/
+dist/
+.publish-stage-*/
+.wrangler/
+.dev.vars
+.dev.vars.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.db
