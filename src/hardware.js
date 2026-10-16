@@ -23,7 +23,7 @@ const PARTS = [
   ['front', 'Front panel lead', 'Case power switch → F_PANEL', 'connect-front-panel']
 ];
 
-const clampCase = id => CASES[id] ? id : 'INC-101';
+const clampCase = id => typeof id === 'string' && Object.hasOwn(CASES, id) ? id : 'INC-101';
 const safetyReady = s => !s.pcOn && !s.acConnected;
 const hardwareReady = s => s.boardInstalled && s.cpuInstalled && s.coolerInstalled && s.ramSeated && s.gpuInstalled && s.atxConnected && s.cpuPowerConnected && s.gpuPowerConnected && s.frontPanelConnected && s.originalDriveInstalled && s.sataDataConnected && s.sataPowerConnected;
 const displayReady = s => s.pcOn && s.booted && s.gpuInstalled && s.videoPort === 'gpu';
@@ -46,6 +46,23 @@ export function initialHardwareState(caseId = 'INC-101') {
     view: 'bench', selectedPart: CASES[id].select,
     evidence: [], actions: [], bootCount: 0
   };
+}
+
+/** Treat browser saves as untrusted data; retain only the documented model shape. */
+export function normalizeHardwareState(caseId, savedState) {
+  const state = initialHardwareState(caseId);
+  if (!savedState || typeof savedState !== 'object' || Array.isArray(savedState) || ![Object.prototype, null].includes(Object.getPrototypeOf(savedState))) return state;
+  for (const key of Object.keys(state)) {
+    if (typeof state[key] === 'boolean' && Object.hasOwn(savedState, key) && typeof savedState[key] === 'boolean') state[key] = savedState[key];
+  }
+  for (const [key, allowed] of Object.entries({ videoPort:['board','gpu'], selectedDrive:['sata','nvme'], view:['bench','internals','rear','display'], selectedPart:Object.keys(INSPECTIONS) })) {
+    if (Object.hasOwn(savedState, key) && allowed.includes(savedState[key])) state[key] = savedState[key];
+  }
+  if (Object.hasOwn(savedState, 'bootCount') && Number.isSafeInteger(savedState.bootCount) && savedState.bootCount >= 0) state.bootCount = Math.min(savedState.bootCount, 1000000);
+  if (Object.hasOwn(savedState, 'evidence') && Array.isArray(savedState.evidence)) state.evidence = [...new Set(savedState.evidence.filter(part => typeof part === 'string' && Object.hasOwn(INSPECTIONS, part)))].slice(0, Object.keys(INSPECTIONS).length);
+  const actions = new Set(['power-off','unplug','plug-in','boot','video-gpu','video-board','open-document','close-document','seat-ram','unseat-ram','disconnect-sata','install-original','choose-nvme',...PARTS.map(part => part[3]),...Object.keys(INSPECTIONS).map(part => `inspect-${part}`)]);
+  if (Object.hasOwn(savedState, 'actions') && Array.isArray(savedState.actions)) state.actions = savedState.actions.filter(action => typeof action === 'string' && actions.has(action)).slice(-250);
+  return state;
 }
 
 function failureReason(s) {
@@ -80,7 +97,8 @@ const INSPECTIONS = {
 
 export function applyHardwareAction(caseId, state, action) {
   const id = clampCase(caseId);
-  const s = { ...state, evidence: [...(state.evidence || [])], actions: [...(state.actions || [])] };
+  const s = normalizeHardwareState(id, state);
+  if (typeof action !== 'string') return result(s, 'Select a documented workbench action.', 'warning');
   const record = (message, kind = 'info') => { s.actions.push(action); return result(s, message, kind); };
   if (action.startsWith('view-')) {
     const view = action.slice(5);
@@ -89,7 +107,7 @@ export function applyHardwareAction(caseId, state, action) {
   }
   if (action.startsWith('inspect-')) {
     const part = action.slice(8);
-    if (!INSPECTIONS[part]) return result(s, 'Choose a labeled part to inspect.');
+    if (!Object.hasOwn(INSPECTIONS, part)) return result(s, 'Choose a labeled part to inspect.');
     s.selectedPart = part;
     if (!s.evidence.includes(part)) s.evidence.push(part);
     return record(INSPECTIONS[part](s));
@@ -117,7 +135,7 @@ export function applyHardwareAction(caseId, state, action) {
   }
   if (action === 'video-gpu' || action === 'video-board') {
     s.videoPort = action === 'video-gpu' ? 'gpu' : 'board'; s.documentOpened = false;
-    if (s.videoPort === 'gpu' && !s.gpuInstalled) return result({ ...s, videoPort: state.videoPort }, 'Install the graphics card before attaching the monitor to its output.', 'warning');
+    if (s.videoPort === 'gpu' && !s.gpuInstalled) return result({ ...s, videoPort: normalizeHardwareState(id, state).videoPort }, 'Install the graphics card before attaching the monitor to its output.', 'warning');
     return record(s.videoPort === 'gpu' ? 'Monitor cable connected to the dedicated graphics card. Check the display and the original lesson task.' : 'Monitor cable connected to the motherboard. This workstation’s upper video output is inactive.', s.videoPort === 'gpu' ? 'success' : 'warning');
   }
   if (action === 'open-document') {
@@ -163,6 +181,7 @@ export function applyHardwareAction(caseId, state, action) {
 }
 
 export function verifyHardware(caseId, state) {
+  state = normalizeHardwareState(caseId, state);
   if (!hardwareReady(state) || !displayReady(state)) return { ok: false, message: !state.acConnected ? 'AC is disconnected. Reconnect power and test startup.' : !state.pcOn ? 'The PC is off. Start it and verify the desktop.' : failureReason(state) || 'The PC is running, but the display connection still needs attention.' };
   if (!state.documentOpened) return { ok: false, message: 'Fixed, but not yet delivered: the desktop is restored. Open Lesson_Practice_File.docx to confirm the original classroom task.' };
   return { ok: true, message: 'Fixed and delivered: the PC starts, the monitor works, and the original lesson document opens with the classroom files preserved.' };
@@ -221,10 +240,87 @@ function displaySvg(s) { return `<svg class="hw-svg hw-svg-display" viewBox="0 0
 const installedFor = (s, part) => ({ board:s.boardInstalled,cpu:s.cpuInstalled,cooler:s.coolerInstalled,ram:s.ramSeated,gpu:s.gpuInstalled,storage:s.originalDriveInstalled,atx:s.atxConnected,eps:s.cpuPowerConnected,'gpu-power':s.gpuPowerConnected,sata:s.sataDataConnected,'sata-power':s.sataPowerConnected,front:s.frontPanelConnected })[part];
 function btn(action,label, extra='') { return `<button type="button" class="hw-action" data-hw-action="${action}" ${extra}>${label}</button>`; }
 
+// These checkpoints describe the present equipment state, rather than awarding points for clicks.
+function hardwareMission(id, s) {
+  const fitted = PARTS.filter(part => installedFor(s, part[0])).length;
+  const repaired = hardwareReady(s) && s.videoPort === 'gpu' && (id !== 'INC-102' || s.acConnected);
+  const desktop = repaired && displayReady(s);
+  const delivered = desktop && s.documentOpened;
+  const stage = !repaired ? 'repair' : !desktop ? 'startup' : !delivered ? 'delivery' : 'confirmed';
+  const titles = {
+    'INC-101': 'Bring the lesson back into view.',
+    'INC-102': 'Find the break in the power path.',
+    'INC-103': 'Get past the memory check.',
+    'INC-104': 'Find the original classroom desktop.',
+    'INC-105': 'Choose the connection that fits.',
+    'INC-106': 'Build a workstation ready for class.'
+  };
+  let feedback, action, label;
+  if (stage === 'confirmed') {
+    feedback = 'The original lesson file is open. Use this result in your ticket report: explain the cause, your change, and what proved it worked.';
+    action = 'inspect-monitor'; label = 'Review the restored display';
+  } else if (stage === 'delivery') {
+    feedback = 'The classroom desktop is back. Now prove that the customer can complete the original lesson task.';
+    action = 'open-document'; label = 'Open the original lesson file';
+  } else if (stage === 'startup') {
+    feedback = !s.acConnected ? 'The components and video route are ready. Reconnect AC, start the PC, and watch what the startup test reveals.' : 'The component connections are ready. Run a startup test and confirm that the original classroom desktop appears.';
+    action = !s.acConnected ? 'inspect-power' : 'boot'; label = !s.acConnected ? 'Check the power state' : 'Run a startup test';
+  } else {
+    feedback = id === 'INC-106' ? `${fitted} of ${PARTS.length} compatible parts and cables fitted. Build from the motherboard outward, then check the monitor connection.` : id === 'INC-101' ? 'The tower is running, but the lesson is out of view. Follow the signal path before changing a component.' : id === 'INC-102' ? 'A working power button needs an unbroken power path. Inspect that path before replacing parts.' : safetyReady(s) ? 'The virtual bench is safe. Compare what you found with the component requirements, then make one change you can explain.' : s.pcOn ? 'Inspect the evidence first. Shut down and disconnect AC before changing anything inside the virtual PC.' : 'The PC is off, but AC is still connected. Internal changes stay locked until both safety conditions are met.';
+    action = `inspect-${CASES[id].select}`; label = id === 'INC-101' ? 'Inspect the video route' : id === 'INC-102' ? 'Inspect the power path' : id === 'INC-103' ? 'Inspect the memory' : id === 'INC-106' ? 'Read the board specifications' : 'Inspect the storage';
+  }
+  return { title: titles[id], stage, repaired, desktop, delivered, feedback, action, label, fitted, completed: [repaired, desktop, delivered].filter(Boolean).length };
+}
+
+function hardwareCoach(id, s, mission) {
+  const safeNext = (action, label) => s.pcOn ? ['power-off', 'Power off the virtual PC', 'Start with a controlled shutdown. Then disconnect AC before making an internal change.'] : s.acConnected ? ['unplug', 'Disconnect the virtual AC cord', 'The PC is off; disconnect its AC cord next. Only then is the internal workbench safe.'] : [action, label, 'Both safety conditions are met. Make this one change, then test the result.'];
+  let hints, next;
+  if (mission.stage === 'confirmed') {
+    hints = ['Look back at the original symptom. What evidence now shows a different result?', 'A useful handover names the cause, the repair, and the customer task you tested.', 'Keep the lesson result in your report and complete your reflection before delivering the ticket.'];
+    next = ['inspect-monitor', 'Review delivery evidence'];
+  } else if (mission.stage === 'delivery') {
+    hints = ['A successful boot shows that the system starts. What was the person actually trying to do?', 'The requested proof is a working display and the existing lesson document, not a replacement operating system.', 'Open Lesson_Practice_File.docx from the original classroom drive.'];
+    next = ['open-document', 'Open the original lesson file'];
+  } else if (mission.stage === 'startup') {
+    hints = ['A component can look connected without proving that the whole system works. Which test would show the result?', 'Reconnect AC after internal work, start the computer, and distinguish a passed POST check from a loaded desktop.', !s.acConnected ? 'The virtual AC cord is still disconnected. Reconnect it, then use Power on / test.' : 'Use Power on / test. Check the monitor before claiming that the customer’s task is restored.'];
+    next = !s.acConnected ? ['plug-in', 'Connect virtual AC'] : ['boot', 'Run the startup test'];
+  } else if (id === 'INC-101') {
+    hints = ['A powered monitor can still have no picture. Trace where its video signal comes from.', 'This workstation has a dedicated graphics card. Compare its lower expansion-slot outputs with the upper motherboard I/O.', 'Move the virtual monitor cable to the graphics card output, then inspect the display.'];
+    next = ['video-gpu', 'Connect monitor to graphics card'];
+  } else if (id === 'INC-102') {
+    hints = ['Trace power from the outside toward the motherboard. Start with the simplest missing link.', 'Inspect the rear AC inlet. A disconnected mains cord can explain an otherwise healthy computer that never starts.', 'Connect the virtual AC cord, then use Power on / test.'];
+    next = ['plug-in', 'Connect virtual AC'];
+  } else if (id === 'INC-103') {
+    hints = ['The computer reaches a memory check and stops. Look closely at the DIMM and its retention clips.', 'A DDR4 module must match the keyed notch and sit evenly. Both clips should close after seating.', 'Power off, disconnect AC, then reseat the DDR4 memory. Reconnect power and test startup.'];
+    next = safeNext('seat-ram', 'Reseat the DDR4 memory');
+  } else if (id === 'INC-104') {
+    hints = ['“No boot device” does not prove that the files were erased. Check how the existing drive communicates.', 'A SATA SSD needs two connections: a narrow data cable to the motherboard and a wider power lead from the PSU.', 'Power off and disconnect AC. Reconnect the SATA data cable between the original SSD and motherboard SATA_1.'];
+    next = safeNext('connect-sata', 'Connect the SATA data cable');
+  } else if (id === 'INC-105') {
+    hints = ['Capacity alone does not make drives interchangeable. Compare the board’s supported interface with the spare drive.', 'The board has SATA ports and no M.2 NVMe slot. Preserve the original drive containing the classroom OS and files.', 'Safely reinstall the original 2.5-inch SATA SSD, attach both data and power, then test the original OS.'];
+    next = safeNext(!s.originalDriveInstalled ? 'install-original' : !s.sataDataConnected ? 'connect-sata' : 'connect-sata-power', !s.originalDriveInstalled ? 'Fit the original SATA SSD' : !s.sataDataConnected ? 'Connect SATA data' : 'Connect SATA power');
+  } else {
+    const missing = PARTS.find(part => !installedFor(s, part[0]));
+    hints = ['Start with the board and its supported connectors. Build the system in a sequence you can explain.', 'Fit the processor before its cooler. The motherboard and CPU use separate power plugs; the SATA drive needs separate data and power.', missing ? `Your next unfitted part is ${missing[1]}. ${missing[2]}. Use its Install button or drag it onto the bench.` : 'All listed parts and cables are fitted. Connect the monitor to the dedicated graphics output before the startup test.'];
+    next = missing ? safeNext(missing[3], `Fit ${missing[1]}`) : ['video-gpu', 'Connect the monitor to the GPU'];
+  }
+  if (next[2]) hints[2] += ` ${next[2]}`;
+  return `<details class="hw-coach" data-hw-coach-stage="${mission.stage}" data-hw-coach-level="1"><summary><span aria-hidden="true">?</span> Need a nudge? Open the coach</summary><div class="hw-coach-body"><p><strong>Look closer.</strong> ${hints[0]}</p><details data-hw-coach-level="2"><summary>Show a more specific hint</summary><div><p><strong>Connect the evidence.</strong> ${hints[1]}</p><details data-hw-coach-level="3"><summary>Show the next move</summary><div><p>${hints[2]}</p>${btn(next[0], next[1])}</div></details></div></details></div></details>`;
+}
+
+function renderHardwareMission(id, s, mission) {
+  const checkpoints = [[mission.repaired, id === 'INC-106' ? 'Assemble & connect' : 'Resolve the hardware fault'], [mission.desktop, 'Reach the classroom desktop'], [mission.delivered, 'Open the original lesson file']];
+  const current = checkpoints.findIndex(([complete]) => !complete);
+  return `<section class="hw-mission" aria-label="Bench mission and checkpoints"><div class="hw-mission-heading"><div><span class="hw-eyebrow">YOUR BENCH MISSION</span><h3>${mission.title}</h3></div><span class="hw-mission-count"><strong>${mission.completed}</strong> / 3 checkpoints</span></div><progress value="${mission.completed}" max="3" aria-label="Current bench checkpoints completed">${mission.completed} of 3</progress><ol class="hw-checkpoints">${checkpoints.map(([complete, label], index) => `<li class="${complete ? 'hw-checkpoint-done' : index === current ? 'hw-checkpoint-current' : ''}" ${!complete && index === current ? 'aria-current="step"' : ''}><span aria-hidden="true">${complete ? '✓' : index + 1}</span><div><strong>${label}</strong><small>${complete ? 'Confirmed in the current state' : index === current ? 'Current objective' : 'Next checkpoint'}</small></div></li>`).join('')}</ol><div class="hw-mission-next"><p>${mission.feedback}</p>${btn(mission.action,mission.label)}</div>${hardwareCoach(id, s, mission)}</section>`;
+}
+
 export function renderHardware(root, caseId, state, onAction) {
+  state = normalizeHardwareState(caseId, state);
   const activeControl = root.ownerDocument?.activeElement;
   const restoreAction = root.contains(activeControl) ? activeControl.dataset?.hwAction : null;
   const restoreComponentSelect = root.contains(activeControl) && activeControl.matches?.('[data-hw-inspect]');
+  const previousCoachStage = root.querySelector('.hw-coach')?.dataset.hwCoachStage;
+  const openCoachLevels = [...root.querySelectorAll('.hw-coach[open], .hw-coach details[open]')].map(details => details.dataset.hwCoachLevel);
   const id = clampCase(caseId), s = state, selection = INSPECTIONS[s.selectedPart] ? s.selectedPart : 'board';
   const safe = safetyReady(s), ready = displayReady(s);
   const fix = hardwareReady(s) && ready;
@@ -236,8 +332,10 @@ export function renderHardware(root, caseId, state, onAction) {
   if (id === 'INC-105') repairs += btn('choose-nvme','Check spare M.2 NVMe module') + btn('install-original',s.originalDriveInstalled?'✓ Original SATA drive fitted':'Reinstall original SATA OS drive') + btn('connect-sata','Connect SATA data') + btn('connect-sata-power','Connect SATA power');
   if (id === 'INC-102') repairs += `<p class="hw-inline-note">Follow the power chain: outlet → AC cord → PSU → motherboard. Inspect the mains inlet in the rear view.</p>`;
   const completeParts = PARTS.filter(p=>installedFor(s,p[0])).length;
+  const mission = hardwareMission(id, s);
   root.innerHTML = `<section class="hw-workbench" aria-label="Interactive hardware workbench">
     <div class="hw-status-bar"><span class="hw-status ${s.pcOn?'hw-status-on':''}"><i></i>PC ${s.pcOn?'ON':'OFF'}</span><span class="hw-status ${s.acConnected?'hw-status-live':'hw-status-safe'}"><i></i>AC ${s.acConnected?'CONNECTED':'DISCONNECTED'}</span><span class="hw-work-safety ${safe?'hw-work-safe':''}">${safe?'✓ Safe to change virtual components':'Power off + unplug before internal work'}</span></div>
+    ${renderHardwareMission(id,s,mission)}
     <div class="hw-power-controls">${btn('power-off','① Power off')}${btn('unplug','② Unplug AC')}${btn('plug-in','③ Connect AC')}${btn('boot','④ Power on / test')}</div>
     <div class="hw-view-tabs" role="tablist" aria-label="Workbench view">${[['bench','Workbench'],['internals','PC close-up'],['rear','Rear I/O'],['display','Monitor']].map(([v,l])=>`<button type="button" role="tab" tabindex="${s.view===v?'0':'-1'}" aria-selected="${s.view===v}" data-hw-action="view-${v}">${l}</button>`).join('')}<span class="hw-bench-tag">VIRTUAL BENCH</span></div>
     <div class="hw-canvas" ${id==='INC-106'?'data-hw-dropzone="true"':''}>${s.view==='rear'?rearSvg(s):s.view==='display'?displaySvg(s):benchSvg(s,s.view==='internals')}${id==='INC-106'?'<span class="hw-drop-hint">Use an Install button, or drag a part onto the bench.</span>':''}</div>
@@ -269,6 +367,11 @@ export function renderHardware(root, caseId, state, onAction) {
   root.ondragstart = event => { const part = event.target.closest('[data-hw-drag]'); if (part && event.dataTransfer) { event.dataTransfer.setData('text/plain', part.dataset.hwDrag); event.dataTransfer.effectAllowed = 'copy'; } };
   root.ondragover = event => { if (event.target.closest('[data-hw-dropzone]')) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } };
   root.ondrop = event => { if (event.target.closest('[data-hw-dropzone]')) { event.preventDefault(); const action = event.dataTransfer.getData('text/plain'); if (PARTS.some(p=>p[3]===action)) onAction(action); } };
+  if (previousCoachStage === mission.stage) {
+    for (const details of root.querySelectorAll('.hw-coach, .hw-coach details')) {
+      if (openCoachLevels.includes(details.dataset.hwCoachLevel)) details.open = true;
+    }
+  }
   if (restoreComponentSelect) root.querySelector('[data-hw-inspect]')?.focus({preventScroll:true});
   else if (restoreAction) {
     const controls = [...root.querySelectorAll('[data-hw-action]')];

@@ -72,3 +72,74 @@
 }
 /* ViewBox letterboxing can reveal off-crop artwork; omit bench annotations in the PC close-up. */
 .hw-svg-closeup .hw-bench-annotation { display: none; }
+
+/* State-based missions and optional coaching; the equipment model remains the source of truth. */
+.hw-mission { padding: 17px 18px 0; border-bottom: 1px solid #2b4354; background: linear-gradient(125deg, #142d35, #111f2d 72%); }
+.hw-mission-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.hw-mission-heading > div { min-width: 0; }
+.hw-mission-heading h3 { margin: 3px 0 10px; color: #e7f2f6; font-size: 19px; font-weight: 650; line-height: 1.35; }
+.hw-mission-count { white-space: nowrap; color: #9cb8c6; font: 500 11px ui-monospace, Consolas, monospace; }
+.hw-mission-count strong { font-size: 23px; color: #82e1c8; font-weight: 600; }
+.hw-mission progress { display: block; width: 100%; height: 5px; margin: 0 0 15px; overflow: hidden; border: 0; border-radius: 8px; color: #55d2af; background: #263d4a; accent-color: #55d2af; }
+.hw-mission progress::-webkit-progress-bar { background: #263d4a; border-radius: 8px; }
+.hw-mission progress::-webkit-progress-value { background: #55d2af; border-radius: 8px; }
+.hw-mission progress::-moz-progress-bar { background: #55d2af; border-radius: 8px; }
+.hw-checkpoints { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; padding: 0; margin: 0 0 13px; list-style: none; }
+.hw-checkpoints li { display: flex; align-items: flex-start; gap: 9px; padding: 11px 9px; border: 1px solid #2c4353; border-radius: 7px; background: #10212f; min-width: 0; }
+.hw-checkpoints li > span { display: grid; place-items: center; width: 23px; height: 23px; flex-shrink: 0; border: 1px solid #466173; border-radius: 50%; color: #8ea7b7; font: 600 11px ui-monospace, Consolas, monospace; }
+.hw-checkpoints li > div { min-width: 0; }
+.hw-checkpoints strong, .hw-checkpoints small { display: block; }
+.hw-checkpoints strong { color: #b5cad7; font-size: 12px; font-weight: 600; line-height: 1.5; }
+.hw-checkpoints small { margin-top: 3px; color: #7997aa; font-size: 10px; line-height: 1.4; }
+.hw-checkpoints .hw-checkpoint-current { border-color: #537968; background: #183a35; }
+.hw-checkpoint-current > span { color: #d2eddf !important; border-color: #7fae91 !important; }
+.hw-checkpoint-current strong { color: #e3efe9; }
+.hw-checkpoint-current small { color: #a2c5b8; }
+.hw-checkpoints .hw-checkpoint-done { border-color: #316d59; background: #15392f; }
+.hw-checkpoint-done > span { background: #4ec49a; color: #0d2c25 !important; border-color: #4ec49a !important; }
+.hw-checkpoint-done strong { color: #9fe5cb; }
+.hw-mission-next { display: flex; align-items: center; gap: 17px; justify-content: space-between; margin-bottom: 13px; }
+.hw-mission-next p { margin: 0; color: #adc6d1; font-size: 13px; line-height: 1.65; max-width: 650px; }
+.hw-mission-next .hw-action { flex-shrink: 0; max-width: 260px; background: #1c3a45; border-color: #4b7885; color: #c0e8ed; }
+.hw-coach { border-top: 1px solid #35515c; color: #b0c6d2; }
+.hw-coach > summary { display: flex; align-items: center; gap: 9px; list-style: none; padding: 11px 0; color: #a8dcd3; font-size: 13px; font-weight: 600; }
+.hw-coach > summary::-webkit-details-marker { display: none; }
+.hw-coach > summary::after { content: '+'; margin-left: auto; color: #75d6c1; font-size: 21px; font-weight: 400; line-height: 1; }
+.hw-coach[open] > summary::after { content: '−'; }
+.hw-coach > summary > span { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid #4b8d80; border-radius: 50%; font-size: 12px; }
+.hw-coach summary { min-height: 44px; box-sizing: border-box; cursor: pointer; touch-action: manipulation; }
+.hw-coach summary:focus-visible { outline: 3px solid #8af3dd; outline-offset: 2px; border-radius: 4px; }
+.hw-coach-body { padding: 0 0 15px; }
+.hw-coach-body p { margin: 4px 0 12px; color: #b7cbd7; font-size: 13px; line-height: 1.75; }
+.hw-coach-body strong { color: #d6e9ec; font-weight: 650; }
+.hw-coach details { margin-top: 6px; padding-left: 14px; border-left: 2px solid #386659; }
+.hw-coach details summary { padding: 10px 0 10px 4px; color: #92d6c7; font-size: 13px; font-weight: 600; }
+.hw-coach details > div { padding: 0 0 2px 4px; }
+.hw-coach details .hw-action { background: #1d5044; border-color: #418e76; color: #d2f3e7; margin: 0 0 5px; }
+@container (max-width: 680px) {
+  .hw-mission { padding: 14px 12px 0; }
+  .hw-mission-heading h3 { font-size: 17px; }
+  .hw-mission-count { font-size: 10px; }
+  .hw-checkpoints { gap: 6px; }
+  .hw-checkpoints li { padding: 9px 7px; gap: 6px; }
+  .hw-checkpoints strong { font-size: 11px; }
+  .hw-checkpoints small { font-size: 9px; }
+  .hw-mission-next { flex-wrap: wrap; gap: 9px; }
+  .hw-mission-next .hw-action { max-width: none; }
+}
+@media (max-width: 540px) {
+  .hw-mission { padding: 14px 12px 0; }
+  .hw-mission-heading { align-items: flex-start; gap: 10px; }
+  .hw-mission-heading h3 { font-size: 17px; }
+  .hw-mission-count { max-width: 74px; white-space: normal; font-size: 10px; text-align: right; }
+  .hw-checkpoints { grid-template-columns: 1fr; gap: 6px; }
+  .hw-checkpoints li { align-items: center; padding: 8px 10px; }
+  .hw-checkpoints li > div { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 10px; }
+  .hw-checkpoints strong { font-size: 12px; }
+  .hw-checkpoints small { font-size: 10px; max-width: 110px; margin: 0; text-align: right; }
+  .hw-mission-next { flex-direction: column; align-items: stretch; gap: 10px; }
+  .hw-mission-next .hw-action { max-width: none; }
+}
+@media (pointer: coarse) {
+  .hw-coach summary { min-height: 48px; }
+}

@@ -95,3 +95,37 @@
   .ws-mail{min-height:72px}
   .ws-check,.ws-log-select{min-height:48px}
 }
+
+/* Progress reflects the current test, while written clues stay optional. */
+.ws-mission{background:linear-gradient(120deg,#123a40,#152b3e);border:1px solid #38606b;border-radius:10px;padding:20px;margin:0 0 20px;min-width:0}
+.ws-mission-top{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0}
+.ws-mission-top .ws-section-label{display:block;font-size:.64rem;margin:0 0 7px;color:#7edbca;line-height:1.5}
+.ws-mission h3{margin:0;color:#f1fcfb;font-size:1.15rem;line-height:1.4}
+.ws-mission-count{color:#b9e1dc;font:600 .73rem/1.6 ui-monospace,monospace;text-align:right;max-width:48%;overflow-wrap:anywhere}
+.ws-mission-progress{display:block;appearance:none;width:100%;height:7px;margin:15px 0;background:#091d2b;border:0;border-radius:5px;overflow:hidden;accent-color:#65d3b8}
+.ws-mission-progress::-webkit-progress-bar{background:#091d2b;border-radius:5px}
+.ws-mission-progress::-webkit-progress-value{background:#65d3b8;border-radius:5px}
+.ws-mission-progress::-moz-progress-bar{background:#65d3b8;border-radius:5px}
+.ws-mission-next{font-size:.86rem;line-height:1.75;color:#bfd7df;margin:0}
+.ws-mission-next b{color:#e6f8f5}
+.ws-coach{border-top:1px solid #355663;margin-top:15px;padding-top:4px}
+.ws-coach summary{display:list-item;list-style-position:inside;color:#b9eddf;cursor:pointer;font-size:.84rem;line-height:1.65;min-height:46px;padding:12px 1px;touch-action:manipulation;box-sizing:border-box}
+.ws-coach summary:focus-visible{outline:2px solid #8cebd9;outline-offset:3px;border-radius:3px}
+.ws-coach>summary>span{font-size:.66rem;color:#8caeb9;margin-left:9px;white-space:nowrap}
+.ws-coach-content{padding:0 0 5px 16px;border-left:2px solid #3e9a8a;margin:8px 0 10px 3px}
+.ws-coach-content p{font-size:.87rem;line-height:1.8;color:#bfdae0;margin:6px 0 16px}
+.ws-coach-content p>b{display:block;color:#7ddcc3;font-size:.75rem;line-height:1.6;margin-bottom:5px}
+.ws-coach-content details{border-top:1px solid #31515b}
+.ws-coach-content details details{margin-left:12px}
+.ws-coach-content>small{display:block;border-top:1px solid #31515b;padding-top:12px;margin-top:10px;font-size:.73rem;line-height:1.7;color:#92b5c0}
+.larger-reading .ws-mission-next,.larger-reading .ws-coach summary,.larger-reading .ws-coach-content p{font-size:1rem}
+@container workspace (max-width:520px){
+  .ws-mission{padding:16px;margin-bottom:16px}
+  .ws-mission-top{gap:12px}
+  .ws-mission h3{font-size:1.05rem}
+  .ws-mission-count{font-size:.7rem}
+  .ws-coach>summary>span{display:block;margin-left:20px;margin-top:2px}
+  .ws-coach-content{padding-left:12px}
+  .ws-coach-content details details{margin-left:8px}
+}
+@media (pointer:coarse){.ws-coach summary{min-height:48px}}

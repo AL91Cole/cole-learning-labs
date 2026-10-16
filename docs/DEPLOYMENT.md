@@ -1,6 +1,6 @@
 # Deploying Cole Learning Labs with Cloudflare Pages
 
-Cole Learning Labs is static HTML, CSS, and browser ES modules. Cloudflare Pages serves the files directly from the repository; GitHub remains the source repository. There is no application server, database, live AI API, or production build step.
+Cole Learning Labs uses static HTML, CSS, and browser ES modules served by Cloudflare Pages. GitHub remains the source repository. Independent labs and the fictional classroom demo need no database or live AI API. An optional Pages Functions classroom API is included but rejects requests until its teacher identity, database, and enablement settings are explicitly configured. No real teacher workspace, D1 database, or Access application is provisioned for this release. See [Classroom setup](CLASSROOM-SETUP.md) before activation.
 
 ## Verified deployment status
 
@@ -15,7 +15,7 @@ Cole Learning Labs is static HTML, CSS, and browser ES modules. Cloudflare Pages
 | Build command | `exit 0` |
 | Build output directory | `.` |
 | Root directory | Repository root |
-| Environment variables | None |
+| Classroom environment | Unconfigured; real enrollment and server storage disabled |
 | Initial deployment | Succeeded |
 | Pages address | [cole-learning-labs.pages.dev](https://cole-learning-labs.pages.dev) |
 | Canonical hostname | [www.colelearninglabs.com](https://www.colelearninglabs.com); Pages Active, SSL enabled, strict HTTPS request returned 200 |
@@ -31,7 +31,7 @@ Cole Learning Labs is static HTML, CSS, and browser ES modules. Cloudflare Pages
 | Edge certificate | Universal SSL Active for apex and wildcard; expires 2027-01-14 |
 | Zone TLS settings | Full (strict), Always Use HTTPS, minimum TLS 1.2, TLS 1.3 enabled |
 | Mail | Existing Google Workspace records preserved |
-| Response headers | All three `_headers` policies verified on the HTTPS `www` response |
+| Response headers | Expanded school-release policies below; verify on each new HTTPS deployment |
 | DDoS status | Network and SSL/TLS protections reported Active; HTTP DDoS always enabled; no overrides |
 | Custom security rules | No custom WAF rules or rate-limit rules configured |
 | Managed-rules view | No managed rules created in the observed dashboard; no custom managed-WAF setup claimed |
@@ -81,19 +81,23 @@ If Pages custom-domain activation stalls, inspect the project's status, DNS asso
 
 ## 4. Check response headers and classroom behavior
 
-The root `_headers` file declares:
+The root `_headers` file declares the following controls for static responses:
 
 ```text
 X-Content-Type-Options: nosniff
-Referrer-Policy: strict-origin-when-cross-origin
-Permissions-Policy: camera=(), microphone=(), geolocation=()
+Referrer-Policy: no-referrer
+Permissions-Policy: camera=(), microphone=(), geolocation=(), display-capture=(), usb=(), serial=(), hid=(), payment=()
+Strict-Transport-Security: max-age=15552000
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; upgrade-insecure-requests
 ```
 
-All three policies were verified on the live HTTPS `www` response. Repeat the response check after future deployment changes. Verify ES module MIME types too, since the site uses browser modules and MIME-sniffing protection.
+Scripts and connections are limited to the site's own origin. Existing illustrated components use inline style attributes, so the style policy permits those; the script policy does not permit inline scripts or evaluation. The teacher route adds `frame-ancestors 'none'` and private/no-store caching. Public lab pages retain the option to be embedded by a school LMS. API responses set their own security and no-store headers because Pages `_headers` does not configure Functions responses. HSTS omits subdomains and preload.
+
+Check the actual HTTPS preview and production response headers, module MIME types, navigation, and console before treating a release as verified. A security header is one control, not a school approval, filter override, or security certification. [Cloudflare headers documentation](https://developers.cloudflare.com/pages/configuration/headers/).
 
 ### Release cache behavior
 
-The entry URL `src/app.js?release=20261016-cloudflare` requests a fresh application entry for this release. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`, allowing modules to be stored but requiring revalidation before reuse. Check the response after future deployments.
+The entry URL `src/app.js?release=20261016-schools` requests a fresh application entry for this release. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`, allowing modules to be stored but requiring revalidation before reuse. Check the response after future deployments.
 
 In the Cloudflare zone, **Caching → Configuration → Browser Cache TTL** is set to **Respect Existing Headers**. This preserves the application's cache policy; the default four-hour browser setting can override a shorter origin policy. The live HTTPS application response was verified with `max-age=0, must-revalidate` after saving this setting. Refreshing code does not require deleting saved lab progress. See [Cloudflare's browser cache guidance](https://developers.cloudflare.com/cache/how-to/edge-browser-cache-ttl/).
 
@@ -109,7 +113,7 @@ Cloudflare reports network and SSL/TLS DDoS protections Active, with HTTP DDoS a
 
 Production changes on `main` trigger the connected Pages deployment. Review its result before treating a source change as live. Keep the GitHub App limited to the intended repositories and preserve other projects using the shared Cloudflare Workers & Pages installation. Do not uninstall the shared app merely to change this project's settings.
 
-The Free plan supports this static architecture. Static asset requests are free and unlimited; the documented Free limits include 500 builds per month, 20,000 files, and 25 MiB per asset. Functions are a separate feature with separate usage limits; this application does not need them.
+The public labs use static asset serving. The optional classroom API invokes Pages Functions only for `/api/*`, as declared by `_routes.json`; its usage and any future database usage have separate limits. Do not enable connected classrooms or create a paid service as part of a routine static-site publish. Check current platform limits before planning enrollment.
 
 [Cloudflare: GitHub integration](https://developers.cloudflare.com/pages/configuration/git-integration/github-integration/) · [Static request pricing](https://developers.cloudflare.com/pages/functions/pricing/) · [Pages limits](https://developers.cloudflare.com/pages/platform/limits/)
 
@@ -121,7 +125,17 @@ Progress belongs to a browser profile and origin: scheme, hostname, and port. Th
 
 Export needed reports before changing the classroom entry address or clearing site data; no automatic cross-origin transfer or report import is implied. Use a cache-only refresh when appropriate instead of deleting local storage that may contain student work.
 
-All deployed static files and the source repository are public. Keep credentials, private student records, and confidential school material out of commits and site assets. The application does not upload classroom reports or maintain a central gradebook.
+All deployed static files and the source repository are public. Keep credentials, private student records, and confidential school material out of commits and site assets. Independent practice does not upload lab reports. If a connected classroom is separately configured and explicitly joined, it can store assigned drafts, submitted snapshots, and manual grades in private D1 records. Those records do not belong in the repository or static assets.
+
+## Optional classroom deployment boundary
+
+`functions/api/[[path]].js` is compiled by Pages during deployment; there is no dependency installation or application build command. `_routes.json` routes only `/api/*` into Functions. With missing configuration, the API must return HTTP 503 with `enabled:false`, not a pretend successful save. Verify this against a real HTTPS preview after adding Functions.
+
+Keep preview environments unconfigured and isolated from any future production database and teacher identity settings. A fictional demo is enough for public review. Before activation, follow [Classroom setup](CLASSROOM-SETUP.md), apply the migration, configure a narrowly scoped teacher Access application and explicit owner allowlist, and test fictional accounts across separate browser profiles. No client-only PIN or role setting grants teacher access.
+
+The prepared API denies access to expired classes after 90 days. Physical cleanup runs on later authorized teacher requests, throttled to one attempt per minute per database binding and worker isolate; it is not scheduled erasure. Provider backups have separate recovery periods. District requirements for retention, agreements, identity recovery, operational monitoring, and managed-device acceptance need review before collecting real records.
+
+Use Node.js 22.13.0 or newer for local checks; the SQL tests use `node:sqlite` and this release was checked with Node 24. The local preview intentionally returns unavailable for classroom API calls. Chrome viewport testing does not establish actual Edge or school-network compatibility. No connected Edge browser or real managed Chromebook was available for this verification.
 
 ## Migration history: GitHub Pages
 

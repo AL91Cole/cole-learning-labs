@@ -7,6 +7,8 @@ const mime = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset
 const server = http.createServer(async (req,res)=>{
   try {
     const url = new URL(req.url,'http://localhost');
+    // Local preview intentionally has no student database or identity service.
+    if(url.pathname.startsWith('/api/')){res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({enabled:false,error:'classroom_unconfigured',message:'Connected classrooms are not configured. Independent labs remain available.'}));return;}
     const target = path.resolve(root, '.' + decodeURIComponent(url.pathname));
     if (target !== root && !target.startsWith(root + path.sep)) {res.writeHead(403);return res.end('Forbidden');}
     const info = await stat(target);
