@@ -83,9 +83,11 @@ Keep asset references compatible with a project-site subdirectory as well as a c
 
 ## Deployment status
 
-The planned public repository is `AL91Cole/cole-learning-labs`. The intended custom hostname is `www.colelearninglabs.com`. These names are deployment targets, not a statement that publishing or DNS migration has completed.
+The public repository is [AL91Cole/cole-learning-labs](https://github.com/AL91Cole/cole-learning-labs). GitHub Pages publishes from `main`, `/(root)`, with `www.colelearninglabs.com` configured as the custom domain.
 
-Follow [Deployment guidance](docs/DEPLOYMENT.md). Check the successful GitHub Pages deployment and the live hostname before announcing an address as ready for classroom use.
+The final DNS configuration points `www` and the apex domain to GitHub Pages. DNS and HTTPS verification are still in progress; HTTPS enforcement has not yet been confirmed. Squarespace remains the registrar, mail records were preserved, and Cloudflare is not enabled.
+
+Follow [Deployment guidance](docs/DEPLOYMENT.md) for the exact records and remaining checks before announcing the custom address as ready for classroom use.
 
 ## Before a release
 
