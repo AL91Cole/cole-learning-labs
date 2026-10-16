@@ -50,6 +50,7 @@ Progress is stored in `localStorage` for the current browser profile and website
 - Use the same browser profile and website address to resume work.
 - Private browsing, browser cleanup, blocked storage, or a different device can prevent progress from being retained.
 - Changing from a local preview or GitHub address to the custom domain does not move existing progress automatically.
+- Storage is scoped by scheme, hostname, and port. The `pages.dev`, apex, and `www` addresses have separate storage; changing the hosting provider while keeping the same HTTPS `www` origin does not itself change that scope.
 - Export a `.txt` report or use the copy control before submitting work through a teacher's chosen process. Reports are not sent to a teacher automatically.
 - On shared devices, export the needed work and reset the session before the next learner uses that profile.
 
@@ -85,21 +86,24 @@ Open `http://localhost:8000/`, then use the site's navigation. Stop the local se
 | `src/workspaces.js`, `src/workspaces.css` | Other simulation workspaces |
 | `scripts/serve.mjs` | Local development server |
 | `docs/TEACHING.md` | Teacher preparation, classroom use, and assessment |
-| `docs/DEPLOYMENT.md` | GitHub Pages publishing, DNS migration, and HTTPS verification |
+| `_headers` | Response-header policy for Cloudflare Pages |
+| `docs/DEPLOYMENT.md` | Cloudflare Pages publishing, domain association, and HTTPS verification |
 
 Keep asset references compatible with a project-site subdirectory as well as a custom-domain root. Keep internal page navigation in the existing hash-route format.
 
 ## Deployment status
 
-The public repository is [AL91Cole/cole-learning-labs](https://github.com/AL91Cole/cole-learning-labs). GitHub Pages publishes from `main`, `/(root)`, with `www.colelearninglabs.com` configured as the custom domain.
+The public repository is [AL91Cole/cole-learning-labs](https://github.com/AL91Cole/cole-learning-labs). Native **Cloudflare Pages** hosts the site through the `cole-learning-labs` project connected to `main`. GitHub remains the source repository.
 
-The saved DNS configuration points `www` and the apex domain to GitHub Pages. GitHub reports a successful DNS check, but TLS provisioning is at **1 of 3 — Certificate Requested** and its **Enforce HTTPS** control is disabled. The custom-domain certificate warning remains an open verification item. Squarespace remains the registrar, and mail records were preserved.
+The Pages project uses framework preset **None**, build command `exit 0`, output directory `.`, and no environment variables. Its initial deployment succeeded at [cole-learning-labs.pages.dev](https://cole-learning-labs.pages.dev). [www.colelearninglabs.com](https://www.colelearninglabs.com) is Active with SSL enabled in Pages; an independent request passed TLS validation and returned HTTP 200 through Cloudflare.
 
-Cloudflare Free is active on `elias.ns.cloudflare.com` and `venus.ns.cloudflare.com`. All ten DNS records were checked and remain DNS-only. Its Universal SSL certificate for `*.colelearninglabs.com` and `colelearninglabs.com` is active and expires on 2027-01-14. **Full (strict)**, **Always Use HTTPS**, and minimum TLS 1.2 are configured for proxied traffic; the website proxy, WAF, and caching protections are not enabled.
+Both the apex and `www` Pages domains are Active with SSL enabled. Fresh Chrome loads the professional homepage without a security warning. The apex redirects to `www` with status 301, preserving paths, query strings, and the tested lab fragment. The hardware lab and Report dialog load at the canonical address.
 
-Cloudflare confirms that DNSSEC is active. The new DS record resolves publicly and matches Cloudflare's supplied values. Public checks also confirm the expected GitHub web destinations and Cloudflare nameservers. Keep web records DNS-only until GitHub's origin certificate is ready; Cloudflare's active edge certificate does not resolve a direct GitHub certificate mismatch.
+Squarespace remains the registrar. Cloudflare's DNS zone, DNSSEC, and edge certificate are active on `elias.ns.cloudflare.com` and `venus.ns.cloudflare.com`; mail records were preserved. The move followed a stalled GitHub Pages certificate request. The native Pages connection does not depend on that old origin certificate. All three response policies from `_headers` were verified on the HTTPS `www` response: MIME-sniffing protection, a strict-origin referrer policy, and disabled camera, microphone, and geolocation permissions.
 
-Follow [Deployment guidance](docs/DEPLOYMENT.md) for the exact records and remaining checks before announcing the custom address as ready for classroom use.
+Both web records are proxied CNAMEs to `cole-learning-labs.pages.dev`. Cloudflare reports its network and SSL/TLS DDoS protections active and HTTP DDoS protection enabled, with no custom overrides. No custom WAF or rate-limit rules are configured. Legacy GitHub Pages publishing is disabled; the GitHub repository remains the source.
+
+Follow [Deployment guidance](docs/DEPLOYMENT.md) for the verified configuration and future releases.
 
 ## Before a release
 

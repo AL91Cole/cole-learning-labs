@@ -56,11 +56,13 @@ Local viewport checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page
 - Give students a written objective and a clear stopping point. Offer vocabulary support, paired discussion, or a spoken explanation when appropriate.
 - Give professional portfolio links context before sending younger learners to external websites. External projects have their own interfaces and access requirements.
 
-GitHub has passed its DNS check, but its custom-domain certificate is still at **1 of 3 — Certificate Requested**, and HTTPS enforcement is disabled. Cloudflare's DNS zone, DNSSEC, and edge certificate are active; all ten records remain DNS-only, so browser traffic still reaches GitHub directly and Cloudflare web protection is not enabled. Public DNS checks confirm the expected destinations. Full (strict), Always Use HTTPS, and minimum TLS 1.2 are configured for future proxied traffic. The certificate warning has not been confirmed resolved. Confirm the published address and connection status before directing a class to it. If security challenge rules are added later, test them on managed Chromebooks and the school network before a lesson.
+Native Cloudflare Pages hosts the site at [www.colelearninglabs.com](https://www.colelearninglabs.com). Both custom hostnames are Active with SSL enabled, and fresh Chrome loads the site without a security warning. The apex redirects to `www`, preserving the tested query string and lab fragment; the hardware lab and Report dialog load successfully. Cloudflare reports DDoS protection enabled; no custom WAF or rate-limit rules are configured. Test the published address on an actual managed classroom Chromebook before a lesson. If security challenge rules are added later, test them on the school network too.
 
 ## Progress, sharing, and reports
 
 The site does not create accounts or send work to a teacher. Progress remains in the current browser profile's local storage for that website address. Another device, a different profile, a different origin, or cleared browser data will not automatically contain the same work.
+
+Use the canonical HTTPS `www` address consistently. The preview, apex, and `www` origins have separate storage. Moving the hosting provider while retaining the same scheme, hostname, and port does not itself create a new storage origin. Export reports before clearing site data during troubleshooting; a browser cache refresh and deletion of saved site data are different actions.
 
 Students can download a `.txt` report or copy it to the clipboard and submit it through the educator's chosen process. Check the report before submission. If clipboard access is blocked, use the download option. Keep the exported file until receipt is confirmed.
 
