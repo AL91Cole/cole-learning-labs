@@ -7,11 +7,11 @@ This site is static HTML, CSS, and browser ES modules. It needs no build service
 - Custom hostname: `www.colelearninglabs.com`
 - Domain registrar: Squarespace
 
-The custom domain is configured in GitHub Pages and the DNS records below have been saved. GitHub reports a successful DNS check and is issuing the custom-domain certificate; its **Enforce HTTPS** checkbox is still disabled. Squarespace's previous apex forwarding rule was removed, and all mail records were preserved.
+The custom domain is configured in GitHub Pages and the DNS records below have been saved. GitHub reports a successful DNS check, but TLS provisioning is at **1 of 3 — Certificate Requested** and its **Enforce HTTPS** checkbox is disabled. The browser's custom-domain certificate warning has not been confirmed resolved. Squarespace's previous apex forwarding rule was removed, and all mail records were preserved.
 
-The user approved the Cloudflare switch, and Squarespace confirmed the saved nameservers `elias.ns.cloudflare.com` and `venus.ns.cloudflare.com`. Cloudflare Free is waiting for registrar propagation and is not yet marked active. All ten imported records remain DNS-only. The Cloudflare SSL/TLS mode is saved as **Full (strict)**, but no website proxy, WAF, or caching protection is enabled.
+Cloudflare Free is active on `elias.ns.cloudflare.com` and `venus.ns.cloudflare.com`. All ten DNS records have been checked and remain DNS-only. The Universal SSL certificate covering `*.colelearninglabs.com` and `colelearninglabs.com` is **Active**, with expiry 2027-01-14. **Full (strict)**, **Always Use HTTPS**, and minimum TLS 1.2 are configured, but no website proxy, WAF, or caching protection is enabled.
 
-The old DNSSEC delegation was removed before the nameserver change. Squarespace's custom DNSSEC page shows **No DS Records**. Cloudflare DNSSEC has not yet been restored; do that after activation using Cloudflare's newly supplied DS information.
+Cloudflare confirms that `colelearninglabs.com` is protected with DNSSEC. Its new DS record is saved at Squarespace and resolves through public resolver `1.1.1.1`: key tag **2371**, algorithm **13**, digest type **2**, with a digest matching Cloudflare's supplied value. DNSSEC is active.
 
 Keep the existing Google Site available while the new domain connection is verified.
 
@@ -72,6 +72,8 @@ All page assets should be relative URLs or HTTPS URLs. HTTP images, scripts, or 
 
 If HTTPS remains unavailable after DNS is correct, inspect the Pages certificate status. GitHub documents certificate availability taking up to an hour after custom-domain configuration. Check conflicting DNS and any CAA policy; a restrictive CAA setup must permit `letsencrypt.org`. Follow GitHub's documented reprovisioning steps only after checking the configuration, rather than repeatedly changing working records.
 
+**Provisioning repair performed:** the public `www` CNAME was verified against `al91cole.github.io`, then the custom domain was removed once, re-entered exactly as `www.colelearninglabs.com`, and saved to restart GitHub's certificate request. This single documented retry is complete. Allow issuance to progress; do not repeat the restart while the request is pending.
+
 [GitHub: Troubleshoot custom domains](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/troubleshooting-custom-domains-and-github-pages)
 
 ## 5. Validate the migration
@@ -88,33 +90,34 @@ Check these separately in a browser without editor privileges:
 
 Record the actual repository URL, deployment result, domain test, and any remaining issue before calling the migration complete.
 
-## 6. Cloudflare cutover in progress
+## 6. Cloudflare and DNSSEC active; origin HTTPS pending
 
 ### Current status
 
 | Item | Status |
 | --- | --- |
-| Cloudflare plan | Free; waiting for registrar propagation, not yet marked active |
-| Imported DNS | All ten existing records copied and DNS-only |
+| Cloudflare plan | Free; zone active |
+| DNS records | All ten records checked and DNS-only |
 | Previous Squarespace nameservers | `nse1.squarespacedns.com`, `nse2.squarespacedns.com`, `nse3.squarespacedns.com`, `nse4.squarespacedns.com` |
-| Saved registrar nameservers | `elias.ns.cloudflare.com`, `venus.ns.cloudflare.com`; Squarespace confirmed “Nameservers updated” |
-| Current DNSSEC | Old delegation removed; Squarespace shows “No DS Records”; restoration pending |
-| GitHub origin HTTPS | DNS check successful; certificate being issued |
+| Current Cloudflare nameservers | `elias.ns.cloudflare.com`, `venus.ns.cloudflare.com` |
+| Current DNSSEC | Active; Cloudflare success status and matching public DS verified |
+| New DS metadata | Key tag 2371; algorithm 13; digest type 2; digest copied from Cloudflare |
+| GitHub origin HTTPS | DNS check successful; TLS provisioning 1 of 3 — Certificate Requested |
 | GitHub HTTPS enforcement | Checkbox disabled while certificate is pending |
 | Cloudflare SSL/TLS mode | Full (strict) saved and confirmed |
 | Cloudflare HTTPS settings | Always Use HTTPS on; minimum TLS 1.2; TLS 1.3 on; apply to proxied traffic |
-| Cloudflare edge certificate | Active status not yet confirmed |
+| Cloudflare edge certificate | Universal SSL Active for apex and wildcard; expires 2027-01-14 |
 | Cloudflare web proxy and protections | Not enabled |
 
-Approval, record import, removal of the old DNSSEC delegation, the registrar nameserver change, and the Full (strict) setting are complete. Nameserver propagation and Cloudflare activation are still pending. Saved settings alone do not confirm that every resolver has adopted the new delegation or that web protection is running.
+Cloudflare activation, the edge certificate, the registrar nameserver change, DNSSEC verification, and the TLS settings are complete. Resolver checks through `8.8.8.8` and `1.1.1.1` independently return the expected `www` CNAME, `al91cole.github.io`. The four apex GitHub A records and the `elias`/`venus` nameserver delegation were also confirmed.
 
-### Remaining activation steps
+GitHub's origin certificate remains pending after the single documented retry. DNS-only requests still connect directly to GitHub; an active Cloudflare edge certificate does not establish that the origin certificate warning is fixed.
 
-1. Wait for Cloudflare to show the zone as active. Check public delegation for the two saved Cloudflare nameservers; do not repeatedly replace correctly saved nameservers during propagation.
-2. Recheck the GitHub web records and Google Workspace mail and verification records through the active DNS provider. Test the website and mail delivery. DNS edits made only at Squarespace will no longer apply once Cloudflare is authoritative.
-3. After activation, enable DNSSEC in Cloudflare and add its newly supplied DS information at Squarespace. Verify the new chain before recording DNSSEC as active. Do not restore the old provider's DS values.
-4. Finish GitHub's custom-domain certificate issuance, test origin HTTPS, and enable GitHub's **Enforce HTTPS** when its control becomes available.
-5. Confirm Cloudflare's edge certificate is active too. Keep the web records DNS-only until both certificates are ready and proxy compatibility has been checked.
+### Remaining verification steps
+
+1. Test the website and Google Workspace mail delivery through the active Cloudflare DNS zone. DNS edits made only at Squarespace no longer control these records. Preserve the verified DS record and DNSSEC settings.
+2. Let GitHub finish its requested custom-domain certificate, test HTTPS with a certificate covering `www.colelearninglabs.com`, and enable **Enforce HTTPS** when available. The documented remove-and-re-add retry has already been performed once after verifying public DNS; do not repeat it while issuance is pending.
+3. Keep the web records DNS-only until GitHub's origin certificate is ready and proxy compatibility has been checked. The Cloudflare edge certificate is already active; recheck its status and coverage before any proxy change.
 
 [Cloudflare: Full DNS setup](https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/) · [Squarespace: Nameserver changes](https://support.squarespace.com/hc/en-us/articles/4404183898125-Review-change-or-reset-your-domain-s-nameservers)
 
@@ -122,9 +125,9 @@ Approval, record import, removal of the old DNSSEC delegation, the registrar nam
 
 DNS-only records send website traffic directly to GitHub Pages. Cloudflare's WAF, caching, and protection for proxied web traffic do not apply to those requests. Mail and third-party verification records remain DNS-only.
 
-After zone activation, Cloudflare can provision Universal SSL even while web records are DNS-only. Keep them unproxied until the edge certificate is active; Cloudflare documents a 15-minute to 24-hour provisioning window.
+Cloudflare's Universal SSL certificate is active even though the web records are DNS-only. It will be presented to visitors only if the corresponding web records are proxied. This edge certificate is separate from GitHub's pending origin certificate.
 
-**Full (strict)** is already saved. Before enabling any proxy record, confirm GitHub's valid, matching origin certificate and Cloudflare's active edge certificate. The saved mode applies to proxied connections; it does not route DNS-only traffic through Cloudflare. The edge certificate covers the visitor-to-Cloudflare connection and does not replace the required origin certificate. An invalid origin certificate can produce error 526.
+**Full (strict)**, **Always Use HTTPS**, and minimum TLS 1.2 are already configured. Before enabling any proxy record, confirm GitHub's valid, matching origin certificate and recheck Cloudflare's active edge certificate. The saved settings apply to proxied connections; they do not route DNS-only traffic through Cloudflare or correct GitHub's direct certificate mismatch. An invalid origin certificate can produce error 526 after proxying.
 
 [Cloudflare: Proxy status](https://developers.cloudflare.com/dns/proxy-status/) · [Universal SSL](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/enable-universal-ssl/) · [Full (strict)](https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/)
 

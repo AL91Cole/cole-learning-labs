@@ -93,11 +93,11 @@ Keep asset references compatible with a project-site subdirectory as well as a c
 
 The public repository is [AL91Cole/cole-learning-labs](https://github.com/AL91Cole/cole-learning-labs). GitHub Pages publishes from `main`, `/(root)`, with `www.colelearninglabs.com` configured as the custom domain.
 
-The saved DNS configuration points `www` and the apex domain to GitHub Pages. GitHub reports a successful DNS check and is issuing the custom-domain certificate; its **Enforce HTTPS** control is still disabled. Squarespace remains the registrar, and mail records were preserved.
+The saved DNS configuration points `www` and the apex domain to GitHub Pages. GitHub reports a successful DNS check, but TLS provisioning is at **1 of 3 — Certificate Requested** and its **Enforce HTTPS** control is disabled. The custom-domain certificate warning remains an open verification item. Squarespace remains the registrar, and mail records were preserved.
 
-The approved nameserver change to `elias.ns.cloudflare.com` and `venus.ns.cloudflare.com` has been saved at Squarespace. Cloudflare Free is waiting for registrar propagation and is not yet marked active. All ten imported records remain DNS-only. **Full (strict)** has been saved for future proxied traffic, but the website proxy, WAF, and caching protections are not enabled.
+Cloudflare Free is active on `elias.ns.cloudflare.com` and `venus.ns.cloudflare.com`. All ten DNS records were checked and remain DNS-only. Its Universal SSL certificate for `*.colelearninglabs.com` and `colelearninglabs.com` is active and expires on 2027-01-14. **Full (strict)**, **Always Use HTTPS**, and minimum TLS 1.2 are configured for proxied traffic; the website proxy, WAF, and caching protections are not enabled.
 
-The old DNSSEC delegation was removed; Squarespace currently shows **No DS Records**. DNSSEC restoration remains a next step after Cloudflare is active. Confirm both GitHub's origin certificate and Cloudflare's edge certificate before enabling the web proxy.
+Cloudflare confirms that DNSSEC is active. The new DS record resolves publicly and matches Cloudflare's supplied values. Public checks also confirm the expected GitHub web destinations and Cloudflare nameservers. Keep web records DNS-only until GitHub's origin certificate is ready; Cloudflare's active edge certificate does not resolve a direct GitHub certificate mismatch.
 
 Follow [Deployment guidance](docs/DEPLOYMENT.md) for the exact records and remaining checks before announcing the custom address as ready for classroom use.
 
