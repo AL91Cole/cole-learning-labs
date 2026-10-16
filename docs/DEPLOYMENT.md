@@ -95,6 +95,8 @@ All three policies were verified on the live HTTPS `www` response. Repeat the re
 
 The entry URL `src/app.js?release=20261016-cloudflare` requests a fresh application entry for this release. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`, allowing modules to be stored but requiring revalidation before reuse. Check the response after future deployments.
 
+In the Cloudflare zone, **Caching → Configuration → Browser Cache TTL** is set to **Respect Existing Headers**. This preserves the application's cache policy; the default four-hour browser setting can override a shorter origin policy. The live HTTPS application response was verified with `max-age=0, must-revalidate` after saving this setting. Refreshing code does not require deleting saved lab progress. See [Cloudflare's browser cache guidance](https://developers.cloudflare.com/cache/how-to/edge-browser-cache-ttl/).
+
 For future entry updates, change the release identifier and check an ordinary browser reload alongside the module response headers. A new policy does not retroactively expire an older cached response until that resource is fetched again. These changes do not delete `localStorage` or student reports; preserve saved work while checking release freshness.
 
 Check all 15 assignment entry points and complete representative actions. Confirm local resume, reset, copy and `.txt` reports, keyboard navigation, and browser back/forward behavior. Recheck the responsive layout at 1366 × 768, 1024 × 768, and 768 × 1024; those sizes previously passed without page-level horizontal overflow. Test a real managed Chromebook before classroom use.
