@@ -97,7 +97,7 @@ Check the actual HTTPS preview and production response headers, module MIME type
 
 ### Release cache behavior
 
-The entry URL `src/app.js?release=20261016-schools` requests a fresh application entry for this release. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`, allowing modules to be stored but requiring revalidation before reuse. Check the response after future deployments.
+The entry URL `src/app.js?release=20261016-schools2`, every internal source-module import, and every HTML script/stylesheet link use the same release query. This prevents returning browsers from combining a new entry with older modules or styles that were cached under the previous four-hour policy. Updating only the entry query is insufficient when dependencies add exports. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`, allowing modules to be stored but requiring revalidation before reuse. Check the response after future deployments.
 
 In the Cloudflare zone, **Caching → Configuration → Browser Cache TTL** is set to **Respect Existing Headers**. This preserves the application's cache policy; the default four-hour browser setting can override a shorter origin policy. The live HTTPS application response was verified with `max-age=0, must-revalidate` after saving this setting. Refreshing code does not require deleting saved lab progress. See [Cloudflare's browser cache guidance](https://developers.cloudflare.com/cache/how-to/edge-browser-cache-ttl/).
 

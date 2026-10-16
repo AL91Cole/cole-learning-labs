@@ -1,9 +1,9 @@
-import {SCENARIOS} from './scenarios.js';
-import {applyHardwareAction,verifyHardware,renderHardware} from './hardware.js';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js';
-import {normalizeLabRecord} from './records.js';
-import {privacyPage} from './privacy.js';
+import {SCENARIOS} from './scenarios.js?release=20261016-schools2';
+import {applyHardwareAction,verifyHardware,renderHardware} from './hardware.js?release=20261016-schools2';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261016-schools2';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261016-schools2';
+import {normalizeLabRecord} from './records.js?release=20261016-schools2';
+import {privacyPage} from './privacy.js?release=20261016-schools2';
 
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
