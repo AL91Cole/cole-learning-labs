@@ -241,7 +241,7 @@ const installedFor = (s, part) => ({ board:s.boardInstalled,cpu:s.cpuInstalled,c
 function btn(action,label, extra='') { return `<button type="button" class="hw-action" data-hw-action="${action}" ${extra}>${label}</button>`; }
 
 function renderHardwareHelp(build) {
-  return '<details class="hw-help"><summary>How to use this workbench</summary><ol><li><strong>Look first.</strong> Click or tap a labeled part in the picture, or use the component selector below it. Read the selected component’s inspection. Inspecting does not move or repair anything.</li><li><strong>Make one change.</strong> Use the buttons in <em>Make a change</em>' + (build ? ' or an <em>Install</em> button in the parts tray. Dragging is optional.' : '. You never have to drag a part.') + ' Before changing internal parts, use <em>Power off</em>, then <em>Unplug AC</em>.</li><li><strong>Test your work.</strong> After internal work, use <em>Connect AC</em>, then <em>Power on / test</em>. Check the monitor and open the original lesson file. Finish your report in the lab’s next step.</li></ol><p>Keyboard: press Tab to reach controls, then Enter or Space to activate them. Use arrow keys to switch picture views. Everything here is virtual; leave your real device alone.</p></details>';
+  return '<section class="hw-help" aria-label="How to use this workbench"><h4>How to use this workbench <span>Keep these 3 steps in view</span></h4><ol><li><strong>1 · Inspect.</strong> Click or tap a labeled part, or choose it in the component menu. Read what you find. Inspecting only looks; it does not repair anything.</li><li><strong>2 · Change.</strong> Use <em>Make a change</em>' + (build ? ' or an <em>Install</em> button. Dragging is optional.' : ' below the inspection. No dragging is needed.') + ' For internal parts: <em>Power off</em>, then <em>Unplug AC</em> first.</li><li><strong>3 · Test.</strong> After internal work, choose <em>Connect AC</em>, then <em>Power on / test</em>. Check the monitor and open the lesson file. Then use <em>Check &amp; finish</em> on this page.</li></ol><p>Everything is virtual; leave your real device alone. Keyboard: Tab to a control, then Enter or Space. Arrow keys switch picture views.</p></section>';
 }
 
 // These checkpoints describe the present equipment state, rather than awarding points for clicks.
@@ -325,7 +325,6 @@ export function renderHardware(root, caseId, state, onAction) {
   const restoreComponentSelect = root.contains(activeControl) && activeControl.matches?.('[data-hw-inspect]');
   const previousCoachStage = root.querySelector('.hw-coach')?.dataset.hwCoachStage;
   const openCoachLevels = [...root.querySelectorAll('.hw-coach[open], .hw-coach details[open]')].map(details => details.dataset.hwCoachLevel);
-  const helpOpen = !!root.querySelector('.hw-help')?.open;
   const id = clampCase(caseId), s = state, selection = INSPECTIONS[s.selectedPart] ? s.selectedPart : 'board';
   const safe = safetyReady(s), ready = displayReady(s);
   const fix = hardwareReady(s) && ready;
@@ -378,7 +377,6 @@ export function renderHardware(root, caseId, state, onAction) {
       if (openCoachLevels.includes(details.dataset.hwCoachLevel)) details.open = true;
     }
   }
-  if (helpOpen) root.querySelector('.hw-help').open = true;
   if (restoreComponentSelect) root.querySelector('[data-hw-inspect]')?.focus({preventScroll:true});
   else if (restoreAction) {
     const controls = [...root.querySelectorAll('[data-hw-action]')];

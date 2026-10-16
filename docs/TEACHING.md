@@ -14,6 +14,12 @@ Created by Mx. Cole, the project supports a future goal of teaching Computer Tec
 
 Grade filters suggest a starting challenge; they do not establish readiness or prevent a teacher from selecting another activity with support.
 
+## One page for each investigation
+
+The request, interactive workbench, notes, and finish checks remain visible together in numbered sections. Begin with the request, use the controls described beside the workbench, then explain and check the result. Learners can scroll naturally or use section shortcuts to move around the same page without hiding sections or losing their work. They do not need to open a separate guide to learn the basic controls.
+
+Model the page once before independent work: point out the request, demonstrate one labeled control, show where to write notes, and identify the finish check and report controls. Optional clues remain available within the activity. Teacher rubrics and answer keys remain outside the public student lab.
+
 ## Four pathways
 
 - **Hardware & ServiceDesk — six investigations.** Trace display and power faults, reseat compatible memory, reconnect storage, preserve the original classroom drive, and assemble a virtual PC. Use the virtual safe-power sequence for internal changes. A repaired component, a working desktop, and delivery of the original lesson file are separate checkpoints.

@@ -132,9 +132,8 @@
 
 /* Keep the same short instruction pattern above every practice workspace. */
 .ws-start{margin:0 0 18px;padding:3px 20px;background:#12283b;border:1px solid #39576e;border-radius:10px;min-width:0}
-.ws-start>summary{padding:12px 0;min-height:48px;box-sizing:border-box;font-size:.93rem;font-weight:600;line-height:1.6;color:#f0f8fc;cursor:pointer;touch-action:manipulation}
-.ws-start>summary>span{font-size:.75rem;font-weight:400;color:#adc8da;display:inline-block;margin-left:10px}
-.ws-start>summary:focus-visible{outline:2px solid #8cebd9;outline-offset:3px;border-radius:3px}
+.ws-start>h3{display:flex;flex-wrap:wrap;gap:5px 10px;margin:0;padding:12px 0 7px;font-size:.93rem;font-weight:600;line-height:1.6;color:#f0f8fc}
+.ws-start>h3>span{font-size:.75rem;font-weight:400;color:#adc8da;display:inline-block}
 .ws-start-content{padding:5px 0 15px}
 .ws-start ol{list-style:none;counter-reset:workspace-step;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:0;padding:0}
 .ws-start li{counter-increment:workspace-step;position:relative;padding-left:33px;min-width:0;font-size:.85rem;line-height:1.7;color:#c3d7e4;overflow-wrap:anywhere}

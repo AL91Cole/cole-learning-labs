@@ -77,13 +77,11 @@
 .hw-controls-label { flex-basis: 100%; color: #b7d0dc; font-size: 13px; font-weight: 650; line-height: 1.5; }
 .hw-canvas-help { margin: 0; padding: 10px 16px; border-bottom: 1px solid var(--hw-line); color: #b1c7d4; background: #10212f; font-size: 13px; line-height: 1.55; }
 .hw-help { border-top: 1px solid #35515c; }
-.hw-help summary { min-height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 11px 0; color: #bededb; font-size: 13px; font-weight: 600; cursor: pointer; touch-action: manipulation; list-style: none; }
-.hw-help summary::-webkit-details-marker { display: none; }
-.hw-help summary::after { content: '+'; margin-left: auto; color: #75d6c1; font-size: 21px; font-weight: 400; line-height: 1; }
-.hw-help[open] summary::after { content: '−'; }
-.hw-help summary:focus-visible { outline: 3px solid #8af3dd; outline-offset: 2px; border-radius: 4px; }
-.hw-help ol { margin: 0; padding: 0 0 0 21px; color: #bad0dc; font-size: 14px; line-height: 1.7; }
-.hw-help li { padding: 0 0 12px 3px; }
+.hw-help h4 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 12px; margin: 0; padding: 13px 0 11px; color: #e2efef; font-size: 14px; line-height: 1.6; }
+.hw-help h4 span { color: #a9c5d2; font-size: 12px; font-weight: 400; }
+.hw-help ol { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 15px; margin: 0; padding: 0; list-style: none; color: #bad0dc; font-size: 13px; line-height: 1.65; }
+.hw-help li { min-width: 0; padding: 0 0 11px; overflow-wrap: anywhere; }
+.hw-help li > strong { display: block; margin-bottom: 4px; }
 .hw-help strong { color: #e2efef; }
 .hw-help em { font-style: normal; color: #ddedeb; font-weight: 600; }
 .hw-help > p { margin: 0; padding: 0 0 15px; color: #a9c5d2; font-size: 13px; line-height: 1.7; }
@@ -133,6 +131,7 @@
 .hw-coach details > div { padding: 0 0 2px 4px; }
 .hw-coach details .hw-action { background: #1d5044; border-color: #418e76; color: #d2f3e7; margin: 0 0 5px; }
 @container (max-width: 680px) {
+  .hw-help ol { grid-template-columns: minmax(0,1fr); gap: 0; }
   .hw-mission { padding: 14px 12px 0; }
   .hw-mission-heading h3 { font-size: 17px; }
   .hw-mission-count { font-size: 10px; }
