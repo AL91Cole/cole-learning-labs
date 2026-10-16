@@ -25,6 +25,8 @@ The responsive lab layout includes a PC close-up view, a labeled component selec
 
 Local viewport checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. Preview an assignment on the actual managed classroom device too: school policies can affect storage, downloads, and clipboard access.
 
+The published update includes these responsive improvements. The 48 state-flow regression tests passed.
+
 ## Pages and routes
 
 The site uses hash navigation so it can run on a static host without server-side routing.
@@ -91,9 +93,11 @@ Keep asset references compatible with a project-site subdirectory as well as a c
 
 The public repository is [AL91Cole/cole-learning-labs](https://github.com/AL91Cole/cole-learning-labs). GitHub Pages publishes from `main`, `/(root)`, with `www.colelearninglabs.com` configured as the custom domain.
 
-The saved DNS configuration points `www` and the apex domain to GitHub Pages. GitHub reports a successful DNS check and is issuing the custom-domain certificate; HTTPS enforcement has not yet been confirmed. Squarespace remains the registrar and authoritative DNS provider, with DNSSEC on and mail records preserved.
+The saved DNS configuration points `www` and the apex domain to GitHub Pages. GitHub reports a successful DNS check and is issuing the custom-domain certificate; its **Enforce HTTPS** control is still disabled. Squarespace remains the registrar, and mail records were preserved.
 
-A Cloudflare Free zone is prepared with all ten existing DNS records imported; eligible web records are DNS-only. Activation is pending approval and a nameserver change. Cloudflare is not yet authoritative, and its website proxy, WAF, and caching protections are not enabled.
+The approved nameserver change to `elias.ns.cloudflare.com` and `venus.ns.cloudflare.com` has been saved at Squarespace. Cloudflare Free is waiting for registrar propagation and is not yet marked active. All ten imported records remain DNS-only. **Full (strict)** has been saved for future proxied traffic, but the website proxy, WAF, and caching protections are not enabled.
+
+The old DNSSEC delegation was removed; Squarespace currently shows **No DS Records**. DNSSEC restoration remains a next step after Cloudflare is active. Confirm both GitHub's origin certificate and Cloudflare's edge certificate before enabling the web proxy.
 
 Follow [Deployment guidance](docs/DEPLOYMENT.md) for the exact records and remaining checks before announcing the custom address as ready for classroom use.
 

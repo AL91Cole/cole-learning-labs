@@ -56,7 +56,7 @@ Local viewport checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page
 - Give students a written objective and a clear stopping point. Offer vocabulary support, paired discussion, or a spoken explanation when appropriate.
 - Give professional portfolio links context before sending younger learners to external websites. External projects have their own interfaces and access requirements.
 
-The custom-domain HTTPS connection is still being verified. Cloudflare setup has been prepared, but its nameserver change and activation are pending; Cloudflare web protection is not yet enabled. Confirm the published address and connection status before directing a class to it. If security challenge rules are added later, test them on managed Chromebooks and the school network before a lesson.
+GitHub has passed its DNS check and is issuing the custom-domain certificate; HTTPS enforcement is not yet available. The approved Cloudflare nameserver change has been saved and is awaiting propagation and activation. Records remain DNS-only, so Cloudflare web protection is not yet enabled. Its Full (strict) setting is saved for future proxying, and DNSSEC restoration remains pending after activation. Confirm the published address and connection status before directing a class to it. If security challenge rules are added later, test them on managed Chromebooks and the school network before a lesson.
 
 ## Progress, sharing, and reports
 
