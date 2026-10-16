@@ -88,7 +88,7 @@ The labs have no advertising, analytics SDK, remote fonts, or live AI service. C
 
 ## Run and verify locally
 
-The static application needs no dependency installation or production build. Use **Node.js 22.13.0 or newer**; Node 24 is the currently supported verification environment for the SQL tests using `node:sqlite`.
+The static application needs no dependency installation. Use **Node.js 24** for the supported checks, SQL tests, and production build. Cloudflare publishes a reviewed set of public files from `dist`, rather than the source checkout.
 
 ```sh
 npm run dev
@@ -99,6 +99,7 @@ Open the printed local HTTP address. ES module imports need a server; opening `i
 ```sh
 npm run check
 npm test
+npm run build
 ```
 
 Syntax checks cover the application, server modules, and scripts. Tests cover simulation state and verification, mission feedback and hints, saved-work handling, and the prepared classroom handler’s authentication, ownership, versioning, limits, and SQL behavior. Separate production-entry tests verify that the privacy gate blocks configuration, database, and identity access. Integration tests intentionally call the prepared handler; passing them neither activates production nor establishes legal compliance. A static preview returns an unavailable-service view for real classroom operations.
@@ -117,6 +118,9 @@ Syntax checks cover the application, server modules, and scripts. Tests cover si
 | `functions/api/[[path]].js`, `migrations/0001_classrooms.sql` | Optional classroom API and database structure |
 | `school-it.html`, `src/school.css` | School technology review page |
 | `scripts/serve.mjs`, `scripts/check.mjs` | Static preview and syntax verification |
+| `scripts/build.mjs` | Explicit public-file manifest and isolated `dist` output |
+| `.github/workflows/security-checks.yml` | Tests, artifact validation, and CodeQL source/workflow scans |
+| `SECURITY.md`, `docs/REPOSITORY-SECURITY.md` | Private vulnerability reporting and maintainer security procedures |
 | `docs/TEACHING.md` | Lesson preparation, assessment, and classroom workflows |
 | `docs/CLASSROOM-SETUP.md` | Prepared backend setup and operational boundaries |
 | `docs/PRIVACY-RELEASE-GATE.md` | Blocking privacy evidence, operational gaps, and reviewed-release requirements |

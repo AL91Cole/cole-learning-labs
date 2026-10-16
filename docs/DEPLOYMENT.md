@@ -12,8 +12,8 @@ Cole Learning Labs uses static HTML, CSS, and browser ES modules served by Cloud
 | Git integration | Authorized for selected repositories; existing connection preserved |
 | Production branch | `main` |
 | Framework preset | None |
-| Build command | `exit 0` |
-| Build output directory | `.` |
+| Build command | `npm run check && npm test && npm run build`; saved in Pages and verified in the security preview build log |
+| Build output directory | `dist`; saved in Pages; preview published only the reviewed public artifact |
 | Root directory | Repository root |
 | Classroom production entry | Hardcoded privacy gate closed; 503 before settings, D1, or identity lookup; environment/email changes cannot unlock it |
 | Classroom provisioning | No first approved teacher email, D1 database, or Access application provisioned |
@@ -44,9 +44,13 @@ The two web DNS records are proxied CNAMEs to `cole-learning-labs.pages.dev`. Th
 
 ## 1. Build and verify the native deployment
 
-In **Workers & Pages → Pages**, use the existing `cole-learning-labs` project. Its GitHub connection reads `main` with the configuration above. Do not select `npm run build`: the package has no production build script and the files already occupy the repository root.
+The repository security release preview `bb8d0564` completed on October 16, 2026 using Node 24.13.1, all 125 tests passing with no skips, and the 22-file public manifest. HTTPS checks verified the headers, privacy-gated API, browser assets, and exclusion of source-only files. Cloudflare's fallback returns homepage HTML for absent paths; a 200 response at a development-file address is not proof that the source file is published. Production still requires verification after the merge.
 
-Cloudflare's framework-free guidance allows an empty command; the Static HTML guide recommends `exit 0` as an explicit no-op. Output `.` selects the directory containing `index.html`, `src/`, and `assets/`.
+In **Workers & Pages → Pages**, use the existing `cole-learning-labs` project. Keep framework preset **None**, production branch **main**, and root directory at the repository root. Use Node **24**, build command **`npm run check && npm test && npm run build`**, and build output directory **`dist`**. The committed `.node-version` selects the supported runtime.
+
+The build copies only the explicit public-file manifest in `scripts/build.mjs`. It rejects unreviewed files in public source directories, symlinks, invalid source types, and broadened Functions routing. It excludes repository documentation, tests, scripts, migrations, credentials, and Functions source from the static output. Never change output back to `.`. New public files require an intentional manifest review and successful tests. Cloudflare compiles `functions/` from the repository root separately; do not move it into `dist`.
+
+Run the same three commands locally and on pull requests. See [Repository security](REPOSITORY-SECURITY.md) and [Cloudflare Functions placement](https://developers.cloudflare.com/pages/functions/get-started/). The currently deployed site remains live if a new build fails; a source commit alone is not proof that a release is live.
 
 After a successful deployment, open its generated `pages.dev` address. Check the homepage, ES module and stylesheet requests, hash navigation, and one assignment from each pathway before changing custom-domain routing. Review the deployment log when a future update fails rather than treating a source commit as a successful publish.
 

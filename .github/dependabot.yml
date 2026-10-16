@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    # Dependabot updates the pinned action commit and its version comment together.
+    # Updates require review and passing checks; nothing auto-merges.
+    groups:
+      github-actions:
+        patterns: ['*']
