@@ -28,6 +28,8 @@ const safetyReady = s => !s.pcOn && !s.acConnected;
 const hardwareReady = s => s.boardInstalled && s.cpuInstalled && s.coolerInstalled && s.ramSeated && s.gpuInstalled && s.atxConnected && s.cpuPowerConnected && s.gpuPowerConnected && s.frontPanelConnected && s.originalDriveInstalled && s.sataDataConnected && s.sataPowerConnected;
 const displayReady = s => s.pcOn && s.booted && s.gpuInstalled && s.videoPort === 'gpu';
 const result = (state, message, kind = 'info') => ({ state, message, kind });
+// A held cable and selected diagnostic tool belong to the picture, not student work.
+const benchInteractions = new WeakMap();
 
 export function initialHardwareState(caseId = 'INC-101') {
   const id = clampCase(caseId);
@@ -187,6 +189,30 @@ export function verifyHardware(caseId, state) {
   return { ok: true, message: 'Fixed and delivered: the PC starts, the monitor works, and the original lesson document opens with the classroom files preserved.' };
 }
 
+/** Readouts describe the modeled equipment; they never run on the learner's device. */
+export function getHardwareReadouts(caseId, state) {
+  const s = normalizeHardwareState(caseId, state);
+  const startupProblem = failureReason(s);
+  const startupStopped = !s.boardInstalled ? 'No motherboard installed' : !s.atxConnected || !s.cpuPowerConnected ? 'Motherboard power missing' : !s.frontPanelConnected ? 'Power-switch lead missing' : !s.cpuInstalled || !s.coolerInstalled ? 'Stopped at CPU check' : !s.ramSeated ? 'Stopped at memory check' : !s.gpuInstalled || !s.gpuPowerConnected ? 'Stopped at graphics check' : !s.originalDriveInstalled || !s.sataDataConnected || !s.sataPowerConnected ? 'No boot device' : 'Startup incomplete';
+  const videoConnected = s.videoPort === 'gpu' && s.gpuInstalled && s.gpuPowerConnected;
+  const driveConnected = s.originalDriveInstalled && s.sataDataConnected && s.sataPowerConnected;
+  return {
+    power: { label:'Power path', value:!s.acConnected ? 'AC disconnected' : s.pcOn ? 'PC powered on' : 'AC present · PC off', tone:safetyReady(s) ? 'safe' : 'notice', action:'inspect-power', detail:`AC cord: ${s.acConnected ? 'connected' : 'disconnected'}. Case power: ${s.pcOn ? 'on' : 'off'}. Motherboard 24-pin: ${s.atxConnected ? 'connected' : 'missing'}. CPU 8-pin: ${s.cpuPowerConnected ? 'connected' : 'missing'}. Internal work is ${safetyReady(s) ? 'safe in this virtual model' : 'locked until the PC is off and AC is disconnected'}.` },
+    startup: { label:'Startup / POST', value:!s.pcOn ? 'PC off · not running' : s.booted ? 'Original OS loaded' : startupStopped, tone:s.booted ? 'safe' : 'notice', action:'inspect-board', detail:!s.pcOn ? `The computer is off. Startup tests run when you choose Power on / test. Tests attempted: ${s.bootCount}.` : s.booted ? `The modeled startup checks passed and the original classroom OS loaded. Tests attempted: ${s.bootCount}. A loaded OS alone does not prove that the monitor or lesson file works.` : `${startupProblem || 'The machine has not completed a startup test. Use Power on / test after making your change.'} Tests attempted: ${s.bootCount}.` },
+    storage: { label:'Drive connections', value:!s.originalDriveInstalled ? 'Original SSD not fitted' : driveConnected ? 'SATA data + power fitted' : !s.sataDataConnected ? 'SATA data disconnected' : 'SATA power disconnected', tone:driveConnected ? 'safe' : 'notice', action:'inspect-storage', detail:`Original classroom SSD: ${s.originalDriveInstalled ? 'in its 2.5-inch bay' : 'safely set aside'}. Narrow SATA data: ${s.sataDataConnected ? 'connected' : 'disconnected'}. Wide SATA power: ${s.sataPowerConnected ? 'connected' : 'disconnected'}. ${s.booted ? 'The original classroom OS has loaded.' : 'These connection checks do not prove that the OS starts; run the startup test.'}` },
+    display: { label:'Monitor signal', value:!s.pcOn ? 'PC off · no signal' : !videoConnected ? 'No video signal' : displayReady(s) ? s.documentOpened ? 'Original lesson file open' : 'Classroom desktop visible' : 'Connected · startup stopped', tone:displayReady(s) ? 'safe' : 'notice', action:'inspect-monitor', detail:`Monitor cable: ${s.videoPort === 'gpu' ? 'lower graphics-card output' : 'upper motherboard video output'}. ${!s.pcOn ? 'The PC must be running to send a picture.' : !videoConnected ? 'This workstation sends its picture through the fitted, powered graphics card.' : !s.booted ? `The cable reaches the graphics card, but startup has not completed. ${startupProblem}` : s.documentOpened ? 'Lesson_Practice_File.docx is open from the original classroom drive.' : 'The desktop is visible. Open the original lesson document to check the customer task.'}` }
+  };
+}
+
+function renderDiagnostics(s, readouts, selected) {
+  const item = readouts[selected];
+  return `<section class="hw-diagnostics" aria-label="Virtual diagnostic tools"><div class="hw-diagnostics-heading"><div><span class="hw-eyebrow">BENCH INSTRUMENTS</span><h3>Check what the equipment is doing.</h3></div><span class="hw-instrument-tag">MODEL READOUTS</span></div><p class="hw-tool-help">Choose a check. Read the result, make one change, then run the startup test. These tools inspect; they do not repair.</p><div class="hw-readout-grid">${Object.entries(readouts).map(([key,tool])=>`<button type="button" data-hw-diagnostic="${key}" aria-pressed="${selected===key}" class="hw-readout hw-readout-${tool.tone}"><span>${tool.label}</span><strong>${tool.value}</strong><small>${selected===key?'Result selected':'Inspect this result'} <span aria-hidden="true">↗</span></small></button>`).join('')}</div><div class="hw-diagnostic-result" role="status" aria-live="polite"><strong>${item.label}</strong><p>${item.detail}</p></div><p class="hw-tool-note">Simulated status only · no real-device scan, remote connection, or voltage measurements.</p></section>`;
+}
+
+function renderCableControls(s, held) {
+  return `<section class="hw-cable-station" aria-label="Hands-on display cable"><div class="hw-cable-heading"><div><span class="hw-eyebrow">DISPLAY CONNECTION</span><h3>Follow the cable. Choose the socket.</h3></div><span class="hw-cable-route">Cable in: ${s.videoPort==='gpu'?'lower graphics card':'upper motherboard'}</span></div><p>1. Pick up the virtual display cable. 2. Tap or click a socket below or in the rear picture. Keyboard: Tab, then Enter or Space. No dragging is needed.</p><div class="hw-cable-pickup"><button type="button" class="hw-action" data-hw-cable="${held?'cancel':'pickup'}" aria-pressed="${held}"><span class="hw-cable-plug" aria-hidden="true"></span>${held?'Put the cable down':'Pick up display cable'}</button><span role="status">${held?'Cable held · choose a video socket. The equipment has not changed yet.':'Choose a socket without holding the cable to inspect it first.'}</span></div><div class="hw-socket-grid">${[['board','Upper motherboard video','Upper rear I/O panel'],['gpu','Lower graphics-card video',s.gpuInstalled?'Lower expansion slot':'Graphics card not installed']].map(([port,label,detail])=>`<button type="button" class="hw-socket ${held?'hw-socket-target':''} ${s.videoPort===port?'hw-socket-connected':''}" data-hw-connector="${port}" aria-label="${held?'Connect display cable to':'Inspect'} ${label.toLowerCase()}"><span class="hw-port-face" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span><strong>${label}</strong><small>${detail} · ${s.videoPort===port?'cable connected':'socket empty'}</small></span><em>${held?'Connect here':'Inspect socket'}</em></button>`).join('')}</div></section>`;
+}
+
 function svgDefs() {
   return `<defs>
     <linearGradient id="hw-chassis" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#424d5b"/><stop offset=".3" stop-color="#202b38"/><stop offset="1" stop-color="#121b27"/></linearGradient>
@@ -203,15 +229,27 @@ function svgDefs() {
 
 function screw(x, y) { return `<g class="hw-screw"><circle cx="${x}" cy="${y}" r="4.2" fill="#485568" stroke="#8290a1"/><path d="M${x-2} ${y}h4M${x} ${y-2}v4" stroke="#13202b" stroke-width="1.4"/></g>`; }
 function interactive(part, label, body, selected) { return `<g class="hw-hit ${selected === part ? 'hw-hit-selected' : ''}" role="button" tabindex="0" aria-label="Inspect ${label}" data-hw-action="inspect-${part}"><title>${label}: activate to inspect</title>${body}</g>`; }
+function videoSocket(part, label, body, selected) {
+  const port = part === 'gpu' ? 'gpu' : 'board';
+  return `<g class="hw-hit hw-picture-socket ${selected===part?'hw-hit-selected':''}" role="button" tabindex="0" aria-label="${label}: inspect socket or connect the held display cable" data-hw-connector="${port}"><title>${label}: pick up the virtual cable, then select this socket to connect</title>${body}</g>`;
+}
+function rearGraphicsPanel(s) {
+  if (!s.gpuInstalled) return '<rect x="24" y="268" width="222" height="58" rx="3" fill="url(#hw-vents)" stroke="#607489" stroke-width="2"/><text x="42" y="292" fill="#b0c0cd" font-size="10">EMPTY EXPANSION SLOT</text><text x="42" y="311" fill="#89a0b0" font-size="9">Fit a graphics card to add video ports</text>';
+  return '<rect x="24" y="268" width="222" height="58" rx="3" fill="#182b34" stroke="#44d9bd" stroke-width="2"/><rect x="37" y="279" width="61" height="22" rx="2" fill="#0a1723" stroke="#8bd8cd"/><path d="M43 285h49l-5 10H48z" fill="#516877"/><rect x="116" y="279" width="42" height="22" fill="#11202b" stroke="#7a929c"/><text x="39" y="318" fill="#74e5cf" font-size="9">DEDICATED GPU · VIDEO OUTPUTS</text>';
+}
 function monitor(s, x=30, y=91, width=330, height=227) {
   const isReady = displayReady(s);
-  const inner = s.documentOpened ? `<rect x="${x+16}" y="${y+16}" width="${width-32}" height="${height-51}" rx="2" fill="#e7edf2"/><rect x="${x+16}" y="${y+16}" width="${width-32}" height="22" fill="#15547d"/><text x="${x+27}" y="${y+30}" fill="white" font-size="9">Lesson_Practice_File.docx</text><rect x="${x+64}" y="${y+52}" width="${width-128}" height="${height-106}" fill="#fff"/><text x="${x+78}" y="${y+72}" font-size="10" fill="#1b2b3d" font-weight="700">Classroom technology practice</text><path d="M${x+79} ${y+87}h${width-158}m-${width-158} 13h${width-168}m-${width-168} 13h${width-174}m-${width-174} 13h${width-158}" stroke="#aebdcb" stroke-width="2"/><rect x="${x+25}" y="${y+height-55}" width="${width-50}" height="13" rx="3" fill="#d6ede8"/><text x="${x+width/2}" y="${y+height-46}" text-anchor="middle" font-size="8" fill="#10624e">Original file opened · customer task delivered</text>` : isReady ? `<rect x="${x+15}" y="${y+15}" width="${width-30}" height="${height-48}" fill="url(#hw-screen)"/><path d="M${x+165} ${y+27}l75 30-30 100-65-40z" fill="#21cbb5" opacity=".1"/><g role="button" tabindex="0" aria-label="Open Lesson Practice File document" data-hw-action="open-document" class="hw-document-launch"><rect x="${x+35}" y="${y+39}" width="112" height="69" rx="6" fill="#183b53" stroke="#5fdfd0"/><path d="M${x+48} ${y+51}h19l7 7v24h-26z" fill="#dcebf1"/><path d="M${x+67} ${y+51}v8h7" fill="none" stroke="#20628c"/><text x="${x+60}" y="${y+75}" text-anchor="middle" fill="#13517c" font-size="13" font-weight="800">W</text><text x="${x+84}" y="${y+63}" fill="#fff" font-size="9">Open lesson</text><text x="${x+84}" y="${y+77}" fill="#a4d4dd" font-size="8">.docx · original file</text><text x="${x+91}" y="${y+98}" text-anchor="middle" fill="#6ee4ce" font-size="8">CLICK TO VERIFY DELIVERY</text></g><rect x="${x+15}" y="${y+height-51}" width="${width-30}" height="18" fill="#0a1929"/><rect x="${x+26}" y="${y+height-45}" width="8" height="8" fill="#57d5d0"/><text x="${x+48}" y="${y+height-38}" fill="#afc6d4" font-size="8">Classroom Desktop</text>` : `<rect x="${x+15}" y="${y+15}" width="${width-30}" height="${height-48}" fill="#040b12"/>${s.pcOn ? `<text x="${x+width/2}" y="${y+height/2-8}" text-anchor="middle" fill="${s.videoPort !== 'gpu' ? '#e7eef3' : '#f4bd6b'}" font-size="14" font-weight="700">${s.videoPort !== 'gpu' ? 'NO SIGNAL' : !s.ramSeated ? 'MEMORY NOT DETECTED' : 'NO BOOT DEVICE'}</text><text x="${x+width/2}" y="${y+height/2+15}" text-anchor="middle" fill="#738ba0" font-size="9">${s.videoPort !== 'gpu' ? 'Check video cable / selected input' : !s.ramSeated ? 'POST stopped · check DIMM seating' : 'Check storage and boot connections'}</text>` : `<circle cx="${x+width/2}" cy="${y+height/2-8}" r="13" fill="none" stroke="#33495e" stroke-width="2"/><path d="M${x+width/2} ${y+height/2-27}v19" stroke="#33495e" stroke-width="3"/><text x="${x+width/2}" y="${y+height/2+27}" text-anchor="middle" fill="#688095" font-size="9">PC POWER OFF</text>`}`;
+  const noSignal = s.videoPort !== 'gpu' || !s.gpuInstalled || !s.gpuPowerConnected;
+  const memoryStopped = s.boardInstalled && s.atxConnected && s.cpuPowerConnected && s.cpuInstalled && s.coolerInstalled && !s.ramSeated;
+  const missingBootDrive = s.ramSeated && (!s.originalDriveInstalled || !s.sataDataConnected || !s.sataPowerConnected);
+  const fault = noSignal ? {label:'NO SIGNAL',hint:'Check video cable / powered graphics card'} : memoryStopped ? {label:'MEMORY NOT DETECTED',hint:'POST stopped · check DIMM seating'} : missingBootDrive ? {label:'NO BOOT DEVICE',hint:'Check storage and boot connections'} : {label:'STARTUP INCOMPLETE',hint:'Read the startup / POST instrument below'};
+  const inner = s.documentOpened ? `<rect x="${x+16}" y="${y+16}" width="${width-32}" height="${height-51}" rx="2" fill="#e7edf2"/><rect x="${x+16}" y="${y+16}" width="${width-32}" height="22" fill="#15547d"/><text x="${x+27}" y="${y+30}" fill="white" font-size="9">Lesson_Practice_File.docx</text><rect x="${x+64}" y="${y+52}" width="${width-128}" height="${height-106}" fill="#fff"/><text x="${x+78}" y="${y+72}" font-size="10" fill="#1b2b3d" font-weight="700">Classroom technology practice</text><path d="M${x+79} ${y+87}h${width-158}m-${width-158} 13h${width-168}m-${width-168} 13h${width-174}m-${width-174} 13h${width-158}" stroke="#aebdcb" stroke-width="2"/><rect x="${x+25}" y="${y+height-55}" width="${width-50}" height="13" rx="3" fill="#d6ede8"/><text x="${x+width/2}" y="${y+height-46}" text-anchor="middle" font-size="8" fill="#10624e">Original file opened · customer task delivered</text>` : isReady ? `<rect x="${x+15}" y="${y+15}" width="${width-30}" height="${height-48}" fill="url(#hw-screen)"/><path d="M${x+165} ${y+27}l75 30-30 100-65-40z" fill="#21cbb5" opacity=".1"/><g role="button" tabindex="0" aria-label="Open Lesson Practice File document" data-hw-action="open-document" class="hw-document-launch"><rect x="${x+35}" y="${y+39}" width="112" height="69" rx="6" fill="#183b53" stroke="#5fdfd0"/><path d="M${x+48} ${y+51}h19l7 7v24h-26z" fill="#dcebf1"/><path d="M${x+67} ${y+51}v8h7" fill="none" stroke="#20628c"/><text x="${x+60}" y="${y+75}" text-anchor="middle" fill="#13517c" font-size="13" font-weight="800">W</text><text x="${x+84}" y="${y+63}" fill="#fff" font-size="9">Open lesson</text><text x="${x+84}" y="${y+77}" fill="#a4d4dd" font-size="8">.docx · original file</text><text x="${x+91}" y="${y+98}" text-anchor="middle" fill="#6ee4ce" font-size="8">CLICK TO VERIFY DELIVERY</text></g><rect x="${x+15}" y="${y+height-51}" width="${width-30}" height="18" fill="#0a1929"/><rect x="${x+26}" y="${y+height-45}" width="8" height="8" fill="#57d5d0"/><text x="${x+48}" y="${y+height-38}" fill="#afc6d4" font-size="8">Classroom Desktop</text>` : `<rect x="${x+15}" y="${y+15}" width="${width-30}" height="${height-48}" fill="#040b12"/>${s.pcOn ? `<text x="${x+width/2}" y="${y+height/2-8}" text-anchor="middle" fill="${noSignal ? '#e7eef3' : '#f4bd6b'}" font-size="14" font-weight="700">${fault.label}</text><text x="${x+width/2}" y="${y+height/2+15}" text-anchor="middle" fill="#738ba0" font-size="9">${fault.hint}</text>` : `<circle cx="${x+width/2}" cy="${y+height/2-8}" r="13" fill="none" stroke="#33495e" stroke-width="2"/><path d="M${x+width/2} ${y+height/2-27}v19" stroke="#33495e" stroke-width="3"/><text x="${x+width/2}" y="${y+height/2+27}" text-anchor="middle" fill="#688095" font-size="9">PC POWER OFF</text>`}`;
   return `<g filter="url(#hw-shadow)"><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="url(#hw-bezel)" stroke="#5e6e80" stroke-width="2"/>${inner}<circle cx="${x+width-22}" cy="${y+height-14}" r="3" fill="${s.pcOn ? '#42d8af' : '#b58b4b'}"/><text x="${x+width/2}" y="${y+height-13}" text-anchor="middle" fill="#8295aa" font-size="7" letter-spacing="2">CLASSROOM DISPLAY · HDMI</text><path d="M${x+width/2-17} ${y+height}v29h34v-29M${x+width/2-72} ${y+height+41}h144l-20-12h-104z" fill="#303d4c" stroke="#617086"/></g>`;
 }
 
 function rearSvg(s) {
   return `<svg class="hw-svg" viewBox="0 0 900 580" role="group" aria-label="Rear connection view with inactive motherboard video, active graphics output, and mains power">${svgDefs()}<rect width="900" height="580" fill="#0a1420"/><rect width="900" height="580" fill="url(#hw-grid)"/>${monitor(s,30,112,365,250)}
-  <g transform="translate(505 31)"><rect width="270" height="512" rx="9" fill="url(#hw-chassis)" stroke="#627183" stroke-width="3"/>${screw(14,15)}${screw(256,15)}${screw(14,496)}${screw(256,496)}<rect x="24" y="27" width="120" height="185" rx="4" fill="#64707d" stroke="#a4aebb"/><g fill="#111d2a" stroke="#b0b9c4"><rect x="38" y="43" width="29" height="17" rx="2"/><rect x="75" y="43" width="29" height="17" rx="2"/><rect x="38" y="79" width="29" height="17" rx="2"/><rect x="75" y="79" width="29" height="17" rx="2"/><rect x="38" y="115" width="36" height="25" rx="2"/></g><circle cx="96" cy="166" r="7" fill="#77a585"/><circle cx="117" cy="166" r="7" fill="#bd7e8d"/>${interactive('rear','motherboard video output',`<rect x="36" y="178" width="73" height="22" rx="3" fill="#101a28" stroke="${s.videoPort==='board'?'#f5b85b':'#99a8b8'}" stroke-width="2"/><path d="M43 184h58l-6 11H49z" fill="#444e5e"/><text x="36" y="232" fill="#e4bc76" font-size="10">MOTHERBOARD VIDEO</text><text x="36" y="247" fill="#9aaabc" font-size="9">Inactive on this workstation</text>`,s.selectedPart)}<rect x="163" y="30" width="82" height="180" rx="5" fill="url(#hw-vents)" stroke="#455265"/><g stroke="#687487" fill="url(#hw-vents)"><rect x="24" y="268" width="222" height="26" rx="2"/><rect x="24" y="300" width="222" height="26" rx="2"/><rect x="24" y="332" width="222" height="26" rx="2"/></g>${interactive('gpu','dedicated graphics-card outputs',`<rect x="24" y="268" width="222" height="58" rx="3" fill="#182b34" stroke="#44d9bd" stroke-width="2"/><rect x="37" y="279" width="61" height="22" rx="2" fill="#0a1723" stroke="#8bd8cd"/><path d="M43 285h49l-5 10H48z" fill="#516877"/><rect x="116" y="279" width="42" height="22" fill="#11202b" stroke="#7a929c"/><text x="39" y="318" fill="#74e5cf" font-size="9">DEDICATED GPU · ACTIVE VIDEO</text>`,s.selectedPart)}${interactive('power','AC mains inlet',`<rect x="24" y="388" width="222" height="95" rx="4" fill="#151c28" stroke="#6b7888"/><circle cx="183" cy="434" r="35" fill="url(#hw-vents)" stroke="#59697a"/><rect x="38" y="413" width="54" height="35" rx="2" fill="#050b13" stroke="${s.acConnected?'#8cdec9':'#9cabbb'}" stroke-width="2"/><path d="M50 422v14m16-14v14m14-14v14" stroke="#7d8c9b" stroke-width="3"/><rect x="105" y="414" width="22" height="27" rx="2" fill="#080e17" stroke="#6e7e90"/><text x="116" y="432" text-anchor="middle" fill="#aec2d1" font-size="11">I</text><text x="39" y="468" fill="#8ca4b6" font-size="9">PSU · AC INLET · VIRTUAL ONLY</text>`,s.selectedPart)}</g>
+  <g transform="translate(505 31)"><rect width="270" height="512" rx="9" fill="url(#hw-chassis)" stroke="#627183" stroke-width="3"/>${screw(14,15)}${screw(256,15)}${screw(14,496)}${screw(256,496)}<rect x="24" y="27" width="120" height="185" rx="4" fill="#64707d" stroke="#a4aebb"/><g fill="#111d2a" stroke="#b0b9c4"><rect x="38" y="43" width="29" height="17" rx="2"/><rect x="75" y="43" width="29" height="17" rx="2"/><rect x="38" y="79" width="29" height="17" rx="2"/><rect x="75" y="79" width="29" height="17" rx="2"/><rect x="38" y="115" width="36" height="25" rx="2"/></g><circle cx="96" cy="166" r="7" fill="#77a585"/><circle cx="117" cy="166" r="7" fill="#bd7e8d"/>${videoSocket('rear','motherboard video output',`<rect x="36" y="178" width="73" height="22" rx="3" fill="#101a28" stroke="${s.videoPort==='board'?'#f5b85b':'#99a8b8'}" stroke-width="2"/><path d="M43 184h58l-6 11H49z" fill="#444e5e"/><text x="36" y="232" fill="#e4bc76" font-size="10">MOTHERBOARD VIDEO</text><text x="36" y="247" fill="#9aaabc" font-size="9">Inactive on this workstation</text>`,s.selectedPart)}<rect x="163" y="30" width="82" height="180" rx="5" fill="url(#hw-vents)" stroke="#455265"/><g stroke="#687487" fill="url(#hw-vents)"><rect x="24" y="268" width="222" height="26" rx="2"/><rect x="24" y="300" width="222" height="26" rx="2"/><rect x="24" y="332" width="222" height="26" rx="2"/></g>${videoSocket('gpu','dedicated graphics-card outputs',rearGraphicsPanel(s),s.selectedPart)}${interactive('power','AC mains inlet',`<rect x="24" y="388" width="222" height="95" rx="4" fill="#151c28" stroke="#6b7888"/><circle cx="183" cy="434" r="35" fill="url(#hw-vents)" stroke="#59697a"/><rect x="38" y="413" width="54" height="35" rx="2" fill="#050b13" stroke="${s.acConnected?'#8cdec9':'#9cabbb'}" stroke-width="2"/><path d="M50 422v14m16-14v14m14-14v14" stroke="#7d8c9b" stroke-width="3"/><rect x="105" y="414" width="22" height="27" rx="2" fill="#080e17" stroke="#6e7e90"/><text x="116" y="432" text-anchor="middle" fill="#aec2d1" font-size="11">I</text><text x="39" y="468" fill="#8ca4b6" font-size="9">PSU · AC INLET · VIRTUAL ONLY</text>`,s.selectedPart)}</g>
   <path d="M390 349C452 365 423 ${s.videoPort==='gpu'?'336':'221'} 500 ${s.videoPort==='gpu'?'321':'221'}H${s.videoPort==='gpu'?'542':'541'}" fill="none" stroke="#f7bb57" stroke-width="9"/><path d="M390 349C452 365 423 ${s.videoPort==='gpu'?'336':'221'} 500 ${s.videoPort==='gpu'?'321':'221'}H${s.videoPort==='gpu'?'542':'541'}" fill="none" stroke="#8f5f24" stroke-width="3"/>${s.acConnected?'<path d="M544 463C464 463 485 551 390 551H330" fill="none" stroke="#080c14" stroke-width="14"/><path d="M544 463C464 463 485 551 390 551H330" fill="none" stroke="#647183" stroke-width="2"/>':''}<text x="30" y="46" fill="#e5edf3" font-size="19" font-weight="700">Follow the cable to its source.</text><text x="30" y="68" fill="#8fa4b6" font-size="12">The upper I/O panel and expansion-slot outputs serve different components.</text></svg>`;
 }
 
@@ -241,7 +279,7 @@ const installedFor = (s, part) => ({ board:s.boardInstalled,cpu:s.cpuInstalled,c
 function btn(action,label, extra='') { return `<button type="button" class="hw-action" data-hw-action="${action}" ${extra}>${label}</button>`; }
 
 function renderHardwareHelp(build) {
-  return '<section class="hw-help" aria-label="How to use this workbench"><h4>How to use this workbench <span>Keep these 3 steps in view</span></h4><ol><li><strong>1 · Inspect.</strong> Click or tap a labeled part, or choose it in the component menu. Read what you find. Inspecting only looks; it does not repair anything.</li><li><strong>2 · Change.</strong> Use <em>Make a change</em>' + (build ? ' or an <em>Install</em> button. Dragging is optional.' : ' below the inspection. No dragging is needed.') + ' For internal parts: <em>Power off</em>, then <em>Unplug AC</em> first.</li><li><strong>3 · Test.</strong> After internal work, choose <em>Connect AC</em>, then <em>Power on / test</em>. Check the monitor and open the lesson file. Then use <em>Check &amp; finish</em> on this page.</li></ol><p>Everything is virtual; leave your real device alone. Keyboard: Tab to a control, then Enter or Space. Arrow keys switch picture views.</p></section>';
+  return '<section class="hw-help" aria-label="How to use this workbench"><h4>How to use this workbench <span>Keep these 3 steps in view</span></h4><ol><li><strong>1 · Inspect.</strong> Click or tap a labeled part, or choose it in the component menu. Read what you find. Inspecting only looks; it does not repair anything.</li><li><strong>2 · Change.</strong> Use <em>Make a change</em>' + (build ? ' or an <em>Install</em> button. Dragging is optional.' : ' below the inspection. No dragging is needed.') + ' For internal parts: <em>Power off</em>, then <em>Unplug AC</em> first.</li><li><strong>3 · Test.</strong> After internal work, choose <em>Connect AC</em>, then <em>Power on / test</em>. Check the monitor and open the lesson file. Then use <em>Check &amp; explain</em> on this page.</li></ol><p>Everything is virtual; leave your real device alone. Keyboard: Tab to a control, then Enter or Space. Arrow keys switch picture views.</p></section>';
 }
 
 // These checkpoints describe the present equipment state, rather than awarding points for clicks.
@@ -320,8 +358,15 @@ function renderHardwareMission(id, s, mission) {
 
 export function renderHardware(root, caseId, state, onAction) {
   state = normalizeHardwareState(caseId, state);
+  let interaction = benchInteractions.get(root);
+  if (!interaction || interaction.caseId !== state.caseId) {
+    interaction = { caseId:state.caseId, cableHeld:false, tool:'power' };
+    benchInteractions.set(root, interaction);
+  }
   const activeControl = root.ownerDocument?.activeElement;
   const restoreAction = root.contains(activeControl) ? activeControl.dataset?.hwAction : null;
+  const restoreConnector = root.contains(activeControl) ? activeControl.dataset?.hwConnector : null;
+  const restoreDiagnostic = root.contains(activeControl) ? activeControl.dataset?.hwDiagnostic : null;
   const restoreComponentSelect = root.contains(activeControl) && activeControl.matches?.('[data-hw-inspect]');
   const previousCoachStage = root.querySelector('.hw-coach')?.dataset.hwCoachStage;
   const openCoachLevels = [...root.querySelectorAll('.hw-coach[open], .hw-coach details[open]')].map(details => details.dataset.hwCoachLevel);
@@ -337,13 +382,17 @@ export function renderHardware(root, caseId, state, onAction) {
   if (id === 'INC-102') repairs += `<p class="hw-inline-note">Follow the power chain: outlet → AC cord → PSU → motherboard. Inspect the mains inlet in the rear view.</p>`;
   const completeParts = PARTS.filter(p=>installedFor(s,p[0])).length;
   const mission = hardwareMission(id, s);
+  const readouts = getHardwareReadouts(id, s);
+  const activeView = interaction.cableHeld ? 'rear' : s.view;
   root.innerHTML = `<section class="hw-workbench" aria-label="Interactive hardware workbench">
     <div class="hw-status-bar"><span class="hw-status ${s.pcOn?'hw-status-on':''}"><i></i>PC ${s.pcOn?'ON':'OFF'}</span><span class="hw-status ${s.acConnected?'hw-status-live':'hw-status-safe'}"><i></i>AC ${s.acConnected?'CONNECTED':'DISCONNECTED'}</span><span class="hw-work-safety ${safe?'hw-work-safe':''}">${safe?'✓ Safe to change virtual components':'Power off + unplug before internal work'}</span></div>
     ${renderHardwareMission(id,s,mission)}
     <div class="hw-power-controls" role="group" aria-label="Virtual PC power controls"><span class="hw-controls-label">Virtual power controls</span>${btn('power-off','① Power off')}${btn('unplug','② Unplug AC')}${btn('plug-in','③ Connect AC')}${btn('boot','④ Power on / test')}</div>
-    <div class="hw-view-tabs" role="tablist" aria-label="Workbench view">${[['bench','Whole workbench'],['internals','Inside the PC'],['rear','Rear connections'],['display','Monitor']].map(([v,l])=>`<button type="button" role="tab" tabindex="${s.view===v?'0':'-1'}" aria-selected="${s.view===v}" data-hw-action="view-${v}">${l}</button>`).join('')}<span class="hw-bench-tag">VIRTUAL BENCH</span></div>
+    ${renderCableControls(s,interaction.cableHeld)}
+    <div class="hw-view-tabs" role="tablist" aria-label="Workbench view">${[['bench','Whole workbench'],['internals','Inside the PC'],['rear','Rear connections'],['display','Monitor']].map(([v,l])=>`<button type="button" role="tab" tabindex="${activeView===v?'0':'-1'}" aria-selected="${activeView===v}" data-hw-action="view-${v}">${l}</button>`).join('')}<span class="hw-bench-tag">VIRTUAL BENCH</span></div>
     <p class="hw-canvas-help">Click or tap a labeled part to inspect it. You can also use the component controls below the picture.</p>
-    <div class="hw-canvas" ${id==='INC-106'?'data-hw-dropzone="true"':''}>${s.view==='rear'?rearSvg(s):s.view==='display'?displaySvg(s):benchSvg(s,s.view==='internals')}${id==='INC-106'?'<span class="hw-drop-hint">Use an Install button, or drag a part onto the bench.</span>':''}</div>
+    <div class="hw-canvas ${interaction.cableHeld?'hw-canvas-cable-held':''}" ${id==='INC-106'?'data-hw-dropzone="true"':''}>${activeView==='rear'?rearSvg(s):activeView==='display'?displaySvg(s):benchSvg(s,activeView==='internals')}${id==='INC-106'?'<span class="hw-drop-hint">Use an Install button, or drag a part onto the bench.</span>':''}</div>
+    ${renderDiagnostics(s,readouts,interaction.tool)}
     <div class="hw-delivery ${s.documentOpened?'hw-delivery-done':''}"><div><strong>${s.documentOpened?'Lesson file opened':fix?'Desktop restored · check the original task':'Check the customer’s original task'}</strong><span>${s.documentOpened?'Now finish your explanation and lab report. The original classroom OS and files are preserved.':ready?'Restore this workstation and open Lesson_Practice_File.docx.':'After the PC starts and shows the desktop, open Lesson_Practice_File.docx. The button will explain what is still missing.'}</span></div>${btn('open-document',s.documentOpened?'✓ Lesson file opened':ready?'Open lesson file':'Check lesson file')}</div>
     <div class="hw-inspect-controls" role="group" aria-label="Inspect a component without changing it"><span class="hw-controls-label">Look at a component</span>${[['monitor','Display'],['rear','Rear connections'],['power','Power'],['board','Board details'],['ram','Memory (RAM)'],['sata','Drive cables'],['storage','Original drive']].map(([p,l])=>`<button type="button" class="${selection===p?'hw-inspect-active':''}" aria-pressed="${selection===p}" data-hw-action="inspect-${p}">${l}</button>`).join('')}</div>
     <label class="hw-component-select"><span>Or choose any component</span><select data-hw-inspect>${[['monitor','Classroom display'],['rear','Rear video connections'],['power','Power supply & AC'],['board','Motherboard specifications'],['cpu','Processor socket'],['cooler','CPU cooler'],['ram','DDR4 memory'],['gpu','Graphics card'],['storage','Original SATA SSD'],['sata','SATA data cable'],['atx','24-pin motherboard power'],['eps','8-pin CPU power'],['gpu-power','Graphics card power'],['sata-power','SATA drive power'],['front','Front panel lead']].map(([p,label])=>`<option value="${p}" ${selection===p?'selected':''}>${label}</option>`).join('')}</select></label>
@@ -352,7 +401,36 @@ export function renderHardware(root, caseId, state, onAction) {
     <p class="hw-model-note">A deterministic teaching model. Components and connectors are simplified for learning; no commands run on your real computer.</p>
   </section>`;
   // Delegation is assigned once per render; replacing the root never stacks listeners.
-  root.onclick = event => { const target = event.target.closest('[data-hw-action]'); if (target && root.contains(target) && !target.disabled) { event.stopPropagation(); onAction(target.dataset.hwAction); } };
+  const useConnector = target => {
+    const port = target.dataset.hwConnector;
+    if (!['board','gpu'].includes(port)) return;
+    const held = interaction.cableHeld;
+    interaction.cableHeld = false;
+    onAction(held ? `video-${port}` : port === 'gpu' ? 'inspect-gpu' : 'inspect-rear');
+  };
+  root.onclick = event => {
+    const cable = event.target.closest('[data-hw-cable]');
+    if (cable && root.contains(cable) && !cable.disabled) {
+      event.stopPropagation();
+      interaction.cableHeld = cable.dataset.hwCable === 'pickup';
+      renderHardware(root,id,s,onAction);
+      root.querySelector('[data-hw-cable]')?.focus({preventScroll:true});
+      return;
+    }
+    const connector = event.target.closest('[data-hw-connector]');
+    if (connector && root.contains(connector) && !connector.disabled) { event.stopPropagation(); useConnector(connector); return; }
+    const tool = event.target.closest('[data-hw-diagnostic]');
+    if (tool && root.contains(tool) && Object.hasOwn(readouts,tool.dataset.hwDiagnostic)) {
+      event.stopPropagation(); interaction.tool = tool.dataset.hwDiagnostic;
+      onAction(readouts[interaction.tool].action); return;
+    }
+    const target = event.target.closest('[data-hw-action]');
+    if (target && root.contains(target) && !target.disabled) {
+      event.stopPropagation();
+      if (target.dataset.hwAction.startsWith('view-')) interaction.cableHeld = false;
+      onAction(target.dataset.hwAction);
+    }
+  };
   root.onkeydown = event => {
     const tab = event.target.closest('.hw-view-tabs [role="tab"]');
     if (tab && ['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
@@ -361,10 +439,13 @@ export function renderHardware(root, caseId, state, onAction) {
       const current = tabs.indexOf(tab);
       const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
       const action = tabs[next].dataset.hwAction;
+      interaction.cableHeld = false;
       onAction(action);
       [...root.querySelectorAll('.hw-view-tabs [role="tab"]')].find(control => control.dataset.hwAction === action)?.focus({preventScroll:true});
       return;
     }
+    const connector = event.target.closest('g[data-hw-connector]');
+    if (connector && ['Enter',' '].includes(event.key)) { event.preventDefault(); event.stopPropagation(); useConnector(connector); return; }
     const target = event.target.closest('g[data-hw-action]');
     if (target && ['Enter',' '].includes(event.key)) { event.preventDefault(); event.stopPropagation(); onAction(target.dataset.hwAction); }
   };
@@ -377,7 +458,9 @@ export function renderHardware(root, caseId, state, onAction) {
       if (openCoachLevels.includes(details.dataset.hwCoachLevel)) details.open = true;
     }
   }
-  if (restoreComponentSelect) root.querySelector('[data-hw-inspect]')?.focus({preventScroll:true});
+  if (restoreConnector) [...root.querySelectorAll('[data-hw-connector]')].find(control=>control.dataset.hwConnector===restoreConnector)?.focus({preventScroll:true});
+  else if (restoreDiagnostic) [...root.querySelectorAll('[data-hw-diagnostic]')].find(control=>control.dataset.hwDiagnostic===restoreDiagnostic)?.focus({preventScroll:true});
+  else if (restoreComponentSelect) root.querySelector('[data-hw-inspect]')?.focus({preventScroll:true});
   else if (restoreAction) {
     const controls = [...root.querySelectorAll('[data-hw-action]')];
     const sameControl = controls.find(control => control.dataset.hwAction === restoreAction);
