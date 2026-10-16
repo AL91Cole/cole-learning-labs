@@ -7,7 +7,9 @@ This site is static HTML, CSS, and browser ES modules. It needs no build service
 - Custom hostname: `www.colelearninglabs.com`
 - Domain registrar: Squarespace
 
-The custom domain is configured in GitHub Pages and the DNS records below have been saved. DNS and HTTPS verification are still in progress; HTTPS enforcement has not yet been confirmed. Squarespace's previous apex forwarding rule was removed, all mail records were preserved, and Cloudflare is not enabled.
+The custom domain is configured in GitHub Pages and the DNS records below have been saved. GitHub reports a successful DNS check and is issuing the custom-domain certificate; HTTPS enforcement has not yet been confirmed. Squarespace's previous apex forwarding rule was removed, and all mail records were preserved.
+
+Cloudflare Free setup is prepared with all ten existing DNS records imported and eligible web records set to DNS-only. Activation is pending approval and a nameserver change. Squarespace remains authoritative with DNSSEC on; no Cloudflare website proxy, WAF, or caching protection is enabled.
 
 Keep the existing Google Site available while the new domain connection is verified.
 
@@ -83,6 +85,55 @@ Check these separately in a browser without editor privileges:
 - Professional external links lead to the intended public destinations.
 
 Record the actual repository URL, deployment result, domain test, and any remaining issue before calling the migration complete.
+
+## 6. Prepared Cloudflare setup
+
+### Current status
+
+| Item | Status |
+| --- | --- |
+| Cloudflare plan | Free zone prepared; activation pending approval and delegation change |
+| Imported DNS | All ten existing records copied; eligible web records DNS-only |
+| Current authoritative nameservers | `nse1.squarespacedns.com`, `nse2.squarespacedns.com`, `nse3.squarespacedns.com`, `nse4.squarespacedns.com` |
+| Current DNSSEC | On at Squarespace |
+| Assigned Cloudflare nameservers | `elias.ns.cloudflare.com`, `venus.ns.cloudflare.com` |
+| GitHub origin HTTPS | DNS check successful; certificate being issued |
+| Cloudflare web proxy and protections | Not enabled |
+
+Preparation in Cloudflare does not change the domain's authoritative DNS. The following is the sequence for an approved activation, not a record of completed steps.
+
+### Activate DNS without changing the host
+
+1. Finish GitHub's custom-domain HTTPS verification and test the website directly before adding the proxy layer.
+2. Compare the ten imported records with the current Squarespace zone. Preserve the GitHub web destinations and every Google Workspace mail and verification record, including any MX, SPF, DKIM, or DMARC records present. Cloudflare's scan can miss records.
+3. Disable the existing Squarespace DNSSEC delegation before replacing nameservers. Confirm the old DS delegation is removed so validators do not expect the old provider's keys.
+4. In Squarespace's **Domain Nameservers** setting, replace the old nameservers with only `elias.ns.cloudflare.com` and `venus.ns.cloudflare.com`. This is a registrar delegation change, not an instruction to add NS records inside the DNS zone.
+5. Wait for Cloudflare to show the zone as active. Recheck public DNS, the website, and mail delivery. DNS edits made only at Squarespace will no longer apply once Cloudflare is authoritative.
+6. Enable DNSSEC in Cloudflare and add its supplied DS information at Squarespace. Verify the new chain before recording DNSSEC as active. Keep website records DNS-only during these checks.
+
+[Cloudflare: Full DNS setup](https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/) · [Squarespace: Nameserver changes](https://support.squarespace.com/hc/en-us/articles/4404183898125-Review-change-or-reset-your-domain-s-nameservers)
+
+### Treat web proxying as a separate step
+
+DNS-only records send website traffic directly to GitHub Pages. Cloudflare's WAF, caching, and protection for proxied web traffic do not apply to those requests. Mail and third-party verification records remain DNS-only.
+
+After zone activation, Cloudflare can provision Universal SSL even while web records are DNS-only. Keep them unproxied until the edge certificate is active; Cloudflare documents a 15-minute to 24-hour provisioning window.
+
+If proxy compatibility is confirmed, use **Full (strict)** with GitHub's valid, matching origin certificate. Cloudflare's edge certificate covers the visitor-to-Cloudflare connection; it does not replace the required origin certificate. An invalid origin certificate can produce error 526.
+
+[Cloudflare: Proxy status](https://developers.cloudflare.com/dns/proxy-status/) · [Universal SSL](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/enable-universal-ssl/) · [Full (strict)](https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/)
+
+Successful edge HTTPS alone does not establish that GitHub's origin certificate will continue renewing. Monitor origin renewal and Pages validation if the proxy is enabled. Keep DNS-only as a fallback if the hosted platform's validation or certificate process conflicts with proxying; no guarantee of unattended GitHub certificate renewal behind the proxy is implied.
+
+[Cloudflare: Hosted-platform and verification caveats](https://developers.cloudflare.com/dns/proxy-status/use-cases/)
+
+### Keep classroom access usable
+
+Begin without blanket challenge rules or aggressive per-IP rate limits. A school can have many learners behind one public IP. Test from a managed Chromebook on the actual school network; extensions, filtering, and proxies can affect challenges, and challenge pages cannot operate in cross-origin iframes.
+
+The site's `#lab/...` routes are browser fragments and cannot be matched as separate WAF request paths. Review the actual requests before adding rules. Recheck the assignment layout, local progress, and report export after any security change.
+
+[Cloudflare: Rate-limit parameters](https://developers.cloudflare.com/waf/rate-limiting-rules/parameters/) · [Supported browsers](https://developers.cloudflare.com/cloudflare-challenges/reference/supported-browsers/) · [Challenge limitations](https://developers.cloudflare.com/cloudflare-challenges/concepts/how-challenges-work/)
 
 ## Maintenance and rollback
 

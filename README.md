@@ -19,6 +19,12 @@ Grade bands are 7–8, 9–10, and 11–12. They provide starting points for tea
 
 The AI activities use authored scenarios. The site makes no live AI API calls. Cybersecurity actions take place inside fictional simulations; the site is not a tool for testing external systems.
 
+## Chromebook and tablet layout
+
+The responsive lab layout includes a PC close-up view, a labeled component selector, section shortcuts, larger controls, and 16px form text. Key controls use minimum heights of 44px or 46px to support touch and pointer use.
+
+Local viewport checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. Preview an assignment on the actual managed classroom device too: school policies can affect storage, downloads, and clipboard access.
+
 ## Pages and routes
 
 The site uses hash navigation so it can run on a static host without server-side routing.
@@ -85,7 +91,9 @@ Keep asset references compatible with a project-site subdirectory as well as a c
 
 The public repository is [AL91Cole/cole-learning-labs](https://github.com/AL91Cole/cole-learning-labs). GitHub Pages publishes from `main`, `/(root)`, with `www.colelearninglabs.com` configured as the custom domain.
 
-The final DNS configuration points `www` and the apex domain to GitHub Pages. DNS and HTTPS verification are still in progress; HTTPS enforcement has not yet been confirmed. Squarespace remains the registrar, mail records were preserved, and Cloudflare is not enabled.
+The saved DNS configuration points `www` and the apex domain to GitHub Pages. GitHub reports a successful DNS check and is issuing the custom-domain certificate; HTTPS enforcement has not yet been confirmed. Squarespace remains the registrar and authoritative DNS provider, with DNSSEC on and mail records preserved.
+
+A Cloudflare Free zone is prepared with all ten existing DNS records imported; eligible web records are DNS-only. Activation is pending approval and a nameserver change. Cloudflare is not yet authoritative, and its website proxy, WAF, and caching protections are not enabled.
 
 Follow [Deployment guidance](docs/DEPLOYMENT.md) for the exact records and remaining checks before announcing the custom address as ready for classroom use.
 

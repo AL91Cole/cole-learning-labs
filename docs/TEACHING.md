@@ -47,10 +47,16 @@ For each criterion, use four levels: **independent and well supported**, **mostl
 
 ## Classroom setup and accessibility
 
+The lab layout adapts to Chromebook and tablet screens. Use the **PC close-up** view and labeled component selector for small equipment details. Section shortcuts help learners move between the investigation areas without hunting through the full page. Key controls have 44px or 46px minimum heights, with 16px text in form inputs.
+
+Local viewport checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. School-device testing remains part of lesson preparation.
+
 - Test one assignment on a managed student Chromebook before teaching. School policies can affect script execution, downloads, clipboard access, or local storage.
 - Check keyboard navigation, visible focus, zoom, contrast, and the available alternatives to pointer interactions. The project should not be described as formally accessibility-certified without an audit.
 - Give students a written objective and a clear stopping point. Offer vocabulary support, paired discussion, or a spoken explanation when appropriate.
 - Give professional portfolio links context before sending younger learners to external websites. External projects have their own interfaces and access requirements.
+
+The custom-domain HTTPS connection is still being verified. Cloudflare setup has been prepared, but its nameserver change and activation are pending; Cloudflare web protection is not yet enabled. Confirm the published address and connection status before directing a class to it. If security challenge rules are added later, test them on managed Chromebooks and the school network before a lesson.
 
 ## Progress, sharing, and reports
 
