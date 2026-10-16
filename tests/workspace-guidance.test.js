@@ -20,7 +20,9 @@ test('every settings workspace starts with three visible steps that name its rea
     assert.ok(guide,`${scenario.id}: first-use instructions should start open`);
     assert.equal((guide.match(/<li>/g)||[]).length,3,scenario.id);
     assert.match(guide,/Neither button submits work to a teacher/,scenario.id);
-    const buttons=[...html.matchAll(/<button\b[^>]*>(.*?)<\/button>/gs)].map(match=>match[1].replace(/<[^>]*>/g,'').replaceAll('&amp;','&'));
+    // Guide labels name plain-text buttons. Compare their markup directly rather
+    // than treating tag stripping as a safe way to process arbitrary HTML.
+    const buttons=[...html.matchAll(/<button\b[^>]*>(.*?)<\/button>/gs)].map(match=>match[1].replaceAll('&amp;','&'));
     for(const [,label] of guide.matchAll(/“([^”]+)”/g)) assert.ok(buttons.includes(label),`${scenario.id}: instructions name a missing button: ${label}`);
     assert.match(html,/No current test results/,scenario.id);
   }
