@@ -105,6 +105,8 @@ Both web records are proxied CNAMEs to `cole-learning-labs.pages.dev`. Cloudflar
 
 Follow [Deployment guidance](docs/DEPLOYMENT.md) for the verified configuration and future releases.
 
+The release entry is versioned as `src/app.js?release=20261016-cloudflare` to request fresh application code without deleting saved work. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`; check the response after future deployments.
+
 ## Before a release
 
 Check the portfolio links, all 15 assignment entry points, grade filtering, evidence and report controls, local resume and reset behavior, and browser back/forward navigation. Complete a representative repair and one assignment from each other pathway. Confirm that keyboard navigation, visible focus, text zoom, and the layout remain usable on a typical Chromebook screen.

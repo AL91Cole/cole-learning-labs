@@ -91,6 +91,12 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()
 
 All three policies were verified on the live HTTPS `www` response. Repeat the response check after future deployment changes. Verify ES module MIME types too, since the site uses browser modules and MIME-sniffing protection.
 
+### Release cache behavior
+
+The entry URL `src/app.js?release=20261016-cloudflare` requests a fresh application entry for this release. `_headers` declares `/src/*` with `Cache-Control: public, max-age=0, must-revalidate`, allowing modules to be stored but requiring revalidation before reuse. Check the response after future deployments.
+
+For future entry updates, change the release identifier and check an ordinary browser reload alongside the module response headers. A new policy does not retroactively expire an older cached response until that resource is fetched again. These changes do not delete `localStorage` or student reports; preserve saved work while checking release freshness.
+
 Check all 15 assignment entry points and complete representative actions. Confirm local resume, reset, copy and `.txt` reports, keyboard navigation, and browser back/forward behavior. Recheck the responsive layout at 1366 × 768, 1024 × 768, and 768 × 1024; those sizes previously passed without page-level horizontal overflow. Test a real managed Chromebook before classroom use.
 
 Cloudflare reports network and SSL/TLS DDoS protections Active, with HTTP DDoS always enabled and no custom overrides. No custom WAF or rate-limit rules are configured. Keep any future rules proportionate: many learners can share one school IP, and managed browser extensions, filtering, or proxies can affect challenges. Challenge pages cannot operate inside cross-origin iframes. The site's `#lab/...` routes are browser fragments and cannot be targeted as separate WAF request paths.
