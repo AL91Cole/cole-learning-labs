@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const ORIGIN = 'https://release-test.invalid/';
-const ENTRIES = ['index.html', 'classroom.html', 'teacher/index.html', 'school-it.html'];
+const ENTRIES = ['index.html', 'classroom.html', 'teacher/index.html', 'school-it.html', 'secure-reports.html'];
 const read = filename => readFileSync(path.join(ROOT, filename), 'utf8');
 
 function attributes(tag) {
