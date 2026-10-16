@@ -277,11 +277,10 @@ const WORKSPACE_GUIDES = {
   ]
 };
 
-function workspaceGuide(id,state) {
+function workspaceGuide(id) {
   const steps = WORKSPACE_GUIDES[normalize(id)];
   if (!steps) return '';
-  const starting=!state.tested && !state.workspaceEdits && !state.checkRuns;
-  return `<details class="ws-start"${starting?' open':''}><summary>How to use this lab <span>3 simple steps</span></summary><div class="ws-start-content"><ol>${steps.map(([title,text])=>`<li><b>${esc(title)}</b><span>${esc(text)}</span></li>`).join('')}</ol><p>Save applies your choices to this practice lab. Test checks them. Neither button submits work to a teacher.</p></div></details>`;
+  return `<section class="ws-start" aria-label="How to use this lab"><h3>How to use this lab <span>Keep these 3 steps in view</span></h3><div class="ws-start-content"><ol>${steps.map(([title,text])=>`<li><b>${esc(title)}</b><span>${esc(text)}</span></li>`).join('')}</ol><p>Save applies your choices to this practice lab. Test checks them. Neither button submits work to a teacher. When you are ready, use Check &amp; finish on this page.</p></div></section>`;
 }
 
 export function applyWorkspaceAction(id, previous, action, value) {
@@ -384,7 +383,7 @@ export function renderWorkspace(root, scenario, state, onAction) {
   state = normalizeWorkspaceState(scenario.id, state);
   const code=normalize(scenario.id);
   const body=code.startsWith('NET')?network(code,state):code.startsWith('AI')?ai(code,state):code.startsWith('SEC')?security(code,state):'<p>This case is available in the hardware bench.</p>';
-  root.innerHTML=`<div class="ws-desktop"><div class="ws-windowbar"><span class="ws-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(scenario.id)} <span aria-hidden="true">/</span> ${esc(scenario.title)}</span><span class="ws-local-badge">PRACTICE ONLY</span></div><div class="ws-body">${workspaceGuide(scenario.id,state)}${missionPanel(scenario.id,state)}${body}${results(state)}</div></div>`;
+  root.innerHTML=`<div class="ws-desktop"><div class="ws-windowbar"><span class="ws-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(scenario.id)} <span aria-hidden="true">/</span> ${esc(scenario.title)}</span><span class="ws-local-badge">PRACTICE ONLY</span></div><div class="ws-body">${workspaceGuide(scenario.id)}${missionPanel(scenario.id,state)}${body}${results(state)}</div></div>`;
   root.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>onAction(button.dataset.action,button.dataset.value)));
   root.querySelector('[data-scope]')?.addEventListener('change',event=>onAction('acknowledge-scope',event.target.checked));
   root.querySelectorAll('[data-form]').forEach(form=>form.addEventListener('submit',event=>{
