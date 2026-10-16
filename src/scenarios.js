@@ -1,0 +1,141 @@
+const clue = (id, label, text) => ({ id, label, text });
+const question = (label, answer) => ({ label, answer });
+
+/** Fictional classroom cases. No student information or live systems are used. */
+export const SCENARIOS = [
+  {
+    id: 'INC-101', title: 'The Blank Monitor', track: 'hardware', grade: '7–8', minutes: 15,
+    summary: 'Follow the video signal from a running desktop to its display.', requester: 'Ms. Rivera · Room 204',
+    goal: 'Restore the picture and open Lesson_Practice_File.docx.',
+    brief: 'The classroom desk moved this morning. The tower starts, but the monitor says “No signal.” Trace the connection before replacing a part.',
+    clues: [clue('screen','Inspect the monitor','The monitor has power and its input is set to HDMI. It reports no video signal.'),clue('video','Inspect the video connection','The display cable is in the motherboard video socket. This desktop uses the dedicated graphics card below it.'),clue('power','Check power','The desktop is running. The fan and power light are on.')],
+    questions: [question('What changed?','The desk was moved and the display cable was reconnected.'),question('What did you try?','I pressed the monitor power button. The “No signal” message stayed.')],
+    rubric: ['Trace power and the signal path.','Choose the active graphics output.','Verify the lesson file opens after the picture returns.']
+  },
+  {
+    id: 'INC-102', title: 'The Desktop That Will Not Start', track: 'hardware', grade: '7–8', minutes: 20,
+    summary: 'Check the power path before diagnosing an internal failure.', requester: 'Mr. Garren · Computer lab',
+    goal: 'Start the classroom PC and open Lesson_Practice_File.docx.',
+    brief: 'The power button does nothing. Inspect the wall power, rear switch, and power cable in the virtual bench.',
+    clues: [clue('power','Trace AC power','The wall outlet is available, but the AC cable is not connected to the desktop.'),clue('switch','Inspect the rear switch','The power supply switch is on.'),clue('components','Inspect installed parts','The processor, memory, and storage are present.')],
+    questions: [question('Are any lights on?','No lights or fans turn on when I press the power button.'),question('When did it last work?','It worked before the cart was unplugged yesterday.')],
+    rubric: ['Inspect the complete power path.','Reconnect the correct cable.','Boot and verify the requested file.']
+  },
+  {
+    id: 'INC-103', title: 'The Interrupted Startup', track: 'hardware', grade: '9–10', minutes: 25,
+    summary: 'Use startup evidence to investigate an unseated memory module.', requester: 'Mr. Garren · Bench 3',
+    goal: 'Restore startup and open Lesson_Practice_File.docx.',
+    brief: 'After a memory inspection, the desktop powers on but stops before loading the operating system. Use the safe power sequence before touching internal parts.',
+    clues: [clue('boot','Read startup evidence','The startup check reports that memory is not detected.'),clue('ram','Inspect the memory slot','The DDR4 module is partly seated; one retaining clip is open.'),clue('spec','Read the motherboard label','The board accepts DDR4 memory. The installed module is compatible.')],
+    questions: [question('What happened before the problem?','A student checked the memory label during an earlier virtual task.'),question('Does the operating system load?','No. Startup stops at the memory check.')],
+    rubric: ['Use the startup clue.','Power off and disconnect AC before reseating memory.','Boot and verify the lesson practice file.']
+  },
+  {
+    id: 'INC-104', title: 'The Missing Desktop', track: 'hardware', grade: '9–10', minutes: 25,
+    summary: 'Distinguish a missing boot device from a failed computer.', requester: 'Ms. Chen · Media center',
+    goal: 'Reconnect classroom storage and open Lesson_Practice_File.docx.',
+    brief: 'The machine reaches its startup screen, but no boot device is available. The original classroom drive contains the operating system and files.',
+    clues: [clue('boot','Read the boot message','The computer reports “Boot device not found.”'),clue('sata','Inspect storage connections','The original SATA drive has power, but its data lead is disconnected.'),clue('drive','Read the drive label','The original drive contains the classroom operating system and documents.')],
+    questions: [question('Was the drive replaced?','No. The original drive is still in the case.'),question('What must be recovered?','Please keep the classroom files and open Lesson_Practice_File.docx.')],
+    rubric: ['Identify the missing storage connection.','Use safe power handling.','Preserve the original drive and verify its file.']
+  },
+  {
+    id: 'INC-105', title: 'The Desktop That Still Will Not Boot', track: 'hardware', grade: '11–12', minutes: 30,
+    summary: 'Identify compatible storage and preserve the original classroom system and files.', requester: 'Mr. Miller · Social studies',
+    goal: 'Reinstall the original classroom SATA drive and open Lesson_Practice_File.docx.',
+    brief: 'The original SATA SSD was safely set aside during an earlier repair. The suggested NVMe spare does not fit this board. Restore the intact classroom drive and its connections rather than discarding the files.',
+    clues: [clue('drive','Inspect the original drive','The original SATA SSD is intact and labeled “Classroom OS & files.” It is safely set aside in the parts tray.'),clue('spec','Read the board specification','This classroom board supports SATA drives. The NVMe spare is incompatible with its available storage connectors.'),clue('delivery','Review the request','The teacher needs the existing classroom system and Lesson_Practice_File.docx, not only a powered-on computer.')],
+    questions: [question('What happened to the original drive?','It was removed for inspection and safely set aside. Its classroom files are still intact.'),question('Can I use the NVMe spare?','This board does not support that spare. Reinstall the original SATA drive and connect both SATA data and power.')],
+    rubric: ['Use drive labels and compatibility evidence.','Reinstall the original SATA drive with data and power.','Verify startup and open the existing lesson practice file.']
+  },
+  {
+    id: 'INC-106', title: 'Complete Desktop Assembly', track: 'hardware', grade: '11–12', minutes: 35,
+    summary: 'Assemble a compatible virtual PC and test the complete system.', requester: 'Technology team · Build bench',
+    goal: 'Install the required components, complete the connections, and open Lesson_Practice_File.docx.',
+    brief: 'Build a classroom desktop from the labeled parts. Use the motherboard specification, disconnect power during internal work, and finish with an acceptance test.',
+    clues: [clue('spec','Read the build specification','The board uses DDR4 memory, a PCIe graphics card, and a prepared SATA classroom drive.'),clue('parts','Inspect the parts tray','The tray includes both compatible parts and distractors. Read each label before installation.'),clue('acceptance','Read the acceptance task','The build is delivered only after the system starts, the display works, and Lesson_Practice_File.docx opens.')],
+    questions: [question('Which result matters?','A usable classroom desktop with Lesson_Practice_File.docx open.'),question('Can I change internal parts with power connected?','No. Power off and disconnect the AC cable in the virtual bench first.')],
+    rubric: ['Match parts to the specification.','Make safe, complete connections.','Perform the final acceptance task.']
+  },
+  {
+    id: 'NET-201', title: 'Static IP & DNS Misconfiguration', track: 'network', grade: '9–10', minutes: 25,
+    summary: 'Repair a workstation’s addressing and name resolution using a network diagram.', requester: 'Library help desk · LAB-PC-12',
+    goal: 'Reach the local gateway and resolve the fictional learning portal.',
+    brief: 'A workstation uses an address from the wrong subnet and an outdated DNS server. Match the lab’s configuration sheet, then test each layer in order.',
+    clues: [clue('sheet','Read the configuration sheet','Use 10.24.8.25 with mask 255.255.255.0, gateway 10.24.8.1, and school DNS 10.24.8.53.'),clue('switch','Inspect the switch','The workstation link is up. The gateway and local DNS server are available.'),clue('ticket','Read the symptom','Both the learning portal and the printer are unreachable from this workstation. Nearby workstations work.')],
+    questions: [question('Does every device have the issue?','Only LAB-PC-12 is affected.'),question('Which portal is required?','The fictional internal name learn.school.test. This simulator never contacts it.')],
+    rubric: ['Distinguish link, addressing, and DNS.','Apply the configuration sheet accurately.','Run diagnostics after the change.']
+  },
+  {
+    id: 'NET-202', title: 'Guest Wi-Fi & Share Permission Lockout', track: 'network', grade: '9–10', minutes: 25,
+    summary: 'Restore a teacher’s project share without giving everyone full control.', requester: 'Ms. Bell · Project studio',
+    goal: 'Let an authorized teacher read Project Materials through the approved staff network.',
+    brief: 'The teacher joined the guest network. A proposed workaround would expose every shared folder. Use the correct network and the smallest permission needed.',
+    clues: [clue('policy','Read network policy','School-Guest is isolated from internal file shares. Staff-Lab is the approved network for this fictional teacher workstation.'),clue('request','Read the access request','The teacher needs read access to Project Materials. They do not need editing rights or access to other folders.'),clue('identity','Inspect the account','The fictional account is a verified teacher account. No password or sign-in is needed in this simulation.')],
+    questions: [question('What must the teacher do?','Open and read the project handout.'),question('Should I share every folder?','No. Only Project Materials is part of the request.')],
+    rubric: ['Recognize guest-network isolation.','Limit sharing to the requested folder.','Verify least-privilege access.']
+  },
+  {
+    id: 'NET-203', title: 'Startup Crash & Broken Update Service', track: 'network', grade: '11–12', minutes: 30,
+    summary: 'Use a recovery console, service status, and update history to restore a workstation.', requester: 'IT operations · Studio-PC-04',
+    goal: 'Start the fictional OS normally and restore its update service.',
+    brief: 'A simulated workstation repeatedly enters recovery after update KB-LAB-17. The update service was also disabled. Preserve classroom documents while repairing both issues.',
+    clues: [clue('event','Read the boot event','BOOT-31: startup failed after fictional update KB-LAB-17. Classroom documents are intact.'),clue('history','Inspect update history','The last known good snapshot predates KB-LAB-17. Rollback is available without deleting user files.'),clue('service','Inspect service status','The update service is Stopped and its startup type is Disabled.')],
+    questions: [question('May I erase the drive?','No. Restore the previous working update state and keep the files.'),question('Is startup the only goal?','No. Restore the update service so the workstation can receive future updates.')],
+    rubric: ['Use event and update evidence.','Choose a reversible recovery action.','Verify boot and service health together.']
+  },
+  {
+    id: 'AI-301', title: 'Prompt Engineering & Student Privacy', track: 'ai', grade: '7–8', minutes: 20,
+    summary: 'Rewrite a classroom prompt to use fictional information and clear learning instructions.', requester: 'Student technology team · AI literacy',
+    goal: 'Create a privacy-aware prompt that asks for a short explanation and a practice question.',
+    brief: 'An example prompt includes unnecessary student details. Replace them with a fictional situation and describe the learning task clearly. The audit uses fixed classroom rules; it does not contact an AI service.',
+    clues: [clue('privacy','Read the privacy note','Do not include student names, email addresses, grades, diagnoses, passwords, or private records. Use a fictional learner.'),clue('task','Read the learning goal','Ask for a short explanation of computer networks and one practice question.'),clue('limits','Read the AI note','A clear prompt cannot guarantee a correct answer. Ask the learner to check the explanation against class notes.')],
+    questions: [question('Do I need a real student account?','No. All information in this activity is fictional.'),question('Will this send my prompt to AI?','No. The browser checks a few visible rules locally and shows why they pass or fail.')],
+    rubric: ['Remove unnecessary personal information.','Describe a specific learning task.','Include a source-checking step.']
+  },
+  {
+    id: 'AI-302', title: 'Hallucination Audit & Ticket Classifier Bias', track: 'ai', grade: '9–10', minutes: 25,
+    summary: 'Compare generated claims with a source card and test equal treatment of matching tickets.', requester: 'Help desk training · AI review desk',
+    goal: 'Correct an unsupported AI report and apply the same category to equivalent tickets.',
+    brief: 'A fictional AI draft makes three claims. Read the source card before accepting them, then compare two tickets with identical technical evidence.',
+    clues: [clue('source','Read source card v4.2','The local help guide says: check the display cable first; record the test result. It contains no password-expiration policy or claims about student effort.'),clue('pair','Compare the ticket pair','Ticket A and Ticket B both say “monitor has power; HDMI cable disconnected.” Their names differ, but the technical evidence is identical.'),clue('human','Read the review policy','A reviewer should cite evidence, mark unsupported claims, and avoid guessing personal traits.')],
+    questions: [question('Is a confident AI claim a source?','No. Compare it with the provided guide and record what the guide actually supports.'),question('Should a student’s name change the category?','No. Equivalent technical evidence should receive equivalent treatment.')],
+    rubric: ['Separate supported, unsupported, and contradicted claims.','Compare matched examples.','Document a correction grounded in the source.']
+  },
+  {
+    id: 'AI-303', title: 'AI-Generated Python Security & Logic Audit', track: 'ai', grade: '11–12', minutes: 30,
+    summary: 'Review an AI-written record lookup and choose safer secret, query, and authorization patterns.', requester: 'Application review team · Code audit',
+    goal: 'Select a patch that keeps secrets out of source, parameterizes queries, and checks record ownership.',
+    brief: 'A generated Python snippet appears to work but includes three security defects. Apply review choices and run a fixed set of simulated tests. No code is executed.',
+    clues: [clue('secret','Inspect the key','The example stores a placeholder secret directly in source. Read secrets from the environment and fail safely if missing.'),clue('query','Inspect the query','String concatenation combines input with SQL. Use a parameter placeholder and a separate argument tuple.'),clue('owner','Inspect authorization','A successful sign-in does not grant access to every learner record. Compare the requested record’s owner with the active user.')],
+    questions: [question('May I run arbitrary Python here?','No. This is a code-review simulation with a fixed test matrix.'),question('Does hiding the record ID protect it?','No. Authorization must be enforced for each record request.')],
+    rubric: ['Identify all three defects.','Explain why the chosen patterns address them.','Run and record the regression tests.']
+  },
+  {
+    id: 'SEC-401', title: 'Phishing Triage & Least-Privilege Audit', track: 'security', grade: '7–8', minutes: 20,
+    summary: 'Inspect a suspicious school message and choose a safe access decision.', requester: 'Digital safety team · Training inbox',
+    goal: 'Flag the suspicious message, identify its warning signs, and preserve the minimum access needed.',
+    brief: 'Use a fictional inbox to inspect message details. Do not open real links or enter credentials. The exercise uses reserved .test domains.',
+    clues: [clue('sender','Inspect the sender','The urgent account message claims to be school IT, but its sender is verify@school-account-check.test rather than helpdesk@school.test.'),clue('link','Inspect the link preview','The button would lead to https://school-account-check.test/verify. The real school link in this simulation is https://portal.school.test.'),clue('scope','Read the access task','A student helper needs read access to a shared troubleshooting checklist, not administrator rights.')],
+    questions: [question('Should I reply with my password?','Never provide credentials in response to this message. Report it through the school’s approved process.'),question('Can I safely inspect the link here?','Yes. The interface shows a text-only destination and never navigates to it.')],
+    rubric: ['Use sender and destination evidence.','Recognize pressure tactics.','Choose read-only access for the checklist.']
+  },
+  {
+    id: 'SEC-402', title: 'SIEM Log Analysis & Exposed Legacy Ports', track: 'security', grade: '9–10', minutes: 30,
+    summary: 'Correlate authentication events and close a legacy service while preserving learning access.', requester: 'School SOC · Defensive training queue',
+    goal: 'Contain the suspicious source, close Telnet, and keep the HTTPS portal available.',
+    brief: 'Read a fixed set of synthetic logs from a fictional school gateway. Link repeated failures with a later success. Apply changes only to this simulated policy.',
+    clues: [clue('logs','Read the event sequence','EVT-102 records repeated failures from 198.51.100.24. EVT-103 records a success from the same source one minute later.'),clue('ports','Read the port inventory','TCP 23 is a legacy Telnet listener that should be closed. TCP 443 serves the classroom learning portal and must stay available.'),clue('policy','Read containment policy','Temporarily block the suspicious source and preserve evidence. A single event is not proof of an attacker’s identity.')],
+    questions: [question('Are these real IP addresses to test?','No. These documentation addresses and logs are synthetic. No packets leave this lab.'),question('Should I shut down all access?','No. Contain the suspicious source and legacy service while keeping the classroom portal available.')],
+    rubric: ['Correlate events rather than guessing identity.','Apply a narrow containment rule.','Verify the intended service remains available.']
+  },
+  {
+    id: 'SEC-403', title: 'Authorized Web App: Patch & Retest', track: 'security', grade: '11–12', minutes: 35,
+    summary: 'Reproduce an object-authorization flaw in a local simulation and test a server-side ownership check.', requester: 'Application security · Authorized sandbox',
+    goal: 'Keep access to your fictional record while denying access to another learner’s record.',
+    brief: 'The fictional LearnDesk app returns a record by ID without checking ownership. Acknowledge the defined scope, reproduce the defect using the two supplied records, then patch and retest.',
+    clues: [clue('scope','Read the authorization','Only the two built-in fictional records in this browser simulation are in scope. No real websites, accounts, scanners, or tools are involved.'),clue('identity','Inspect the active session','The active user is learner-101. Record 101 belongs to learner-101; record 102 belongs to learner-102.'),clue('patch','Read the remediation note','Check ownership on every server-side record request. A hidden URL or a disabled button alone does not enforce authorization.')],
+    questions: [question('May I try this on the school portal?','No. Permission for this fictional simulation does not authorize testing any real system.'),question('What should the retest show?','The same user should receive 200 for record 101 and 403 for record 102 after the ownership check is applied.')],
+    rubric: ['Acknowledge the exact scope.','Record the original authorization defect.','Apply an ownership check and retest both allowed and denied access.']
+  }
+];
