@@ -36,6 +36,12 @@ A fresh INC-101 session verified the simplified controls and initial keyboard fo
 
 Before classroom acceptance, test the detailed mode on managed Chromebooks, Edge, Android and iPad: rotate/scroll without accidental actions; choose parts and fasteners by keyboard/touch; pause/resume; switch investigation sections; trigger the graphics-disabled fallback; download and open the report; and complete a build without device overheating or excessive battery use. Confirm the school's filtering policy permits the site's own script files; no external graphics CDN is required.
 
+## Drag-and-drop and tool checks — October 17, 2026
+
+In the tools13 local in-app browser preview, visible 3D screwdriver taps removed both panel screws. A pointer drag from the fitted panel to the parts tray removed the panel only on release. After the cooler was removed through the guarded controls, tapping the exposed CPU with Clean surfaces and then Thermal paste changed the real model from used paste to clean surfaces to a fresh pea-sized dot. The component feedback and action log reflected each accepted operation.
+
+At 768 × 1024 and 390 × 844 viewport sizes, the page had no horizontal overflow and the five tool buttons were 48 CSS pixels high. Automated tests additionally cover incorrect sockets, unsafe model proposals, screw-head visibility, all eight loose-component selection targets, interruption cleanup and the ordinary-button alternatives. This is browser and synthetic input evidence; new physical Chromebook, tablet and Edge tool testing remains outstanding.
+
 ## Browser guidance
 
 - [ChromeOS: find and open files](https://support.google.com/chromebook/answer/1700055?hl=en).

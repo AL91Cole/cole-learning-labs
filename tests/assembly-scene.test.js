@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import * as THREE from '../src/three.module.js?release=20261017-assembly12';
+import * as THREE from '../src/three.module.js?release=20261017-tools13';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-tools13';
 import { initialHardwareState } from '../src/hardware.js';
 import { initialAssemblyState } from '../src/assembly-model.js';
 
@@ -27,7 +28,7 @@ class Surface extends EventTarget {
   }
 }
 
-function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, caseId = 'INC-106' } = {}) {
+function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, caseId = 'INC-106', onAction } = {}) {
   const page = new Surface(); page.hidden = false;
   const view = new Surface(); page.defaultView = view; view.devicePixelRatio = dpr;
   let nextFrame = 1;
@@ -67,13 +68,13 @@ function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, cas
     render(scene, camera) { this.renders.push({ scene, camera }); }
     dispose() { this.disposed = true; }
   }
-  const context = vm.createContext({ THREE: { ...THREE, WebGLRenderer: MockRenderer } });
-  const code = source.replace(/^import[^\n]*\n/, '').replace('export function mountAssemblyScene', 'function mountAssemblyScene');
+  const context = vm.createContext({ THREE: { ...THREE, WebGLRenderer: MockRenderer }, assemblyToolAction, assemblyDropAction, assembledPartFitted });
+  const code = source.replace(/^import[^\n]*\n/gm, '').replace('export function mountAssemblyScene', 'function mountAssemblyScene');
   const mount = vm.runInContext(`${code}\nmountAssemblyScene;`, context);
   const hardware = initialHardwareState(caseId);
   const assembly = initialAssemblyState(hardware);
-  const events = []; const selections = [];
-  const api = mount(host, { hardware, assembly, onStatus: value => events.push(value), onSelect: id => selections.push(id) });
+  const events = []; const selections = []; const actions = []; const interactions = [];
+  const api = mount(host, { hardware, assembly, onStatus: value => events.push(value), onSelect: id => selections.push(id), onAction: action => { actions.push(action); return onAction?.(action); }, onInteraction: info => interactions.push(info) });
   const flush = () => {
     let count = 0;
     while (queue.size) {
@@ -82,7 +83,19 @@ function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, cas
       queue.delete(id); callback(0);
     }
   };
-  return { api, host, page, view, canvas, dimensions, renderer, queue, observer, hardware, assembly, events, selections, flush };
+  const project = point => {
+    const camera = renderer.renders.at(-1).camera;
+    const projected = new THREE.Vector3(...point).project(camera);
+    return { clientX: (projected.x + 1) * dimensions.width / 2, clientY: (1 - projected.y) * dimensions.height / 2 };
+  };
+  const component = id => renderer.renders.at(-1).scene.children.find(node => node.userData.selectId === id && node.userData.partKey);
+  const pointFor = id => {
+    const node = component(id) || renderer.renders.at(-1).scene.children.find(node => node.userData.selectId === id);
+    const point = new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3());
+    return project(point.toArray());
+  };
+  const pointer = (type, position, extra = {}) => canvas.fire(type, { button: 0, pointerId: 1, pointerType: 'mouse', ...position, ...extra });
+  return { api, host, page, view, canvas, dimensions, renderer, queue, observer, hardware, assembly, events, selections, actions, interactions, flush, project, pointFor, pointer, component };
 }
 
 test('3D is an on-demand, bounded-resolution adapter using real procedural Three geometry', () => {
@@ -223,6 +236,137 @@ test('unsupported WebGL2 uses labeled-workbench fallback without creating listen
 });
 
 test('3D assets remain same-origin with no network or student-work storage in the view adapter', () => {
-  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-assembly12';/);
+  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-tools13';/);
   assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage|indexedDB)\b|https?:\/\//);
+});
+
+test('real raycast drag fits only on release into the matching authored socket', () => {
+  const h = harness(); h.flush(); h.api.setView('top'); h.api.setTool('move'); h.flush();
+  const origin = h.component('cpu').position.clone();
+  const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').userData.fitted);
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
+  assert.equal(h.actions.length, 0, 'A preview must never change the model');
+  assert.equal(h.component('cpu').visible, false);
+  assert.ok(h.renderer.renders.at(-1).scene.children.some(node => node.userData.assemblyGhost));
+  assert.equal(h.interactions.at(-1).kind, 'valid');
+  h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['asm-fit-cpu']);
+  assert.equal(h.component('cpu').visible, true);
+  assert.deepEqual(h.component('cpu').position.toArray(), origin.toArray());
+  assert.equal(h.canvas.captures.size, 0);
+  assert.equal(h.renderer.renders.at(-1).scene.children.some(node => node.userData.assemblyGhost), false);
+  h.api.dispose();
+});
+
+test('loose equipment is directly selectable on the bench rather than hidden behind the monitor', () => {
+  const h = harness(); h.flush(); h.api.setView('top'); h.flush();
+  for (const id of ['board', 'cpu', 'cooler', 'ram', 'gpu', 'ssd', 'psu', 'panel']) {
+    const point = h.pointFor(id);
+    h.pointer('pointerdown', point); h.pointer('pointerup', point);
+    assert.equal(h.selections.at(-1), id, `The ${id} must be directly selectable at its visible center`);
+  }
+  h.api.dispose();
+});
+
+test('an incompatible 3D socket cancels the ghost without dispatching an action', () => {
+  const h = harness(); h.flush(); h.api.setView('top'); h.api.setTool('move'); h.flush();
+  const from = h.pointFor('cpu'); const to = h.project(h.component('ram').userData.fitted);
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
+  assert.equal(h.interactions.at(-1).kind, 'dragging');
+  h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, []);
+  assert.equal(h.interactions.at(-1).kind, 'warning');
+  assert.equal(h.component('cpu').visible, true);
+  h.api.dispose();
+});
+
+test('a rejected model action restores the ghost before a synchronous scene update', () => {
+  let h;
+  h = harness({ onAction: () => {
+    assert.equal(h.component('cpu').visible, true, 'Model callback never observes a hidden original');
+    assert.equal(h.renderer.renders.at(-1).scene.children.some(node => node.userData.assemblyGhost), false);
+    h.api.update(h.hardware, h.assembly);
+    return { kind: 'warning', message: 'Fit and secure the board first.' };
+  } });
+  h.flush(); h.api.setView('top'); h.api.setTool('move'); h.flush();
+  const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').userData.fitted);
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['asm-fit-cpu']);
+  assert.equal(h.interactions.at(-1).message, 'Fit and secure the board first.');
+  assert.equal(h.component('cpu').visible, true);
+  h.api.dispose();
+});
+
+test('Escape, blur, modal cancel, second pointer, state update, and camera changes abandon movement', () => {
+  const cases = [
+    h => h.page.fire('keydown', { key: 'Escape' }),
+    h => h.view.fire('blur'),
+    h => h.api.cancelInteraction(),
+    h => h.pointer('pointerdown', h.pointFor('cpu'), { pointerId: 2 }),
+    h => h.api.update(h.hardware, h.assembly),
+    h => h.api.setView('side'),
+    h => h.api.zoom('in'),
+    h => h.api.setTool('inspect'),
+    h => h.pointer('pointercancel', {}),
+    h => { h.page.hidden = true; h.page.fire('visibilitychange'); },
+    h => h.canvas.fire('webglcontextlost'),
+    h => { h.dimensions.width -= 30; h.observer.callback(); },
+    h => h.api.pause()
+  ];
+  for (const cancel of cases) {
+    const h = harness(); h.flush(); h.api.setView('top'); h.api.setTool('move'); h.flush();
+    const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').userData.fitted);
+    h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
+    assert.equal(h.component('cpu').visible, false);
+    cancel(h);
+    h.pointer('pointerup', to);
+    assert.equal(h.component('cpu').visible, true);
+    assert.equal(h.canvas.captures.size, 0);
+    assert.deepEqual(h.actions, [], String(cancel));
+    assert.equal(h.renderer.renders.at(-1).scene.children.some(node => node.userData.assemblyGhost), false);
+    h.api.dispose();
+  }
+});
+
+test('3D screwdriver and paste tools dispatch only the authored model actions', () => {
+  const h = harness(); h.flush(); h.api.setView('top'); h.flush();
+  h.api.setTool('screwdriver'); h.flush();
+  const screw = h.pointFor('panel-0'); h.pointer('pointerdown', screw); h.pointer('pointerup', screw);
+  assert.deepEqual(h.actions, ['asm-tighten-panel-0']);
+  h.api.setTool('paste'); h.flush();
+  const cpu = h.pointFor('cpu'); h.pointer('pointerdown', cpu); h.pointer('pointerup', cpu);
+  h.api.setPasteAmount('excess'); h.pointer('pointerdown', cpu); h.pointer('pointerup', cpu);
+  h.api.setTool('clean'); h.pointer('pointerdown', cpu); h.pointer('pointerup', cpu);
+  assert.deepEqual(h.actions.slice(1), ['asm-apply-paste', 'asm-excess-paste', 'asm-clean-paste']);
+  const ram = h.pointFor('ram'); h.pointer('pointerdown', ram); h.pointer('pointerup', ram);
+  assert.equal(h.actions.length, 4, 'A cleaning tool cannot clean a RAM module');
+  assert.equal(h.interactions.at(-1).kind, 'warning');
+  h.api.setTool('inspect'); assert.equal(h.canvas.style.touchAction, 'pan-y');
+  h.api.setTool('move'); assert.equal(h.canvas.style.touchAction, 'none');
+  h.api.dispose();
+});
+
+test('screwdriver offers a forgiving visible-head tap area without turning occluded screws', () => {
+  const h = harness({ caseId: 'INC-101' }); h.flush(); h.api.setView('side'); h.api.setTool('screwdriver'); h.flush();
+  const center = h.pointFor('panel-0');
+  const near = { clientX: center.clientX + 12, clientY: center.clientY };
+  h.pointer('pointerdown', near); h.pointer('pointerup', near);
+  assert.deepEqual(h.actions, ['asm-loosen-panel-0']);
+  const behindPsu = h.pointFor('psu-0');
+  h.pointer('pointerdown', behindPsu); h.pointer('pointerup', behindPsu);
+  assert.deepEqual(h.actions, ['asm-loosen-panel-0'], 'A rear PSU screw cannot be turned through the front of the power supply');
+  h.api.dispose();
+});
+
+test('fitted parts release toward the bounded parts tray and leave model checks authoritative', () => {
+  const h = harness({ caseId: 'INC-101', onAction: () => ({ kind: 'warning', message: 'Remove the side panel first.' }) }); h.flush();
+  h.api.setView('side'); h.api.setTool('move'); h.flush();
+  const from = h.pointFor('panel'); const to = h.project([4.8, -0.1, 0.2]);
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
+  assert.equal(h.actions.length, 0);
+  h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['asm-remove-panel']);
+  assert.equal(h.component('panel').visible, true);
+  assert.equal(h.interactions.at(-1).kind, 'warning');
+  h.api.dispose();
 });

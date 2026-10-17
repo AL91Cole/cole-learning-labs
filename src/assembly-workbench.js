@@ -1,4 +1,5 @@
-import { assemblyActions, assemblyFailure } from './assembly-model.js?release=20261017-assembly12';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261017-tools13';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261017-tools13';
 
 const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
 const NAMES = Object.fromEntries(GROUPS);
@@ -20,23 +21,41 @@ const groupFor = id => {
 export function mountAssemblyWorkbench(root,{state,onAction}) {
   let current=state,selected='panel',scene=null,disposed=false,visible=!root.closest?.('[hidden]'),loading=false,loadRequested=false,sceneFailed=false;
   let sceneModule=null;
+  let activeTool='inspect',selectedScrew='panel-0';
   const doc=root.ownerDocument;
   root.onclick=null;root.onkeydown=null;root.onchange=null;
   root.innerHTML=`<section class="asm-bench" aria-label="Detailed assembly workbench">
     <div class="asm-heading"><div><span class="hw-eyebrow">DETAILED EQUIPMENT LAB</span><h3>Inside the workstation</h3></div><span class="asm-badge">3D · assembly & teardown</span></div>
     <div class="asm-power" role="group" aria-label="Virtual PC power controls">${button('power-off','1. Power off')}${button('unplug','2. Disconnect AC')}${button('plug-in','3. Connect AC')}${button('boot','4. Power on / test')}<strong data-asm-power></strong></div>
     <p class="asm-next" data-asm-next></p>
+    <section class="asm-toolbox" aria-label="Workbench tools"><div class="asm-tool-buttons" role="group" aria-label="Choose a workbench tool">${ASSEMBLY_TOOLS.map(tool=>`<button type="button" data-asm-tool="${tool.id}" aria-pressed="${tool.id==='inspect'}">${escape(tool.label)}</button>`).join('')}</div><p data-asm-tool-help></p><div class="asm-tool-controls" data-asm-tool-controls></div></section>
     <div class="asm-layout"><div class="asm-visual"><div class="asm-scene" data-asm-scene role="img" aria-label="Rotatable 3D workstation. All equipment actions are also available in the component controls."><div class="asm-loading" data-asm-loading><strong>Your equipment is ready.</strong><span>Load the optional 3D view, or use the detailed controls below.</span></div></div>
-      <div class="asm-camera" role="group" aria-label="3D camera controls"><button type="button" data-asm-camera="load">Load 3D view</button><button type="button" data-asm-camera="iso">Whole PC</button><button type="button" data-asm-camera="top">Top</button><button type="button" data-asm-camera="side">Side</button><button type="button" data-asm-camera="in">Zoom +</button><button type="button" data-asm-camera="out">Zoom −</button><button type="button" data-asm-camera="off">Pause 3D</button></div>
+      <div class="asm-camera" role="group" aria-label="3D camera controls"><button type="button" data-asm-camera="load">Load 3D view</button><button type="button" data-asm-camera="iso">Whole PC</button><button type="button" data-asm-camera="monitor">Monitor</button><button type="button" data-asm-camera="top">Top</button><button type="button" data-asm-camera="side">Side</button><button type="button" data-asm-camera="rear">Rear I/O</button><button type="button" data-asm-camera="in">Zoom +</button><button type="button" data-asm-camera="out">Zoom −</button><button type="button" data-asm-camera="off">Pause 3D</button></div>
       <p class="asm-view-status" data-asm-view-status role="status">3D loads only when you choose it. Detailed controls work without graphics.</p>
-      <p class="asm-tip">Drag horizontally to rotate; swipe vertically to scroll. Tap equipment to select it. Use a component button for the same controls without aiming.</p></div>
+      <p class="asm-tip">Inspect: drag sideways to rotate and swipe vertically to scroll. Move parts: drag equipment to its highlighted socket or return area. Tool buttons and component controls offer the same actions without dragging. Escape cancels a move.</p></div>
     <aside class="asm-controls" aria-label="Component controls"><label>Choose a component<select aria-label="Choose a component" data-asm-select>${GROUPS.map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label><div class="asm-part-tabs" role="group" aria-label="Equipment sections">${GROUPS.map(([key,label])=>`<button type="button" data-asm-part="${key}">${label}</button>`).join('')}</div><h4 data-asm-part-title></h4><p data-asm-part-state></p><div class="asm-actions" data-asm-actions></div><p class="asm-feedback" data-asm-feedback role="status" aria-live="polite">Choose a component, then one action. The model explains anything that needs to happen first.</p></aside></div>
     <details class="asm-help"><summary>How to build or take apart this virtual PC</summary><ol><li>Power off and disconnect virtual AC. Remove the case screws and side panel for internal work.</li><li>Select a component in the picture or the list. Fit or remove it using the large controls. Keep loose screws in the virtual tray.</li><li>Fit parts on their mounts, secure their fasteners, close clips, and connect the correct leads. Tighten the cooler diagonally: 1, 4, 2, 3.</li><li>Use Clean surfaces and Apply pea-sized paste with the cooler removed. Lifting a cooler breaks its paste seal; clean and reapply before refitting.</li><li>Reattach the side panel and its screws, connect AC, then test startup. Finish by opening the original lesson file.</li></ol><p>For teardown, disconnect the leads and release fasteners and clips before removing a part. Removal never erases the original SSD. Use the same controls with a mouse, touch, Tab, Enter or Space.</p><p>This is one authored training workstation. Screw tension, paste spread and temperatures are simplified teaching checks; manufacturer procedures vary.</p></details>
     <div class="asm-delivery"><strong data-asm-delivery></strong>${button('video-gpu','Monitor → graphics card')}${button('input-hdmi','Monitor source: HDMI')}${button('open-document','Open original lesson file')}</div>
   </section>`;
   const $=selector=>root.querySelector(selector);
   const sceneHost=$('[data-asm-scene]'),status=$('[data-asm-view-status]');
+  const toolHelp={inspect:'Tap a part to inspect it. Drag sideways to rotate; swipe up or down to scroll.',move:'Drag a part to the highlighted socket or return area, then release. Use the camera buttons to adjust your view. Outside the picture, the page scrolls normally. You can also select a part and use Fit or Return below.',screwdriver:'Tap a screw to tighten or remove it. For small screws, choose one below and turn it with the large button. The assembly rules still check safety and cooler order.',paste:'Tap the exposed CPU to apply one pea-sized dot of paste. Remove the cooler first. The large Apply button does the same thing.',clean:'Tap the exposed CPU to clean the CPU and cooler contact surfaces. Remove the cooler first. The large Clean button does the same thing.'};
+  function feedback(message){const element=$('[data-asm-feedback]');if(typeof message==='string'&&element.textContent!==message)element.textContent=message;}
+  function dispatch(action){scene?.cancelInteraction?.();const response=onAction(action);if(!disposed&&response)feedback(response.message);return response;}
+  function renderTools(){
+    root.querySelectorAll('[data-asm-tool]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.asmTool===activeTool)));
+    $('[data-asm-tool-help]').textContent=toolHelp[activeTool];
+    const target=$('[data-asm-tool-controls]');
+    if(activeTool==='screwdriver')target.innerHTML=`<label>Choose a screw<select aria-label="Choose a screw" data-asm-fastener>${Object.entries(ASSEMBLY_FASTENERS).flatMap(([group,spec])=>Array.from({length:spec.count},(_,i)=>`<option value="${group}-${i}" ${selectedScrew===`${group}-${i}`?'selected':''}>${escape(spec.label)} screw ${i+1}</option>`)).join('')}</select></label><button type="button" data-asm-use-tool="turn">Turn selected screw</button>`;
+    else if(activeTool==='paste'||activeTool==='clean')target.innerHTML=`<button type="button" data-asm-use-tool="apply">${activeTool==='paste'?'Apply pea-sized paste to CPU':'Clean CPU and cooler surfaces'}</button>`;
+    else if(activeTool==='move')target.innerHTML='<span>Choose a part in the component list or picture.</span><button type="button" data-asm-use-tool="fit">Fit selected part</button><button type="button" data-asm-use-tool="remove">Return selected part to tray</button>';
+    else target.innerHTML='';
+  }
+  function chooseTool(id){if(!ASSEMBLY_TOOLS.some(tool=>tool.id===id))return;scene?.cancelInteraction?.();activeTool=id;scene?.setTool?.(id);if(id==='paste'||id==='clean')select('paste');renderTools();feedback(toolHelp[id]);}
   function select(id) {
+    if(id.startsWith('tool-')){chooseTool(id.slice(5));return;}
+    const fastener=/^(panel|psu|board|cooler|gpu|ssd)-(\d)$/.exec(id);
+    if(fastener&&Number(fastener[2])<ASSEMBLY_FASTENERS[fastener[1]].count){selectedScrew=id;if(activeTool==='screwdriver')renderTools();}
     const key=NAMES[id]?id:groupFor(`asm-${id}`);
     selected=key;
     $('[data-asm-select]').value=key;
@@ -79,17 +98,23 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     if(disposed||!visible||loading||scene)return;
     loading=true; sceneFailed=false;status.textContent='Loading the local 3D equipment view…';
     try {
-      sceneModule ||= await import('./assembly-scene.js?release=20261017-assembly12');
+      sceneModule ||= await import('./assembly-scene.js?release=20261017-tools13');
       if(disposed||!visible||!loadRequested)return;
-      scene=sceneModule.mountAssemblyScene(sceneHost,{hardware:current,assembly:current.assembly,onSelect:select,onStatus:message=>{if(!disposed)status.textContent=message.message;}});
+      scene=sceneModule.mountAssemblyScene(sceneHost,{hardware:current,assembly:current.assembly,onSelect:select,onAction:dispatch,onInteraction:info=>{if(!disposed)feedback(info.message);},onStatus:message=>{if(!disposed)status.textContent=message.message;}});
       if(!scene){sceneFailed=true;status.textContent='3D is unavailable on this device. Every assembly and teardown action remains available in the component controls.';}
-      else { $('[data-asm-loading]')?.setAttribute('hidden','');scene.select?.(selected); }
+      else { $('[data-asm-loading]')?.setAttribute('hidden','');scene.select?.(selected);scene.setTool?.(activeTool); }
     } catch { sceneFailed=true; status.textContent='The 3D view could not load. Continue with the complete component controls, or choose Load 3D view to retry.'; }
     finally {loading=false;}
   }
   function click(event) {
     const target=event.target.closest('button');if(!target||!root.contains(target))return;
-    if(target.dataset.assemblyAction){const response=onAction(target.dataset.assemblyAction);if(!disposed&&response)$('[data-asm-feedback]').textContent=response.message;return;}
+    if(target.dataset.assemblyAction){dispatch(target.dataset.assemblyAction);return;}
+    if(target.dataset.asmTool){chooseTool(target.dataset.asmTool);return;}
+    if(target.dataset.asmUseTool){
+      const id=activeTool==='screwdriver'?selectedScrew:activeTool==='paste'||activeTool==='clean'?'cpu':selected;
+      const mapped=assemblyToolAction(current,current.assembly,activeTool,id,target.dataset.asmUseTool==='remove'?'remove':'fit');
+      if(mapped.action)dispatch(mapped.action);else feedback(mapped.message);return;
+    }
     if(target.dataset.asmPart){select(target.dataset.asmPart);return;}
     const camera=target.dataset.asmCamera;
     if(camera==='load'){loadRequested=true;if(scene){scene.resume();status.textContent='3D view resumed.';}else void loadScene();}
@@ -97,9 +122,10 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     else if(camera==='in'||camera==='out')scene?.zoom(camera);
     else if(camera)scene?.setView(camera);
   }
-  function change(event){if(event.target.matches('[data-asm-select]'))select(event.target.value);}
+  function change(event){if(event.target.matches('[data-asm-select]'))select(event.target.value);else if(event.target.matches('[data-asm-fastener]')){selectedScrew=event.target.value;scene?.select?.(selectedScrew);}}
   root.addEventListener('click',click);root.addEventListener('change',change);
   update(state);
+  renderTools();
   if(visible)$('[data-asm-select]')?.focus({preventScroll:true});
-  return {update,cancel(){scene?.pause();if(visible&&loadRequested)scene?.resume();},setVisible(value){visible=value;if(value){if(loadRequested&&!scene&&!loading&&!sceneFailed)void loadScene();else if(loadRequested)scene?.resume();}else scene?.pause();},dispose(){disposed=true;loadRequested=false;scene?.dispose();scene=null;root.removeEventListener('click',click);root.removeEventListener('change',change);}};
+  return {update,cancel(){scene?.cancelInteraction?.();},setVisible(value){visible=value;if(value){if(loadRequested&&!scene&&!loading&&!sceneFailed)void loadScene();else if(loadRequested)scene?.resume();}else{scene?.cancelInteraction?.();scene?.pause();}},dispose(){disposed=true;loadRequested=false;scene?.cancelInteraction?.();scene?.dispose();scene=null;root.removeEventListener('click',click);root.removeEventListener('change',change);}};
 }
