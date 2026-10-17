@@ -2,6 +2,8 @@
 
 Cole Learning Labs provides 27 browser-based investigations across five pathways for grades 7–12. Use it for demonstrations, guided investigation, independent practice, and discussion on school devices.
 
+If a learner leaves a coding lab through the site menu or browser history, the current editor text is preserved as an untested program in that lab’s work. They must rerun fixtures before finishing. This does not enable device saving; private work still needs an export before closing the page.
+
 Created by Mx. Cole, the project supports a future goal of teaching Computer Technology through CTE; it does not represent completed CTE certification. Review each activity against your objectives, students’ needs, school policies, and available devices before assigning it.
 
 ## Choose a starting point

@@ -2,6 +2,8 @@
 
 A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 27 investigations across five pathways for grades 7–12.
 
+Coding drafts also survive normal site navigation and browser back/forward within this page. Leaving the editor preserves its current program as untested lab work; device persistence still requires the learner’s saving choice. Explicit resume, reset, and clear actions do not revive the previous editor draft.
+
 The site combines a light professional portfolio with dark teal and navy learning workspaces, a 3D-inspired computer bench, and a guided troubleshooting process. Learners inspect evidence, make changes, test the result, and explain whether the original task works.
 
 Each investigation stays on one page with three accessible tabs: **1. Request & clues**, **2. Workbench & hypothesis testing**, and **3. Check & explain**. One section is visible at a time; switching tabs preserves questions, notes, the equipment state, and unapplied workspace form entries. Short instructions stay beside the controls, so learners do not need a separate guide to begin.
