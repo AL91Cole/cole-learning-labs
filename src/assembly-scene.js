@@ -1,6 +1,6 @@
-import * as THREE from './three.module.js?release=20261017-repair15';
-import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-repair15';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-repair15';
+import * as THREE from './three.module.js?release=20261017-realism16';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-realism16';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-realism16';
 
 /**
  * Original, procedural 3D hardware lab & workstation artwork.
@@ -32,7 +32,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   renderer.setClearColor(0x091521, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1;
   renderer.setPixelRatio(1);
   host.appendChild(canvas);
 
@@ -58,6 +58,9 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   let pitch = 0.33;
   let distance = 16.5;
   let fittedDistance = 16.5;
+  let cameraFraming = 'bench';
+  let framingReference = 16.5;
+  let focusDiameter = 0;
   let gesture = null;
   let selectedId = '';
   let modelHardware = hardware;
@@ -70,9 +73,25 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   let armedCable = '';
   let dispatchVersion = 0;
 
+  const steel = { color: 0x34383e, roughness: 0.48, metalness: 0.66, bevel: true };
+  const aluminum = { color: 0xb0b3b6, roughness: 0.34, metalness: 0.82 };
+  const rubber = { color: 0x191d21, roughness: 0.85, metalness: 0.02 };
+  const finishes = new Map([
+    ...[0x566774,0x455664,0x283644,0x223544,0x6f8794,0x3b5060,0x1e2e3a].map(color=>[color,steel]),
+    ...[0xa2b8c2,0x8ea4b2,0x728a94,0xb8ccd2,0xc8d6da,0xd4dde0].map(color=>[color,aluminum]),
+    ...[0x22d1c6,0x28bfb6,0x2e4954,0x162834,0x17202c,0x38495b].map(color=>[color,rubber]),
+    [0x2c3b48,{color:0x242a30,roughness:0.61,metalness:0.55}],
+    [0x0e584a,{color:0x173a2d,roughness:0.72,metalness:0.04}],
+    [0x4cc49e,{color:0x96784e,roughness:0.52,metalness:0.65}],
+    [0x42b592,{color:0x786746,roughness:0.55,metalness:0.55}],
+    [0xa8c6cf,{color:0x454b50,roughness:0.57,metalness:0.32}]
+  ]);
   function material(color, options = {}) {
-    const key = `${color}:${JSON.stringify(options)}`;
-    if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.64, metalness: 0.22, ...options }));
+    const finish=finishes.get(color);
+    const resolved={color,roughness:0.68,metalness:0.18,...options,...finish};
+    delete resolved.bevel;
+    const key = JSON.stringify(resolved);
+    if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial(resolved));
     return materials.get(key);
   }
   function geometry(key, build) {
@@ -80,7 +99,15 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     return geometries.get(key);
   }
   function box(parent, width, height, depth, x, y, z, color, options = {}) {
-    const mesh = new THREE.Mesh(geometry(`b:${width}:${height}:${depth}`, () => new THREE.BoxGeometry(width, height, depth)), material(color, options));
+    const beveled=finishes.get(color)?.bevel&&Math.min(width,height,depth)>.06;
+    const geo=geometry(`${beveled?'bevel':'b'}:${width}:${height}:${depth}`,()=>{
+      if(!beveled)return new THREE.BoxGeometry(width,height,depth);
+      const bevel=Math.min(.035,Math.min(width,height,depth)/4),shape=new THREE.Shape();
+      const w=width/2-bevel,h=height/2-bevel;
+      shape.moveTo(-w,-h);shape.lineTo(w,-h);shape.lineTo(w,h);shape.lineTo(-w,h);shape.closePath();
+      return new THREE.ExtrudeGeometry(shape,{depth:depth-2*bevel,steps:1,bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel,bevelSegments:1,curveSegments:1}).translate(0,0,-depth/2+bevel);
+    });
+    const mesh = new THREE.Mesh(geo, material(color, options));
     mesh.position.set(x, y, z);
     parent.add(mesh);
     return mesh;
@@ -117,13 +144,55 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     parent.add(mesh);
     return mesh;
   }
+  function mergedGeometry(key,pieces){
+    return geometry(key,()=>{
+      const position=[],normal=[];
+      for(const [base,transform] of pieces){
+        const part=base.index?base.toNonIndexed():base.clone();
+        if(transform)part.applyMatrix4(transform);
+        position.push(...part.attributes.position.array);normal.push(...part.attributes.normal.array);part.dispose();base.dispose();
+      }
+      const merged=new THREE.BufferGeometry();merged.setAttribute('position',new THREE.Float32BufferAttribute(position,3));merged.setAttribute('normal',new THREE.Float32BufferAttribute(normal,3));return merged;
+    });
+  }
+  function mergedBoxes(parent,key,size,positions,color,options={}){
+    if(geometries.has(key)){const mesh=new THREE.Mesh(geometries.get(key),material(color,options));parent.add(mesh);return mesh;}
+    const pieces=positions.map(([x,y,z,rx=0,ry=0,rz=0])=>{const t=new THREE.Object3D();t.position.set(x,y,z);t.rotation.set(rx,ry,rz);t.updateMatrix();return[new THREE.BoxGeometry(...size),t.matrix];});
+    const mesh=new THREE.Mesh(mergedGeometry(key,pieces),material(color,options));parent.add(mesh);return mesh;
+  }
+  function silkScreen(parent,labels){
+    const font={A:['01110','10001','10001','11111','10001','10001','10001'],C:['01111','10000','10000','10000','10000','10000','01111'],D:['11110','10001','10001','10001','10001','10001','11110'],E:['11111','10000','10000','11110','10000','10000','11111'],F:['11111','10000','10000','11110','10000','10000','10000'],I:['11111','00100','00100','00100','00100','00100','11111'],L:['10000','10000','10000','10000','10000','10000','11111'],M:['10001','11011','10101','10101','10001','10001','10001'],N:['10001','11001','11001','10101','10011','10011','10001'],P:['11110','10001','10001','11110','10000','10000','10000'],R:['11110','10001','10001','11110','10100','10010','10001'],S:['01111','10000','10000','01110','00001','00001','11110'],T:['11111','00100','00100','00100','00100','00100','00100'],U:['10001','10001','10001','10001','10001','10001','01110'],W:['10001','10001','10001','10101','10101','11011','10001'],X:['10001','10001','01010','00100','01010','10001','10001'],'0':['01110','10011','10101','10101','11001','10001','01110'],'1':['00100','01100','00100','00100','00100','00100','01110'],'4':['00010','00110','01010','10010','11111','00010','00010'],'6':['01110','10000','10000','11110','10001','10001','01110'],'_':['00000','00000','00000','00000','00000','00000','11111']};
+    const vertices=[];
+    for(const {text,x,y,z=.067,size=.012} of labels){
+      [...text].forEach((letter,i)=>{const rows=font[letter];if(!rows)return;rows.forEach((row,line)=>{let column=0;while(column<5){if(row[column]!=='1'){column++;continue;}const start=column;while(column<5&&row[column]==='1')column++;const l=x+(i*6+start)*size,r=x+(i*6+column)*size,b=y+(6-line)*size,t=b+size*.86;vertices.push(l,b,z,r,b,z,r,t,z,l,b,z,r,t,z,l,t,z);}});});
+    }
+    const geo=geometry('board-silkscreen',()=>new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(vertices,3)));
+    const mat=new THREE.MeshBasicMaterial({color:0xd5dacb,side:THREE.FrontSide});disposals.push(mat);
+    const mesh=new THREE.Mesh(geo,mat);mesh.userData.detail='board-silkscreen';parent.add(mesh);
+  }
+  function capacitorBank(parent,positions){
+    const geo=geometry('capacitor',()=>new THREE.CylinderGeometry(.055,.055,.15,8).rotateX(Math.PI/2));
+    const mesh=new THREE.InstancedMesh(geo,material(0xb8ccd2),positions.length),t=new THREE.Object3D();
+    positions.forEach((p,i)=>{t.position.set(...p);t.updateMatrix();mesh.setMatrixAt(i,t.matrix);});mesh.instanceMatrix.needsUpdate=true;parent.add(mesh);
+  }
   function cableGeometry(points, radius) {
     const curve = new THREE.CatmullRomCurve3(points.map(point => new THREE.Vector3(...point)));
     return geometry(`lead:${radius}:${points.flat().join(':')}`, () => new THREE.TubeGeometry(curve, 16, radius, 5, false));
   }
+  function sleeving(points,radius){
+    const key=`sleeve:${radius}:${points.flat().join(':')}`;
+    if(geometries.has(key))return geometries.get(key);
+    const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
+    const strands=[0,Math.PI].map(phase=>{
+      const route=Array.from({length:19},(_,i)=>{const t=i/18,p=curve.getPoint(t),a=t*Math.PI*10+phase;p.x+=Math.cos(a)*radius*.75;p.z+=Math.sin(a)*radius*.75;return p;});
+      return[new THREE.TubeGeometry(new THREE.CatmullRomCurve3(route),12,Math.max(.006,radius*.17),4,false)];
+    });
+    return mergedGeometry(key,strands);
+  }
   function lead(id, key, points, color, width = 0.045, requirePart = '') {
     const node = group(id);
-    const mesh = new THREE.Mesh(cableGeometry(points, width), material(color, { roughness: 0.85, metalness: 0.08 }));
+    const wireColor=id==='sata-data'?0x8f3f33:0x25292e;
+    const mesh = new THREE.Mesh(cableGeometry(points, width), material(wireColor, { roughness: 0.87, metalness: 0.03 }));
     node.add(mesh);
     const end = points.at(-1);
     box(node, width * 4, width * 3, width * 3, ...end, 0x17202c, { roughness: 0.5, metalness: 0.2 });
@@ -131,9 +200,11 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     const loose = group(id, scene, false);
     const start = points[0];
     const loosePoints = [start, [start[0] + 0.5, 0.55, 0.7], [start[0] + 0.55, 0.22, 1.15]];
-    loose.add(new THREE.Mesh(cableGeometry(loosePoints, width), material(color, { roughness: 0.85, metalness: 0.08 })));
+    loose.add(new THREE.Mesh(cableGeometry(loosePoints, width), material(wireColor, { roughness: 0.87, metalness: 0.03 })));
     box(loose, width * 4, width * 3, width * 3, ...loosePoints.at(-1), 0x38495b, { roughness: 0.5, metalness: 0.2 });
-    cables.push({ node, loose, key, requirePart, start: points[0], assemblyKey: key === 'cpuFanConnected' });
+    const braid=new THREE.Mesh(sleeving(points,width),material(0x62676c,{roughness:.95,metalness:0}));braid.userData.flexibleLead=true;node.add(braid);
+    const looseBraid=new THREE.Mesh(sleeving(loosePoints,width),material(0x62676c,{roughness:.95,metalness:0}));looseBraid.userData.flexibleLead=true;loose.add(looseBraid);
+    cables.push({ node, loose, key, requirePart, start: points[0], width, looseBraid, assemblyKey: key === 'cpuFanConnected' });
     return node;
   }
   function movable(id, fitted, loose, partKey, rotation = null) {
@@ -146,19 +217,16 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
 
   // Multi-point studio + warm classroom tech-lab lighting
-  scene.add(new THREE.HemisphereLight(0xd8f0ff, 0x121e2b, 2.35));
-  const keyLight = new THREE.DirectionalLight(0xfffaf0, 3.6);
+  scene.add(new THREE.HemisphereLight(0xe8edf3, 0x202329, 1.65));
+  const keyLight = new THREE.DirectionalLight(0xfff6e8, 2.6);
   keyLight.position.set(-5, 11, 9);
   scene.add(keyLight);
-  const fillLight = new THREE.DirectionalLight(0x88c8ff, 1.45);
+  const fillLight = new THREE.DirectionalLight(0xdce7f0, 0.9);
   fillLight.position.set(8, 7, 6);
   scene.add(fillLight);
-  const rim = new THREE.DirectionalLight(0x2ce6cc, 1.35);
+  const rim = new THREE.DirectionalLight(0xc3d0db, 0.85);
   rim.position.set(4, 6, -7);
   scene.add(rim);
-  const benchGlow = new THREE.PointLight(0x52e5d0, 2.2, 14, 1.6);
-  benchGlow.position.set(-0.2, 4.2, 2.4);
-  scene.add(benchGlow);
 
   // Realistic Tech Lab Workbench, Backboard, ESD Mat & Staging Trays
   const labBench = group();
@@ -264,7 +332,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   // Illuminated front power button LED
   const powerLed = box(chassis, 0.22, 0.22, 0.15, 2.83, 5.85, 0.7, 0x1dd8bd, { emissive: 0x1dd8bd, emissiveIntensity: 0.75, roughness: 0.25 });
   // Brass motherboard standoffs
-  [[-1.83, 5.75], [1.6, 5.75], [-1.83, 2.25], [1.6, 2.25]].forEach(([x, y]) => cylinder(chassis, 0.095, 0.27, x, y, -0.79, 0xc7a34f, { metalness: 0.82, roughness: 0.28 }));
+  [[-1.83, 5.75], [1.6, 5.75], [-1.83, 2.25], [1.6, 2.25]].forEach(([x, y]) => cylinder(chassis, 0.095, 0.27, x, y, -0.79, 0xc7a34f, 'z', { metalness: 0.82, roughness: 0.28 }));
 
   // Motherboard (Micro-ATX PCB, VRM heatsinks, I/O shroud, chipset, traces, sockets)
   const board = movable('board', [0, 3.93, -0.76], [-5.8, -0.16, 3], 'boardInstalled', [-Math.PI / 2, 0, 0]);
@@ -272,7 +340,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   // Top VRM heatsink & rear I/O shield shroud
   box(board, 1.82, 0.5, 0.28, -0.82, 1.8, 0.19, 0xa2b8c2, { metalness: 0.76, roughness: 0.28 });
   box(board, 0.42, 1.18, 0.48, -1.74, 1.09, 0.21, 0x8ea4b2, { metalness: 0.74, roughness: 0.3 });
-  // Chipset heatsink & M.2 decorative shield
+  // Chipset heatsinks. This authored SATA board has no M.2 socket.
   box(board, 1.25, 0.58, 0.17, 0.1, -1.25, 0.16, 0x1c2d36, { metalness: 0.55, roughness: 0.4 });
   box(board, 1.0, 0.68, 0.24, 0.6, -0.72, 0.17, 0x728a94, { metalness: 0.72, roughness: 0.32 });
   // Brushed heatsink fins, VRM chokes & solid capacitors
@@ -297,6 +365,10 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   box(board, 0.2, 0.82, 0.22, 1.73, 0.15, 0.16, 0x16222c);
   box(board, 0.38, 0.2, 0.2, -1.53, 1.69, 0.17, 0x16222c);
   box(board, 0.36, 0.15, 0.19, 1.56, -1.38, 0.17, 0x202b35);
+  silkScreen(board,[{text:'CLL_MATX',x:-1.65,y:-1.96},{text:'CPU',x:-1.28,y:1.29},{text:'DDR4',x:.9,y:1.56},{text:'ATX_PWR',x:1.15,y:-.53},{text:'CPU_PWR',x:-1.78,y:1.43},{text:'PCIEX16',x:-1.48,y:-1.11},{text:'SATA_1',x:1.05,y:-1.76},{text:'F_PANEL',x:.5,y:-1.94},{text:'CPU_FAN',x:-.27,y:1.51}]);
+  capacitorBank(board,[[-1.42,.98,.18],[-1.23,.98,.18],[-1.04,.98,.18],[-.85,.98,.18],[-1.58,-1.15,.18],[-1.36,-1.15,.18],[-1.6,-1.43,.18],[-1.38,-1.43,.18]]);
+  instanceBoxes(board,[.11,.055,.04],Array.from({length:28},(_,i)=>[-1.58+(i%7)*.2,-.08-Math.floor(i/7)*.19,.088]),0x22282b,{roughness:.85,metalness:.05});
+  instanceBoxes(board,[.055,.022,.02],Array.from({length:24},(_,i)=>[-1.71+(i%8)*.15,-1.72-Math.floor(i/8)*.07,.08]),0xb3a17a,{roughness:.7,metalness:.25});
 
   // CPU Socket Retention Frame & Lever
   const retention = group('cpu', scene, false);
@@ -340,14 +412,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   const fan = group('', cooler);
   cylinder(fan, 0.54, 0.15, 0, 0, 0.4, 0x2e4954, 'z', { roughness: 0.45, metalness: 0.35 });
   cylinder(fan, 0.17, 0.19, 0, 0, 0.51, 0xa8c6cf, 'z', { metalness: 0.75, roughness: 0.25 });
-  const bladeGeo = geometry('fan-blade', () => new THREE.BoxGeometry(0.14, 0.4, 0.03));
-  for (let i = 0; i < 7; i += 1) {
-    const blade = new THREE.Mesh(bladeGeo, material(0x22d1c6, { metalness: 0.38, roughness: 0.32 }));
-    const angle = i * Math.PI * 2 / 7;
-    blade.position.set(Math.sin(angle) * 0.29, Math.cos(angle) * 0.29, 0.51);
-    blade.rotation.z = -angle + 0.4;
-    fan.add(blade);
-  }
+  mergedBoxes(fan,'cooler-fan-blades',[.14,.4,.035],Array.from({length:7},(_,i)=>{const a=i*Math.PI*2/7;return[Math.sin(a)*.29,Math.cos(a)*.29,.51,0,0,-a+.4];}),0x22d1c6);
   [[-0.78, -0.68], [0.78, -0.68], [-0.78, 0.68], [0.78, 0.68]].forEach(([x, y]) => box(cooler, 0.2, 0.22, 0.08, x, y, -0.27, 0x96a8b2, { metalness: 0.75, roughness: 0.28 }));
 
   // DDR4 Memory DIMM + Top/Bottom Clips
@@ -424,10 +489,13 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   for (const [name, set] of Object.entries(fasteners)) {
     set.points.forEach((pos, index) => {
       const screw = group(`${name}-${index}`);
-      cylinder(screw, 0.085, 0.06, 0, 0, 0, name === 'panel' ? 0xc0d0d4 : 0xe2e4d8, 'z', { metalness: 0.85, roughness: 0.22 });
-      cylinder(screw, 0.035, 0.13, 0, 0, -0.07, 0x98a6ad, 'z', { metalness: 0.8, roughness: 0.28 });
-      box(screw, 0.105, 0.018, 0.009, 0, 0, 0.034, 0x222e38);
-      box(screw, 0.018, 0.105, 0.009, 0, 0, 0.034, 0x222e38);
+      const body=geometries.get('fastener-body')||mergedGeometry('fastener-body',[
+        [new THREE.CylinderGeometry(.085,.085,.06,12).rotateX(Math.PI/2)],
+        [new THREE.CylinderGeometry(.035,.035,.13,8).rotateX(Math.PI/2).translate(0,0,-.07)],
+        [new THREE.RingGeometry(.065,.105,12).translate(0,0,.015)]
+      ]);
+      screw.add(new THREE.Mesh(body,material(0xb8ccd2)));
+      mergedBoxes(screw,'fastener-phillips',[.105,.018,.009],[[0,0,.034],[0,0,.034,0,0,Math.PI/2]],0x222e38);
       const tray = [-3.35 + (screwIndex % 4) * 0.23, -0.25, 2.02 + Math.floor(screwIndex / 4) * 0.23];
       screws.push({ screw, part: set.part, stateKey: set.state, index, pos, tray, rear: name === 'psu' });
       screwIndex += 1;
@@ -517,7 +585,22 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   ASSEMBLY_CABLES.forEach((item, index) => {
     const node = group(); node.userData.cableEndpointId = item.id;
     const shape = item.id === 'atx' ? [0.2, 0.46, 0.19] : item.id.includes('hdmi') ? [0.31, 0.15, 0.2] : [0.26, 0.2, 0.2];
-    box(node, ...shape, 0, 0, 0, cableColors[index], { emissive: 0x123d36, emissiveIntensity: 0.6, roughness: 0.65 });
+    const [w,h,d]=shape;
+    const housing=geometry(`connector:${item.id.includes('hdmi')?'hdmi':item.id}`,()=>{
+      const profile=new THREE.Shape(),cut=item.id.includes('hdmi')?w*.16:w*.1;
+      if(item.id.startsWith('sata-')){
+        // The notch forms the SATA L key; the wider power plug has 15 contacts.
+        profile.moveTo(-w/2,-h/2);profile.lineTo(w/2,-h/2);profile.lineTo(w/2,h*.08);profile.lineTo(w*.25,h*.08);profile.lineTo(w*.25,h/2);profile.lineTo(-w/2,h/2);profile.closePath();
+      }else{profile.moveTo(-w/2+cut,-h/2);profile.lineTo(w/2-cut,-h/2);profile.lineTo(w/2,h/2-cut);profile.lineTo(w/2-cut,h/2);profile.lineTo(-w/2+cut,h/2);profile.lineTo(-w/2,h/2-cut);profile.closePath();}
+      return new THREE.ExtrudeGeometry(profile,{depth:d-.014,steps:1,bevelEnabled:true,bevelThickness:.007,bevelSize:.007,bevelSegments:1,curveSegments:1}).translate(0,0,-d/2+.007);
+    });
+    const body=new THREE.Mesh(housing,material(0x25292e,{roughness:.75,metalness:.04}));body.userData.detail='keyed-housing';node.add(body);
+    const pinCount=item.id==='atx'?24:item.id.includes('hdmi')?19:item.id==='sata-power'?15:item.id==='sata-data'?7:item.id==='ac'?3:item.id==='gpu-power'?6:item.id==='cpu-fan'?4:item.id==='front-panel'?2:8;
+    const rows=item.id==='atx'?12:item.id==='ac'||item.id.startsWith('sata-')?1:2,columns=Math.ceil(pinCount/rows);
+    const pins=item.id==='ac'?[[-w*.24,-h*.18,d/2+.012],[w*.24,-h*.18,d/2+.012],[0,h*.22,d/2+.012]]:Array.from({length:pinCount},(_,i)=>[(i%columns-(columns-1)/2)*(w*.68/Math.max(1,columns-1)),(Math.floor(i/columns)-(rows-1)/2)*(h*.67/Math.max(1,rows-1)),d/2+.012]);
+    instanceBoxes(node,[Math.min(.032,w*.45/columns),Math.min(.026,h*.4/rows),.018],pins,0xc6ac68,{roughness:.45,metalness:.78});
+    mergedBoxes(node,`strain-relief:${w}:${h}:${d}`,[w*.64,h*.58,.018],Array.from({length:4},(_,i)=>[0,0,-d/2-.018-i*.035]),0x191d21,{roughness:.92,metalness:0});
+    box(node,w*.7,.025,.012,0,h/2+.006,0,cableColors[index],{roughness:.8,metalness:.05});
     const home = item.internal ? [3.6 + (index - 3) * 0.58, -0.14, 2.72] : item.id === 'hdmi-monitor' ? [-6.4, -0.14, -2.45] : [-0.15 - index * 0.65, -0.14, -2.6];
     cableEnds.set(item.id, { node, home, spec: item });
     label(`cable-${item.id}`, `${item.label} · plug`);
@@ -551,6 +634,8 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
       const socket = cableConnection(modelHardware, modelAssembly, id);
       const spec = portSpecs[socket];
       item.node.position.fromArray(spec ? spec.at.map((value, i) => value + spec.normal[i] * 0.18) : item.home);
+      if(spec)item.node.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),new THREE.Vector3(...spec.normal).negate());
+      else item.node.rotation.set(0,0,id==='atx'?Math.PI/2:0);
       item.node.visible = tool === 'cables' && cableVisible(item.spec) && !(cableDrag?.id === id);
       item.node.scale.setScalar(selectedCable === id ? 1.3 : 1);
     }
@@ -558,7 +643,9 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
       const item = cableEnds.get(lead.node.userData.selectId);
       if (!item) continue;
       const home = item.home;
-      lead.loose.children[0].geometry = cableGeometry([lead.start, [lead.start[0] + 0.45, 0.35, 1.4], [home[0] - 0.4, -0.06, home[2] - 0.35], home], 0.04);
+      const route=[lead.start, [lead.start[0] + 0.45, 0.35, 1.4], [home[0] - 0.4, -0.06, home[2] - 0.35], home];
+      lead.loose.children[0].geometry = cableGeometry(route,lead.width);
+      lead.looseBraid.geometry=sleeving(route,lead.width);
       lead.loose.children[1].position.fromArray(home);
     }
     cableRest.visible = tool === 'cables';
@@ -577,7 +664,11 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     const distanceToNode = node.getWorldPosition(new THREE.Vector3()).distanceTo(raycaster.ray.origin);
     // Thin flexible leads crossing the center ray do not erase a port's tap
     // area. Solid housings still occlude; closed-panel guards are explicit.
-    const obstacle = raycaster.intersectObjects(scene.children, true).find(hit => hit.object.isMesh && hit.object.geometry?.type !== 'TubeGeometry' && isVisible(hit.object) && !hit.object.material?.wireframe && !(hit.object.material?.transparent && hit.object.material.opacity < 0.2) && !hit.object.parent?.userData.assemblyCableGhost);
+    const obstacle = raycaster.intersectObjects(scene.children, true).find(hit => hit.object.isMesh && hit.object.geometry?.type !== 'TubeGeometry' && !hit.object.userData.flexibleLead && isVisible(hit.object) && !hit.object.material?.wireframe && !(hit.object.material?.transparent && hit.object.material.opacity < 0.2) && !hit.object.parent?.userData.assemblyCableGhost);
+    for(let part=obstacle?.object;part&&part!==scene;part=part.parent){
+      if(part===node)return true;
+      if(node.userData.cablePortId&&part.userData.cableEndpointId&&cableConnection(modelHardware,modelAssembly,part.userData.cableEndpointId)===node.userData.cablePortId)return true;
+    }
     return !obstacle || obstacle.distance + 0.18 >= distanceToNode;
   }
   function updateCableLabels() {
@@ -720,9 +811,11 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     renderer.setPixelRatio(ratio);
     renderer.setSize(width, height, false);
     const nextFittedDistance = Math.max(15.5, 16.8 / camera.aspect);
-    distance *= nextFittedDistance / fittedDistance;
+    const reference=cameraFraming==='pc'?pcFitDistance():cameraFraming==='part'?partFitDistance():cameraFraming==='monitor'?Math.max(8,9/camera.aspect):nextFittedDistance;
+    distance *= reference / framingReference;
+    framingReference=reference;
     fittedDistance = nextFittedDistance;
-    distance = Math.max(7, Math.min(40, distance));
+    distance = Math.max(cameraFraming==='part'?2.2:7, Math.min(40, distance));
     requestRender();
   }
   function rayAt(event) {
@@ -1061,8 +1154,9 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     const presets = { iso: [0.52, 0.33], monitor: [-0.36, 0.18], side: [0, 0.02], front: [1.29, 0.15], top: [0.24, 1.31], rear: [Math.PI, 0.08], 'rear-io': [Math.PI, 0.18], 'monitor-ports': [-2.86, 0.17] };
     if (!Object.hasOwn(presets, name)) return;
     [yaw, pitch] = presets[name];
+    cameraFraming='bench';framingReference=fittedDistance;distance=fittedDistance;
     target.set(-0.45, 2.65, 0);
-    if (name === 'monitor-ports') { target.set(-5.1, 1.7, -0.3); distance = Math.max(8, 9 / camera.aspect); }
+    if (name === 'monitor-ports') {target.set(-5.1,1.7,-.3);distance=Math.max(8,9/camera.aspect);cameraFraming='monitor';framingReference=distance;}
     else if (name === 'rear-io') distance = fittedDistance;
     cancelInteraction();
     requestRender();
@@ -1074,8 +1168,38 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   function zoom(direction) {
     if (!['in', 'out'].includes(direction)) return;
     cancelInteraction();
-    distance = Math.max(7, Math.min(40, distance * (direction === 'in' ? 0.84 : 1.19)));
+    distance = Math.max(cameraFraming==='part'?2.2:7, Math.min(40, distance * (direction === 'in' ? 0.84 : 1.19)));
     requestRender();
+  }
+  function pcFitDistance(){
+    const angle=.35,elevation=.18,tangent=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+    const right=new THREE.Vector3(Math.cos(angle),0,-Math.sin(angle));
+    const up=new THREE.Vector3(-Math.sin(angle)*Math.sin(elevation),Math.cos(elevation),-Math.cos(angle)*Math.sin(elevation));
+    const outward=new THREE.Vector3(Math.sin(angle)*Math.cos(elevation),Math.sin(elevation),Math.cos(angle)*Math.cos(elevation));
+    let required=7;
+    for(const x of [-2.85,2.85])for(const y of [-.25,6.4])for(const z of [-1.12,1.62]){
+      const point=new THREE.Vector3(x,y-3.05,z-.12);
+      required=Math.max(required,point.dot(outward)+Math.max(Math.abs(point.dot(right))/(tangent*camera.aspect*.94),Math.abs(point.dot(up))/(tangent*.94)));
+    }
+    return Math.min(40,required);
+  }
+  function partFitDistance(){return Math.min(30,Math.max(2.2,focusDiameter*1.9/Math.min(1,camera.aspect)));}
+  function fit(){
+    if(stopped)return;
+    cancelInteraction();cameraFraming='pc';target.set(0,3.05,.12);yaw=.35;pitch=.18;
+    distance=framingReference=pcFitDistance();requestRender();
+  }
+  function focusSelected(){
+    if(stopped)return;
+    const node=tool==='cables'?cableEnds.get(selectedCable)?.node:nodes.get(selectedId);
+    if(!node||!isVisible(node)){fit();return;}
+    cancelInteraction();scene.updateMatrixWorld(true);
+    const bounds=new THREE.Box3().setFromObject(node),size=bounds.getSize(new THREE.Vector3());
+    if(bounds.isEmpty()){fit();return;}
+    bounds.getCenter(target);focusDiameter=Math.max(size.x,size.y,size.z,.55);cameraFraming='part';
+    const loose=node.userData.partKey&&!assembledPartFitted(node.userData.selectId,modelHardware,modelAssembly);
+    if(loose){yaw=.18;pitch=1.02;}else if(tool!=='cables'){yaw=.12;pitch=.1;}
+    distance=framingReference=partFitDistance();requestRender();
   }
   function setTool(next) {
     if (stopped || !['inspect', 'move', 'cables', 'screwdriver', 'paste', 'clean'].includes(next)) return;
@@ -1096,7 +1220,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     const item = cableEnds.get(id);
     if (tool === 'cables') {
       if (!item.spec.internal) setView(id === 'hdmi-monitor' ? 'monitor-ports' : 'rear-io');
-      else setView('side');
+      else {setView('side');distance=framingReference=fittedDistance;}
     }
     armedCable = id;
     updateCableViews(); requestRender();
@@ -1143,6 +1267,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   updateModel(hardware, assembly);
   resize();
+  fit();
   onStatus({ kind: 'ready', message: '3D Tech Lab bench ready. Tap any PC component or the 3D monitor to select it, or drag sideways to orbit.' });
-  return { update: updateModel, select: id => { highlight(id); requestRender(); }, resetView, setView, zoom, setTool, setCable, setPasteAmount, cancelInteraction, pause, resume, dispose };
+  return { update: updateModel, select: id => { highlight(id); requestRender(); }, fit, focusSelected, resetView, setView, zoom, setTool, setCable, setPasteAmount, cancelInteraction, pause, resume, dispose };
 }

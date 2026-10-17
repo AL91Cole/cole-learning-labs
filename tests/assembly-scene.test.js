@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import * as THREE from '../src/three.module.js?release=20261017-repair15';
-import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-repair15';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js?release=20261017-repair15';
+import * as THREE from '../src/three.module.js?release=20261017-realism16';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-realism16';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js?release=20261017-realism16';
 import { initialHardwareState } from '../src/hardware.js';
 import { initialAssemblyState } from '../src/assembly-model.js';
 
@@ -128,7 +128,7 @@ test('3D is an on-demand, bounded-resolution adapter using real procedural Three
     for (let i = 0; i < count; i += 1) assert.ok(ids.has(`${group}-${i}`), `${group}-${i}`);
   }
   assert.ok(meshes < 280, `Bounded equipment and connector catalog: ${meshes} mesh objects (including hidden endpoint/port views)`);
-  assert.ok(triangles < 15000, `Bounded procedural geometry: ${triangles} triangles (not a device performance measurement)`);
+  assert.ok(triangles < 18000, `Bounded procedural equipment, silkscreen, and sleeved cables: ${triangles} triangles including hidden states (not a device performance measurement)`);
   h.api.dispose();
 });
 
@@ -240,7 +240,7 @@ test('unsupported WebGL2 uses labeled-workbench fallback without creating listen
 });
 
 test('3D assets remain same-origin with no network or student-work storage in the view adapter', () => {
-  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-repair15';/);
+  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-realism16';/);
   assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage|indexedDB)\b|https?:\/\//);
 });
 
@@ -500,4 +500,78 @@ test('connector tap areas are forgiving and the overlay is removed on disposal',
   assert.ok(overlay.children.some(node => node.textContent?.includes('Cable rest') && node.style.display === 'block'));
   h.api.dispose();
   assert.equal(h.host.children.length, 0);
+});
+
+test('Fit PC opens close to the tower and keeps its case inside desktop and tablet viewports',()=>{
+  for(const width of [1366,768,390]){
+    const h=harness({width,height:600});h.flush();
+    const camera=h.renderer.renders.at(-1).camera;
+    for(const x of [-2.85,2.85])for(const y of [-.25,6.4])for(const z of [-1.12,1.62]){
+      const projected=new THREE.Vector3(x,y,z).project(camera);
+      assert.ok(Math.abs(projected.x)<1&&Math.abs(projected.y)<1,`The tower must fit at ${width}px: ${projected.toArray()}`);
+    }
+    const initial=camera.position.distanceTo(new THREE.Vector3(0,3.05,.12));
+    h.api.resetView();h.flush();
+    const whole=camera.position.distanceTo(new THREE.Vector3(-.45,2.65,0));
+    assert.ok(initial<whole*.8,'Fit PC should show a larger tower than Whole bench');
+    h.api.focusSelected();h.flush();
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(0,3.05,.12))-initial<.001,'Focus without a selection falls back to Fit PC');
+    assert.equal(h.queue.size,0);assert.deepEqual(h.actions,[]);h.api.dispose();
+  }
+});
+
+test('Focus part pivots onto the processor and zoom reaches a bounded close-up without model changes',()=>{
+  const h=harness();h.flush();const original=structuredClone({hardware:h.hardware,assembly:h.assembly});
+  h.api.select('cpu');h.api.focusSelected();h.flush();
+  const camera=h.renderer.renders.at(-1).camera;
+  const center=new THREE.Box3().setFromObject(h.component('cpu')).getCenter(new THREE.Vector3());
+  assert.ok(camera.getWorldDirection(new THREE.Vector3()).dot(center.clone().sub(camera.position).normalize())>.9999,'Camera must pivot onto the selected processor');
+  assert.ok(camera.position.distanceTo(center)<3,'Processor focus must get closer than the old whole-PC minimum distance');
+  for(let i=0;i<25;i++)h.api.zoom('in');h.flush();
+  assert.ok(camera.position.distanceTo(center)>=2.19&&camera.position.distanceTo(center)<=2.21);
+  for(let i=0;i<35;i++)h.api.zoom('out');h.flush();
+  assert.ok(camera.position.distanceTo(center)<=40.001);
+  assert.deepEqual(h.actions,[]);assert.deepEqual({hardware:h.hardware,assembly:h.assembly},original);
+  assert.equal(h.queue.size,0);h.api.dispose();
+});
+
+test('fit and focus discard a held part before changing the camera',()=>{
+  for(const method of ['fit','focusSelected']){
+    const h=harness();h.flush();h.api.setView('top');h.api.setTool('move');h.flush();
+    const from=h.pointFor('cpu'),to=h.project(h.component('cpu').userData.fitted);
+    h.pointer('pointerdown',from);h.pointer('pointermove',to);h.flush();
+    assert.equal(h.component('cpu').visible,false);
+    h.api[method]();h.pointer('pointerup',to);h.flush();
+    assert.equal(h.component('cpu').visible,true);assert.equal(h.canvas.captures.size,0);assert.deepEqual(h.actions,[]);
+    h.api.dispose();
+  }
+});
+
+test('a camera preset restores a useful equipment view after a close-up',()=>{
+  const h=harness({caseId:'INC-101'});h.flush();
+  const target=new THREE.Vector3(-.45,2.65,0);
+  for(const preset of ['iso','side','top','rear-io']){
+    h.api.select('cpu');h.api.focusSelected();h.flush();
+    h.api.zoom('in');h.flush();
+    h.api.setView(preset);h.flush();
+    assert.ok(h.renderer.renders.at(-1).camera.position.distanceTo(target)>10,`${preset} restores a wider equipment view`);
+  }
+  assert.equal(h.actions.length,0);assert.equal(h.queue.size,0);h.api.dispose();
+});
+
+test('board labels and physical connector details stay procedural with a bounded visible draw budget',()=>{
+  const h=harness({caseId:'INC-101'});h.flush();
+  const scene=h.renderer.renders.at(-1).scene;let visible=0,triangles=0;
+  scene.traverse(object=>{
+    if(!object.isMesh)return;
+    for(let ancestor=object;ancestor;ancestor=ancestor.parent)if(!ancestor.visible)return;
+    visible++;triangles+=(object.geometry.index?.count??object.geometry.attributes.position.count)/3*(object.isInstancedMesh?object.count:1);
+    for(const material of Array.isArray(object.material)?object.material:[object.material])assert.equal(material.map??null,null,'Equipment detail must not add downloaded texture maps');
+  });
+  assert.ok(visible<210,`${visible} visible meshes must remain below the previous 219-mesh baseline`);
+  assert.ok(triangles<13000,`${triangles} visible triangles must remain bounded`);
+  const silk=h.component('board').children.find(node=>node.userData.detail==='board-silkscreen');
+  assert.ok(silk?.geometry.attributes.position.count>0);
+  for(const id of ['atx','hdmi-pc','sata-data','sata-power','ac'])assert.ok(h.cableNode(id).children.some(node=>node.userData.detail==='keyed-housing'));
+  h.api.dispose();
 });

@@ -54,6 +54,14 @@ In the repair15 in-app browser preview, the catalog displayed direct ticket card
 
 At 768 × 1024, dragging the PC HDMI plug from the motherboard output to the labeled graphics-card output changed the actual simulation state. Reconnecting AC, testing the PC and opening the lesson passed the original-task check. The 768 × 1024 and 390 × 844 layouts had no horizontal page overflow. NET-201 had no canvas on its request tab and mounted its pathway scene only after entering the workbench. These are connected-browser and viewport checks; physical school devices and managed Edge remain acceptance checks.
 
+## Realistic equipment and direct zoom — October 17, 2026
+
+The realism16 connected-browser preview rendered the revised PC with neutral lighting, component markings and detailed connectors. Zoom in, Zoom out, Fit PC and Focus part were available directly below the picture. Selecting memory and choosing Focus part moved the camera onto it and brought the full equipment picture below the sticky tabs; the clicked button retained keyboard focus. Repeated view changes left the action count unchanged. Fit PC showed the tower inside the picture at 768 × 1024 and 390 × 844, with no horizontal page overflow and all four camera buttons 48 CSS pixels high.
+
+A visible 3D screwdriver tap removed a side-panel screw. After safe shutdown, unplugging and panel removal, an HDMI plug drag connected the graphics-card output. In the final connector revision, dragging the SATA data plug to Cable rest disconnected it; Focus part, Fit PC and Zoom out made close inspection and wider routing views available, and dragging the parked plug back to the SSD data socket reconnected it. The real feedback and action log reflected accepted changes. No browser warnings or errors were observed in this preview. Automated tests additionally check bounded camera distances, case framing, preset recovery after close-ups, cancellation, resource disposal and a visible-geometry budget.
+
+These checks use a connected desktop browser and responsive viewports. They do not establish physical touch precision, battery life or performance on managed Chromebooks, Edge, Android tablets or iPads. Include the new camera buttons and close-up connector workflow in those school-device acceptance checks.
+
 ## Browser guidance
 
 - [ChromeOS: find and open files](https://support.google.com/chromebook/answer/1700055?hl=en).
