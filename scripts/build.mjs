@@ -10,6 +10,7 @@ export const PUBLIC_FILES = Object.freeze([
   'index.html', 'classroom.html', 'school-it.html', 'secure-reports.html', 'teacher/index.html',
   '_headers', '_routes.json',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
+  'src/teaching.js', 'src/teaching.css', 'src/experiments.js', 'src/experiments.css', 'src/learning-tools.js', 'src/capstone.js', 'src/capstone.css',
   'src/app.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js',
   'src/privacy.js', 'src/interview.js', 'src/conversation.js', 'src/records.js', 'src/scenarios.js', 'src/workspaces.js',
   'src/expanded-labs.js', 'src/expanded-labs.css', 'src/coding-lab.js', 'src/coding-lab.css', 'src/interview.css',

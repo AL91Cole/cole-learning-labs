@@ -1,9 +1,9 @@
-import { resolveQuestion } from './conversation.js?release=20261016-conversation8';
+import { resolveQuestion } from './conversation.js?release=20261016-teaching9';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
-const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
+const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
 const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();
 const bounded = text => text.length <= ANSWER_MAX ? text : text.slice(0, ANSWER_MAX - 1).trimEnd() + '…';
@@ -28,6 +28,8 @@ function containsPrivateDetails(text) {
 const outOfScopeInstructions = text => /\b(?:rubric|answer[ -]?key|mark(?:ing)? scheme|grading criteria|system prompt|developer message|hidden instructions)\b|\b(?:show|reveal|dump|print|download)\b.{0,35}\bsource code\b|\b(?:ignore|override|forget)\b.{0,45}\b(?:instructions|rules|previous|privacy)\b/iu.test(text);
 const read = (state, field, allowed) => state && typeof state === 'object' && Object.hasOwn(state, field) && allowed.includes(state[field]) ? state[field] : undefined;
 const flag = (state, field) => read(state, field, [true, false]);
+const externalDisplayQuestion = question => /monitor|display|hdmi|signal|video cable/iu.test(question) && !/internal|inside|mains|\bac\b|power cord/iu.test(question);
+const unknownEquipmentHistory = question => /\bwho (?:last )?(?:unplugged|disconnected|repaired|installed|moved)\b/iu.test(question);
 const clueText = (scenario, id) => {
   const found = Array.isArray(scenario.clues) ? scenario.clues.find(clue => clue && clue.id === id && typeof clue.text === 'string') : undefined;
   return found ? found.text : 'That detail is not recorded in this case. Inspect the supplied case cards and explain what you can observe.';
@@ -86,14 +88,15 @@ function expandedCaseReply(scenario, question, state) {
 
 function caseReply(scenario, question, state) {
   const id = scenario.id;
-  if (id.startsWith('INC-') && /safe|safety|disconnect|unplug|internal|touch|power off/iu.test(question)) {
+  if (id.startsWith('INC-') && /safe|safety|disconnect|unplug|internal|touch|power off/iu.test(question) && !externalDisplayQuestion(question) && !unknownEquipmentHistory(question)) {
     const off = flag(state, 'pcOn') === false; const unplugged = flag(state, 'acConnected') === false;
     return response('For internal work, power off and unplug AC using the virtual bench controls first. ' + (off && unplugged ? 'The virtual bench currently shows both safety steps complete.' : 'Confirm both indicators before touching internal parts.') + ' All actions are on-screen; leave your real Chromebook or tablet closed.', 'safety');
   }
   if (id === 'INC-101') {
     if (/monitor|screen|display|picture|video|signal|hdmi|cable|port|socket/iu.test(question)) {
       const on = flag(state, 'pcOn'); const port = read(state, 'videoPort', ['board','gpu']); const boot = flag(state, 'booted');
-      if (on !== undefined && port && boot !== undefined) return response('Current bench: the desktop is ' + (on ? 'on' : 'off') + '; the display cable uses the ' + (port === 'gpu' ? 'dedicated graphics-card output' : 'motherboard output') + '. ' + (on && boot && port === 'gpu' ? 'The virtual display can show the desktop.' : 'The display is not ready to show the classroom desktop.'), 'current-state');
+      const source = read(state,'monitorInput',['hdmi','displayport']); const signal = flag(state,'signalConnected');
+      if (on !== undefined && port && boot !== undefined) return response('Current bench: the desktop is ' + (on ? 'on' : 'off') + '; cable at ' + (port === 'gpu' ? 'dedicated graphics-card output' : 'motherboard output') + '. Source: ' + (source === 'displayport' ? 'DisplayPort' : 'HDMI') + '; monitor end ' + (signal === false ? 'disconnected' : 'fitted') + '. ' + (on && boot && port === 'gpu' && source !== 'displayport' && signal !== false && flag(state,'gpuInstalled') !== false && flag(state,'gpuPowerConnected') !== false ? 'The virtual display can show the desktop.' : 'The display is not ready to show the classroom desktop.'), 'current-state');
       return fact(scenario, /cable|port|socket|hdmi/iu.test(question) ? 'video' : 'screen');
     }
     if (/power|lights?|fans?|running|turn.*on/iu.test(question)) return currentOr(scenario, state, 'pcOn', 'The virtual tower is on. Its power light and fans are running.', 'The virtual tower is currently off. No running fans or power light are shown.', 'power');
@@ -125,6 +128,19 @@ function caseReply(scenario, question, state) {
   if (id === 'INC-106') {
     if (/compatib|type|ddr|parts|spec|component|cpu|gpu|processor|ram|motherboard|build|assemble/iu.test(question)) return fact(scenario, /tray|distractor/iu.test(question) ? 'parts' : 'spec');
     if (/ready|finish|deliver|document|acceptance/iu.test(question)) return fact(scenario, 'acceptance');
+  }
+  if (['INC-107','INC-108'].includes(id)) {
+    if (/safe|safety|while.*(?:on|running)|power off/iu.test(question) && externalDisplayQuestion(question)) return response('The virtual monitor source and external HDMI connectors can be changed while the PC runs. Internal components still require PC off and AC disconnected. Use only the on-screen equipment; do not disconnect your real device.', 'safety');
+    if (/monitor|screen|display|picture|video|signal|hdmi|displayport|cable|port|socket|input|source/iu.test(question)) {
+      const on = flag(state,'pcOn'); const boot = flag(state,'booted'); const signal = flag(state,'signalConnected');
+      const port = read(state,'videoPort',['board','gpu']); const source = read(state,'monitorInput',['hdmi','displayport']);
+      if (source && signal !== undefined && port && on !== undefined && boot !== undefined) {
+        const ready = on && boot && signal && source === 'hdmi' && port === 'gpu' && flag(state,'gpuInstalled') !== false && flag(state,'gpuPowerConnected') !== false;
+        return response('Current bench: monitor source ' + (source === 'hdmi'?'HDMI':'DisplayPort') + '; HDMI at monitor ' + (signal?'fitted':'disconnected') + '; PC cable at ' + (port==='gpu'?'graphics card':'inactive motherboard output') + '. ' + (ready?'The desktop is visible. Open the lesson file to check the original task.':!on?'The PC is off, so no picture is sent.':!boot?'Startup has not completed; inspect the POST result.':'The monitor has no usable signal on its selected source.'),'current-state');
+      }
+      return fact(scenario,/cable|port|socket|hdmi/iu.test(question)?'video':'screen');
+    }
+    if (/power|lights?|fans?|running|turn.*on|boot|startup|operating system/iu.test(question)) return currentOr(scenario,state,'pcOn','The virtual tower is on, with power light and fans running. Compare its startup readout with the monitor signal; a running PC does not prove a working picture.','The virtual tower is off. Start it before testing the picture.','power');
   }
   if (id === 'NET-201') {
     if (/current|now|set to|configured|settings|address|dns|gateway|subnet|mask|ip\b/iu.test(question)) {
@@ -203,7 +219,7 @@ function caseAnswer(scenario, question, state = {}) {
   if (/^(?:thanks|thank you|okay thanks|ok thanks)[!,. ]*$/iu.test(text)) return response('You are welcome. Keep a note of what the evidence shows, then try one change in the workbench and compare its test result with your hypothesis.', 'conversation');
   if (/\b(?:goal|requested result|need to (?:do|finish)|trying to|want to|what.*(?:need|want)|success look|complete the task)\b/iu.test(text)) return response(typeof scenario.goal === 'string' ? scenario.goal : 'Read the request card for the result this fictional requester needs.', 'request');
   // Asking for missing history reveals a requester fact; it never replaces a safety instruction or a live bench observation.
-  if (scenario.id.startsWith('INC-') && /safe|safety|disconnect|unplug|internal|touch|power off/iu.test(text)) return caseReply(scenario,text,state);
+  if (scenario.id.startsWith('INC-') && /safe|safety|disconnect|unplug|internal|touch|power off/iu.test(text) && !externalDisplayQuestion(text) && !unknownEquipmentHistory(text)) return caseReply(scenario,text,state);
   const inquiryFact = matchedCaseFact(scenario,text);
   if (inquiryFact && requiredInquiryFacts(scenario).includes(inquiryFact.id) && !followUpKind(text)) return response(inquiryFact.answer,'case-fact');
   if (/\b(?:last (?:work|worked|working)|ever work|when.*(?:work|working)|last known good)\b/iu.test(text) && scenario.id !== 'NET-203') {

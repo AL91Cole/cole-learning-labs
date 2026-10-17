@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../src/app.js', import.meta.url), 'utf8');
-const start = source.indexOf('function openReport(s,r){');
+const start = source.indexOf('function openReport(s,r,customContent){');
 const end = source.indexOf('\nfunction educators(', start);
 assert.ok(start >= 0 && end > start, 'The report dialog entry must be available for lifecycle testing.');
 // Exercise the real production handler, replacing only its module-loading boundary.

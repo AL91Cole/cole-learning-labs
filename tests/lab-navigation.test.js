@@ -9,6 +9,9 @@ import { answerQuestion, questionEvent, readQuestionEvents, inquiryProgress, ret
 import { createWorkStorage, WORK_PREFIX } from '../src/local-work.js';
 import { normalizeLabRecord } from '../src/records.js';
 
+import {retainExperimentEvents,experimentEventText,experimentReport} from '../src/experiments.js';
+import {learningRoute} from '../src/learning-tools.js';
+
 const source = await readFile(new URL('../src/app.js', import.meta.url), 'utf8');
 const helperStart = source.indexOf('function interviewList(');
 const bindingStart = source.indexOf('function bindLab(s){');
@@ -70,7 +73,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     // Production modules share one realm. Transfer VM-created action data into
     // the model's realm so its strict plain-object boundary is tested fairly.
     applyWorkspaceAction:(caseId,previous,action,value)=>applyWorkspaceAction(caseId,previous,action,value===undefined?undefined:structuredClone(value)),
-    verifyWorkspace,answerQuestion:replyForQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,tracks,esc:escapeHtml,
+    retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),experimentEventText,experimentReport,verifyWorkspace,answerQuestion:replyForQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,tracks,esc:escapeHtml,
     document:{createElement(tagName){const element=new Element();element.tagName=tagName.toUpperCase();return element;}},
     $: selector => { assert.ok(elements.has(selector),'Unexpected lab selector: '+selector); return elements.get(selector); },
     $$: selector => { assert.ok(groups.has(selector),'Unexpected lab control group: '+selector); return groups.get(selector); },
@@ -341,7 +344,7 @@ function routeHarness(id='CODE-501') {
   const location={hash:'#lab/'+id};
   const initialStore={version:2,labs:{}};
   const context=vm.createContext({
-    SCENARIOS,normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,
+    SCENARIOS,learningRoute,retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),mountLabLearning:()=>()=>{},mountTeachingPage:()=>()=>{},renderCapstone:()=>'capstone',mountCapstone:()=>()=>{},capstoneReport:()=>'capstone report',checkCapstoneState:()=>({ok:false}),normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,
     applyWorkspaceAction:(caseId,previous,action,value)=>{order.push('save current draft');return applyWorkspaceAction(caseId,previous,action,structuredClone(value));},
     $:selector=>{if(selector==='#coding-editor')return editor;if(selector==='#main')return main;if(!elements.has(selector))elements.set(selector,new Element());return elements.get(selector);},
     $$:()=>[],document:{body:{classList:new Element().classList},title:''},history:{replaceState(){}},
@@ -350,7 +353,7 @@ function routeHarness(id='CODE-501') {
     onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
     routeLink:()=>'',labCards(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
   });
-  vm.runInContext('let store=initialStore,currentLab=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
+  vm.runInContext('let routeCleanup=null,store=initialStore,currentLab=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
     'let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});\n'+lifecycle.join('\n')+'\n'+
     'function labPage(s){currentLab=s;recordFor(s);return "lab "+s.id;}\nfunction bindLab(s){onBind(s,recordFor(s));}\n'+
     source.slice(draftStart,draftEnd)+'\n'+source.slice(routeStart,routeEnd)+'\n'+hashListener+'\n'+

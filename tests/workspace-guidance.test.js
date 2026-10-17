@@ -59,8 +59,8 @@ function visibleWorkspaceGuide(scenario,state) {
 }
 
 test('every settings workspace shows three instructions that name its real buttons',()=>{
-  assert.equal(SCENARIOS.length,27);
-  assert.equal(SCENARIOS.filter(item=>item.track==='hardware').length,6);
+  assert.equal(SCENARIOS.length,29);
+  assert.equal(SCENARIOS.filter(item=>item.track==='hardware').length,8);
   assert.equal(legacyScenarios.length,9);assert.equal(expandedScenarios.length,9);assert.equal(codingScenarios.length,3);
   for(const scenario of settingsScenarios) {
     const {html}=visibleWorkspaceGuide(scenario,initialWorkspaceState(scenario.id));
