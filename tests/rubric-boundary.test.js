@@ -17,7 +17,7 @@ function inspectPublicValues(value, location = 'catalogue') {
 }
 
 test('all public lab cases exclude teacher grading and answer-key fields', () => {
-  assert.equal(SCENARIOS.length, 15);
+  assert.equal(SCENARIOS.length, 27);
   inspectPublicValues(SCENARIOS);
   for (const scenario of SCENARIOS) {
     assert.ok(scenario.goal && scenario.brief, `${scenario.id}: learner instructions remain available`);

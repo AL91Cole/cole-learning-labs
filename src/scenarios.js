@@ -1,3 +1,5 @@
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261016-pathways6';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261016-pathways6';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 
@@ -122,5 +124,7 @@ export const SCENARIOS = [
     brief: 'The fictional LearnDesk app returns a record by ID without checking ownership. Acknowledge the defined scope, reproduce the defect using the two supplied records, then patch and retest.',
     clues: [clue('scope','Read the authorization','Only the two built-in fictional records in this browser simulation are in scope. No real websites, accounts, scanners, or tools are involved.'),clue('identity','Inspect the active session','The active user is learner-101. Record 101 belongs to learner-101; record 102 belongs to learner-102.'),clue('patch','Read the remediation note','Check ownership on every server-side record request. A hidden URL or a disabled button alone does not enforce authorization.')],
     questions: [question('May I try this on the school portal?','No. Permission for this fictional simulation does not authorize testing any real system.'),question('What should the retest show?','The same user should receive 200 for record 101 and 403 for record 102 after the ownership check is applied.')],
-  }
+  },
+  ...EXPANDED_SCENARIOS,
+  ...CODING_SCENARIOS
 ];

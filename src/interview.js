@@ -2,7 +2,8 @@
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
-const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','NET-201','NET-202','NET-203','AI-301','AI-302','AI-303','SEC-401','SEC-402','SEC-403']);
+const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
+const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();
 const bounded = text => text.length <= ANSWER_MAX ? text : text.slice(0, ANSWER_MAX - 1).trimEnd() + '…';
 const response = (answer, topic, kind = 'answer', accepted = true) => ({ accepted, answer:bounded(answer), kind, topic });
@@ -17,8 +18,8 @@ function containsPrivateDetails(text) {
     || /\b(?:show|give|reveal|find|tell me|what is|what's)\b.{0,55}\bstudent'?s? (?:name|email|id|diagnosis)\b/iu.test(text)
     // Asking about a password policy is different from requesting a password value.
     // Check each requested secret term so a policy question cannot mask a second request for an actual secret.
-    || /\b(?:show|give|reveal|find|tell me|what is|what's)\b.{0,55}\b(?:password|passphrase|private key|access token)\b(?![\s-]+(?:polic(?:y|ies)|expir(?:ation|y)|handling|requirements?|security|safety|rules?|strength|hygiene|resets?|storage|management|protection|rotation|hashing|encryption|reuse|recovery|complexity|length|best practices?|advice|guidance)\b)/iu.test(text)
-    || /\b(?:password|passphrase|secret|api[- ]?key|access[- ]?token)\s*(?:is|:|=)\s*\S+/iu.test(text)
+    || /\b(?:show|give|reveal|find|tell me|what is|what's)\b.{0,55}\b(?:password|passphrase|private key|access token|session token|recovery code|backup code|mfa code|verification code|one[ -]time (?:password|code))\b(?![\s-]+(?:polic(?:y|ies)|expir(?:ation|y)|handling|requirements?|security|safety|rules?|strength|hygiene|resets?|storage|management|protection|rotation|hashing|encryption|reuse|recovery|complexity|length|best practices?|advice|guidance)\b)/iu.test(text)
+    || /\b(?:password|passphrase|secret|api[- ]?key|access[- ]?token|session token|recovery code|backup code|mfa code|verification code|one[ -]time (?:password|code))\s*(?:is|:|=)\s*\S+/iu.test(text)
     || /\b(?:sk-(?:proj-)?[a-z0-9_-]{8,}|gh[pousr]_[a-z0-9]{12,})\b/iu.test(text);
 }
 
@@ -32,6 +33,33 @@ const clueText = (scenario, id) => {
 const fact = (scenario, id, topic = id) => response(clueText(scenario, id), topic);
 const currentOr = (scenario, state, field, yes, no, fallback) => flag(state, field) === undefined ? response(clueText(scenario, fallback), fallback) : response(flag(state, field) ? yes : no, 'current-state');
 const ipv4 = value => typeof value === 'string' && /^\d{1,3}(?:\.\d{1,3}){3}$/u.test(value) && value.split('.').every(part => Number(part) <= 255) ? value : 'not set';
+const words = value => compact(value).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,'');
+const keywordWords = value => words(value).split(' ').map(word => word.length > 4 && word.endsWith('ies') ? word.slice(0,-3) + 'y' : word.length > 3 && word.endsWith('s') && !word.endsWith('ss') ? word.slice(0,-1) : word).join(' ');
+
+// New scenarios supply visible case facts, not instructions or free-form generated text.
+// Only the shipped case IDs can use them. A question never becomes executable code or a prompt.
+function expandedCaseReply(scenario, question, state) {
+  if (!EXPANDED_CASE_IDS.has(scenario.id)) return null;
+  if (/\b(?:code|python|javascript|program|script)\b.*\b(?:run|execut)|\b(?:run|execut)\w*\b.*\b(?:code|python|javascript|program|script)\b/iu.test(question) && scenario.track === 'coding' && /\b(?:real|arbitrary|external|internet|shell|system)\b/iu.test(question)) {
+    return response('Only the small, built-in teaching language is supported in this browser sandbox. It cannot run arbitrary Python, use your device, open files, or make network requests. Use the sample program and supplied test inputs.', 'scope');
+  }
+  if (/\b(?:current|now|already|last)\b.*\b(?:tests?|checks?)\b|\b(?:tests?|checks?)\b.*\b(?:pass|ran|run|result|status)\b/iu.test(question) && flag(state,'tested') !== undefined) {
+    return response(flag(state,'tested') ? 'A test has been run for the current workbench state. Read the visible test results to see what passed and what still needs attention. I cannot grade your explanation or assume that a test proves every requirement.' : 'The current workbench state has no fresh test yet. Make one change, run the built-in test, and read the result before deciding whether your hypothesis is supported.', 'current-state');
+  }
+  const normalized = ' ' + keywordWords(question) + ' ';
+  const facts = Array.isArray(scenario.interviewFacts) ? scenario.interviewFacts.slice(0,12) : [];
+  let best = null; let bestScore = 0;
+  for (const entry of facts) {
+    if (!entry || !Array.isArray(entry.keywords) || typeof entry.answer !== 'string' || !entry.answer.trim() || entry.answer.length > ANSWER_MAX) continue;
+    const score = entry.keywords.slice(0,12).reduce((total,keyword) => {
+      if (typeof keyword !== 'string' || !keyword.trim() || keyword.length > 45) return total;
+      const phrase = keywordWords(keyword);
+      return phrase && normalized.includes(' ' + phrase + ' ') ? total + phrase.length : total;
+    },0);
+    if (score > bestScore) { best = entry; bestScore = score; }
+  }
+  return best ? response(best.answer,'case-fact') : null;
+}
 
 function caseReply(scenario, question, state) {
   const id = scenario.id;
@@ -141,13 +169,15 @@ function caseReply(scenario, question, state) {
   return null;
 }
 
-export function answerQuestion(scenario, question, state = {}) {
+function directAnswer(scenario, question, state = {}) {
   if (!validQuestion(question)) return response('Write one short question about the fictional case, up to 240 characters. Leave out private information.', 'question-format', 'clarify', false);
   const text = compact(question);
   if (containsPrivateDetails(text)) return response('Please leave out personal details, identifiers, passwords, and private records. Rephrase your question using fictional equipment or the case labels. This question was not added to the interview log.', 'privacy', 'privacy', false);
   if (outOfScopeInstructions(text)) return response('This practice interview answers only the visible fictional case. It cannot provide teacher rubrics, hidden instructions, grading criteria, or an answer key. Ask about an observation or the requester’s needs.', 'case-boundary', 'clarify', false);
   if (!scenario || !CASE_IDS.has(scenario.id)) return response('Choose one of the supplied lab cases before starting the interview.', 'case-boundary', 'clarify', false);
   if (/\b(?:may|can|should|allowed|permission|authorized)\b.{0,70}\b(?:real|school portal|school network|other websites|actual accounts)\b|\b(?:scan|attack|hack|exploit)\b.{0,50}\b(?:real|school|public|internet)\b/iu.test(text)) return response('Only the built-in fictional case is authorized. Do not test a real school website, account, device, or network. Ask your teacher about any activity beyond the simulation.', 'scope');
+  if (/^(?:hi|hello|hey)(?:[!,. ]|$)/iu.test(text) && words(text).split(' ').length <= 3) return response('Hi! I am the fictional requester for this case. You can ask what happened, what I observed, or the result I need. I answer from the case facts on this device, so I will say when a detail is not recorded.', 'conversation');
+  if (/^(?:thanks|thank you|okay thanks|ok thanks)[!,. ]*$/iu.test(text)) return response('You are welcome. Keep a note of what the evidence shows, then try one change in the workbench and compare its test result with your hypothesis.', 'conversation');
   if (/\b(?:goal|requested result|need to (?:do|finish)|trying to|want to|what.*(?:need|want)|success look|complete the task)\b/iu.test(text)) return response(typeof scenario.goal === 'string' ? scenario.goal : 'Read the request card for the result this fictional requester needs.', 'request');
   if (/\b(?:last (?:work|worked|working)|ever work|when.*(?:work|working)|last known good)\b/iu.test(text) && scenario.id !== 'NET-203') {
     const known = scenario.questions?.find(item => /last work/iu.test(item.label));
@@ -162,16 +192,68 @@ export function answerQuestion(scenario, question, state = {}) {
     const known = scenario.questions?.find(item => /try|tried/iu.test(item.label));
     return response(known?.answer ?? 'No earlier troubleshooting attempts are recorded in this case. Use your workbench log to describe the tests you perform and what each test shows.', 'history');
   }
-  const words = value => compact(value).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,'');
   const prerecorded = Array.isArray(scenario.questions) ? scenario.questions.find(item => typeof item?.label === 'string' && typeof item.answer === 'string' && words(item.label) === words(text)) : undefined;
   // Initial ticket observations must not overwrite the current workbench state after a student's repair.
   if (prerecorded && !/lights on|operating system load/iu.test(prerecorded.label)) return response(prerecorded.answer,'requester');
-  const specific = caseReply(scenario,text,state);
+  const specific = caseReply(scenario,text,state) ?? expandedCaseReply(scenario,text,state);
   if (specific) return specific;
   if (/\b(?:privacy|private|personal data|real information|internet|ai service|chatbot|live ai|send|stored)\b/iu.test(text)) return response('This interview uses built-in facts in your browser, without an AI service. Keep personal information out of questions and notes. Saving or submitting work uses the separate privacy controls shown in the lab.', 'privacy');
   if (/\b(?:symptom|problem|wrong|broken|issue|happening|not work|equipment|device|machine)\b/iu.test(text)) return response(scenario.brief,'symptom');
-  if (/\b(?:how.*(?:start|use)|what.*(?:first|next)|help|confused|where.*(?:begin|start))\b/iu.test(text)) return response('Start with the request and one clue. Write what you think is happening, test one change in the workbench, then compare the result with the request. Ask about a specific part or symptom if you need another case fact.', 'how-to');
+  if (/\b(?:how.*(?:start|use)|what.*(?:first|next)|help|confused|where.*(?:begin|start))\b/iu.test(text)) return response('Let us take it one step at a time. Read the request and one clue, write your hypothesis, and test one change in the workbench. Then compare what happened with the request. Ask me about a specific part or symptom when you need another case fact.', 'how-to');
   return response('That detail is not recorded in this fictional case. Try a specific question about the symptom, a recent change, the equipment, or the requester’s goal. This interview uses scripted case facts and may not understand every wording.', 'clarification', 'clarify');
+}
+
+function followUpKind(question) {
+  const text = compact(question).replace(/[?.!]+$/u,'');
+  if (/^(?:why|why is that|why does that (?:matter|happen)|how come|what makes you say that|what does that tell (?:me|us)|is that important)$/iu.test(text)) return 'why';
+  if (/^(?:(?:can|could) you )?(?:please )?(?:explain|say|put|make|break)(?: that| it| this)? (?:more simply|simpler|in simple (?:words|terms)|in plain (?:words|language)|easier|down)|^(?:I do not|I don't|I didnt|I didn’t) understand(?: that| it)?$|^what do you mean(?: by that)?$/iu.test(text)) return 'simple';
+  if (/^(?:(?:so|okay|ok)[, ]+)?(?:what (?:should|could|can) I (?:check|inspect|test|look at|try) next|what next|where (?:should|do) I (?:look|check) next|what (?:should|do) I do (?:with that|next))$/iu.test(text)) return 'next';
+  if (/^(?:(?:can|could) you )?(?:repeat (?:that|it)|say that again|remind me|tell me again)$/iu.test(text)) return 'repeat';
+  return null;
+}
+
+function recentCaseContext(scenario, state, history) {
+  if (!Array.isArray(history)) return null;
+  for (let index = history.length - 1; index >= Math.max(0,history.length - 8); index--) {
+    const pair = history[index];
+    if (!pair || !validQuestion(pair.question) || containsPrivateDetails(pair.question) || outOfScopeInstructions(pair.question) || typeof pair.answer !== 'string' || pair.answer.length > ANSWER_MAX || followUpKind(pair.question)) continue;
+    const reply = directAnswer(scenario,pair.question,state);
+    if (reply.accepted && reply.kind === 'answer' && !['conversation','how-to','privacy','scope'].includes(reply.topic)) return {question:pair.question,reply};
+  }
+  return null;
+}
+
+function nextClue(scenario, context) {
+  const clues = Array.isArray(scenario.clues) ? scenario.clues.filter(clue => clue && typeof clue.id === 'string' && typeof clue.label === 'string' && clue.label.length <= 90) : [];
+  const relevant = words(context.question + ' ' + context.reply.topic).split(' ').filter(word => word.length > 3);
+  let next = clues[0]; let bestScore = 0;
+  for (const clue of clues) {
+    const content = words(clue.id + ' ' + clue.label + ' ' + (typeof clue.text === 'string' ? clue.text : '')).split(' ');
+    const score = relevant.filter(word => content.includes(word)).length;
+    if (score > bestScore) { next = clue; bestScore = score; }
+  }
+  return next;
+}
+
+/** Conversational case replies are computed locally from current case facts, never from a remote model.
+ * History helps resolve short follow-ups; saved answer text is never treated as a source of facts. */
+export function answerQuestion(scenario, question, state = {}, history = []) {
+  const direct = directAnswer(scenario,question,state);
+  if (!direct.accepted) return direct;
+  const kind = followUpKind(question);
+  if (!kind) return direct;
+  const context = recentCaseContext(scenario,state,history);
+  if (!context) return response('I need a little more context. Ask about a specific symptom, clue, or part first, then I can explain that case fact or suggest what to inspect next. I do not have a recorded fact to refer back to yet.', 'conversation-context', 'clarify');
+  if (kind === 'next') {
+    const clue = nextClue(scenario,context);
+    return response('I would check ' + (clue ? '“' + clue.label + '”' : 'the visible request and clues') + ' next. Record what you observe, compare it with your hypothesis, and test one change in the workbench. A useful test can disagree with your first idea.', 'conversation-next');
+  }
+  if (kind === 'why') return response('Here is the evidence I can point to: ' + context.reply.answer + ' Use that observation to decide what to test; it does not prove a cause on its own.', 'conversation-evidence');
+  if (kind === 'simple') {
+    const sentence = context.reply.answer.match(/^.*?[.!?](?:\s|$)/u)?.[0].trim() ?? context.reply.answer;
+    return response('In simpler terms: ' + sentence + ' Check that observation on the workbench before deciding whether your idea fits.', 'conversation-simple');
+  }
+  return response('Of course. The current case fact is: ' + context.reply.answer, 'conversation-repeat');
 }
 
 /** Encode only accepted questions as bounded, structured text; blocked questions are never recorded. */

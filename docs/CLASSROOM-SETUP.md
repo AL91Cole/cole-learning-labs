@@ -4,6 +4,8 @@ The repository includes a classroom API and a teacher/student portal. This is pr
 
 The independent public labs begin in browser memory; optional device saving and ordinary local exports require an explicit learner action. Real classroom joining, server drafts, submissions, and grades are unavailable in this release. In a future approved release, students would explicitly join an enabled classroom before that workflow sends assignment work to its server. A fictional portal demo is separate from real class data. Do not enter real student records into a demonstration.
 
+Release `20261016-pathways6` (version `2.6.0`) offers 27 independent labs across five pathways. Conversational interview replies use on-device authored case facts and recent question context. The optional live AI response mode is visible but disabled and unconnected; there is no provider request or API key. Future live processing needs a separately reviewed implementation, approved provider/data terms, authenticated teacher controls and applicable school/privacy approval. It cannot be enabled by a student mode choice, teacher email or environment flag, and it does not change this classroom service's hardcoded production lock.
+
 ## Use Google Classroom without importing a roster
 
 Teachers can post the public lab link in their existing school Classroom assignment. A normal Google Classroom share link can help create that post; it shares only the public lab URL and does not connect this site to the Classroom API. Do not add aliases, class codes, keys, grades, reports, Google user IDs, or school student IDs to URLs. Students complete the local lab, then attach their chosen report directly to the district's assignment. Teachers use the student's identity and grading controls within Classroom. No Google roster, student email, OAuth token, or grade passback is received by this site through this workflow.
@@ -69,7 +71,7 @@ D1 would store teacher email/class ownership, class name/code, server-generated 
 
 This backend has not implemented teacher-held report encryption. Provider encryption and authenticated access must not be described as preventing all operator/provider access to plaintext. The optional local encrypted-file workflow is separate from D1 and does not change the production release lock. No Google API client, roster import, student Google login, or automatic grading connection is configured.
 
-The application does not execute uploaded code or student commands, call a live AI model, or offer file attachments/public student galleries. Work is a bounded JSON object, not a trusted executable. Student-supplied completion/verification is self-reported practice evidence; it is **not an anti-cheat certification**. Teachers manually review and grade a submitted version. Saving a later draft cannot alter that submitted snapshot or its teacher grade.
+The application does not execute uploaded programs or operating-system commands, call a live AI model, or offer file attachments/public student galleries. The three coding labs interpret only a small documented teaching language with bounded source, nesting, loops, steps and output. It cannot access browser globals, files, networks or device controls and is not full JavaScript or Python. Saved code and recorded output can appear in reports; review them for private information just as you review notes. Work remains a bounded JSON object, not a trusted executable for the prepared server. Student-supplied completion/verification is self-reported practice evidence; it is **not an anti-cheat certification**. Teachers manually review and grade a submitted version. Saving a later draft cannot alter that submitted snapshot or its teacher grade.
 
 Cloudflare also handles ordinary request, network, and security metadata. A short-lived join throttle stores a hash derived from the connecting IP/time bucket, not the raw IP; these throttle rows expire after one hour and are removed during later authorized teacher cleanup. This does not prevent Cloudflare or school-managed filtering systems from processing their own network metadata. The API does not add analytics or cross-origin submission endpoints. Do not describe the site as collecting no information or being completely secure.
 
@@ -79,7 +81,7 @@ API responses are private/no-store and do not grant CORS access. All mutations r
 | --- | --- |
 | Active classes per approved teacher | 10 |
 | Memberships per class, including lost sessions | 100 |
-| Assigned lab choices | The 15 supported lab IDs; one assignment per lab per class |
+| Assigned lab choices | The 27 supported lab IDs; one assignment per lab per class |
 | Class name / generated alias / assignment title | 100 characters / server-generated `Learner-XXXX-XXXX` / 120 characters |
 | Work per saved draft or submitted snapshot | 64 KiB of JSON; bounded nesting, lists, strings, and keys |
 | Individual work string / teacher feedback | 16,000 / 4,000 characters |

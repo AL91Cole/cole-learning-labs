@@ -116,17 +116,32 @@ test('application inspections cannot acknowledge scope, reproduce a defect, or p
   assert.equal(verifyWorkspace('SEC-403',applyWorkspaceAction('SEC-403',state,'run-check').state).ok,false);
 });
 
-test('every software lab exposes the same bounded local tools and rejects real or chained commands',()=>{
+test('every software lab keeps its practice diagnostics bounded and rejects real or chained commands',()=>{
   for(const scenario of SCENARIOS.filter(item=>item.track!=='hardware')) {
     const state=initialWorkspaceState(scenario.id);
-    assert.match(inspect(scenario.id,state,'help'),/Available practice tools/);
+    assert.match(inspect(scenario.id,state,'help'),/practice (?:tools|diagnostics)/i);
     for(const command of ['ping 8.8.8.8','curl https://example.com','ipconfig; echo private@example.com','ipconfig\nping 10.24.8.1','x'.repeat(97),null,{toString(){throw new Error('Must not coerce objects');}}]) {
       const output=inspect(scenario.id,state,command);
-      assert.match(output,/outside this simulation/);
+      assert.match(output,/outside this simulation|displayed practice tool|commands are unavailable/);
       assert.doesNotMatch(output,/private@example\.com|8\.8\.8\.8|https:\/\/example\.com/);
     }
-    const root={innerHTML:'',querySelector:()=>null,querySelectorAll:()=>[]};
+    const elements=new Map();
+    const root={innerHTML:'',querySelector:selector=>{if(!elements.has(selector))elements.set(selector,{value:'',textContent:'',addEventListener(){},setAttribute(){}});return elements.get(selector);},querySelectorAll:()=>[]};
     renderWorkspace(root,scenario,state,()=>assert.fail('Rendering tools must not run one'));
+    if(scenario.track==='coding') {
+      assert.match(root.innerHTML,/aria-label="Coding simulation"/);
+      assert.match(root.innerHTML,/id="coding-editor"/);
+      assert.match(root.innerHTML,/Run all fixtures/);
+      assert.match(root.innerHTML,/No network requests/);
+      continue;
+    }
+    if(/^(?:NET-20[4-6]|AI-30[4-6]|SEC-40[4-6])$/.test(scenario.id)) {
+      assert.match(root.innerHTML,/aria-label="Local practice inspection tools"/);
+      assert.match(root.innerHTML,/data-exp-command=/);
+      assert.match(root.innerHTML,/exp-console/);
+      assert.match(root.innerHTML,/runs locally/);
+      continue;
+    }
     assert.match(root.innerHTML,/aria-label="Hands-on practice tools"/);
     assert.match(root.innerHTML,/maxlength="96"/);
     assert.match(root.innerHTML,/data-inspection-output role="status"/);

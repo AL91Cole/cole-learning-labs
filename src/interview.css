@@ -1,0 +1,12 @@
+/* Conversation uses ordinary document controls so keyboard and touch users share the same flow. */
+.interview-history{display:grid;gap:14px;max-height:460px;padding:4px 2px 12px;scrollbar-gutter:stable}
+.interview-pair{border:0;border-radius:0;background:transparent;margin:0;padding:0;display:grid;gap:8px;min-width:0}
+.single-page-lab .interview-pair p{max-width:96%;margin:0;padding:12px 14px;border-radius:13px;line-height:1.6;font-size:.93rem;overflow-wrap:anywhere}
+.single-page-lab .interview-pair p:first-child{justify-self:end;background:#143b47;border:1px solid #317080;border-bottom-right-radius:3px}
+.single-page-lab .interview-pair p:last-child{justify-self:start;background:#102732;border:1px solid #29515e;border-bottom-left-radius:3px}
+.interview-pair strong{display:block;font-size:.73rem;letter-spacing:.035em;margin-bottom:4px;color:#b4f5e6}
+.interview-mode-note{padding:11px 13px;border-left:3px solid #53c7bb;border-radius:0 8px 8px 0;background:#102c34;color:#c7dfdf;line-height:1.6;overflow-wrap:anywhere}
+.interview-mode-select{min-height:48px;width:100%;max-width:100%;font:inherit;border:1px solid #3a6975;border-radius:9px;background:#0b202d;color:#edf9fb;padding:10px 12px}
+.interview-mode-select:focus-visible{outline:3px solid #79e4d3;outline-offset:3px}
+@media(max-width:580px){.single-page-lab .interview-pair p{max-width:100%;padding:11px 12px}.interview-history{max-height:400px;scrollbar-gutter:auto}}
+@media(forced-colors:active){.single-page-lab .interview-pair p,.interview-mode-note,.interview-mode-select{border:1px solid CanvasText}}
