@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { assemblyActions, assemblyFailure } from '../src/assembly-model.js';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from '../src/assembly-model.js';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from '../src/assembly-tools.js';
 import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
 
 const source = readFileSync(new URL('../src/assembly-workbench.js', import.meta.url), 'utf8');
@@ -29,7 +30,7 @@ function fixture({ hidden = false, loader } = {}) {
       return node(dataset);
     });
   }
-  for (const key of ['scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading']) fields.set(`[data-asm-${key}]`, node());
+  for (const key of ['scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls']) fields.set(`[data-asm-${key}]`, node());
   Object.defineProperty(fields.get('[data-asm-actions]'), 'innerHTML', { set(html) { actionButtons = buttons(html); }, get() { return ''; } });
   const root = { ownerDocument: doc, onclick: () => {}, onkeydown: () => {}, onchange: () => {},
     closest() { return hidden ? {} : null; }, contains(target) { return target === fields.get('[data-asm-select]') || staticButtons.includes(target) || actionButtons.includes(target); },
@@ -42,8 +43,8 @@ function fixture({ hidden = false, loader } = {}) {
   const calls = { loads: 0, mounts: 0, updates: 0, pauses: 0, resumes: 0, disposals: 0 };
   const scene = { update() { calls.updates++; }, select() {}, pause() { calls.pauses++; }, resume() { calls.resumes++; }, dispose() { calls.disposals++; } };
   const sceneModule = { mountAssemblyScene(host) { assert.equal(host, fields.get('[data-asm-scene]')); calls.mounts++; return scene; } };
-  const mount = vm.runInNewContext(`${source.replace(/^import[^\n]+\n/, '').replace('export function mountAssemblyWorkbench', 'function mountAssemblyWorkbench').replace(lazyImport, 'sceneLoader()')}; mountAssemblyWorkbench`, {
-    assemblyActions, assemblyFailure, sceneLoader() { calls.loads++; return loader ? loader(sceneModule) : Promise.resolve(sceneModule); }
+  const mount = vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm, '').replace('export function mountAssemblyWorkbench', 'function mountAssemblyWorkbench').replace(lazyImport, 'sceneLoader()')}; mountAssemblyWorkbench`, {
+    assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS, ASSEMBLY_TOOLS, assemblyToolAction, sceneLoader() { calls.loads++; return loader ? loader(sceneModule) : Promise.resolve(sceneModule); }
   });
   let state = applyHardwareAction('INC-106', initialHardwareState('INC-106'), 'enable-assembly').state;
   let controller;

@@ -1,12 +1,28 @@
 # Detailed 3D assembly
 
+Source release: `20261017-tools13`, version `2.12.0`.
+
 In a hardware investigation, open **Workbench & test → Open detailed 3D assembly**. Detailed mechanics stay active for that investigation until Start over. Choose **Load 3D view** when graphics are useful; all mechanical controls also work without WebGL. Existing investigations and earlier drafts retain their original fault when adopting detailed mechanics.
 
 ## Equipment and controls
 
 The authored workstation contains removable side panel, PSU, motherboard, processor, cooler, memory, graphics card and original SATA SSD. Eighteen individually modeled screws cover panel (2), PSU (4), board (4), cooler (4), GPU bracket (2) and SSD (2). The case frame and cosmetic ventilation remain fixed. Parts and removed screws move to the virtual tray. Clips, CPU retention, connected leads and exposed thermal paste reflect model state.
 
-Tap equipment or choose it from the component controls. Use the large native buttons to fit, remove, fasten, release, connect and prepare paste. Tab/Enter/Space operate these same controls. Horizontal canvas gestures rotate the camera; vertical touch gestures permit page scrolling. Whole-PC, top, side and zoom buttons provide an alternative to camera dragging. Parts snap to authored locations through their controls; free-form 3D part dragging and physical collision are not implemented. The illustrated bench retains its drag-to-socket workflow.
+Choose a tool in the toolbar. Tapping the 3D screwdriver, paste syringe or cleaning wipe also selects its mode. Tool selection changes the interaction mode without changing the equipment or recording a repair. Every operation also has a large native control usable with touch, a trackpad, or Tab/Enter/Space.
+
+| Tool | In the 3D picture | Alternative without dragging or precise aiming |
+| --- | --- | --- |
+| Inspect | Tap equipment to select it; drag sideways to rotate the view | Choose a component from the list and use the camera preset buttons |
+| Move parts | Drag a loose component onto its matching outlined mount, or a fitted component to the parts tray; release to attempt the change | Choose a component, then Fit selected part or Return selected part to tray |
+| Screwdriver | Tap a visible screw head to tighten it or remove it, according to its current state | Choose a screw by its component and number, then Turn selected screw |
+| Thermal paste | Tap the exposed processor to apply one pea-sized dot | Apply pea-sized paste to CPU |
+| Clean surfaces | Tap the exposed processor to clean the CPU and cooler contact surfaces | Clean CPU and cooler surfaces |
+
+The Move tool shows a temporary part and matching destination. Its authored mount assists alignment and snaps the preview into place; only release requests an equipment change. An incompatible destination or release elsewhere cancels the move. The mechanical model can still reject a correctly aimed drop because a screw, lead, clip, or earlier component needs attention. It explains that reason without completing the repair. Equipment does not use free placement, gravity or physical collision. The illustrated bench retains its separate drag-to-socket workflow.
+
+Whole-PC, monitor, top, side, rear-I/O and zoom controls provide alternatives to camera dragging. In Inspect mode, vertical touch gestures scroll the page. Move parts captures touch movement inside the 3D canvas; switch back to Inspect or scroll outside the picture to move the page. Screws can be small at the default view, so use the selector and Turn button when needed.
+
+Escape cancels a move. Changing tools or camera views, opening My report, hiding the workbench section, navigating away, losing window focus or losing graphics context also discards unfinished movement. The equipment and action history change only when the model accepts an operation; rejected attempts can still appear as feedback in the lab's activity log. Tool and camera choices are temporary view state.
 
 Power off and disconnect virtual AC before internal changes. Remove panel screws and panel to reach the internals. Disconnect leads, release clips and remove fasteners before lifting components. The PSU requires all power leads disconnected. The cooler fasteners follow 1, 4, 2, 3 across opposite corners; lifting the cooler disturbs its paste seal. Clean both surfaces and apply one fresh pea-sized dot before refitting. Excess or disturbed paste prevents a successful startup. Manufacturer instructions differ; no measured thermal or torque physics is claimed.
 
@@ -14,10 +30,14 @@ Mechanical checks participate in startup, original-file delivery and saved-work 
 
 ## School-device constraints
 
-Three.js is pinned and self-hosted; see [Third-party software](THIRD-PARTY.md). The 3D dependency loads on explicit request. Graphics require WebGL2. No textures, external assets, physics dependency, continuous render loop, shadows or post-processing are used. Draws are requested only when needed, at pixel ratio no greater than 1.5 and approximately 900,000 framebuffer pixels. Hidden sections pause graphics; route changes release renderer resources. Context loss preserves equipment state and leaves all DOM controls available. Pause 3D is reversible.
+Three.js is pinned and self-hosted; see [Third-party software](THIRD-PARTY.md). Graphics require WebGL2. The detailed assembly renderer starts after choosing Load 3D view. The home/library classroom hub and non-hardware station previews mount automatically, so their shared 3D library currently loads with the application. Load 3D view does not defer every 3D asset download.
+
+The assembly scene uses procedural geometry, with no remote assets, physics dependency, continuous render loop, shadows or post-processing. Hub and pathway monitor textures are drawn locally on canvas. Rendering is requested only when needed, with pixel ratio capped at 1.5 and approximately 900,000 framebuffer pixels per view. The detailed scene pauses when its section is hidden; pathway previews skip rendering while hidden. Route changes dispose scene resources. Context loss preserves equipment state and leaves the ordinary controls available. Pause 3D is reversible and is not overridden by returning to a browser tab.
 
 These limits support modest devices but do not establish performance on every Chromebook or tablet. Accept the release on actual managed school hardware, with its browser settings and filtering policy. No new network permissions, device access, telemetry, student service or live AI service is enabled. The production classroom privacy gate remains closed.
 
 ## Verification
 
-Automated tests cover complete build, full teardown/rebuild, screw order, power and cable interlocks, paste rework, malformed saves, old-action guards, report-compatible state and strict draft schemas. Renderer tests use actual Three scene geometry with a mock GPU adapter to check resource disposal, pause/context/resize behavior and fallback. They do not measure physical-device GPU performance. Browser findings and remaining device checks are recorded in [Device checks](DEVICE-CHECKS.md).
+Automated tests cover complete build, full teardown/rebuild, screw order, power and cable interlocks, paste rework, malformed saves, old-action guards, report-compatible state and strict draft schemas. Tool tests check fixed component/socket mappings, ordinary-button alternatives, text-only feedback and the shared model's safety rules. Renderer tests use actual Three scene geometry with a mock GPU adapter to check projected pointer interactions, wrong drops, cancellation, resource disposal, pause/context/resize behavior and fallback. They do not measure a physical device's GPU performance or establish native touch behavior.
+
+Source tests and local previews do not verify that this release has reached production. Testing on actual managed Chromebooks, tablets, Edge devices and school networks remains necessary. Record release-specific browser evidence and remaining checks in [Device checks](DEVICE-CHECKS.md) rather than treating earlier release findings as verification of new tools.

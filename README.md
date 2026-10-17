@@ -4,7 +4,7 @@ A professional portfolio and browser-based technology learning platform created 
 
 Coding drafts also survive normal site navigation and browser back/forward within this page. Leaving the editor preserves its current program as untested lab work; device persistence still requires the learner’s saving choice. Explicit resume, reset, and clear actions do not revive the previous editor draft.
 
-The site combines a light professional portfolio with dark teal and navy learning workspaces, a 3D-inspired computer bench, and a guided troubleshooting process. Learners inspect evidence, make changes, test the result, and explain whether the original task works.
+The site combines a light professional portfolio with dark teal and navy learning workspaces, an interactive 3D classroom and computer workbench, and a guided troubleshooting process. Learners inspect evidence, make changes, test the result, and explain whether the original task works.
 
 Each investigation stays on one page with three accessible tabs: **1. Request & clues**, **2. Workbench & test**, and **3. Check & explain**. One section is visible at a time; switching tabs preserves questions, notes, the equipment state, and unapplied workspace form entries. Short instructions stay beside the controls, so learners do not need a separate guide to begin.
 
@@ -52,7 +52,11 @@ Original curriculum archives, workbook originals, teacher guides, speaking scrip
 
 ## Equipment interaction and report saving
 
-Hardware labs offer a bounded parts tray beside the equipment picture, twelve component/cable fit targets, separate display-cable ends, current fitted inventory and visible connector detail. Mouse/trackpad and touch-grip drags request the same safety-checked model actions as tap and keyboard controls. Wrong sockets, unsafe internal work and incompatible storage do not bypass the model. The optional detailed assembly mode adds a real, rotatable 3D workstation and complete teardown/rebuild of its seven removable components, 18 screws, retention mechanisms, leads and thermal-paste preparation. Screw tension, paste spread, temperature and physical force remain simplified teaching rules. See [3D assembly](docs/3D-ASSEMBLY.md).
+Hardware labs offer a bounded parts tray beside the equipment picture, twelve component/cable fit targets, separate display-cable ends, current fitted inventory and visible connector detail. Mouse/trackpad and touch-grip drags request the same safety-checked model actions as tap and keyboard controls. Wrong sockets, unsafe internal work and incompatible storage do not bypass the model.
+
+Detailed assembly adds a rotatable 3D workstation with eight removable parts, 18 screws, retention mechanisms, leads and thermal-paste preparation. Choose **Move parts** to drag a component onto its matching outlined mount or return a fitted component to the tray. Release attempts the same model action as the large Fit and Return buttons. **Screwdriver** turns a visible screw head; a screw selector and Turn button provide an alternative to precise aiming. **Thermal paste** and **Clean surfaces** work on the exposed CPU, with equivalent large buttons. The same power, mounting, cable and cooler cross-pattern checks apply to every route. Escape, changing tools or views, opening My report, hiding the section and leaving the route cancel unfinished moves. Tool selection alone does not change equipment or record a repair. These are authored snap locations and teaching checks; physical collision, screw torque, measured paste spread and heat simulation are not implemented. See [3D assembly](docs/3D-ASSEMBLY.md).
+
+The home and lab-library pages also show a 3D classroom with five pathway stations. Non-hardware labs have a state-reactive station preview alongside their actual workspace controls. Preview monitors show current checks; passing those checks still requires the learner to verify the original task. These previews mount automatically and load the self-hosted 3D library with the application. **Load 3D view** controls creation of the detailed assembly canvas, rather than all 3D library loading. Graphics require WebGL2; the component buttons and investigation controls remain available when graphics are unavailable. In Inspect mode, vertical touch swipes scroll the page. Move parts captures touch movement inside its canvas; switch to Inspect or scroll outside the picture to move the page.
 
 My report presents an approved local UTF-8 `.txt` download with a fictional case-only filename, optional feature-detected device file sharing, and copy/manual-selection alternatives. Saving does not submit work, and a chosen native app or cloud destination can receive the file. Requested download URLs receive a short handoff interval before cleanup. [Device checks](docs/DEVICE-CHECKS.md) distinguishes actual browser evidence from physical-device checks still required by a school.
 
@@ -155,6 +159,8 @@ npm run build
 | `src/scenarios.js` | Combined catalogue of all 29 student assignments; no teacher rubrics or answer keys |
 | `src/interview.js`, `src/interview.css` | Bounded conversational case replies and chat presentation; on-device authored facts, no live AI |
 | `src/hardware.js`, `src/hardware.css` | Virtual hardware bench, checkpoints, and coaching |
+| `src/assembly-model.js`, `src/assembly-tools.js`, `src/assembly-workbench.js`, `src/assembly-scene.js`, `src/assembly.css` | Detailed assembly rules, fixed tool/drop mappings, accessible controls and disposable 3D equipment view |
+| `src/virtual-lab-scene.js` | 3D classroom hub and local, state-reactive pathway previews |
 | `src/workspaces.js`, `src/workspaces.css` | Network/OS, AI, and security workspaces and coaching |
 | `src/expanded-labs.js`, `src/expanded-labs.css` | Nine additional Network/OS, AI and security scenarios with local models and inspection tools |
 | `src/coding-lab.js`, `src/coding-lab.css` | Three coding scenarios, bounded teaching-language interpreter, fixture output and feedback |
@@ -176,6 +182,7 @@ npm run build
 | `docs/STUDENT-DATA-DESIGN.md` | Data inventory, aliases, manual Classroom workflow, key custody, and access limitations |
 | `_headers`, `_routes.json` | Cloudflare response policies and API routing |
 | `docs/DEPLOYMENT.md` | Hosting, domains, HTTPS, and release verification |
+| `docs/3D-ASSEMBLY.md` | 3D tools, drag/drop alternatives, mechanical rules and school-device limits |
 
 Keep independent-site assets and hash navigation compatible with the supported static preview. The optional classroom API and teacher Access setup target the canonical Cloudflare-hosted site.
 
@@ -185,11 +192,13 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-The `20261017-assembly12` source release (version `2.11.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
+The `20261017-tools13` source release (version `2.12.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Source changes and automated checks do not establish that this release has reached production or passed testing on physical school devices. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 
 Complete a representative repair and a lab from every other pathway. Check all 29 entry points, filters, keyboard focus, touch controls, zoom, resume/reset, report copy/download, and back/forward navigation. Confirm the three numbered tabs show the selected section without reloading or losing questions, notes, equipment state, code or unapplied form entries. Try a supported student-written question, a contextual follow-up and an unknown question; confirm optional live AI remains unavailable. Inspect a tool without changing settings, and compare a real simulation test with the written hypothesis. For coding, test a changed fixture, syntax error, boundary input and bounded loop, then review the saved source/output in the report. Instructions must remain beside the active controls. Review the fictional classroom demo, grade/return flow, and disabled-service behavior. Development verification of the prepared handler should use fictional teacher/student sessions to check ownership, isolation, locking, expiry/deletion, stale versions, and failure recovery. It does not replace the blocking privacy review or permit real enrollment.
+
+For detailed assembly, check a correct and incorrect drop, each tool's large-button alternative, keyboard operation, vertical page scrolling in Inspect, and cancellation while opening a report or switching sections. Confirm that an unfinished drag changes no saved equipment and that unsafe or out-of-order tool attempts receive a reason. Use the camera presets and screw selector when small targets are difficult to reach. Check the 3D-unavailable fallback on the school's managed devices.
 
 Check that a fresh page does not read old work, device saving/resume require explicit choices, and clear-local-work removes saved copies without claiming to erase downloads or school submissions. For encrypted reports, use fictional test data to verify intended-key decryption, wrong keys/passphrases, corrupted files, file-size limits, no network or storage writes, and clear-page behavior. Do not create or commit real school keys or test with actual student records.
 

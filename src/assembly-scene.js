@@ -1,11 +1,13 @@
-import * as THREE from './three.module.js?release=20261017-assembly12';
+import * as THREE from './three.module.js?release=20261017-tools13';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-tools13';
 
 /**
- * Original, procedural equipment artwork. This module is a view adapter only:
- * authored mechanical rules and student work remain outside the scene graph.
- * No textures, remote assets, physics engine, or continuous animation loop.
+ * Original, procedural 3D hardware lab & workstation artwork.
+ * This module is a view adapter only: authored mechanical rules and student work
+ * remain outside the scene graph. No external textures, remote assets, physics
+ * engine, or continuous animation loop.
  */
-export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelect = () => {}, onStatus = () => {} } = {}) {
+export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelect = () => {}, onStatus = () => {}, onAction = () => {}, onInteraction = () => {} } = {}) {
   if (!host?.ownerDocument || typeof host.appendChild !== 'function') return null;
   const doc = host.ownerDocument;
   const view = doc.defaultView;
@@ -19,21 +21,23 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
 
   const canvas = renderer.domElement;
   canvas.setAttribute('role', 'img');
-  canvas.setAttribute('aria-label', 'Interactive 3D classroom workstation. Labeled component and camera buttons provide the same actions without dragging.');
+  canvas.setAttribute('aria-label', 'Interactive 3D classroom workstation and monitor bench. Labeled component and camera buttons provide the same actions without dragging.');
   canvas.style.display = 'block';
   canvas.style.width = '100%';
   canvas.style.height = '100%';
   // Vertical gestures can scroll the page; horizontal gestures rotate equipment.
   canvas.style.touchAction = 'pan-y';
   canvas.style.userSelect = 'none';
-  renderer.setClearColor(0x0b1724, 1);
+  renderer.setClearColor(0x091521, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.12;
   renderer.setPixelRatio(1);
   host.appendChild(canvas);
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  const target = new THREE.Vector3(-0.15, 2.7, 0);
+  const target = new THREE.Vector3(-0.45, 2.65, 0);
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const geometries = new Map();
@@ -51,16 +55,20 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   let lastHeight = 0;
   let yaw = 0.52;
   let pitch = 0.33;
-  let distance = 16;
-  let fittedDistance = 16;
+  let distance = 16.5;
+  let fittedDistance = 16.5;
   let gesture = null;
   let selectedId = '';
   let modelHardware = hardware;
   let modelAssembly = assembly;
+  let tool = 'inspect';
+  let pasteAmount = 'pea';
+  let drag = null;
+  let dispatchVersion = 0;
 
   function material(color, options = {}) {
     const key = `${color}:${JSON.stringify(options)}`;
-    if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.72, metalness: 0.18, ...options }));
+    if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.64, metalness: 0.22, ...options }));
     return materials.get(key);
   }
   function geometry(key, build) {
@@ -91,13 +99,13 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     parent.add(node);
     return node;
   }
-  function instanceBoxes(parent, size, positions, color) {
+  function instanceBoxes(parent, size, positions, color, options = {}) {
     const geo = geometry(`b:${size.join(':')}`, () => new THREE.BoxGeometry(...size));
-    const mesh = new THREE.InstancedMesh(geo, material(color), positions.length);
+    const mesh = new THREE.InstancedMesh(geo, material(color, options), positions.length);
     const transform = new THREE.Object3D();
     positions.forEach((pos, index) => {
-      transform.position.set(...pos);
-      transform.rotation.set(0, 0, 0);
+      transform.position.set(pos[0], pos[1], pos[2]);
+      transform.rotation.set(pos[3] || 0, pos[4] || 0, pos[5] || 0);
       transform.updateMatrix();
       mesh.setMatrixAt(index, transform.matrix);
     });
@@ -107,20 +115,20 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   function cableGeometry(points, radius) {
     const curve = new THREE.CatmullRomCurve3(points.map(point => new THREE.Vector3(...point)));
-    return geometry(`lead:${radius}:${points.flat().join(':')}`, () => new THREE.TubeGeometry(curve, 16, radius, 4, false));
+    return geometry(`lead:${radius}:${points.flat().join(':')}`, () => new THREE.TubeGeometry(curve, 16, radius, 5, false));
   }
   function lead(id, key, points, color, width = 0.045, requirePart = '') {
     const node = group(id);
-    const mesh = new THREE.Mesh(cableGeometry(points, width), material(color, { roughness: 0.92, metalness: 0 }));
+    const mesh = new THREE.Mesh(cableGeometry(points, width), material(color, { roughness: 0.85, metalness: 0.08 }));
     node.add(mesh);
     const end = points.at(-1);
-    box(node, width * 4, width * 3, width * 3, ...end, 0x17202c);
+    box(node, width * 4, width * 3, width * 3, ...end, 0x17202c, { roughness: 0.5, metalness: 0.2 });
     // A connected and a visibly loose cable are separate render states.
     const loose = group(id, scene, false);
     const start = points[0];
     const loosePoints = [start, [start[0] + 0.5, 0.55, 0.7], [start[0] + 0.55, 0.22, 1.15]];
-    loose.add(new THREE.Mesh(cableGeometry(loosePoints, width), material(color, { roughness: 0.92, metalness: 0 })));
-    box(loose, width * 4, width * 3, width * 3, ...loosePoints.at(-1), 0x38495b);
+    loose.add(new THREE.Mesh(cableGeometry(loosePoints, width), material(color, { roughness: 0.85, metalness: 0.08 })));
+    box(loose, width * 4, width * 3, width * 3, ...loosePoints.at(-1), 0x38495b, { roughness: 0.5, metalness: 0.2 });
     cables.push({ node, loose, key, requirePart, assemblyKey: key === 'cpuFanConnected' });
     return node;
   }
@@ -133,164 +141,269 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     return node;
   }
 
-  scene.add(new THREE.HemisphereLight(0xc7e9ff, 0x17222e, 2.6));
-  const keyLight = new THREE.DirectionalLight(0xf5fbff, 3.5);
-  keyLight.position.set(-6, 10, 10);
+  // Multi-point studio + warm classroom tech-lab lighting
+  scene.add(new THREE.HemisphereLight(0xd8f0ff, 0x121e2b, 2.35));
+  const keyLight = new THREE.DirectionalLight(0xfffaf0, 3.6);
+  keyLight.position.set(-5, 11, 9);
   scene.add(keyLight);
-  const rim = new THREE.DirectionalLight(0x30d5c0, 1.2);
-  rim.position.set(5, 5, -5);
+  const fillLight = new THREE.DirectionalLight(0x88c8ff, 1.45);
+  fillLight.position.set(8, 7, 6);
+  scene.add(fillLight);
+  const rim = new THREE.DirectionalLight(0x2ce6cc, 1.35);
+  rim.position.set(4, 6, -7);
   scene.add(rim);
+  const benchGlow = new THREE.PointLight(0x52e5d0, 2.2, 14, 1.6);
+  benchGlow.position.set(-0.2, 4.2, 2.4);
+  scene.add(benchGlow);
 
-  // Worktable, grounded mat, and a few etched lines use no bitmap textures.
-  box(scene, 16, 0.15, 9, 0, -0.43, 0, 0x243848);
-  box(scene, 7.2, 0.025, 4.7, 0, -0.34, 0.1, 0x0c403d);
-  box(scene, 3.2, 0.04, 4.1, 5, -0.32, 0, 0x172833);
+  // Realistic Tech Lab Workbench, Backboard, ESD Mat & Staging Trays
+  const labBench = group();
+  // Wood-trimmed dark composite workbench top & front bevel
+  box(labBench, 19.2, 0.24, 10.2, -0.4, -0.48, 0.1, 0x1e2f3d, { roughness: 0.72, metalness: 0.12 });
+  box(labBench, 19.24, 0.09, 0.18, -0.4, -0.39, 5.18, 0x8b6b4a, { roughness: 0.65, metalness: 0.08 });
+  // Subtle lab backboard wall and overhead LED task light bar
+  box(labBench, 19.2, 8.6, 0.16, -0.4, 3.7, -4.85, 0x0f1e2c, { roughness: 0.88, metalness: 0.1 });
+  box(labBench, 11.5, 0.14, 0.45, -0.4, 7.65, -4.4, 0x2c4255, { roughness: 0.4, metalness: 0.6 });
+  box(labBench, 10.8, 0.05, 0.22, -0.4, 7.57, -4.4, 0xdff9ff, { emissive: 0x8be9ff, emissiveIntensity: 0.85, roughness: 0.2 });
+  // Grounded anti-static ESD mat with snap button & parts staging mat
+  box(labBench, 7.8, 0.03, 5.1, 0, -0.34, 0.15, 0x0b4440, { roughness: 0.82, metalness: 0.05 });
+  cylinder(labBench, 0.11, 0.04, -3.55, -0.31, 2.35, 0xe8c44a, 'y', { metalness: 0.75, roughness: 0.3 });
+  box(labBench, 3.7, 0.04, 4.5, 5.05, -0.32, 0.05, 0x152634, { roughness: 0.76, metalness: 0.15 });
+  // A separate ESD foam staging pad keeps the loose board in front of, rather
+  // than underneath, the monitor and above the bare worktop.
+  box(labBench, 3.98, 0.12, 4.18, -5.8, -0.28, 3, 0x123d3a, { roughness: 0.94, metalness: 0.02 });
+
   const lines = [];
-  for (let i = -6; i <= 6; i += 1) lines.push(i * 0.5, -0.32, -2.1, i * 0.5, -0.32, 2.1);
-  for (let i = -4; i <= 4; i += 1) lines.push(-3, -0.32, i * 0.5, 3, -0.32, i * 0.5);
+  for (let i = -7; i <= 7; i += 1) lines.push(i * 0.5, -0.32, -2.2, i * 0.5, -0.32, 2.5);
+  for (let i = -4; i <= 5; i += 1) lines.push(-3.5, -0.32, i * 0.5, 3.5, -0.32, i * 0.5);
   const gridGeo = geometry('mat-grid', () => new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(lines, 3)));
-  const gridMat = new THREE.LineBasicMaterial({ color: 0x27605a, transparent: true, opacity: 0.65 });
+  const gridMat = new THREE.LineBasicMaterial({ color: 0x2a6d66, transparent: true, opacity: 0.6 });
   disposals.push(gridMat);
   scene.add(new THREE.LineSegments(gridGeo, gridMat));
 
-  const chassis = group();
-  box(chassis, 5.4, 4.68, 0.12, 0, 3.92, -1.02, 0x344451);
-  box(chassis, 5.55, 0.15, 2.65, 0, 6.3, 0.22, 0x62717b);
-  box(chassis, 5.55, 0.18, 2.65, 0, 0, 0.22, 0x536573);
-  box(chassis, 0.16, 6.2, 2.5, -2.7, 3.1, 0.22, 0x2d3a47);
-  box(chassis, 0.18, 6.2, 2.5, 2.7, 3.1, 0.22, 0x253b48);
-  // Front grille and rear cut-outs stay legible from the default side view.
-  instanceBoxes(chassis, [0.19, 0.07, 1.8], Array.from({ length: 18 }, (_, i) => [2.805, 1.7 + i * 0.2, 0.2]), 0x0c1a25);
-  instanceBoxes(chassis, [0.15, 0.07, 1.9], Array.from({ length: 8 }, (_, i) => [-2.8, 1.5 + i * 0.18, 0.2]), 0x0c1a25);
-  box(chassis, 0.12, 6.2, 0.12, -2.67, 3.1, 1.5, 0x6c838e);
-  box(chassis, 0.12, 6.2, 0.12, 2.67, 3.1, 1.5, 0x6c838e);
-  [-2.1, 2.1].forEach(x => [-0.55, 1].forEach(z => box(chassis, 0.48, 0.18, 0.48, x, -0.15, z, 0x080e16)));
-  box(chassis, 0.2, 0.2, 0.14, 2.83, 5.85, 0.7, 0x1dd8bd);
-  // Exposed standoffs identify the board's mounting surface when it is removed.
-  [[-1.83, 5.75], [1.6, 5.75], [-1.83, 2.25], [1.6, 2.25]].forEach(([x, y]) => cylinder(chassis, 0.095, 0.27, x, y, -0.79, 0xa78946));
+  // 3D Classroom Monitor on the left side of the bench (selectable as 'display')
+  const monitor = group('display');
+  monitor.position.set(-5.35, 0, -0.25);
+  monitor.rotation.y = 0.28;
+  // Monitor base, neck, and sleek bezel
+  box(monitor, 2.1, 0.1, 1.35, 0, -0.28, 0.1, 0x263544, { metalness: 0.55, roughness: 0.42 });
+  box(monitor, 0.34, 1.75, 0.22, 0, 0.6, -0.22, 0x324556, { metalness: 0.6, roughness: 0.38 });
+  box(monitor, 4.35, 2.72, 0.18, 0, 2.45, 0, 0x1b2836, { metalness: 0.45, roughness: 0.48 });
+  box(monitor, 4.12, 2.46, 0.04, 0, 2.47, 0.09, 0x08111b, { roughness: 0.28, metalness: 0.15 });
+  // Monitor rear input block (HDMI & DisplayPort sockets)
+  box(monitor, 0.95, 0.42, 0.14, 0.55, 1.52, -0.12, 0x101a24, { roughness: 0.6, metalness: 0.3 });
+  // Screen states: Desktop ready, Lesson Document open, and No-Signal OSD
+  const screenDesktop = box(monitor, 4.04, 2.38, 0.02, 0, 2.47, 0.11, 0x0f4c5c, { emissive: 0x0d5c68, emissiveIntensity: 0.55, roughness: 0.22 });
+  // Taskbar on desktop
+  box(screenDesktop, 4.02, 0.2, 0.01, 0, -1.08, 0.015, 0x071e29, { roughness: 0.4 });
+  // Lesson_Practice_File.docx window on the 3D monitor
+  const screenDoc = group('display', screenDesktop, false);
+  box(screenDoc, 2.65, 1.58, 0.015, 0.12, 0.08, 0.02, 0xf2f7fa, { emissive: 0xd8eef5, emissiveIntensity: 0.32, roughness: 0.3 });
+  box(screenDoc, 2.65, 0.24, 0.018, 0.12, 0.75, 0.025, 0x007f78, { emissive: 0x005954, emissiveIntensity: 0.35 });
+  instanceBoxes(screenDoc, [1.85, 0.07, 0.01], [
+    [0.02, 0.42, 0.03], [0.02, 0.22, 0.03], [0.02, 0.02, 0.03], [-0.18, -0.18, 0.03], [0.02, -0.38, 0.03]
+  ], 0x3b5568);
+  // Standby / No Signal OSD card
+  const screenNoSignal = group('display', monitor, false);
+  box(screenNoSignal, 1.75, 0.72, 0.02, 0, 2.47, 0.12, 0x1b2d3e, { emissive: 0x20384c, emissiveIntensity: 0.4 });
+  box(screenNoSignal, 1.45, 0.12, 0.025, 0, 2.55, 0.13, 0xf0ab49, { emissive: 0xd98a2b, emissiveIntensity: 0.65 });
+  const monitorLed = box(monitor, 0.12, 0.05, 0.04, 1.85, 1.16, 0.1, 0x28d7be, { emissive: 0x28d7be, emissiveIntensity: 0.8 });
 
-  const board = movable('board', [0, 3.93, -0.76], [-4.5, -0.16, -0.25], 'boardInstalled', [-Math.PI / 2, 0, 0]);
-  box(board, 3.9, 4.1, 0.1, 0, 0, 0, 0x116153);
-  box(board, 1.8, 0.5, 0.25, -0.82, 1.8, 0.19, 0x95abb3);
-  box(board, 0.4, 1.15, 0.45, -1.74, 1.09, 0.21, 0x8398a6);
-  box(board, 1.25, 0.58, 0.17, 0.1, -1.25, 0.16, 0x1a292f);
-  box(board, 1.0, 0.68, 0.23, 0.6, -0.72, 0.17, 0x647b83);
-  instanceBoxes(board, [0.035, 0.52, 0.02], Array.from({ length: 12 }, (_, i) => [0.15 + i * 0.08, -0.72, 0.3]), 0xa8bbc0);
-  instanceBoxes(board, [0.23, 0.15, 0.10], Array.from({ length: 7 }, (_, i) => [-1.38 + i * 0.25, 1.15, 0.12]), 0x263238);
-  instanceBoxes(board, [0.08, 0.23, 0.07], Array.from({ length: 8 }, (_, i) => [-1.45 + i * 0.19, -1.65, 0.11]), 0xbbad83);
+  // External HDMI Display Cable (routes from GPU or Motherboard to Monitor)
+  const hdmiGpuToMonitor = new THREE.Mesh(
+    cableGeometry([[-2.55, 2.68, -0.05], [-3.25, 1.15, -0.65], [-4.15, 0.65, -0.55], [-4.85, 1.52, -0.25]], 0.052),
+    material(0x1f2d3a, { roughness: 0.75, metalness: 0.15 })
+  );
+  hdmiGpuToMonitor.userData.selectId = 'display';
+  selectables.push(hdmiGpuToMonitor);
+  scene.add(hdmiGpuToMonitor);
+
+  const hdmiBoardToMonitor = new THREE.Mesh(
+    cableGeometry([[-2.55, 5.02, -0.55], [-3.35, 3.1, -0.75], [-4.15, 1.1, -0.6], [-4.85, 1.52, -0.25]], 0.052),
+    material(0x283848, { roughness: 0.75, metalness: 0.15 })
+  );
+  hdmiBoardToMonitor.userData.selectId = 'display';
+  selectables.push(hdmiBoardToMonitor);
+  scene.add(hdmiBoardToMonitor);
+
+  const hdmiLooseMonitor = new THREE.Mesh(
+    cableGeometry([[-2.55, 2.68, -0.05], [-3.35, 0.65, -0.45], [-4.2, -0.18, 0.35], [-4.55, -0.24, 0.85]], 0.052),
+    material(0x3a4d5e, { roughness: 0.78, metalness: 0.12 })
+  );
+  hdmiLooseMonitor.userData.selectId = 'display';
+  selectables.push(hdmiLooseMonitor);
+  scene.add(hdmiLooseMonitor);
+
+  // PC Workstation Chassis (Brushed steel frame, PSU shroud, vents, front I/O)
+  const chassis = group();
+  // Motherboard tray & backplate
+  box(chassis, 5.4, 4.68, 0.12, 0, 3.92, -1.02, 0x2c3b48, { metalness: 0.55, roughness: 0.46 });
+  // Top, bottom, rear, and front structural panels
+  box(chassis, 5.58, 0.16, 2.68, 0, 6.3, 0.22, 0x566774, { metalness: 0.58, roughness: 0.38 });
+  box(chassis, 5.58, 0.18, 2.68, 0, 0, 0.22, 0x455664, { metalness: 0.58, roughness: 0.42 });
+  box(chassis, 0.16, 6.2, 2.52, -2.7, 3.1, 0.22, 0x283644, { metalness: 0.52, roughness: 0.48 });
+  box(chassis, 0.2, 6.2, 2.52, 2.7, 3.1, 0.22, 0x223544, { metalness: 0.52, roughness: 0.45 });
+  // PSU shroud divider bar with cable pass-through
+  box(chassis, 5.25, 0.08, 2.38, 0, 1.18, 0.18, 0x1d2b36, { metalness: 0.48, roughness: 0.52 });
+  // Front airflow grille and rear exhaust cut-outs
+  instanceBoxes(chassis, [0.21, 0.07, 1.85], Array.from({ length: 18 }, (_, i) => [2.805, 1.7 + i * 0.2, 0.2]), 0x0b1620, { roughness: 0.7 });
+  instanceBoxes(chassis, [0.16, 0.07, 1.9], Array.from({ length: 8 }, (_, i) => [-2.8, 1.5 + i * 0.18, 0.2]), 0x0b1620, { roughness: 0.7 });
+  // Front & rear vertical corner pillars
+  box(chassis, 0.14, 6.2, 0.14, -2.67, 3.1, 1.5, 0x6f8794, { metalness: 0.62, roughness: 0.35 });
+  box(chassis, 0.14, 6.2, 0.14, 2.67, 3.1, 1.5, 0x6f8794, { metalness: 0.62, roughness: 0.35 });
+  // Rubberized case feet
+  [-2.1, 2.1].forEach(x => [-0.55, 1].forEach(z => box(chassis, 0.52, 0.2, 0.52, x, -0.15, z, 0x0a1017, { roughness: 0.9 })));
+  // Illuminated front power button LED
+  const powerLed = box(chassis, 0.22, 0.22, 0.15, 2.83, 5.85, 0.7, 0x1dd8bd, { emissive: 0x1dd8bd, emissiveIntensity: 0.75, roughness: 0.25 });
+  // Brass motherboard standoffs
+  [[-1.83, 5.75], [1.6, 5.75], [-1.83, 2.25], [1.6, 2.25]].forEach(([x, y]) => cylinder(chassis, 0.095, 0.27, x, y, -0.79, 0xc7a34f, { metalness: 0.82, roughness: 0.28 }));
+
+  // Motherboard (Micro-ATX PCB, VRM heatsinks, I/O shroud, chipset, traces, sockets)
+  const board = movable('board', [0, 3.93, -0.76], [-5.8, -0.16, 3], 'boardInstalled', [-Math.PI / 2, 0, 0]);
+  box(board, 3.9, 4.1, 0.1, 0, 0, 0, 0x0e584a, { roughness: 0.52, metalness: 0.18 });
+  // Top VRM heatsink & rear I/O shield shroud
+  box(board, 1.82, 0.5, 0.28, -0.82, 1.8, 0.19, 0xa2b8c2, { metalness: 0.76, roughness: 0.28 });
+  box(board, 0.42, 1.18, 0.48, -1.74, 1.09, 0.21, 0x8ea4b2, { metalness: 0.74, roughness: 0.3 });
+  // Chipset heatsink & M.2 decorative shield
+  box(board, 1.25, 0.58, 0.17, 0.1, -1.25, 0.16, 0x1c2d36, { metalness: 0.55, roughness: 0.4 });
+  box(board, 1.0, 0.68, 0.24, 0.6, -0.72, 0.17, 0x728a94, { metalness: 0.72, roughness: 0.32 });
+  // Brushed heatsink fins, VRM chokes & solid capacitors
+  instanceBoxes(board, [0.035, 0.52, 0.025], Array.from({ length: 12 }, (_, i) => [0.15 + i * 0.08, -0.72, 0.3]), 0xb8ccd2, { metalness: 0.8, roughness: 0.25 });
+  instanceBoxes(board, [0.23, 0.15, 0.12], Array.from({ length: 7 }, (_, i) => [-1.38 + i * 0.25, 1.15, 0.12]), 0x2a3740, { metalness: 0.5, roughness: 0.45 });
+  instanceBoxes(board, [0.08, 0.23, 0.08], Array.from({ length: 8 }, (_, i) => [-1.45 + i * 0.19, -1.65, 0.11]), 0xd2be82, { metalness: 0.7, roughness: 0.3 });
+  // CMOS coin-cell battery
+  cylinder(board, 0.21, 0.05, -1.15, -0.28, 0.08, 0xd8e2e6, 'z', { metalness: 0.88, roughness: 0.18 });
   const traces = [];
   for (let i = 0; i < 8; i += 1) {
     traces.push([-1.45 + i * 0.24, 0.12, 0.068]);
     traces.push([-1.45 + i * 0.24, -0.52, 0.068]);
   }
-  instanceBoxes(board, [0.015, 0.66, 0.008], traces, 0x45a488);
-  instanceBoxes(board, [1.5, 0.012, 0.008], Array.from({ length: 7 }, (_, i) => [-0.7, -0.3 - i * 0.085, 0.068]), 0x3d9a81);
-  // Empty keyed sockets are attached to the motherboard, never to the CPU/RAM.
-  box(board, 1.23, 1.07, 0.07, -0.61, 0.7, 0.1, 0x202b31);
-  instanceBoxes(board, [0.047, 0.047, 0.018], Array.from({ length: 48 }, (_, i) => [-1.05 + (i % 8) * 0.13, 0.35 + Math.floor(i / 8) * 0.13, 0.15]), 0xb4a26a);
-  [0.96, 1.32].forEach(x => box(board, 0.18, 2.03, 0.18, x, 0.42, 0.14, 0x151f29));
-  box(board, 2.52, 0.16, 0.22, -0.35, -0.84, 0.16, 0x18232c);
-  box(board, 0.19, 0.8, 0.22, 1.73, 0.15, 0.16, 0x18232c);
-  box(board, 0.38, 0.2, 0.2, -1.53, 1.69, 0.17, 0x18232c);
+  instanceBoxes(board, [0.016, 0.66, 0.008], traces, 0x4cc49e, { metalness: 0.65, roughness: 0.35 });
+  instanceBoxes(board, [1.5, 0.014, 0.008], Array.from({ length: 7 }, (_, i) => [-0.7, -0.3 - i * 0.085, 0.068]), 0x42b592, { metalness: 0.65, roughness: 0.35 });
+  // Empty keyed sockets attached to the motherboard
+  box(board, 1.23, 1.07, 0.07, -0.61, 0.7, 0.1, 0x1e2930, { roughness: 0.6 });
+  instanceBoxes(board, [0.047, 0.047, 0.018], Array.from({ length: 48 }, (_, i) => [-1.05 + (i % 8) * 0.13, 0.35 + Math.floor(i / 8) * 0.13, 0.15]), 0xd4b663, { metalness: 0.85, roughness: 0.25 });
+  // Dual DDR4 DIMM slots, steel-reinforced PCIe x16 slot, ATX 24-pin, EPS 8-pin, SATA headers
+  [0.96, 1.32].forEach(x => box(board, 0.18, 2.03, 0.18, x, 0.42, 0.14, 0x15202b));
+  box(board, 2.52, 0.17, 0.22, -0.35, -0.84, 0.16, 0x8a9da8, { metalness: 0.72, roughness: 0.32 });
+  box(board, 0.2, 0.82, 0.22, 1.73, 0.15, 0.16, 0x16222c);
+  box(board, 0.38, 0.2, 0.2, -1.53, 1.69, 0.17, 0x16222c);
   box(board, 0.36, 0.15, 0.19, 1.56, -1.38, 0.17, 0x202b35);
 
+  // CPU Socket Retention Frame & Lever
   const retention = group('cpu', scene, false);
   const retentionFrame = group('', retention);
-  box(retentionFrame, 1.25, 0.07, 0.07, 0, 0, 0, 0xb6c3c5);
-  box(retentionFrame, 1.25, 0.07, 0.07, 0, -1.08, 0, 0xb6c3c5);
-  [-0.59, 0.59].forEach(x => box(retentionFrame, 0.07, 1.08, 0.07, x, -0.54, 0, 0xb6c3c5));
-  box(retentionFrame, 0.045, 1.3, 0.045, 0.71, -0.43, 0, 0xd0d6d3);
+  box(retentionFrame, 1.25, 0.07, 0.07, 0, 0, 0, 0xc8d6da, { metalness: 0.82, roughness: 0.24 });
+  box(retentionFrame, 1.25, 0.07, 0.07, 0, -1.08, 0, 0xc8d6da, { metalness: 0.82, roughness: 0.24 });
+  [-0.59, 0.59].forEach(x => box(retentionFrame, 0.07, 1.08, 0.07, x, -0.54, 0, 0xc8d6da, { metalness: 0.82, roughness: 0.24 }));
+  box(retentionFrame, 0.045, 1.3, 0.045, 0.71, -0.43, 0, 0xdce4e6, { metalness: 0.85, roughness: 0.2 });
   retention.position.set(-0.61, 5.18, -0.49);
 
+  // Processor (LGA package + nickel-plated heatspreader + gold triangle)
   const cpu = movable('cpu', [-0.61, 4.63, -0.47], [3.82, -0.12, 1.35], 'cpuInstalled', [-Math.PI / 2, 0, 0]);
-  box(cpu, 1.0, 0.88, 0.055, 0, 0, 0, 0x667d6d);
-  box(cpu, 0.83, 0.72, 0.07, 0, 0, 0.06, 0xc8d1cf, { metalness: 0.72, roughness: 0.4 });
-  box(cpu, 0.09, 0.09, 0.01, -0.42, -0.35, 0.04, 0xf8c75c);
+  box(cpu, 1.0, 0.88, 0.055, 0, 0, 0, 0x296e5c, { roughness: 0.48, metalness: 0.22 });
+  box(cpu, 0.84, 0.73, 0.072, 0, 0, 0.06, 0xd4dde0, { metalness: 0.82, roughness: 0.22 });
+  box(cpu, 0.095, 0.095, 0.012, -0.42, -0.35, 0.04, 0xf8c954, { metalness: 0.88, roughness: 0.2 });
   instanceBoxes(cpu, [0.42, 0.015, 0.01], [[0, 0.12, 0.103], [-0.04, 0.06, 0.103], [0.03, -0.02, 0.103]], 0x7d8b8c);
 
+  // Thermal interface paste states
   const paste = group('', cpu);
   const pasteGeo = geometry('paste-sphere', () => new THREE.SphereGeometry(1, 12, 8));
-  const pastePea = new THREE.Mesh(pasteGeo, material(0xbfc6cc, { metalness: 0, roughness: 0.92 }));
+  const pastePea = new THREE.Mesh(pasteGeo, material(0xc5cdd4, { metalness: 0.05, roughness: 0.85 }));
   pastePea.scale.set(0.13, 0.13, 0.07);
   pastePea.position.z = 0.15;
   paste.add(pastePea);
-  const pasteDry = new THREE.Mesh(pasteGeo, material(0x727d85, { metalness: 0, roughness: 1 }));
+  const pasteDry = new THREE.Mesh(pasteGeo, material(0x6e7982, { metalness: 0, roughness: 1 }));
   pasteDry.scale.set(0.36, 0.3, 0.015);
   pasteDry.position.z = 0.13;
   paste.add(pasteDry);
-  const pasteExcess = new THREE.Mesh(pasteGeo, material(0xc6cbd0, { metalness: 0, roughness: 0.9 }));
+  const pasteExcess = new THREE.Mesh(pasteGeo, material(0xcad0d6, { metalness: 0.05, roughness: 0.85 }));
   pasteExcess.scale.set(0.51, 0.44, 0.08);
   pasteExcess.position.z = 0.16;
   paste.add(pasteExcess);
 
-  const cooler = movable('cooler', [-0.61, 4.63, 0.02], [-4.3, 0.35, 2.75], 'coolerInstalled');
-  box(cooler, 1.19, 1.04, 0.14, 0, 0, -0.34, 0xaa6c3c, { metalness: 0.72 });
-  instanceBoxes(cooler, [1.25, 0.035, 0.51], Array.from({ length: 19 }, (_, i) => [0, -0.48 + i * 0.054, 0]), 0xa7bbc0);
-  box(cooler, 1.39, 1.29, 0.13, 0, 0, 0.31, 0x172b35);
+  // Tower CPU Cooler (Copper coldplate, 4 copper heatpipes, aluminum fin stack, 7-blade PWM fan)
+  const cooler = movable('cooler', [-0.61, 4.63, 0.02], [-1.4, 0.35, 3.6], 'coolerInstalled');
+  box(cooler, 1.19, 1.04, 0.14, 0, 0, -0.34, 0xc87842, { metalness: 0.84, roughness: 0.25 });
+  // 4 Copper heatpipes running through the fin stack
+  instanceBoxes(cooler, [0.075, 1.18, 0.56], [[-0.38, 0, -0.02], [-0.13, 0, -0.02], [0.13, 0, -0.02], [0.38, 0, -0.02]], 0xd4834a, { metalness: 0.86, roughness: 0.22 });
+  instanceBoxes(cooler, [1.26, 0.032, 0.52], Array.from({ length: 19 }, (_, i) => [0, -0.48 + i * 0.054, 0]), 0xb8ccd2, { metalness: 0.78, roughness: 0.26 });
+  box(cooler, 1.39, 1.29, 0.14, 0, 0, 0.31, 0x162834, { roughness: 0.5, metalness: 0.25 });
   const fan = group('', cooler);
-  cylinder(fan, 0.53, 0.15, 0, 0, 0.4, 0x38545c);
-  cylinder(fan, 0.16, 0.18, 0, 0, 0.51, 0x99b8c1);
+  cylinder(fan, 0.54, 0.15, 0, 0, 0.4, 0x2e4954, 'z', { roughness: 0.45, metalness: 0.35 });
+  cylinder(fan, 0.17, 0.19, 0, 0, 0.51, 0xa8c6cf, 'z', { metalness: 0.75, roughness: 0.25 });
   const bladeGeo = geometry('fan-blade', () => new THREE.BoxGeometry(0.14, 0.4, 0.03));
   for (let i = 0; i < 7; i += 1) {
-    const blade = new THREE.Mesh(bladeGeo, material(0x1bb9b4, { metalness: 0.28 }));
+    const blade = new THREE.Mesh(bladeGeo, material(0x22d1c6, { metalness: 0.38, roughness: 0.32 }));
     const angle = i * Math.PI * 2 / 7;
     blade.position.set(Math.sin(angle) * 0.29, Math.cos(angle) * 0.29, 0.51);
     blade.rotation.z = -angle + 0.4;
     fan.add(blade);
   }
-  [[-0.78, -0.68], [0.78, -0.68], [-0.78, 0.68], [0.78, 0.68]].forEach(([x, y]) => box(cooler, 0.2, 0.22, 0.08, x, y, -0.27, 0x84949c));
+  [[-0.78, -0.68], [0.78, -0.68], [-0.78, 0.68], [0.78, 0.68]].forEach(([x, y]) => box(cooler, 0.2, 0.22, 0.08, x, y, -0.27, 0x96a8b2, { metalness: 0.75, roughness: 0.28 }));
 
+  // DDR4 Memory DIMM + Top/Bottom Clips
   const ram = movable('ram', [0.96, 4.35, -0.38], [4.3, -0.2, 0.63], 'ramSeated', [0, 0, Math.PI / 2]);
-  box(ram, 0.08, 2.0, 0.58, 0, 0, 0, 0x1f7056);
-  box(ram, 0.12, 2.04, 0.07, 0, 0, 0.29, 0x8faaa8);
-  instanceBoxes(ram, [0.09, 0.21, 0.31], Array.from({ length: 7 }, (_, i) => [0.085, -0.78 + i * 0.25, 0.03]), 0x192b31);
-  box(ram, 0.1, 1.7, 0.06, 0, 0, -0.29, 0xc4a969);
+  box(ram, 0.08, 2.0, 0.58, 0, 0, 0, 0x1b6d54, { roughness: 0.45, metalness: 0.25 });
+  box(ram, 0.13, 2.04, 0.08, 0, 0, 0.29, 0xa6c2c6, { metalness: 0.82, roughness: 0.22 });
+  instanceBoxes(ram, [0.09, 0.21, 0.31], Array.from({ length: 7 }, (_, i) => [0.085, -0.78 + i * 0.25, 0.03]), 0x15252c, { roughness: 0.4 });
+  box(ram, 0.1, 1.7, 0.06, 0, 0, -0.29, 0xd8b862, { metalness: 0.86, roughness: 0.22 });
   const upperClip = group('ram', scene, false);
   const lowerClip = group('ram', scene, false);
-  box(upperClip, 0.23, 0.24, 0.2, 0, 0, 0, 0xc8d0c7);
-  box(lowerClip, 0.23, 0.24, 0.2, 0, 0, 0, 0xc8d0c7);
+  box(upperClip, 0.23, 0.24, 0.2, 0, 0, 0, 0xd0dad4, { metalness: 0.5, roughness: 0.35 });
+  box(lowerClip, 0.23, 0.24, 0.2, 0, 0, 0, 0xd0dad4, { metalness: 0.5, roughness: 0.35 });
 
+  // Dedicated PCIe x16 Dual-Fan Graphics Card
   const gpu = movable('gpu', [-0.6, 2.93, 0.1], [4.72, -0.17, -0.4], 'gpuInstalled', [0, 0, Math.PI]);
-  box(gpu, 3.32, 0.11, 1.3, 0, 0, 0, 0x226d57);
-  box(gpu, 3.42, 0.44, 1.34, 0, -0.25, 0, 0x203440);
-  instanceBoxes(gpu, [0.035, 0.28, 1.2], Array.from({ length: 20 }, (_, i) => [-1.48 + i * 0.15, -0.2, 0]), 0x859ba3);
+  // PCB & anodized metallic backplate
+  box(gpu, 3.34, 0.08, 1.3, 0, 0.04, 0, 0x263844, { metalness: 0.72, roughness: 0.3 });
+  box(gpu, 3.32, 0.09, 1.28, 0, -0.02, 0, 0x1d6852, { roughness: 0.48, metalness: 0.2 });
+  // Sculpted dual-fan GPU shroud & exposed copper heatpipe bar
+  box(gpu, 3.44, 0.44, 1.35, 0, -0.26, 0, 0x1c2f3c, { metalness: 0.48, roughness: 0.42 });
+  box(gpu, 2.85, 0.06, 0.12, 0, -0.12, 0.66, 0xd08046, { metalness: 0.85, roughness: 0.22 });
+  instanceBoxes(gpu, [0.035, 0.28, 1.22], Array.from({ length: 20 }, (_, i) => [-1.48 + i * 0.15, -0.2, 0]), 0x9ab0b8, { metalness: 0.78, roughness: 0.26 });
   [-0.84, 0.77].forEach(x => {
-    cylinder(gpu, 0.49, 0.08, x, -0.5, 0, 0x14242e, 'y');
-    cylinder(gpu, 0.16, 0.10, x, -0.56, 0, 0x28bfb6, 'y');
+    cylinder(gpu, 0.49, 0.09, x, -0.5, 0, 0x101f28, 'y', { roughness: 0.45, metalness: 0.3 });
+    cylinder(gpu, 0.17, 0.11, x, -0.56, 0, 0x2ce0d4, 'y', { metalness: 0.65, roughness: 0.25 });
   });
-  box(gpu, 0.13, 0.73, 1.5, -1.83, -0.14, 0, 0xa6b3b5);
-  box(gpu, 0.15, 0.13, 0.39, -1.91, -0.24, 0.2, 0x14242d);
-  box(gpu, 0.15, 0.13, 0.39, -1.91, -0.24, -0.35, 0x14242d);
-  box(gpu, 0.23, 0.26, 0.38, 1.43, 0.08, 0.3, 0x151f29);
+  // Dual-slot stainless I/O bracket & video output ports
+  box(gpu, 0.13, 0.75, 1.52, -1.83, -0.14, 0, 0xb8c6cc, { metalness: 0.82, roughness: 0.25 });
+  box(gpu, 0.16, 0.13, 0.39, -1.91, -0.24, 0.2, 0x12222b);
+  box(gpu, 0.16, 0.13, 0.39, -1.91, -0.24, -0.35, 0x12222b);
+  // 6-pin PCIe power header
+  box(gpu, 0.24, 0.26, 0.38, 1.43, 0.08, 0.3, 0x141f29);
   const pcieLatch = group('gpu', scene, false);
-  box(pcieLatch, 0.18, 0.24, 0.25, 0, 0, 0, 0xbed1c6);
+  box(pcieLatch, 0.18, 0.24, 0.25, 0, 0, 0, 0xc4d8ce, { metalness: 0.5, roughness: 0.35 });
 
+  // Original 2.5-inch SATA Classroom SSD
   const ssd = movable('ssd', [1.97, 1.83, -0.27], [5.5, -0.14, 1.2], 'originalDriveInstalled', [-Math.PI / 2, 0, 0]);
-  box(ssd, 0.91, 1.36, 0.16, 0, 0, 0, 0x141f2b);
-  box(ssd, 0.73, 0.82, 0.014, 0, 0.08, 0.09, 0x3a7d88);
-  box(ssd, 0.6, 0.06, 0.014, 0, 0.24, 0.105, 0x97d2d1);
-  instanceBoxes(ssd, [0.5, 0.018, 0.014], [[0, 0.03, 0.105], [-0.03, -0.05, 0.105], [-0.03, -0.13, 0.105]], 0xa8c5c8);
-  box(ssd, 0.25, 0.11, 0.12, -0.22, -0.71, 0, 0xbc9a59);
-  box(ssd, 0.4, 0.11, 0.12, 0.16, -0.71, 0, 0xbc9a59);
+  box(ssd, 0.92, 1.38, 0.17, 0, 0, 0, 0x172432, { metalness: 0.62, roughness: 0.35 });
+  box(ssd, 0.74, 0.84, 0.016, 0, 0.08, 0.09, 0x0e6e78, { roughness: 0.42, metalness: 0.2 });
+  box(ssd, 0.62, 0.07, 0.016, 0, 0.24, 0.105, 0x99ebe6, { emissive: 0x227772, emissiveIntensity: 0.25 });
+  instanceBoxes(ssd, [0.5, 0.018, 0.014], [[0, 0.03, 0.105], [-0.03, -0.05, 0.105], [-0.03, -0.13, 0.105]], 0xb6d6da);
+  box(ssd, 0.25, 0.11, 0.12, -0.22, -0.71, 0, 0xd4ad5c, { metalness: 0.85, roughness: 0.22 });
+  box(ssd, 0.4, 0.11, 0.12, 0.16, -0.71, 0, 0xd4ad5c, { metalness: 0.85, roughness: 0.22 });
 
+  // Modular ATX Power Supply Unit (PSU)
   const psu = movable('psu', [0.95, 0.58, -0.01], [5.15, 0.2, -2.72], 'psuInstalled');
-  box(psu, 2.4, 0.95, 1.78, 0, 0, 0, 0x253642);
-  box(psu, 1.7, 0.65, 0.016, 0, 0.05, 0.9, 0x14252f);
-  instanceBoxes(psu, [1.4, 0.025, 0.02], Array.from({ length: 8 }, (_, i) => [0, -0.2 + i * 0.07, 0.92]), 0x56737b);
-  box(psu, 0.64, 0.16, 0.02, 0, 0.08, 0.94, 0xe1ba65);
-  box(psu, 2.36, 0.91, 0.04, 0, 0, -0.9, 0x7a8e96);
-  box(psu, 0.45, 0.26, 0.06, -0.57, 0, -0.94, 0x111b23);
-  box(psu, 0.17, 0.2, 0.07, -0.14, 0, -0.94, 0x18242a);
+  box(psu, 2.4, 0.95, 1.78, 0, 0, 0, 0x1e2e3a, { metalness: 0.58, roughness: 0.38 });
+  box(psu, 1.7, 0.65, 0.018, 0, 0.05, 0.9, 0x12222c);
+  instanceBoxes(psu, [1.4, 0.025, 0.02], Array.from({ length: 8 }, (_, i) => [0, -0.2 + i * 0.07, 0.92]), 0x62808a, { metalness: 0.7 });
+  box(psu, 0.66, 0.17, 0.022, 0, 0.08, 0.94, 0xefc662, { metalness: 0.78, roughness: 0.25 });
+  box(psu, 2.36, 0.91, 0.04, 0, 0, -0.9, 0x7e949e, { metalness: 0.65, roughness: 0.35 });
+  box(psu, 0.45, 0.26, 0.06, -0.57, 0, -0.94, 0x0f1820);
+  box(psu, 0.17, 0.2, 0.07, -0.14, 0, -0.94, 0xc93b3b, { roughness: 0.4 });
   instanceBoxes(psu, [0.67, 0.025, 0.02], Array.from({ length: 7 }, (_, i) => [0.63, -0.23 + i * 0.075, -0.94]), 0x223540);
 
-  const panel = movable('panel', [0, 3.15, 1.54], [-5.2, 2.8, -1.8], 'panelInstalled', [0, -0.25, 0]);
-  box(panel, 5.4, 0.18, 0.1, 0, 3.04, 0, 0x3f5565);
-  box(panel, 5.4, 0.18, 0.1, 0, -3.04, 0, 0x3f5565);
-  [-2.61, 2.61].forEach(x => box(panel, 0.18, 6.1, 0.1, x, 0, 0, 0x3f5565));
-  box(panel, 5.1, 5.87, 0.035, 0, 0, 0, 0x3b777d, { transparent: true, opacity: 0.13, depthWrite: false, metalness: 0.1 });
-  // This reusable clear teaching panel permits inspection while installed.
-  box(panel, 0.22, 0.8, 0.15, -2.35, -0.2, 0.12, 0x9bb0b6);
+  // Tempered-Glass Teaching Side Panel
+  const panel = movable('panel', [0, 3.15, 1.54], [5.3, 2.8, -4.3], 'panelInstalled');
+  box(panel, 5.4, 0.18, 0.1, 0, 3.04, 0, 0x3b5060, { metalness: 0.62, roughness: 0.35 });
+  box(panel, 5.4, 0.18, 0.1, 0, -3.04, 0, 0x3b5060, { metalness: 0.62, roughness: 0.35 });
+  [-2.61, 2.61].forEach(x => box(panel, 0.18, 6.1, 0.1, x, 0, 0, 0x3b5060, { metalness: 0.62, roughness: 0.35 }));
+  box(panel, 5.1, 5.87, 0.035, 0, 0, 0, 0x458b94, { transparent: true, opacity: 0.14, depthWrite: false, metalness: 0.2, roughness: 0.12 });
+  box(panel, 0.22, 0.8, 0.15, -2.35, -0.2, 0.12, 0xa8bec6, { metalness: 0.78, roughness: 0.25 });
 
+  // 18 Individually Modeled Fasteners (Screws) & Magnetic Parts Tray
   const fasteners = {
     panel: { state: 'panelScrews', part: 'panel', points: [[-2.58, 2.6, 0.13], [-2.58, -2.6, 0.13]] },
     board: { state: 'boardScrews', part: 'board', points: [[-1.83, 1.82, 0.15], [1.6, 1.82, 0.15], [-1.83, -1.68, 0.15], [1.6, -1.68, 0.15]] },
@@ -303,37 +416,56 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   for (const [name, set] of Object.entries(fasteners)) {
     set.points.forEach((pos, index) => {
       const screw = group(`${name}-${index}`);
-      cylinder(screw, 0.085, 0.06, 0, 0, 0, name === 'panel' ? 0xb3c1c4 : 0xd8d9cc);
-      cylinder(screw, 0.035, 0.13, 0, 0, -0.07, 0x8a969b);
-      box(screw, 0.105, 0.018, 0.009, 0, 0, 0.034, 0x26323c);
-      box(screw, 0.018, 0.105, 0.009, 0, 0, 0.034, 0x26323c);
+      cylinder(screw, 0.085, 0.06, 0, 0, 0, name === 'panel' ? 0xc0d0d4 : 0xe2e4d8, 'z', { metalness: 0.85, roughness: 0.22 });
+      cylinder(screw, 0.035, 0.13, 0, 0, -0.07, 0x98a6ad, 'z', { metalness: 0.8, roughness: 0.28 });
+      box(screw, 0.105, 0.018, 0.009, 0, 0, 0.034, 0x222e38);
+      box(screw, 0.018, 0.105, 0.009, 0, 0, 0.034, 0x222e38);
       const tray = [-3.35 + (screwIndex % 4) * 0.23, -0.25, 2.02 + Math.floor(screwIndex / 4) * 0.23];
       screws.push({ screw, part: set.part, stateKey: set.state, index, pos, tray, rear: name === 'psu' });
       screwIndex += 1;
     });
   }
-  box(scene, 1.24, 0.04, 1.38, -2.99, -0.29, 2.5, 0x102632);
-  // Original hand tools are decorative; the accessible tool controls run rules.
-  const screwdriver = group();
-  cylinder(screwdriver, 0.085, 1.1, 5.92, -0.16, -1.85, 0x19c4ad, 'z');
-  cylinder(screwdriver, 0.025, 0.7, 5.92, -0.16, -1.0, 0xb3c6ca, 'z');
-  box(scene, 0.17, 0.12, 0.59, 4.28, -0.2, -1.93, 0xc0c9ca);
-  box(scene, 0.09, 0.09, 0.19, 4.28, -0.2, -1.54, 0x47c8bc);
+  // Selectable tools choose the same mode as the accessible DOM toolbar.
+  box(scene, 1.32, 0.05, 1.46, -2.99, -0.29, 2.5, 0x102836, { metalness: 0.65, roughness: 0.32 });
+  const screwdriver = group('tool-screwdriver');
+  cylinder(screwdriver, 0.09, 1.15, 5.92, -0.16, -1.85, 0x1ed4bc, 'z', { roughness: 0.38, metalness: 0.22 });
+  cylinder(screwdriver, 0.026, 0.75, 5.92, -0.16, -0.98, 0xc8d8de, 'z', { metalness: 0.88, roughness: 0.18 });
+  const syringe = group('tool-paste');
+  box(syringe, 0.18, 0.13, 0.62, 4.28, -0.2, -1.93, 0xcad4d8, { metalness: 0.4, roughness: 0.35 });
+  box(syringe, 0.095, 0.095, 0.21, 4.28, -0.2, -1.52, 0x3be0cf, { roughness: 0.35 });
+  const wipe = group('tool-clean');
+  box(wipe, 0.7, 0.05, 0.6, 6.38, -0.22, 1.85, 0xc8e1da, { roughness: 1, metalness: 0 });
 
-  lead('atx', 'atxConnected', [[1.5, 0.72, 0.26], [2.28, 1.25, 0.85], [2.31, 3.9, 0.52], [1.75, 4.1, -0.45]], 0x343d47, 0.075, 'boardInstalled');
-  lead('eps', 'cpuPowerConnected', [[0.26, 0.74, 0.22], [-2.33, 1.08, 0.4], [-2.25, 5.83, 0.27], [-1.53, 5.64, -0.46]], 0xc6a844, 0.049, 'boardInstalled');
-  lead('gpu-power', 'gpuPowerConnected', [[1.28, 0.77, 0.36], [1.8, 1.5, 1.04], [1.45, 2.6, 0.97], [0.84, 3.02, 0.42]], 0x556b76, 0.066, 'gpuInstalled');
-  lead('sata-data', 'sataDataConnected', [[1.6, 2.59, -0.45], [2.3, 2.7, 0.75], [2.37, 1.47, 0.61], [1.74, 1.1, -0.17]], 0xf0ab49, 0.036, 'originalDriveInstalled');
-  lead('sata-power', 'sataPowerConnected', [[1.57, 0.73, 0.36], [2.4, 0.58, 0.96], [2.43, 1.2, 0.8], [2.12, 1.1, -0.17]], 0x344454, 0.058, 'originalDriveInstalled');
-  lead('front-panel', 'frontPanelConnected', [[2.53, 0.24, 0.8], [1.65, 0.45, 0.8], [1.24, 1.52, 0.12], [1.51, 2.3, -0.45]], 0x47bfc1, 0.028, 'boardInstalled');
-  lead('cpu-fan', 'cpuFanConnected', [[-0.08, 5.18, 0.31], [0.3, 5.5, 0.58], [0.25, 5.8, 0.1], [-0.1, 5.66, -0.46]], 0x1a242d, 0.027, 'coolerInstalled');
+  // Internal power & data leads
+  lead('atx', 'atxConnected', [[1.5, 0.72, 0.26], [2.28, 1.25, 0.85], [2.31, 3.9, 0.52], [1.75, 4.1, -0.45]], 0x2c3742, 0.075, 'boardInstalled');
+  lead('eps', 'cpuPowerConnected', [[0.26, 0.74, 0.22], [-2.33, 1.08, 0.4], [-2.25, 5.83, 0.27], [-1.53, 5.64, -0.46]], 0xd4b24c, 0.049, 'boardInstalled');
+  lead('gpu-power', 'gpuPowerConnected', [[1.28, 0.77, 0.36], [1.8, 1.5, 1.04], [1.45, 2.6, 0.97], [0.84, 3.02, 0.42]], 0x4f6876, 0.066, 'gpuInstalled');
+  lead('sata-data', 'sataDataConnected', [[1.6, 2.59, -0.45], [2.3, 2.7, 0.75], [2.37, 1.47, 0.61], [1.74, 1.1, -0.17]], 0xf2a63b, 0.036, 'originalDriveInstalled');
+  lead('sata-power', 'sataPowerConnected', [[1.57, 0.73, 0.36], [2.4, 0.58, 0.96], [2.43, 1.2, 0.8], [2.12, 1.1, -0.17]], 0x344656, 0.058, 'originalDriveInstalled');
+  lead('front-panel', 'frontPanelConnected', [[2.53, 0.24, 0.8], [1.65, 0.45, 0.8], [1.24, 1.52, 0.12], [1.51, 2.3, -0.45]], 0x3fd0d4, 0.028, 'boardInstalled');
+  lead('cpu-fan', 'cpuFanConnected', [[-0.08, 5.18, 0.31], [0.3, 5.5, 0.58], [0.25, 5.8, 0.1], [-0.1, 5.66, -0.46]], 0x1a2630, 0.027, 'coolerInstalled');
 
   const selection = new THREE.BoxHelper(new THREE.Object3D(), 0x52f2cc);
   selection.material.depthTest = false;
   selection.material.transparent = true;
-  selection.material.opacity = 0.8;
+  selection.material.opacity = 0.85;
   selection.visible = false;
   scene.add(selection);
+
+  // Small, authored component sockets are independent of camera angle and GPU
+  // hit geometry. A box never represents "anywhere inside the case".
+  const socketSizes = { board: [4, 4.2, 0.25], cpu: [1.13, 1.03, 0.26], cooler: [1.7, 1.48, 0.8], ram: [0.43, 2.28, 0.7], gpu: [3.65, 0.65, 1.5], ssd: [1.1, 1.55, 0.35], psu: [2.5, 1.06, 1.95], panel: [5.5, 6.25, 0.2] };
+  const dropBoxes = new Map(Object.entries(socketSizes).map(([id, size]) => [id, new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(...nodes.get(id).userData.fitted), new THREE.Vector3(...size))]));
+  dropBoxes.set('tray', new THREE.Box3(new THREE.Vector3(3.2, -0.34, -2.2), new THREE.Vector3(6.95, 0.15, 2.3)));
+  const dropMarker = new THREE.Box3Helper(new THREE.Box3(), 0x35e3bc);
+  dropMarker.material.depthTest = false;
+  dropMarker.material.transparent = true;
+  dropMarker.material.opacity = 0.9;
+  dropMarker.visible = false;
+  dropMarker.userData.assemblyTargetMarker = true;
+  scene.add(dropMarker);
+  const ghostMaterial = new THREE.MeshStandardMaterial({ color: 0xf2b14e, emissive: 0x5d3510, transparent: true, opacity: 0.48, depthWrite: false, roughness: 0.8, metalness: 0 });
+  disposals.push(ghostMaterial);
 
   function isVisible(object) {
     for (let parent = object; parent; parent = parent.parent) if (!parent.visible) return false;
@@ -348,6 +480,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   function updateModel(nextHardware, nextAssembly) {
     if (stopped) return;
+    cancelInteraction();
     modelHardware = nextHardware || {};
     modelAssembly = nextAssembly || {};
     for (const node of nodes.values()) {
@@ -371,7 +504,21 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     pastePea.visible = modelAssembly.paste === 'pea';
     pasteExcess.visible = modelAssembly.paste === 'excess';
     pasteDry.visible = modelAssembly.paste === 'dry';
-    fan.rotation.z = modelHardware.pcOn ? 0.3 : 0;
+    fan.rotation.z = modelHardware.pcOn ? 0.35 : 0;
+    powerLed.material.emissiveIntensity = modelHardware.pcOn ? 0.95 : 0.08;
+
+    // Update 3D Monitor screen & external HDMI display cable routing
+    const desktopVisible = !!modelHardware.pcOn && !!modelHardware.booted && !!modelHardware.gpuInstalled && !!modelHardware.gpuPowerConnected && modelHardware.videoPort === 'gpu' && !!modelHardware.signalConnected && (modelHardware.monitorInput || 'hdmi') === 'hdmi';
+    screenDesktop.visible = desktopVisible;
+    screenDoc.visible = desktopVisible && !!modelHardware.documentOpened;
+    screenNoSignal.visible = !desktopVisible && !!modelHardware.pcOn;
+    monitorLed.material.emissiveIntensity = desktopVisible ? 0.95 : modelHardware.pcOn ? 0.45 : 0.12;
+    const signalConnected = modelHardware.signalConnected !== false;
+    const onGpuPort = (modelHardware.videoPort || 'gpu') === 'gpu';
+    hdmiGpuToMonitor.visible = signalConnected && onGpuPort;
+    hdmiBoardToMonitor.visible = signalConnected && !onGpuPort;
+    hdmiLooseMonitor.visible = !signalConnected;
+
     scene.updateMatrixWorld(true);
     for (const fastener of screws) {
       const fitted = !!modelAssembly[fastener.stateKey]?.[fastener.index];
@@ -417,12 +564,14 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     const width = Math.round(bounds.width);
     const height = Math.round(bounds.height);
     if (!width || !height) {
+      cancelInteraction();
       lastWidth = lastHeight = 0;
       if (frame) view.cancelAnimationFrame(frame);
       frame = 0;
       return;
     }
     if (width === lastWidth && height === lastHeight) return;
+    cancelInteraction();
     lastWidth = width;
     lastHeight = height;
     camera.aspect = width / height;
@@ -431,22 +580,48 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     const ratio = Math.min(1.5, Math.max(1, view.devicePixelRatio || 1), Math.sqrt(900000 / (width * height)));
     renderer.setPixelRatio(ratio);
     renderer.setSize(width, height, false);
-    const nextFittedDistance = Math.max(15, 16.4 / camera.aspect);
+    const nextFittedDistance = Math.max(15.5, 16.8 / camera.aspect);
     distance *= nextFittedDistance / fittedDistance;
     fittedDistance = nextFittedDistance;
     distance = Math.max(7, Math.min(40, distance));
     requestRender();
   }
-  function selectedAt(event) {
+  function rayAt(event) {
     const bounds = canvas.getBoundingClientRect();
-    if (!bounds.width || !bounds.height) return '';
+    if (!bounds.width || !bounds.height || event.clientX < bounds.left || event.clientY < bounds.top || event.clientX > bounds.left + bounds.width || event.clientY > bounds.top + bounds.height) return null;
     pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1);
     updateCamera();
     scene.updateMatrixWorld(true);
     raycaster.setFromCamera(pointer, camera);
+    return raycaster.ray;
+  }
+  function selectedAt(event) {
+    if (!rayAt(event)) return '';
+    if (tool === 'screwdriver') {
+      const rect = canvas.getBoundingClientRect();
+      const candidates = screws.map(({ screw }) => {
+        const projected = screw.getWorldPosition(new THREE.Vector3()).project(camera);
+        const x = rect.left + (projected.x + 1) * rect.width / 2;
+        const y = rect.top + (1 - projected.y) * rect.height / 2;
+        return { screw, x, y, depth: projected.z, distance: Math.hypot(x - event.clientX, y - event.clientY) };
+      }).filter(item => isVisible(item.screw) && item.depth >= -1 && item.depth <= 1 && item.distance <= 17).sort((a, b) => a.distance - b.distance);
+      for (const candidate of candidates) {
+        if (!rayAt({ clientX: candidate.x, clientY: candidate.y })) continue;
+        // A generous tap target must not turn a screw through a solid case,
+        // cooler, or closed panel. Test the visible head's own center ray.
+        const occluders = raycaster.intersectObjects(scene.children, true).filter(hit => hit.object.isMesh && isVisible(hit.object) && !hit.object.material?.wireframe);
+        const closest = occluders[0]?.object;
+        for (let node = closest; node && node !== scene; node = node.parent) if (node === candidate.screw) return candidate.screw.userData.selectId;
+      }
+      rayAt(event);
+    }
     const hits = raycaster.intersectObjects(selectables, true).filter(hit => isVisible(hit.object));
     for (const hit of hits) {
-      for (let node = hit.object; node && node !== scene; node = node.parent) if (node.userData.selectId) return node.userData.selectId;
+      for (let node = hit.object; node && node !== scene; node = node.parent) if (node.userData.selectId) {
+        // Screwdriver targets were already checked against real occlusion.
+        if (tool === 'screwdriver' && /^(panel|psu|board|cooler|gpu|ssd)-[0-9]+$/.test(node.userData.selectId)) return '';
+        return node.userData.selectId;
+      }
     }
     return '';
   }
@@ -454,16 +629,120 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     const previous = gesture;
     gesture = null;
     if (previous && canvas.hasPointerCapture?.(previous.id)) canvas.releasePointerCapture(previous.id);
-    canvas.style.cursor = 'grab';
+    canvas.style.cursor = tool === 'inspect' ? 'grab' : tool === 'move' ? 'move' : 'crosshair';
+  }
+  function notify(kind, message, extra = {}) {
+    if (!stopped) onInteraction({ kind, message, ...extra });
+  }
+  function cancelInteraction(message = '') {
+    const hadDrag = !!drag;
+    releaseGesture();
+    if (drag) {
+      drag.source.visible = drag.sourceVisible;
+      drag.ghost.traverse(node => { if (node.isInstancedMesh) node.dispose(); });
+      drag.ghost.removeFromParent();
+      drag = null;
+    }
+    dropMarker.visible = false;
+    highlight(selectedId);
+    if (message || hadDrag) notify('idle', message || 'Movement canceled. Your assembly is unchanged.');
+    requestRender();
+  }
+  function action(mapped) {
+    if (stopped || paused || contextLost || doc.hidden) return;
+    // Restore transient transforms before calling the model: the callback may
+    // synchronously update or dispose this scene through the workbench adapter.
+    cancelInteraction();
+    if (!mapped?.action) { notify('warning', mapped?.message || 'Choose a compatible part or tool target.'); return; }
+    const version = ++dispatchVersion;
+    const done = result => {
+      if (stopped || version !== dispatchVersion) return;
+      notify(result?.kind === 'warning' ? 'warning' : 'info', result?.message || mapped.message, { action: mapped.action });
+      requestRender();
+    };
+    try {
+      const result = onAction(mapped.action);
+      if (result?.then) result.then(done, () => done({ kind: 'warning', message: 'The action could not finish. Your assembly is unchanged; try the labeled controls.' }));
+      else done(result);
+    } catch {
+      done({ kind: 'warning', message: 'The action could not finish. Continue using the labeled assembly controls.' });
+    }
+  }
+  function destinationAt(event, intended) {
+    const ray = rayAt(event);
+    if (!ray) return '';
+    // Stacked sockets overlap in projection (CPU below cooler). The exact
+    // intended socket has priority; incompatible regions never become valid.
+    if (ray.intersectBox(dropBoxes.get(intended), new THREE.Vector3())) return intended;
+    let nearest = Infinity; let destination = '';
+    for (const [id, bounds] of dropBoxes) {
+      const hit = ray.intersectBox(bounds, new THREE.Vector3());
+      if (hit && hit.distanceTo(ray.origin) < nearest) { nearest = hit.distanceTo(ray.origin); destination = id; }
+    }
+    return destination;
+  }
+  function beginMove(event) {
+    const source = nodes.get(gesture.partId);
+    if (!source?.userData.partKey) return false;
+    const ghost = source.clone(true);
+    ghost.userData.assemblyGhost = true;
+    ghost.traverse(node => { if (node.isMesh) node.material = ghostMaterial; });
+    const normal = camera.getWorldDirection(new THREE.Vector3());
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, source.position);
+    const startRay = rayAt({ clientX: gesture.x, clientY: gesture.y });
+    const start = startRay?.intersectPlane(plane, new THREE.Vector3());
+    if (!start) return false;
+    scene.add(ghost);
+    drag = { source, sourceVisible: source.visible, ghost, plane, start, origin: source.position.clone(), partId: gesture.partId, intended: assembledPartFitted(gesture.partId, modelHardware, modelAssembly) ? 'tray' : gesture.partId, destination: '', valid: false };
+    source.visible = false;
+    selection.visible = false;
+    dropMarker.box.copy(dropBoxes.get(drag.intended));
+    dropMarker.visible = true;
+    canvas.setPointerCapture?.(event.pointerId);
+    canvas.style.cursor = 'grabbing';
+    return true;
+  }
+  function movePart(event) {
+    const ray = rayAt(event);
+    const hit = ray?.intersectPlane(drag.plane, new THREE.Vector3());
+    if (hit) {
+      drag.ghost.position.copy(drag.origin).add(hit.sub(drag.start));
+      drag.ghost.position.clamp(new THREE.Vector3(-8, -0.24, -3.3), new THREE.Vector3(8.2, 6.5, 4.6));
+    }
+    const destination = destinationAt(event, drag.intended);
+    const mapped = assemblyDropAction(modelHardware, modelAssembly, drag.partId, destination);
+    drag.destination = destination;
+    drag.valid = destination === drag.intended && !!mapped.action;
+    ghostMaterial.color.set(drag.valid ? 0x42ebc5 : 0xf2b14e);
+    ghostMaterial.emissive.set(drag.valid ? 0x124f40 : 0x5d3510);
+    dropMarker.material.color.set(drag.valid ? 0x42ebc5 : 0xf2b14e);
+    if (drag.valid) {
+      drag.ghost.position.fromArray(drag.intended === 'tray' ? drag.source.userData.loose : drag.source.userData.fitted);
+      drag.ghost.rotation.set(...(drag.intended === 'tray' ? drag.source.userData.looseRotation : [0, 0, 0]));
+    }
+    const message = drag.valid ? `Release to attempt ${drag.intended === 'tray' ? 'removing' : 'fitting'} ${drag.partId}. Safety, screws, and cables are still checked.` : `Move ${drag.partId} onto its outlined ${drag.intended === 'tray' ? 'parts tray' : 'matching socket'}. Release elsewhere to cancel.`;
+    if (gesture.lastMessage !== message) { gesture.lastMessage = message; notify(drag.valid ? 'valid' : 'dragging', message, { partId: drag.partId, targetId: destination }); }
+    requestRender();
   }
   function down(event) {
-    if (paused || contextLost || event.button !== 0 || gesture) return;
-    gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, yaw, pitch, orbit: false, touch: event.pointerType !== 'mouse' };
+    if (stopped || paused || doc.hidden || contextLost || event.button !== 0) return;
+    if (gesture && event.pointerId !== gesture.id) { cancelInteraction('Movement canceled: use one pointer at a time.'); return; }
+    if (gesture) return;
+    const partId = selectedAt(event);
+    gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, yaw, pitch, orbit: false, moved: false, partId, touch: event.pointerType !== 'mouse' };
   }
   function move(event) {
     if (!gesture || event.pointerId !== gesture.id) return;
     const dx = event.clientX - gesture.x;
     const dy = event.clientY - gesture.y;
+    if (tool !== 'inspect') {
+      if (Math.hypot(dx, dy) > 7) {
+        gesture.moved = true;
+        if (tool === 'move' && !drag && !beginMove(event)) return;
+      }
+      if (drag) movePart(event);
+      return;
+    }
     if (!gesture.orbit && Math.hypot(dx, dy) > 7) {
       // Leave predominantly vertical touch movement to normal page scrolling.
       if (gesture.touch && Math.abs(dx) <= Math.abs(dy) * 1.15) return;
@@ -478,7 +757,13 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   function up(event) {
     if (!gesture || event.pointerId !== gesture.id) return;
-    const tap = !gesture.orbit && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) < 8;
+    if (drag) {
+      movePart(event);
+      const mapped = drag.valid ? assemblyDropAction(modelHardware, modelAssembly, drag.partId, drag.destination) : { action: null, message: 'Movement canceled. Drop the part on its matching outline or the parts tray.' };
+      action(mapped);
+      return;
+    }
+    const tap = !gesture.orbit && !gesture.moved && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) < 8;
     releaseGesture();
     if (tap) {
       const id = selectedAt(event);
@@ -486,20 +771,26 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
         highlight(id);
         requestRender();
         onSelect(id);
+        if (id.startsWith('tool-')) { setTool(id.slice(5)); return; }
+        if (tool !== 'inspect' && tool !== 'move') {
+          const mapped = assemblyToolAction(modelHardware, modelAssembly, tool, id);
+          if (tool === 'paste' && pasteAmount === 'excess' && mapped.action === 'asm-apply-paste') mapped.action = 'asm-excess-paste';
+          action(mapped);
+        }
       }
     }
   }
-  function lost() { releaseGesture(); }
+  function lost() { cancelInteraction(); }
   function outsideUp(event) {
-    if (gesture && event.pointerId === gesture.id && event.target !== canvas) releaseGesture();
+    if (gesture && event.pointerId === gesture.id && event.target !== canvas) cancelInteraction();
   }
   function leave() {
-    if (gesture && !gesture.orbit) releaseGesture();
+    if (gesture && !gesture.orbit && !drag) cancelInteraction();
   }
   function loss(event) {
     event.preventDefault();
     contextLost = true;
-    releaseGesture();
+    cancelInteraction();
     if (frame) view.cancelAnimationFrame(frame);
     frame = 0;
     onStatus({ kind: 'context-lost', message: 'The device paused 3D graphics. Your work is preserved; continue with the labeled assembly tools.' });
@@ -511,6 +802,12 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     requestRender();
   }
   canvas.style.cursor = 'grab';
+  function secondPointer(event) {
+    if (gesture && event.pointerId !== gesture.id) cancelInteraction('Movement canceled: use one pointer at a time.');
+  }
+  function key(event) {
+    if (event.key === 'Escape') cancelInteraction('Movement canceled. Your assembly is unchanged.');
+  }
   canvas.addEventListener('pointerdown', down);
   canvas.addEventListener('pointermove', move);
   canvas.addEventListener('pointerup', up);
@@ -521,13 +818,15 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   canvas.addEventListener('webglcontextrestored', restored);
   view.addEventListener('blur', lost);
   doc.addEventListener('pointerup', outsideUp);
+  doc.addEventListener('pointerdown', secondPointer);
+  doc.addEventListener('keydown', key);
   const observer = typeof view.ResizeObserver === 'function' ? new view.ResizeObserver(resize) : null;
   observer?.observe(host);
   if (!observer) view.addEventListener('resize', resize);
 
   function pause() {
     paused = true;
-    releaseGesture();
+    cancelInteraction();
     if (frame) view.cancelAnimationFrame(frame);
     frame = 0;
   }
@@ -539,7 +838,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   function visibility() {
     if (doc.hidden) {
-      releaseGesture();
+      cancelInteraction();
       if (frame) view.cancelAnimationFrame(frame);
       frame = 0;
     } else if (!paused) {
@@ -550,10 +849,10 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   doc.addEventListener('visibilitychange', visibility);
 
   function setView(name) {
-    const presets = { iso: [0.52, 0.33], side: [0, 0.02], front: [1.29, 0.15], top: [0.24, 1.31], rear: [Math.PI, 0.08] };
+    const presets = { iso: [0.52, 0.33], monitor: [-0.36, 0.18], side: [0, 0.02], front: [1.29, 0.15], top: [0.24, 1.31], rear: [Math.PI, 0.08] };
     if (!Object.hasOwn(presets, name)) return;
     [yaw, pitch] = presets[name];
-    releaseGesture();
+    cancelInteraction();
     requestRender();
   }
   function resetView() {
@@ -562,8 +861,24 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   function zoom(direction) {
     if (!['in', 'out'].includes(direction)) return;
+    cancelInteraction();
     distance = Math.max(7, Math.min(40, distance * (direction === 'in' ? 0.84 : 1.19)));
     requestRender();
+  }
+  function setTool(next) {
+    if (stopped || !['inspect', 'move', 'screwdriver', 'paste', 'clean'].includes(next)) return;
+    cancelInteraction();
+    tool = next;
+    // Move is an explicit manipulation mode. Its canvas captures touch drags;
+    // Inspect restores normal vertical scrolling. The page outside is unchanged.
+    canvas.style.touchAction = tool === 'move' ? 'none' : 'pan-y';
+    canvas.style.cursor = tool === 'inspect' ? 'grab' : tool === 'move' ? 'move' : 'crosshair';
+    notify('info', tool === 'move' ? 'Move tool: drag a component to its matching outline, or a fitted part to the right-hand parts tray. Release to attempt the change.' : tool === 'screwdriver' ? 'Screwdriver: tap a screw once to turn it. Its current fitting decides tighten or remove; the safety rules still apply.' : tool === 'paste' ? 'Paste tool: tap the exposed CPU to apply thermal paste. Clean old paste first.' : tool === 'clean' ? 'Cleaning tool: tap the exposed CPU to clean its thermal paste.' : 'Inspect: tap a part to select it, or drag sideways to rotate. Vertical touch swipes scroll the page.');
+  }
+  function setPasteAmount(amount) {
+    if (!['pea', 'excess'].includes(amount)) return;
+    cancelInteraction();
+    pasteAmount = amount;
   }
   function dispose() {
     if (stopped) return;
@@ -574,6 +889,8 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     view.removeEventListener('blur', lost);
     doc.removeEventListener('visibilitychange', visibility);
     doc.removeEventListener('pointerup', outsideUp);
+    doc.removeEventListener('pointerdown', secondPointer);
+    doc.removeEventListener('keydown', key);
     canvas.removeEventListener('pointerdown', down);
     canvas.removeEventListener('pointermove', move);
     canvas.removeEventListener('pointerup', up);
@@ -587,6 +904,8 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     for (const item of disposals) item.dispose();
     selection.geometry.dispose();
     selection.material.dispose();
+    dropMarker.geometry.dispose();
+    dropMarker.material.dispose();
     renderer.dispose();
     canvas.remove();
     scene.clear();
@@ -597,6 +916,6 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   updateModel(hardware, assembly);
   resize();
-  onStatus({ kind: 'ready', message: '3D view ready. Tap a part to select it. Drag sideways to rotate, or use the camera buttons.' });
-  return { update: updateModel, select: id => { highlight(id); requestRender(); }, resetView, setView, zoom, pause, resume, dispose };
+  onStatus({ kind: 'ready', message: '3D Tech Lab bench ready. Tap any PC component or the 3D monitor to select it, or drag sideways to orbit.' });
+  return { update: updateModel, select: id => { highlight(id); requestRender(); }, resetView, setView, zoom, setTool, setPasteAmount, cancelInteraction, pause, resume, dispose };
 }

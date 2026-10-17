@@ -13,7 +13,7 @@ export const PUBLIC_FILES = Object.freeze([
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
   'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
   'assets/three-LICENSE.txt',
-  'src/assembly-model.js', 'src/assembly-workbench.js', 'src/assembly-scene.js', 'src/assembly.css',
+  'src/assembly-model.js', 'src/assembly-tools.js', 'src/assembly-workbench.js', 'src/assembly-scene.js', 'src/virtual-lab-scene.js', 'src/assembly.css',
   'src/three.module.js', 'src/three.core.js',
   'src/teaching.js', 'src/teaching.css', 'src/experiments.js', 'src/experiments.css', 'src/learning-tools.js', 'src/capstone.js', 'src/capstone.css',
   'src/app.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js', 'src/workbench-interactions.js',
