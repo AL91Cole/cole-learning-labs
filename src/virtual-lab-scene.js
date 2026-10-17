@@ -1,4 +1,4 @@
-import * as THREE from './three.module.js?release=20261017-foundations17';
+import * as BABYLON from './babylon.js?release=20261017-babylon18';
 
 const MAX_PIXEL_RATIO = 1.5;
 const MAX_RENDER_PIXELS = 900000;
@@ -141,809 +141,260 @@ const PATHWAY_STATIONS = Object.freeze([
   }
 ]);
 
-function createResourceTracker() {
-  const geometries = new Set();
-  const materials = new Set();
-  const textures = new Set();
-  const mat = (color, roughness = 0.55, metalness = 0.25, extra = {}) => {
-    const material = new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
-    materials.add(material);
+// Authored hex swatches are sRGB; Babylon PBR colors are linear inputs.
+const color=hex=>BABYLON.Color3.FromInts((hex>>>16)&255,(hex>>>8)&255,hex&255).toLinearSpace();
+const vector=values=>BABYLON.Vector3.FromArray(values);
+const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/** Original procedural equipment: no model loader, downloaded textures or physics. */
+function createEquipment(scene,doc){
+  let serial=0;
+  const materials=new Map(),textures=new Set();
+  function mat(hex,roughness=.58,metallic=.15,{emissive=0,intensity=0,alpha=1,unique=false}={}){
+    const key=[hex,roughness,metallic,emissive,intensity,alpha].join(':');
+    if(!unique&&materials.has(key))return materials.get(key);
+    const material=new BABYLON.PBRMaterial(`equipment-material-${serial++}`,scene);
+    material.albedoColor=color(hex);material.metallic=metallic;material.roughness=roughness;
+    material.emissiveColor=color(emissive).scale(intensity);material.alpha=alpha;
+    material.environmentIntensity=.5;material.directIntensity=1;
+    if(alpha<1){material.transparencyMode=BABYLON.PBRMaterial.PBRMATERIAL_ALPHABLEND;material.backFaceCulling=false;material.disableDepthWrite=true;}
+    if(!unique)materials.set(key,material);
     return material;
-  };
-  const trackGeo = geometry => {
-    geometries.add(geometry);
-    return geometry;
-  };
-  const box = (w, h, d, material, pos = [0, 0, 0], rot = [0, 0, 0]) => {
-    const mesh = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(w, h, d)), material);
-    mesh.position.set(pos[0], pos[1], pos[2]);
-    if (rot[0] || rot[1] || rot[2]) mesh.rotation.set(rot[0], rot[1], rot[2]);
-    return mesh;
-  };
-  const cyl = (rt, rb, h, segs, material, pos = [0, 0, 0], rot = [0, 0, 0]) => {
-    const mesh = new THREE.Mesh(trackGeo(new THREE.CylinderGeometry(rt, rb, h, segs)), material);
-    mesh.position.set(pos[0], pos[1], pos[2]);
-    if (rot[0] || rot[1] || rot[2]) mesh.rotation.set(rot[0], rot[1], rot[2]);
-    return mesh;
-  };
-  const sphere = (r, wSeg, hSeg, material, pos = [0, 0, 0]) => {
-    const mesh = new THREE.Mesh(trackGeo(new THREE.SphereGeometry(r, wSeg, hSeg)), material);
-    mesh.position.set(pos[0], pos[1], pos[2]);
-    return mesh;
-  };
-  const tagSelect = (root, selectId) => {
-    root.userData.selectId = selectId;
-    root.traverse(node => { node.userData.selectId = selectId; });
-    return root;
-  };
-  const createScreenPlane = (doc, width, height, drawFn) => {
-    const canvas = doc.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 180;
-    const ctx = canvas.getContext?.('2d') || null;
-    let texture = null;
-    if (ctx) {
-      drawFn(ctx, canvas.width, canvas.height);
-      texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      textures.add(texture);
-    }
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      roughness: 0.22,
-      metalness: 0.05,
-      map: texture || null,
-      emissive: 0x1e293b,
-      emissiveMap: texture || null,
-      emissiveIntensity: 0.65
-    });
-    materials.add(material);
-    const mesh = new THREE.Mesh(trackGeo(new THREE.PlaneGeometry(width, height)), material);
-    return {
-      mesh,
-      redraw(customDraw = drawFn) {
-        if (!ctx || !texture) return;
-        customDraw(ctx, canvas.width, canvas.height);
-        texture.needsUpdate = true;
-      }
-    };
-  };
-  const disposeAll = scene => {
-    scene.traverse(obj => {
-      if (obj.geometry) geometries.add(obj.geometry);
-      if (Array.isArray(obj.material)) obj.material.forEach(m => materials.add(m));
-      else if (obj.material) materials.add(obj.material);
-    });
-    geometries.forEach(g => g.dispose?.());
-    materials.forEach(m => m.dispose?.());
-    textures.forEach(t => t.dispose?.());
-    geometries.clear();
-    materials.clear();
-    textures.clear();
-  };
-  return { mat, trackGeo, box, cyl, sphere, tagSelect, createScreenPlane, disposeAll };
+  }
+  function place(mesh,material,pos=[0,0,0],rot=[0,0,0],parent=null){mesh.material=material;mesh.position.copyFromFloats(...pos);mesh.rotation.copyFromFloats(...rot);mesh.parent=parent;mesh.receiveShadows=true;return mesh;}
+  const box=(name,w,h,d,material,pos,rot,parent)=>place(BABYLON.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene),material,pos,rot,parent);
+  const cylinder=(name,top,bottom,height,segments,material,pos,rot,parent)=>place(BABYLON.MeshBuilder.CreateCylinder(name,{diameterTop:top*2,diameterBottom:bottom*2,height,tessellation:segments},scene),material,pos,rot,parent);
+  const sphere=(name,radius,segments,material,pos,parent)=>place(BABYLON.MeshBuilder.CreateSphere(name,{diameter:radius*2,segments},scene),material,pos,undefined,parent);
+  const group=(name,pos=[0,0,0],parent=null)=>{const node=new BABYLON.TransformNode(name,scene);node.position.copyFromFloats(...pos);node.parent=parent;return node;};
+  function cable(name,points,hex,parent){const mesh=BABYLON.MeshBuilder.CreateTube(name,{path:points.map(vector),radius:.008,tessellation:6,cap:BABYLON.Mesh.CAP_ALL},scene);mesh.material=mat(hex,.78,0);mesh.parent=parent;return mesh;}
+  function screen(name,width,height,draw,parent){
+    const canvas=doc.createElement('canvas');canvas.width=512;canvas.height=288;
+    const ctx=canvas.getContext?.('2d');let texture=null;
+    if(ctx){texture=new BABYLON.DynamicTexture(`${name}-texture`,canvas,scene,false,BABYLON.Texture.BILINEAR_SAMPLINGMODE);texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;textures.add(texture);}
+    const material=mat(0xffffff,.35,0,{unique:true});
+    material.unlit=true;material.albedoTexture=texture;material.emissiveTexture=texture;material.emissiveColor=color(0xffffff);material.backFaceCulling=false;
+    const mesh=BABYLON.MeshBuilder.CreatePlane(name,{width,height,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);mesh.material=material;mesh.parent=parent;mesh.isPickable=false;
+    function redraw(fn=draw){if(!ctx||!texture)return;ctx.save?.();ctx.setTransform?.(1,0,0,1,0,0);ctx.clearRect?.(0,0,512,288);fn(ctx,512,288);ctx.restore?.();texture.update(true);}
+    redraw();return {mesh,redraw,texture};
+  }
+  function tag(node,id){node.metadata={...node.metadata,selectId:id};for(const child of node.getChildMeshes())child.metadata={...child.metadata,selectId:id};}
+  return {mat,box,cylinder,sphere,group,cable,screen,tag,dispose(){for(const texture of textures)texture.dispose();textures.clear();materials.clear();}};
 }
 
-function addStudioLighting(scene, tracker) {
-  const hemi = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 1.3);
-  const key = new THREE.DirectionalLight(0xfffbeb, 1.55);
-  key.position.set(4.5, 6.8, 5.2);
-  const fill = new THREE.DirectionalLight(0x67e8f9, 0.72);
-  fill.position.set(-5.2, 4.2, 3.6);
-  const rim = new THREE.DirectionalLight(0xa78bfa, 0.52);
-  rim.position.set(0, 4.8, -4.5);
-  scene.add(hemi, key, fill, rim);
+function tint(material,hex,emissive=hex,intensity=.28){material.albedoColor.copyFrom(color(hex));material.emissiveColor.copyFrom(color(emissive).scale(intensity));}
 
-  // Architectural classroom shell
-  const room = new THREE.Group();
-  const floorMat = tracker.mat(0x0f172a, 0.68, 0.18);
-  const tileStripMat = tracker.mat(0x1e293b, 0.5, 0.25);
-  const wallMat = tracker.mat(0x132033, 0.82, 0.1);
-  const baseboardMat = tracker.mat(0x334155, 0.5, 0.35);
-  const woodTrimMat = tracker.mat(0x784b2a, 0.6, 0.12);
-  const lightBarMat = tracker.mat(0xe0f2fe, 0.2, 0.1, { emissive: 0x38bdf8, emissiveIntensity: 0.7 });
-
-  room.add(
-    tracker.box(10.5, 0.12, 6.6, floorMat, [0, -0.06, -0.4]),
-    tracker.box(10.5, 3.6, 0.14, wallMat, [0, 1.8, -3.65]),
-    tracker.box(10.5, 0.14, 0.16, baseboardMat, [0, 0.07, -3.56]),
-    tracker.box(10.5, 0.08, 0.18, woodTrimMat, [0, 1.2, -3.56])
-  );
-  for (let i = -4; i <= 4; i += 2) {
-    room.add(tracker.box(0.03, 0.005, 6.4, tileStripMat, [i, 0.003, -0.4]));
-  }
-  for (let z = -3; z <= 2; z += 1.25) {
-    room.add(tracker.box(10.2, 0.005, 0.03, tileStripMat, [0, 0.003, z]));
-  }
-  // Overhead suspended classroom LED fixtures
-  for (const x of [-2.8, 0, 2.8]) {
-    room.add(
-      tracker.box(1.9, 0.05, 0.18, baseboardMat, [x, 3.25, -1.2]),
-      tracker.box(1.82, 0.025, 0.12, lightBarMat, [x, 3.22, -1.2])
-    );
-  }
-  scene.add(room);
+function addLighting(scene){
+  const hemi=new BABYLON.HemisphericLight('soft-studio-fill',new BABYLON.Vector3(0,1,0),scene);
+  hemi.intensity=.65;hemi.diffuse=color(0xf1f5f9);hemi.groundColor=color(0x3b4351);
+  const key=new BABYLON.DirectionalLight('window-key',new BABYLON.Vector3(-.6,-1,-.5),scene);
+  key.position.copyFromFloats(3.5,5,3.5);key.intensity=1.6;key.diffuse=color(0xfff8ed);
+  key.shadowMinZ=.1;key.shadowMaxZ=18;
+  const fill=new BABYLON.DirectionalLight('equipment-rim',new BABYLON.Vector3(.7,-.5,.8),scene);
+  fill.intensity=.4;fill.diffuse=color(0xdbe7ef);
+  // One bounded map, sampled only when this on-demand scene renders.
+  const shadows=new BABYLON.ShadowGenerator(512,key);
+  shadows.usePoissonSampling=true;shadows.bias=.0015;shadows.normalBias=.015;
+  return shadows;
 }
 
-function buildDeskBase(tracker, accentHex, width = 1.32, depth = 0.86) {
-  const group = new THREE.Group();
-  const topMat = tracker.mat(0x1e293b, 0.58, 0.16);
-  const woodEdge = tracker.mat(0x85532f, 0.55, 0.12);
-  const legMat = tracker.mat(0x334155, 0.4, 0.65);
-  const matSurface = tracker.mat(accentHex, 0.72, 0.12);
-
-  // Tabletop at y = 0.74
-  group.add(
-    tracker.box(width, 0.05, depth, topMat, [0, 0.74, 0]),
-    tracker.box(width + 0.02, 0.052, 0.035, woodEdge, [0, 0.74, depth / 2 + 0.01]),
-    tracker.box(width * 0.78, 0.01, depth * 0.68, matSurface, [0, 0.77, 0.02])
-  );
-  // 4 steel legs
-  const lx = width / 2 - 0.08;
-  const lz = depth / 2 - 0.08;
-  for (const [x, z] of [[-lx, -lz], [lx, -lz], [-lx, lz], [lx, lz]]) {
-    group.add(tracker.box(0.05, 0.74, 0.05, legMat, [x, 0.37, z]));
-  }
-  // Floor anti-fatigue mat
-  group.add(tracker.box(width * 0.92, 0.012, 0.55, matSurface, [0, 0.006, depth / 2 + 0.32]));
-  return group;
+function buildDesk(t,parent,width=1.85,depth=.96){
+  const steel=t.mat(0x303844,.4,.48),top=t.mat(0x30343a,.77,.03),wood=t.mat(0x785843,.65,.05);
+  const desk=t.group('service-desk',[0,0,0],parent);
+  t.box('laminate-tabletop',width,.055,depth,top,[0,.74,0],undefined,desk);
+  t.box('table-edge',width,.055,.022,wood,[0,.74,depth/2+.006],undefined,desk);
+  for(const x of [-width/2+.08,width/2-.08])for(const z of [-depth/2+.08,depth/2-.08])t.box('steel-leg',.045,.74,.045,steel,[x,.37,z],undefined,desk);
+  t.box('bench-mat',width*.9,.007,depth*.79,t.mat(0x192a2a,.92,0),[0,.772,.025],undefined,desk);
+  return desk;
 }
 
-function buildMonitorMesh(tracker, doc, width, height, pos, rotY, drawFn) {
-  const group = new THREE.Group();
-  group.position.set(pos[0], pos[1], pos[2]);
-  if (rotY) group.rotation.y = rotY;
-  const bezelMat = tracker.mat(0x0f172a, 0.42, 0.45);
-  const standMat = tracker.mat(0x475569, 0.38, 0.65);
-  group.add(
-    tracker.box(width * 0.45, 0.018, 0.16, standMat, [0, 0.01, 0]),
-    tracker.box(0.045, 0.16, 0.035, standMat, [0, 0.09, -0.02]),
-    tracker.box(width, height, 0.03, bezelMat, [0, 0.16 + height / 2, 0])
-  );
-  const screen = tracker.createScreenPlane(doc, width - 0.04, height - 0.04, drawFn);
-  screen.mesh.position.set(0, 0.16 + height / 2, 0.017);
-  group.add(screen.mesh);
-  return { group, screen };
+function monitor(t,parent,name,width,height,pos,rot=0,draw=()=>{}){
+  const node=t.group(name,pos,parent);node.rotation.y=rot;
+  const bezel=t.mat(0x1a1d22,.58,.06),metal=t.mat(0x525a63,.36,.6);
+  t.box(`${name}-foot`,width*.46,.018,.16,metal,[0,.01,0],undefined,node);
+  t.box(`${name}-stand`,.035,.16,.035,metal,[0,.09,-.02],undefined,node);
+  t.box(`${name}-bezel`,width,height,.035,bezel,[0,.16+height/2,0],undefined,node);
+  const display=t.screen(`${name}-display`,width-.035,height-.035,draw,node);display.mesh.position.copyFromFloats(0,.16+height/2,.019);
+  t.sphere(`${name}-power-led`,.005,6,t.mat(0x8ad4bd,.5,0,{emissive:0x39c998,intensity:.5}),[width/2-.04,.16+.008,.021],node);
+  return {node,screen:display};
 }
 
-/**
- * Mounts the Interactive 3D Virtual Learning Lab Room Hub (#home and #labs).
- * Students and educators can orbit the 3D classroom, click any of the 5 pathway
- * benches, fly the camera to inspect each station, and jump into investigations.
- */
-export function mountVirtualLabRoom(host, { activeTrack = 'all', onSelectTrack, onOpenLab } = {}) {
-  const doc = host.ownerDocument;
-  const win = doc.defaultView || globalThis;
-  const canvas = doc.createElement('canvas');
-  canvas.className = 'vlab-canvas';
-  const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'low-power', preserveDrawingBuffer: false });
-  if (!gl) return null;
-
-  const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: false, alpha: false, powerPreference: 'low-power', preserveDrawingBuffer: false });
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x081221);
-  const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 45);
-  const tracker = createResourceTracker();
-  addStudioLighting(scene, tracker);
-
-  // Classroom Smartboard on back wall
-  const smartboard = new THREE.Group();
-  smartboard.position.set(0, 2.15, -3.52);
-  smartboard.add(tracker.box(3.7, 1.25, 0.05, tracker.mat(0x1e293b, 0.35, 0.55)));
-  const boardScreen = tracker.createScreenPlane(doc, 3.52, 1.1, (ctx, w, h) => {
-    ctx.fillStyle = '#09192c';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#0f3156';
-    ctx.fillRect(0, 0, w, 34);
-    ctx.fillStyle = '#5eead4';
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('COLE LEARNING LABS · 3D VIRTUAL TECH CLASSROOM', 14, 22);
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.fillText('Select a Pathway Station to Explore', 14, 68);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '13px sans-serif';
-    ctx.fillText('01 Hardware  ·  02 Network Rack  ·  03 AI Audit  ·  04 Cyber SOC  ·  05 Coding', 14, 98);
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillText('29 Interactive Investigations · Grades 7–12 · Safe Browser Simulation', 14, 130);
-  });
-  boardScreen.mesh.position.set(0, 0, 0.028);
-  smartboard.add(boardScreen.mesh);
-  scene.add(smartboard);
-
-  const stationGroups = new Map();
-  const pickTargets = [];
-  const selectionRings = new Map();
-
-  for (const station of PATHWAY_STATIONS) {
-    const group = new THREE.Group();
-    group.position.set(station.pos[0], station.pos[1], station.pos[2]);
-    group.add(buildDeskBase(tracker, station.color));
-
-    // Selection glow ring under station
-    const ringMat = tracker.mat(station.color, 0.3, 0.2, { emissive: station.color, emissiveIntensity: 0.15 });
-    const ring = tracker.cyl(0.76, 0.78, 0.016, 24, ringMat, [0, 0.01, 0]);
-    group.add(ring);
-    selectionRings.set(station.id, ringMat);
-
-    // Build pathway-specific 3D equipment on the desk
-    if (station.id === 'hardware') {
-      // Open PC chassis + glowing cooler + monitor
-      const tower = tracker.box(0.28, 0.44, 0.38, tracker.mat(0x1e293b, 0.4, 0.6), [-0.32, 0.99, -0.05]);
-      const board = tracker.box(0.02, 0.32, 0.28, tracker.mat(0x0f766e, 0.5, 0.25), [-0.31, 1.0, -0.05]);
-      const fan = tracker.cyl(0.06, 0.06, 0.04, 14, tracker.mat(0x2dd4bf, 0.3, 0.3, { emissive: 0x14b8a6, emissiveIntensity: 0.45 }), [-0.28, 1.04, -0.05], [0, 0, Math.PI / 2]);
-      const mon = buildMonitorMesh(tracker, doc, 0.48, 0.3, [0.16, 0.77, -0.12], -0.15, (ctx, w, h) => {
-        ctx.fillStyle = '#072a2d'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#2dd4bf'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('01 · HARDWARE BENCH', 16, 42);
-        ctx.fillStyle = '#e2e8f0'; ctx.font = '14px sans-serif'; ctx.fillText('8 ServiceDesk & PC Assembly Labs', 16, 80);
-        ctx.fillStyle = '#5eead4'; ctx.fillText('INC-101 → INC-108 · Ready', 16, 122);
-      });
-      group.add(tower, board, fan, mon.group);
-    } else if (station.id === 'network') {
-      // Server/Switch rack + blinking LEDs + Wi-Fi AP dome + printer
-      const rack = tracker.box(0.42, 0.72, 0.36, tracker.mat(0x0f172a, 0.38, 0.65), [-0.3, 1.13, -0.12]);
-      const sw1 = tracker.box(0.38, 0.07, 0.37, tracker.mat(0x1d4ed8, 0.35, 0.5, { emissive: 0x2563eb, emissiveIntensity: 0.35 }), [-0.3, 1.32, -0.12]);
-      const sw2 = tracker.box(0.38, 0.07, 0.37, tracker.mat(0x0284c7, 0.35, 0.5, { emissive: 0x0ea5e9, emissiveIntensity: 0.3 }), [-0.3, 1.18, -0.12]);
-      const ap = tracker.cyl(0.09, 0.09, 0.025, 16, tracker.mat(0xf8fafc, 0.3, 0.2), [0.35, 0.79, 0.14]);
-      const mon = buildMonitorMesh(tracker, doc, 0.46, 0.28, [0.18, 0.77, -0.12], -0.08, (ctx, w, h) => {
-        ctx.fillStyle = '#0b1e3b'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#60a5fa'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('02 · NETWORK & OS', 16, 42);
-        ctx.fillStyle = '#e2e8f0'; ctx.font = '14px sans-serif'; ctx.fillText('VLANs · IPv4 · DNS · Wi-Fi · Printers', 16, 80);
-        ctx.fillStyle = '#38bdf8'; ctx.fillText('NET-201 → NET-206 · Online', 16, 122);
-      });
-      group.add(rack, sw1, sw2, ap, mon.group);
-    } else if (station.id === 'ai') {
-      // Dual curved monitors + glowing AI ethics core
-      const monL = buildMonitorMesh(tracker, doc, 0.44, 0.28, [-0.23, 0.77, -0.1], 0.18, (ctx, w, h) => {
-        ctx.fillStyle = '#1e103a'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#c4b5fd'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('03 · AI AUDIT LAB', 16, 42);
-        ctx.fillStyle = '#e2e8f0'; ctx.font = '14px sans-serif'; ctx.fillText('Privacy · Citations · Fairness', 16, 80);
-        ctx.fillStyle = '#a78bfa'; ctx.fillText('AI-301 → AI-306 · Verified', 16, 122);
-      });
-      const monR = buildMonitorMesh(tracker, doc, 0.44, 0.28, [0.23, 0.77, -0.1], -0.18, (ctx, w, h) => {
-        ctx.fillStyle = '#160d2e'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('ETHICS & EVIDENCE', 16, 40);
-        ctx.fillStyle = '#34d399'; ctx.fillRect(16, 65, 190, 14);
-        ctx.fillStyle = '#38bdf8'; ctx.fillRect(16, 92, 165, 14);
-        ctx.fillStyle = '#c084fc'; ctx.fillRect(16, 119, 210, 14);
-      });
-      const shield = tracker.sphere(0.075, 14, 12, tracker.mat(0x8b5cf6, 0.25, 0.4, { emissive: 0x7c3aed, emissiveIntensity: 0.5 }), [0, 0.86, 0.18]);
-      group.add(monL.group, monR.group, shield);
-    } else if (station.id === 'security') {
-      // Triple SOC monitor array + firewall appliance
-      const monC = buildMonitorMesh(tracker, doc, 0.42, 0.27, [0, 0.77, -0.14], 0, (ctx, w, h) => {
-        ctx.fillStyle = '#271705'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('04 · CYBERSECURITY SOC', 14, 42);
-        ctx.fillStyle = '#fde68a'; ctx.font = '14px sans-serif'; ctx.fillText('Defensive Triage · Zero Trust', 14, 80);
-        ctx.fillStyle = '#f59e0b'; ctx.fillText('SEC-401 → SEC-406 · Scope Ready', 14, 122);
-      });
-      const monL = buildMonitorMesh(tracker, doc, 0.34, 0.25, [-0.38, 0.77, -0.06], 0.32, (ctx, w, h) => {
-        ctx.fillStyle = '#1c1206'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('SIEM TIMELINE', 16, 44);
-        ctx.fillStyle = '#10b981'; ctx.fillText('● Zero-Trust Active', 16, 90);
-      });
-      const firewall = tracker.box(0.32, 0.065, 0.2, tracker.mat(0xb45309, 0.35, 0.55, { emissive: 0xd97706, emissiveIntensity: 0.28 }), [0.36, 0.81, 0.08]);
-      group.add(monC.group, monL.group, firewall);
-    } else if (station.id === 'coding') {
-      // Coding monitor + smart thermostat + station readiness LED bar
-      const mon = buildMonitorMesh(tracker, doc, 0.46, 0.29, [-0.14, 0.77, -0.12], 0.1, (ctx, w, h) => {
-        ctx.fillStyle = '#290b1d'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#f472b6'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('05 · CODING SANDBOX', 14, 42);
-        ctx.fillStyle = '#fbcfe8'; ctx.font = '14px sans-serif'; ctx.fillText('Variables · Conditionals · Loops', 14, 80);
-        ctx.fillStyle = '#ec4899'; ctx.fillText('CODE-501 → CODE-503 · Ready', 14, 122);
-      });
-      const sensor = tracker.cyl(0.085, 0.085, 0.04, 16, tracker.mat(0xec4899, 0.3, 0.4, { emissive: 0xdb2777, emissiveIntensity: 0.4 }), [0.3, 0.81, 0.06]);
-      group.add(mon.group, sensor);
-    }
-
-    tracker.tagSelect(group, station.id);
-    stationGroups.set(station.id, group);
-    pickTargets.push(group);
-    scene.add(group);
-  }
-
-  const overviewCam = { pos: [0, 3.65, 4.55], target: [0, 0.85, -1.25] };
-  let targetPos = overviewCam.target.slice();
-  let camPos = overviewCam.pos.slice();
-  let selectedTrack = PATHWAY_STATIONS.some(s => s.id === activeTrack) ? activeTrack : 'hardware';
-  let frame = 0;
-  let paused = false;
-  let disposed = false;
-  let contextLost = false;
-  let pointers = null;
-
-  const stageHost = host.querySelector('[data-vlab-stage]') || host;
-  stageHost.appendChild(canvas);
-
-  function syncSelectionAppearance() {
-    for (const station of PATHWAY_STATIONS) {
-      const mat = selectionRings.get(station.id);
-      if (mat) mat.emissiveIntensity = station.id === selectedTrack ? 0.75 : 0.14;
-    }
-    host.querySelectorAll('[data-vlab-station]').forEach(btn => {
-      btn.setAttribute('aria-pressed', String(btn.dataset.vlabStation === selectedTrack));
-    });
-    const info = PATHWAY_STATIONS.find(s => s.id === selectedTrack) || PATHWAY_STATIONS[0];
-    const titleEl = host.querySelector('[data-vlab-title]');
-    const summaryEl = host.querySelector('[data-vlab-summary]');
-    const linksEl = host.querySelector('[data-vlab-links]');
-    if (titleEl) titleEl.textContent = `Station ${info.number} · ${info.name}`;
-    if (summaryEl) summaryEl.textContent = info.summary;
-    if (linksEl) {
-      linksEl.innerHTML = info.featured.map(lab => `<a class="vlab-ticket-pill" href="#lab/${lab.id}"><strong>${lab.id}</strong><span>${lab.title}</span><span aria-hidden="true">↗</span></a>`).join('') +
-        `<a class="vlab-pathway-btn" href="#labs/${info.id}" data-vlab-filter="${info.id}">Filter ${info.short} pathway →</a>`;
-    }
-  }
-
-  function resize() {
-    const rect = stageHost.getBoundingClientRect?.() || { width: stageHost.clientWidth || 720, height: stageHost.clientHeight || 380 };
-    if (rect.width < 2 || rect.height < 2) return false;
-    let ratio = Math.min(win.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-    if (rect.width * rect.height * ratio * ratio > MAX_RENDER_PIXELS) {
-      ratio = Math.sqrt(MAX_RENDER_PIXELS / (rect.width * rect.height));
-    }
-    renderer.setPixelRatio(ratio);
-    renderer.setSize(Math.max(1, Math.round(rect.width)), Math.max(1, Math.round(rect.height)), false);
-    camera.aspect = rect.width / rect.height;
-    camera.updateProjectionMatrix();
-    return true;
-  }
-
-  function draw() {
-    frame = 0;
-    if (disposed || paused || contextLost || doc.hidden || !resize()) return;
-    camera.position.set(camPos[0], camPos[1], camPos[2]);
-    camera.lookAt(targetPos[0], targetPos[1], targetPos[2]);
-    renderer.render(scene, camera);
-  }
-
-  function schedule() {
-    if (!disposed && !paused && !contextLost && !doc.hidden && !frame) {
-      frame = win.requestAnimationFrame(draw);
-    }
-  }
-
-  function flyTo(viewId) {
-    pointers?.cancel();
-    if (viewId === 'overview') {
-      camPos = overviewCam.pos.slice();
-      targetPos = overviewCam.target.slice();
-    } else {
-      const st = PATHWAY_STATIONS.find(s => s.id === viewId);
-      if (st) {
-        selectedTrack = st.id;
-        camPos = st.cam.pos.slice();
-        targetPos = st.cam.target.slice();
-        syncSelectionAppearance();
-        onSelectTrack?.(st.id);
-      }
-    }
-    schedule();
-  }
-
-  function zoom(direction) {
-    pointers?.cancel();
-    const factor = direction === 'in' ? 0.86 : 1.15;
-    camPos = camPos.map((c, i) => targetPos[i] + (c - targetPos[i]) * factor);
-    schedule();
-  }
-
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
-  function orbit(dx, dy) {
-    const vx = camPos[0] - targetPos[0];
-    const vz = camPos[2] - targetPos[2];
-    const angle = -dx * 0.0065;
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    camPos[0] = targetPos[0] + vx * cos - vz * sin;
-    camPos[2] = targetPos[2] + vx * sin + vz * cos;
-    camPos[1] = Math.max(1.05, Math.min(5.2, camPos[1] + dy * 0.008));
-    schedule();
-  }
-  function tap(event) {
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects(pickTargets, true).find(item => item.object.userData.selectId);
-    if (hit) flyTo(hit.object.userData.selectId);
-  }
-
-  function onHostClick(event) {
-    const filterLink = event.target.closest?.('[data-vlab-filter]');
-    if (filterLink && onSelectTrack) {
-      onSelectTrack(filterLink.dataset.vlabFilter, true);
-    }
-    const btn = event.target.closest?.('button');
-    if (!btn || !host.contains(btn)) return;
-    if (btn.dataset.vlabStation) {
-      flyTo(btn.dataset.vlabStation);
-    } else if (btn.dataset.vlabCam) {
-      const cmd = btn.dataset.vlabCam;
-      if (cmd === 'overview') flyTo('overview');
-      else if (cmd === 'in' || cmd === 'out') zoom(cmd);
-      else if (cmd === 'toggle') {
-        pointers?.cancel();
-        paused = !paused;
-        btn.textContent = paused ? 'Resume 3D' : 'Pause 3D';
-        if (!paused) schedule();
-      }
-    } else if (btn.dataset.vlabOpen && onOpenLab) {
-      onOpenLab(btn.dataset.vlabOpen);
-    }
-  }
-
-  pointers = bindPreviewPointers(canvas, { doc, win, enabled: () => !disposed && !paused && !contextLost && !doc.hidden, onOrbit: orbit, onTap: tap,
-    onSuspend(reason) { if (reason === 'context') contextLost = true; if (frame) win.cancelAnimationFrame(frame); frame = 0; },
-    onRestore(reason) { if (reason === 'context') contextLost = false; schedule(); }
-  });
-  host.addEventListener('click', onHostClick);
-  const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
-  observer?.observe(stageHost);
-
-  syncSelectionAppearance();
-  if (PATHWAY_STATIONS.some(s => s.id === activeTrack)) {
-    const st = PATHWAY_STATIONS.find(s => s.id === activeTrack);
-    camPos = st.cam.pos.slice();
-    targetPos = st.cam.target.slice();
-  }
-  schedule();
-
-  return {
-    flyTo,
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      pointers.dispose();
-      if (frame) win.cancelAnimationFrame(frame);
-      observer?.disconnect();
-      host.removeEventListener('click', onHostClick);
-      tracker.disposeAll(scene);
-      renderer.dispose();
-      canvas.remove();
-    }
-  };
+function drawText(ctx,w,h,title,lines,accent='#8bc7c4'){
+  ctx.fillStyle='#10171f';ctx.fillRect(0,0,w,h);ctx.fillStyle='#252e38';ctx.fillRect(0,0,w,48);
+  ctx.fillStyle=accent;ctx.font='bold 21px sans-serif';ctx.fillText(String(title).slice(0,39),20,32);
+  ctx.font='20px sans-serif';ctx.fillStyle='#e2e8f0';lines.forEach((line,index)=>ctx.fillText(String(line).slice(0,47),20,86+index*41));
 }
 
-/**
- * Mounts a live, state-reactive 3D Pathway Station inside #lab-workbench for
- * any investigation (NET-201..206, AI-301..306, SEC-401..406, CODE-501..503).
- * Updates its 3D monitors, LEDs, Wi-Fi coverage dome, printer tray, and sensors
- * whenever `cole:lab-state-change` fires.
- */
-export function mountLabStation3D(benchColumn, { scenario, getRecord }) {
-  if (!benchColumn || !scenario || scenario.track === 'hardware') return () => {};
-  const doc = benchColumn.ownerDocument;
-  const win = doc.defaultView || globalThis;
-  const workspaceEl = benchColumn.querySelector('#workspace');
-  if (!workspaceEl) return () => {};
-
-  const container = doc.createElement('section');
-  container.className = `vlab-station-card track-${scenario.track}`;
-  container.setAttribute('aria-label', 'Interactive 3D pathway station view');
-  container.innerHTML = `<div class="vlab-station-head">
-    <div><span class="hw-eyebrow">3D VIRTUAL LAB ENVIRONMENT · ${scenario.id}</span><h3>Live 3D ${scenario.track === 'network' ? 'Network & Systems Rack' : scenario.track === 'ai' ? 'AI Evaluation & Audit Station' : scenario.track === 'security' ? 'Cybersecurity SOC Console' : 'Coding & Physical Computing Bench'}</h3></div>
-    <div class="vlab-station-controls" role="group" aria-label="3D station camera controls">
-      <button type="button" data-station-cam="iso">Desk view</button>
-      <button type="button" data-station-cam="screen">Monitor</button>
-      <button type="button" data-station-cam="device">Equipment</button>
-      <button type="button" data-station-cam="in">Zoom +</button>
-      <button type="button" data-station-cam="out">Zoom −</button>
-      <button type="button" data-station-cam="toggle">Pause 3D</button>
-    </div>
-  </div>
-  <div class="vlab-station-stage" data-station-stage role="img" aria-label="3D virtual station that updates as you test changes in the workbench below."></div>
-  <p class="vlab-station-caption" data-station-caption>Drag horizontally to orbit the 3D station. Changes you make in the workspace below update the 3D equipment and monitors live.</p>`;
-
-  benchColumn.insertBefore(container, workspaceEl);
-  const stage = container.querySelector('[data-station-stage]');
-  const caption = container.querySelector('[data-station-caption]');
-  const canvas = doc.createElement('canvas');
-  canvas.className = 'vlab-canvas';
-  const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'low-power', preserveDrawingBuffer: false });
-  if (!gl) {
-    stage.innerHTML = `<div class="vlab-fallback">3D station preview is unavailable on this device. All simulation controls below remain active.</div>`;
-    return () => container.remove();
+function buildStation(t,scene,track,{parent=null,preview=false}={}){
+  const root=t.group(`${track}-station`,[0,0,0],parent),metal=t.mat(0x4e5964,.4,.55),black=t.mat(0x151b21,.63,.12),plastic=t.mat(0x242a31,.7,.02),paper=t.mat(0xe9edf1,.9,0);
+  buildDesk(t,root);
+  const main=monitor(t,root,`${track}-main-monitor`,.68,.42,[0,.77,-.14]);
+  t.box('keyboard',.44,.018,.14,plastic,[0,.792,.24],undefined,root);
+  for(let row=0;row<4;row++)t.box('key-row',.4,.006,.014,t.mat(0x4a535e,.74,.02),[0,.803,.19+row*.025],undefined,root);
+  t.box('mouse',.055,.025,.085,plastic,[.34,.8,.26],undefined,root);
+  t.cable('monitor-signal-lead',[[0,.95,-.16],[.05,.79,-.3],[.3,.79,-.32],[.44,.79,-.2]],0x14191f,root);
+  const leds=[];
+  for(let i=0;i<4;i++){const material=t.mat(0x64748b,.3,.05,{unique:true,emissive:0x334155,intensity:.22});t.sphere(`status-led-${i}`,.012,8,material,[-.55+i*.07,.794,.34],root);leds.push(material);}
+  let wifiDome=null,wifiAp=null,printerSheet=null,thermostat=null;const codeNodes=[];
+  if(track==='network'){
+    // Rack rails, blanking panels and keyed Ethernet ports remain recognizable at desk view.
+    t.box('rack-back',.4,.66,.028,black,[-.65,1.11,-.33],undefined,root);
+    for(const x of [-.865,-.435])t.box('rack-rail',.03,.7,.36,metal,[x,1.12,-.15],undefined,root);
+    for(let row=0;row<3;row++){
+      t.box('rack-appliance',.4,.1,.34,black,[-.65,.88+row*.17,-.14],undefined,root);
+      t.box('rack-front-panel',.4,.095,.016,metal,[-.65,.88+row*.17,.038],undefined,root);
+      for(let port=0;port<6;port++)t.box('ethernet-socket',.038,.034,.012,black,[-.798+port*.059,.88+row*.17,.052],undefined,root);
+    }
+    t.cable('patch-lead-blue',[[-.798,1.05,.065],[-.8,.99,.11],[-.59,.96,.11],[-.562,.88,.065]],0x2e64a5,root);
+    t.cable('patch-lead-yellow',[[-.68,1.22,.065],[-.68,1.13,.13],[-.45,1.12,.12],[-.444,1.05,.065]],0xcbb574,root);
+    wifiAp=t.cylinder('wireless-access-point',.075,.085,.025,20,t.mat(0xd7dde1,.45,.03),[.56,.79,.12],undefined,root);
+    t.cylinder('ap-led',.012,.012,.027,12,t.mat(0x62bda9,.4,0,{emissive:0x37ae8a,intensity:.35}),[.56,.792,.12],undefined,root);
+    wifiDome=t.sphere('coverage-visualization',.2,12,t.mat(0x70a8ba,.65,0,{alpha:.13,unique:true,emissive:0x256b83,intensity:.12}),[.56,.86,.12],root);wifiDome.isPickable=false;wifiDome.receiveShadows=false;
+    t.box('printer-base',.34,.17,.27,t.mat(0xbcc4cb,.68,.04),[.56,.862,-.18],undefined,root);
+    t.box('printer-lid',.36,.045,.29,plastic,[.56,.97,-.18],undefined,root);
+    t.box('printer-output-slot',.23,.018,.015,black,[.56,.916,-.036],undefined,root);
+    printerSheet=t.box('printed-sheet',.16,.005,.18,paper,[.56,.926,.015],undefined,root);
+  }else if(track==='ai'||track==='security'){
+    const title=track==='ai'?'AI AUDIT CHECKLIST':'DEFENSIVE SOC';
+    monitor(t,root,`${track}-side-monitor`,.44,.3,[-.58,.77,-.07],.2,(ctx,w,h)=>drawText(ctx,w,h,title,track==='ai'?['Protect private data','Verify sources and fairness','Keep a human reviewer']:['Authorized practice scope','Least privilege and logs','Contain, test and explain']));
+    t.box('sealed-appliance',.35,.075,.25,metal,[.58,.815,-.08],undefined,root);
+    for(let port=0;port<4;port++)t.box('appliance-network-port',.041,.028,.008,black,[.47+port*.066,.82,.049],undefined,root);
+    t.box('review-tablet',.22,.015,.29,black,[.58,.79,.24],[-.04,0,0],root);
+    const tablet=t.screen('review-tablet-display',.195,.25,(ctx,w,h)=>drawText(ctx,w,h,track==='ai'?'HUMAN REVIEW':'SCOPE AND ACCESS',track==='ai'?['Evidence','Fairness','Decision']:['Fictional system only','Permission required','No real credentials']),root);
+    tablet.mesh.position.copyFromFloats(.58,.800,.24);tablet.mesh.rotation.x=-Math.PI/2;
+  }else if(track==='coding'){
+    t.cylinder('thermostat-housing',.105,.105,.035,24,plastic,[.58,.8,-.04],undefined,root);
+    thermostat=t.mat(0x53768d,.4,.25,{unique:true,emissive:0x29637c,intensity:.22});
+    t.cylinder('thermostat-status-ring',.082,.082,.039,24,thermostat,[.58,.803,-.04],undefined,root);
+    for(let i=0;i<6;i++){const material=t.mat(0x475569,.45,.16,{unique:true,emissive:0x1e293b,intensity:.15});t.box(`readiness-node-${i}`,.07,.045,.07,material,[-.73+i*.085,.8,.13],undefined,root);codeNodes.push(material);}
+    t.box('sensor-controller',.22,.018,.14,t.mat(0x254e43,.72,.05),[.57,.79,.23],undefined,root);
+    t.box('controller-chip',.055,.009,.055,black,[.57,.807,.23],undefined,root);
+    t.cable('sensor-wire',[[.57,.81,.23],[.74,.82,.21],[.74,.81,-.04],[.65,.82,-.04]],0x98784e,root);
+  }else{
+    t.box('tower',.29,.43,.35,metal,[-.61,.99,-.09],undefined,root);
+    t.box('front-case-panel',.28,.42,.018,black,[-.61,.99,.095],undefined,root);
+    for(let i=0;i<5;i++)t.box('case-air-slot',.2,.008,.006,plastic,[-.61,.85+i*.022,.108],undefined,root);
   }
+  if(preview)main.screen.redraw((ctx,w,h)=>drawText(ctx,w,h,PATHWAY_STATIONS.find(s=>s.id===track)?.short||'HARDWARE', ['Choose a ticket to investigate','All equipment here is simulated']));
+  return {root,main,leds,wifiAp,wifiDome,printerSheet,thermostat,codeNodes};
+}
 
-  const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: false, alpha: false, powerPreference: 'low-power', preserveDrawingBuffer: false });
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+/** Babylon owns rendering resources; the caller continues to own all lab state. */
+function createPreviewRuntime(stage,doc){
+  const win=doc.defaultView||globalThis,canvas=doc.createElement('canvas');canvas.className='vlab-canvas';
+  canvas.style&&(canvas.style.touchAction='pan-y');
+  let engine;
+  try{engine=new BABYLON.Engine(canvas,false,{alpha:false,antialias:false,stencil:false,powerPreference:'low-power',preserveDrawingBuffer:false,premultipliedAlpha:false,doNotHandleTouchAction:true},false);}
+  catch{return null;}
+  const scene=new BABYLON.Scene(engine);scene.useRightHandedSystem=true;
+  scene.clearColor=new BABYLON.Color4(.033,.045,.061,1);scene.skipPointerMovePicking=true;
+  scene.detachControl();
+  scene.imageProcessingConfiguration.toneMappingEnabled=true;
+  scene.imageProcessingConfiguration.toneMappingType=BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+  scene.imageProcessingConfiguration.exposure=1.05;scene.imageProcessingConfiguration.contrast=1.08;
+  const camera=new BABYLON.FreeCamera('equipment-camera',new BABYLON.Vector3(0,1.85,1.55),scene);camera.fov=38*Math.PI/180;camera.minZ=.035;camera.maxZ=45;
+  scene.activeCamera=camera;
+  const equipment=createEquipment(scene,doc),shadows=addLighting(scene);
   stage.appendChild(canvas);
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x091426);
-  const camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.1, 30);
-  const tracker = createResourceTracker();
-  addStudioLighting(scene, tracker);
-
-  const accent = { network: 0x3b82f6, ai: 0x8b5cf6, security: 0xf59e0b, coding: 0xec4899 }[scenario.track] || 0x18b7a0;
-  const desk = buildDeskBase(tracker, accent, 1.85, 0.96);
-  scene.add(desk);
-
-  // Dynamic state-reactive 3D elements
-  const leds = [];
-  for (let i = 0; i < 4; i++) {
-    const ledMat = tracker.mat(0x64748b, 0.25, 0.2, { emissive: 0x334155, emissiveIntensity: 0.5 });
-    const led = tracker.sphere(0.018, 10, 8, ledMat, [-0.55 + i * 0.08, 0.81, 0.28]);
-    scene.add(led);
-    leds.push(ledMat);
-  }
-
-  // Primary 3D monitor on desk
-  const mainMonitor = buildMonitorMesh(tracker, doc, 0.68, 0.42, [0, 0.77, -0.14], 0, () => {});
-  scene.add(mainMonitor.group);
-
-  // Track-specific 3D equipment
-  let wifiDome = null;
-  let wifiAp = null;
-  let printerSheet = null;
-  let thermostatRingMat = null;
-  const codeNodeMats = [];
-
-  if (scenario.track === 'network') {
-    // 42U Network Rack & Switch on left, Printer/Wi-Fi AP on right
-    const rack = tracker.box(0.46, 0.68, 0.36, tracker.mat(0x0f172a, 0.4, 0.65), [-0.62, 1.11, -0.12]);
-    const sw = tracker.box(0.42, 0.08, 0.37, tracker.mat(0x1d4ed8, 0.35, 0.5, { emissive: 0x2563eb, emissiveIntensity: 0.35 }), [-0.62, 1.28, -0.12]);
-    scene.add(rack, sw);
-    // Wi-Fi AP & translucent coverage dome
-    wifiAp = tracker.cyl(0.08, 0.08, 0.025, 16, tracker.mat(0xf8fafc, 0.3, 0.2), [0.56, 0.79, 0.05]);
-    const domeMat = tracker.mat(0x38bdf8, 0.2, 0.1, { transparent: true, opacity: 0.24, emissive: 0x0284c7, emissiveIntensity: 0.35 });
-    wifiDome = tracker.sphere(0.24, 18, 12, domeMat, [0.56, 0.88, 0.05]);
-    // Classroom Laser Printer
-    const printerBody = tracker.box(0.34, 0.22, 0.28, tracker.mat(0xcbd5e1, 0.5, 0.2), [0.56, 0.88, -0.18]);
-    printerSheet = tracker.box(0.16, 0.008, 0.18, tracker.mat(0xffffff, 0.6, 0.05), [0.56, 0.995, -0.06]);
-    scene.add(wifiAp, wifiDome, printerBody, printerSheet);
-  } else if (scenario.track === 'ai') {
-    const sideMon = buildMonitorMesh(tracker, doc, 0.46, 0.32, [-0.56, 0.77, -0.06], 0.25, (ctx, w, h) => {
-      ctx.fillStyle = '#190d33'; ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#c4b5fd'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('AI AUDIT CHECKLIST', 16, 36);
-      ctx.fillStyle = '#a78bfa'; ctx.font = '13px sans-serif';
-      ctx.fillText('1. Protect private data', 16, 72);
-      ctx.fillText('2. Verify real sources', 16, 102);
-      ctx.fillText('3. Keep humans in the loop', 16, 132);
-    });
-    const totem = tracker.sphere(0.09, 16, 14, tracker.mat(0x8b5cf6, 0.22, 0.4, { emissive: 0x7c3aed, emissiveIntensity: 0.45 }), [0.56, 0.88, 0.06]);
-    scene.add(sideMon.group, totem);
-  } else if (scenario.track === 'security') {
-    const sideMon = buildMonitorMesh(tracker, doc, 0.46, 0.32, [-0.56, 0.77, -0.06], 0.25, (ctx, w, h) => {
-      ctx.fillStyle = '#241404'; ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('DEFENSIVE SOC TELEMETRY', 14, 36);
-      ctx.fillStyle = '#fde68a'; ctx.font = '13px sans-serif';
-      ctx.fillText('• Authorized lab scope only', 14, 74);
-      ctx.fillText('• Least privilege & audit logs', 14, 104);
-      ctx.fillText('• Contain & verify safely', 14, 134);
-    });
-    const appliance = tracker.box(0.38, 0.08, 0.24, tracker.mat(0xb45309, 0.35, 0.55, { emissive: 0xd97706, emissiveIntensity: 0.3 }), [0.56, 0.81, 0.02]);
-    scene.add(sideMon.group, appliance);
-  } else if (scenario.track === 'coding') {
-    // Thermostat cylinder + 6 station readiness nodes
-    const thermoBase = tracker.cyl(0.11, 0.11, 0.045, 20, tracker.mat(0x1e293b, 0.35, 0.5), [0.55, 0.8, -0.08]);
-    thermostatRingMat = tracker.mat(0x38bdf8, 0.25, 0.3, { emissive: 0x0284c7, emissiveIntensity: 0.55 });
-    const thermoRing = tracker.cyl(0.085, 0.085, 0.052, 20, thermostatRingMat, [0.55, 0.805, -0.08]);
-    scene.add(thermoBase, thermoRing);
-    for (let i = 0; i < 6; i++) {
-      const m = tracker.mat(0x475569, 0.3, 0.3, { emissive: 0x1e293b, emissiveIntensity: 0.4 });
-      const node = tracker.box(0.065, 0.05, 0.065, m, [-0.72 + i * 0.09, 0.8, 0.12]);
-      codeNodeMats.push(m);
-      scene.add(node);
-    }
-  }
-
-  function syncFromState() {
-    const rec = getRecord?.() || {};
-    const st = rec.state || {};
-    const results = Array.isArray(st.results) ? st.results : [];
-    const passCount = results.filter(r => r && r.ok).length;
-    const allPass = results.length > 0 && results.every(r => r && r.ok);
-
-    // Update 4 status LEDs on desk
-    leds.forEach((mat, idx) => {
-      const ok = allPass || idx < passCount;
-      mat.color.setHex(ok ? 0x10b981 : st.tested ? 0xf59e0b : 0x64748b);
-      mat.emissive.setHex(ok ? 0x059669 : st.tested ? 0xd97706 : 0x334155);
-      mat.emissiveIntensity = ok ? 0.85 : 0.45;
-    });
-
-    // Update track-specific 3D props
-    if (wifiDome && wifiAp) {
-      const centered = st.placement === 'ceiling-center';
-      const clean5g = st.band === '5' && st.channel === '40';
-      wifiAp.position.x = centered ? 0.46 : 0.72;
-      wifiDome.position.x = wifiAp.position.x;
-      wifiDome.scale.setScalar(centered ? 1.25 : 0.75);
-      wifiDome.material.color.setHex(clean5g ? 0x10b981 : 0xf59e0b);
-      wifiDome.material.emissive.setHex(clean5g ? 0x059669 : 0xd97706);
-    }
-    if (printerSheet) {
-      const ready = st.spooler === 'running' && st.queue === 'resume' && st.port === 'approved' && st.job === 'release';
-      printerSheet.visible = ready;
-    }
-    if (thermostatRingMat) {
-      const code = String(st.code || '');
-      const hasBranches = /Heating/i.test(code) && /Comfortable/i.test(code) && /Cooling/i.test(code);
-      thermostatRingMat.color.setHex(allPass ? 0x10b981 : hasBranches ? 0x38bdf8 : 0xf59e0b);
-      thermostatRingMat.emissive.setHex(allPass ? 0x059669 : hasBranches ? 0x0284c7 : 0xd97706);
-    }
-    if (codeNodeMats.length) {
-      const lines = Array.isArray(st.output) ? st.output.length : 0;
-      codeNodeMats.forEach((m, idx) => {
-        const lit = allPass || idx < lines;
-        m.color.setHex(lit ? 0xec4899 : 0x475569);
-        m.emissive.setHex(lit ? 0xdb2777 : 0x1e293b);
-      });
-    }
-
-    // Redraw 3D Main Monitor screen with live lab telemetry
-    mainMonitor.screen.redraw((ctx, w, h) => {
-      ctx.fillStyle = '#071120';
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = allPass ? '#065f46' : '#1e293b';
-      ctx.fillRect(0, 0, w, 32);
-      ctx.fillStyle = allPass ? '#6ee7b7' : '#38bdf8';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.fillText(`${scenario.id} · ${scenario.title.slice(0, 28)}`, 12, 21);
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 15px sans-serif';
-      if (scenario.track === 'network') {
-        const line1 = st.ip ? `IPv4: ${st.ip}  GW: ${st.gateway || '-'}` : st.portVlan ? `Port VLAN: ${st.portVlan} (${st.mode || '-'})` : st.placement ? `AP: ${st.placement}` : st.spooler ? `Spooler: ${st.spooler} · Port: ${st.port || '-'}` : `Checks run: ${st.checkRuns || 0}`;
-        const line2 = st.dns ? `DNS: ${st.dns}` : st.band ? `Band: ${st.band} GHz · Ch: ${st.channel || '-'} (${st.width || '-'} MHz)` : st.queue ? `Queue: ${st.queue} · Job: ${st.job || '-'}` : `Tested: ${st.tested ? 'Yes' : 'Pending'}`;
-        ctx.fillText(line1.slice(0, 38), 12, 64);
-        ctx.fillStyle = '#93c5fd';
-        ctx.font = '13px sans-serif';
-        ctx.fillText(line2.slice(0, 42), 12, 92);
-      } else if (scenario.track === 'ai') {
-        ctx.fillText(`AI Audit Runs: ${st.checkRuns || 0}`, 12, 64);
-        ctx.fillStyle = '#c4b5fd';
-        ctx.font = '13px sans-serif';
-        ctx.fillText(allPass ? '✓ All privacy, evidence & fairness checks pass' : 'Review prompt, sources, or policy controls below', 12, 92);
-      } else if (scenario.track === 'security') {
-        ctx.fillText(`Scope Authorized: ${st.scope ? 'YES (Active)' : 'Awaiting Check'}`, 12, 64);
-        ctx.fillStyle = '#fcd34d';
-        ctx.font = '13px sans-serif';
-        ctx.fillText(allPass ? '✓ Defensive controls verified' : `Triage checks passing: ${passCount}/${results.length || 3}`, 12, 92);
-      } else if (scenario.track === 'coding') {
-        const firstLine = (Array.isArray(st.output) && st.output[0]) ? `Out: ${st.output[0]}` : 'Run program fixtures to see output';
-        ctx.fillText(`Fixture Runs: ${st.checkRuns || 0}`, 12, 64);
-        ctx.fillStyle = '#f9a8d4';
-        ctx.font = '13px monospace';
-        ctx.fillText(String(firstLine).slice(0, 38), 12, 92);
-      }
-
-      ctx.fillStyle = allPass ? '#10b981' : st.tested ? '#f59e0b' : '#64748b';
-      ctx.fillRect(12, 118, w - 24, 42);
-      ctx.fillStyle = '#041019';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.fillText(allPass ? 'STATUS: CHECKS PASS · VERIFY THE TASK' : st.tested ? `STATUS: ${passCount}/${results.length || 3} CHECKS PASSING` : 'STATUS: READY FOR WORKBENCH TEST', 22, 144);
-    });
-
-    if (caption) {
-      caption.textContent = allPass
-        ? `3D Station Status: All checks passing for ${scenario.id}. Ready to verify and explain!`
-        : `3D Station Status: Live view synced with ${scenario.id}. Make changes below and test to update the 3D equipment.`;
-    }
-  }
-
-  const presets = {
-    iso: { pos: [0, 1.85, 1.55], target: [0, 0.96, -0.08] },
-    screen: { pos: [0, 1.12, 0.62], target: [0, 1.08, -0.14] },
-    device: { pos: [0.58, 1.38, 0.95], target: [0.35, 0.88, -0.05] }
-  };
-  let camPos = presets.iso.pos.slice();
-  let targetPos = presets.iso.target.slice();
-  let frame = 0;
-  let paused = false;
-  let disposed = false;
-  let stationContextLost = false;
-  let stationPointers = null;
-
-  function resize() {
-    if (benchColumn.hidden) return false;
-    const rect = stage.getBoundingClientRect?.() || { width: stage.clientWidth || 640, height: stage.clientHeight || 260 };
-    if (rect.width < 2 || rect.height < 2) return false;
-    let ratio = Math.min(win.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-    if (rect.width * rect.height * ratio * ratio > MAX_RENDER_PIXELS) {
-      ratio = Math.sqrt(MAX_RENDER_PIXELS / (rect.width * rect.height));
-    }
-    renderer.setPixelRatio(ratio);
-    renderer.setSize(Math.max(1, Math.round(rect.width)), Math.max(1, Math.round(rect.height)), false);
-    camera.aspect = rect.width / rect.height;
-    camera.updateProjectionMatrix();
+  let frame=0,disposed=false,paused=false,lost=false,visible=true,pointers=null;
+  let camPos=[0,1.85,1.55],target=[0,.96,-.08];
+  const enabled=()=>!disposed&&!paused&&!lost&&visible&&!doc.hidden&&!stage.closest?.('[hidden]');
+  function resize(){
+    const rect=stage.getBoundingClientRect?.()||{width:stage.clientWidth||640,height:stage.clientHeight||300};if(rect.width<2||rect.height<2)return false;
+    const ratio=Math.min(Math.max(.25,Number(win.devicePixelRatio)||1),MAX_PIXEL_RATIO,Math.sqrt(MAX_RENDER_PIXELS/(rect.width*rect.height)));
+    const width=Math.max(1,Math.floor(rect.width*ratio)),height=Math.max(1,Math.floor(rect.height*ratio));
+    if(canvas.width!==width||canvas.height!==height)engine.setSize(width,height,false);
+    if(canvas.style){canvas.style.width='100%';canvas.style.height='100%';}
     return true;
   }
-
-  function draw() {
-    frame = 0;
-    if (disposed || paused || stationContextLost || doc.hidden || !resize()) return;
-    camera.position.set(camPos[0], camPos[1], camPos[2]);
-    camera.lookAt(targetPos[0], targetPos[1], targetPos[2]);
-    renderer.render(scene, camera);
-  }
-
-  function schedule() {
-    if (!disposed && !paused && !stationContextLost && !doc.hidden && !benchColumn.hidden && !frame) {
-      frame = win.requestAnimationFrame(draw);
-    }
-  }
-
-  function orbit(dx, dy) {
-    const vx = camPos[0] - targetPos[0];
-    const vz = camPos[2] - targetPos[2];
-    const angle = -dx * 0.007;
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    camPos[0] = targetPos[0] + vx * cos - vz * sin;
-    camPos[2] = targetPos[2] + vx * sin + vz * cos;
-    camPos[1] = Math.max(0.88, Math.min(2.8, camPos[1] + dy * 0.006));
-    schedule();
-  }
-
-  function onControlsClick(event) {
-    const btn = event.target.closest?.('button[data-station-cam]');
-    if (!btn) return;
-    const cmd = btn.dataset.stationCam;
-    stationPointers.cancel();
-    if (presets[cmd]) {
-      camPos = presets[cmd].pos.slice();
-      targetPos = presets[cmd].target.slice();
-      schedule();
-    } else if (cmd === 'in' || cmd === 'out') {
-      const factor = cmd === 'in' ? 0.85 : 1.16;
-      camPos = camPos.map((c, i) => targetPos[i] + (c - targetPos[i]) * factor);
-      schedule();
-    } else if (cmd === 'toggle') {
-      paused = !paused;
-      btn.textContent = paused ? 'Resume 3D' : 'Pause 3D';
-      if (!paused) schedule();
-    }
-  }
-
-  function onStateChange(event) {
-    if (!event?.detail?.id || event.detail.id === scenario.id) {
-      syncFromState();
-      schedule();
-    }
-  }
-
-  function onTabReveal() {
-    if (benchColumn.hidden) stationPointers.cancel();
-    else schedule();
-  }
-
-  stationPointers = bindPreviewPointers(canvas, { doc, win, enabled: () => !disposed && !paused && !stationContextLost && !doc.hidden && !benchColumn.hidden, onOrbit: orbit,
-    onSuspend(reason) { if (reason === 'context') stationContextLost = true; if (frame) win.cancelAnimationFrame(frame); frame = 0; },
-    onRestore(reason) { if (reason === 'context') stationContextLost = false; schedule(); }
+  function draw(){frame=0;if(!enabled()||!resize())return;camera.position.copyFromFloats(...camPos);camera.setTarget(vector(target));engine.beginFrame();scene.render();engine.endFrame();}
+  function schedule(){if(enabled()&&!frame)frame=win.requestAnimationFrame(draw);}
+  function cancel(){pointers?.cancel();}
+  function stop(){if(frame)win.cancelAnimationFrame(frame);frame=0;}
+  function setView(pos,point){cancel();camPos=pos.slice();target=point.slice();schedule();}
+  function zoom(direction,min=.38,max=10){cancel();const delta=camPos.map((value,i)=>value-target[i]),distance=Math.hypot(...delta);if(!distance)return;const factor=Math.max(min,Math.min(max,distance*(direction==='in'?.85:1.16)))/distance;camPos=delta.map((value,i)=>target[i]+value*factor);schedule();}
+  function orbit(dx,dy){const x=camPos[0]-target[0],z=camPos[2]-target[2],angle=-dx*.007,c=Math.cos(angle),s=Math.sin(angle);camPos[0]=target[0]+x*c-z*s;camPos[2]=target[2]+x*s+z*c;camPos[1]=Math.max(target[1]+.06,Math.min(target[1]+4,camPos[1]+dy*.006));schedule();}
+  function suspend(reason){if(reason==='context')lost=true;cancel();stop();}
+  function restore(reason){if(reason==='context')return;schedule();}
+  // The DOM restore event precedes Babylon rebuilding its GPU resources.
+  // Resume only after the engine reports that its own restoration is complete.
+  const contextRestored=engine.onContextRestoredObservable.add(()=>{
+    lost=false;schedule();
+    // Restoring the engine can start asynchronous material recompilation.
+    // Request the completed image as well as the immediate restoration frame.
+    scene.executeWhenReady(()=>{if(!disposed)schedule();});
   });
-  container.addEventListener('click', onControlsClick);
-  doc.addEventListener('cole:lab-state-change', onStateChange);
-  doc.addEventListener('click', onTabReveal);
-  doc.addEventListener('keydown', onTabReveal);
-  const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
-  observer?.observe(stage);
+  function observe(){const observer=typeof ResizeObserver==='function'?new ResizeObserver(schedule):null;observer?.observe(stage);if(!observer)win.addEventListener?.('resize',schedule);return ()=>{observer?.disconnect();if(!observer)win.removeEventListener?.('resize',schedule);};}
+  const stopObserve=observe();
+  function bind(onTap){pointers=bindPreviewPointers(canvas,{doc,win,enabled,onOrbit:orbit,onTap,onSuspend:suspend,onRestore:restore});}
+  function setVisible(value){visible=!!value;if(!visible){cancel();stop();}else schedule();}
+  function pause(){paused=true;cancel();stop();}
+  function resume(){paused=false;schedule();}
+  function finish(){
+    for(const mesh of scene.meshes){if(mesh.name==='coverage-visualization'||mesh.name.endsWith('-display'))continue;shadows.addShadowCaster(mesh,false);}
+    scene.executeWhenReady(()=>{if(!disposed)schedule();});schedule();
+  }
+  function dispose(){if(disposed)return;disposed=true;cancel();stop();pointers?.dispose();stopObserve();if(contextRestored)engine.onContextRestoredObservable.remove(contextRestored);shadows.dispose();equipment.dispose();scene.dispose();engine.dispose();canvas.remove?.();}
+  return {scene,camera,engine,canvas,equipment,schedule,setView,zoom,bind,finish,setVisible,pause,resume,cancel,dispose,get paused(){return paused;},get disposed(){return disposed;}};
+}
 
-  syncFromState();
-  schedule();
+/** Optional legacy room view. Main lesson routes never mount a decorative hub. */
+export function mountVirtualLabRoom(host,{activeTrack='all',onSelectTrack,onOpenLab}={}){
+  if(!host?.ownerDocument)return null;
+  const stage=host.querySelector('[data-vlab-stage]')||host,doc=host.ownerDocument,runtime=createPreviewRuntime(stage,doc);if(!runtime)return null;
+  const {scene,equipment:t}=runtime;
+  t.box('classroom-floor',11,.07,6,t.mat(0x353a42,.88,.02),[0,-.04,-1]);
+  const stations=new Map();
+  for(const station of PATHWAY_STATIONS){const equipment=buildStation(t,scene,station.id,{preview:true});equipment.root.position.copyFromFloats(...station.pos);t.tag(equipment.root,station.id);stations.set(station.id,equipment);}
+  let selected=PATHWAY_STATIONS.some(station=>station.id===activeTrack)?activeTrack:'hardware';
+  const overview={pos:[0,3.65,5.5],target:[0,.85,-1.25]};
+  function sync(){const info=PATHWAY_STATIONS.find(station=>station.id===selected);host.querySelectorAll('[data-vlab-station]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.vlabStation===selected)));const title=host.querySelector('[data-vlab-title]'),summary=host.querySelector('[data-vlab-summary]'),links=host.querySelector('[data-vlab-links]');if(title)title.textContent=`Station ${info.number} · ${info.name}`;if(summary)summary.textContent=info.summary;if(links)links.innerHTML=info.featured.map(lab=>`<a class="vlab-ticket-pill" href="#lab/${escape(lab.id)}"><strong>${escape(lab.id)}</strong><span>${escape(lab.title)}</span><span aria-hidden="true">↗</span></a>`).join('')+`<a class="vlab-pathway-btn" href="#labs/${info.id}" data-vlab-filter="${info.id}">Filter ${info.short} pathway →</a>`;}
+  function flyTo(id){if(runtime.disposed)return;if(id==='overview'){runtime.setView(overview.pos,overview.target);return;}const station=PATHWAY_STATIONS.find(station=>station.id===id);if(!station)return;selected=id;runtime.setView(station.cam.pos,station.cam.target);sync();onSelectTrack?.(id);}
+  runtime.bind(event=>{const rect=runtime.canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;const hit=scene.pick((event.clientX-rect.left)*runtime.canvas.width/rect.width,(event.clientY-rect.top)*runtime.canvas.height/rect.height,mesh=>!!mesh.metadata?.selectId,false,runtime.camera);if(hit?.hit)flyTo(hit.pickedMesh.metadata.selectId);});
+  function click(event){const filter=event.target.closest?.('[data-vlab-filter]');if(filter&&host.contains(filter))onSelectTrack?.(filter.dataset.vlabFilter,true);const button=event.target.closest?.('button');if(!button||!host.contains(button))return;if(button.dataset.vlabStation)flyTo(button.dataset.vlabStation);else if(button.dataset.vlabCam){const id=button.dataset.vlabCam;if(id==='overview')flyTo(id);else if(id==='in'||id==='out')runtime.zoom(id,.5,12);else if(id==='toggle'){runtime.paused?runtime.resume():runtime.pause();button.textContent=runtime.paused?'Resume 3D':'Pause 3D';}}else if(button.dataset.vlabOpen)onOpenLab?.(button.dataset.vlabOpen);}
+  host.addEventListener('click',click);sync();const initial=PATHWAY_STATIONS.find(station=>station.id===activeTrack);runtime.setView(initial?.cam.pos||overview.pos,initial?.cam.target||overview.target);runtime.finish();
+  return {flyTo,pause:runtime.pause,resume:runtime.resume,cancelInteraction:runtime.cancel,dispose(){host.removeEventListener('click',click);runtime.dispose();}};
+}
 
-  return () => {
-    if (disposed) return;
-    disposed = true;
-    stationPointers.dispose();
-    if (frame) win.cancelAnimationFrame(frame);
-    observer?.disconnect();
-    container.removeEventListener('click', onControlsClick);
-    doc.removeEventListener('cole:lab-state-change', onStateChange);
-    doc.removeEventListener('click', onTabReveal);
-    doc.removeEventListener('keydown', onTabReveal);
-    tracker.disposeAll(scene);
-    renderer.dispose();
-    container.remove();
-  };
+/** Live read-only equipment views. Ordinary workspace controls remain authoritative. */
+export function mountLabStation3D(benchColumn,{scenario,getRecord}={}){
+  if(!benchColumn?.ownerDocument||!scenario||scenario.track==='hardware')return ()=>{};
+  const doc=benchColumn.ownerDocument,workspace=benchColumn.querySelector('#workspace');if(!workspace)return ()=>{};
+  const container=doc.createElement('section');container.className=`vlab-station-card track-${scenario.track}`;container.setAttribute('aria-label','Interactive 3D pathway station view');
+  const name={network:'Network & Systems Rack',ai:'AI Evaluation & Audit Station',security:'Cybersecurity SOC Console',coding:'Coding & Physical Computing Bench'}[scenario.track]||'Practice Station';
+  container.innerHTML=`<div class="vlab-station-head"><div><span class="hw-eyebrow">LIVE EQUIPMENT · ${escape(scenario.id)}</span><h3>${name}</h3></div><div class="vlab-station-controls" role="group" aria-label="3D station camera controls"><button type="button" data-station-cam="iso">Desk view</button><button type="button" data-station-cam="screen">Monitor</button><button type="button" data-station-cam="device">Equipment</button><button type="button" data-station-cam="in">Zoom +</button><button type="button" data-station-cam="out">Zoom −</button><button type="button" data-station-cam="toggle">Pause 3D</button></div></div><div class="vlab-station-stage" data-station-stage role="img" aria-label="3D equipment synchronized with the ordinary workbench controls below."></div><p class="vlab-station-caption" data-station-caption>Drag sideways to orbit. Use the workbench controls below to make and test changes.</p>`;
+  benchColumn.insertBefore(container,workspace);
+  const stage=container.querySelector('[data-station-stage]'),caption=container.querySelector('[data-station-caption]'),runtime=createPreviewRuntime(stage,doc);
+  if(!runtime){stage.innerHTML='<div class="vlab-fallback">The 3D equipment view is unavailable here. All simulation controls and reports remain available below.</div>';return ()=>container.remove();}
+  const station=buildStation(runtime.equipment,runtime.scene,scenario.track);
+  const presets={iso:{pos:[0,1.85,1.55],target:[0,.96,-.08]},screen:{pos:[0,1.12,.62],target:[0,1.08,-.14]},device:{pos:[.58,1.38,.95],target:[.35,.88,-.05]}};
+  let disposed=false,lastState='';
+  function syncFromState(){
+    const state=getRecord?.()?.state||{};
+    // No redraw, texture upload, or render request for repeated unchanged records.
+    const serialized=JSON.stringify(state);if(lastState===serialized)return false;lastState=serialized;
+    const results=Array.isArray(state.results)?state.results:[],passed=results.filter(result=>result?.ok).length,allPass=results.length>0&&results.every(result=>result?.ok);
+    station.leds.forEach((material,index)=>tint(material,allPass||index<passed?0x10b981:state.tested?0xc99849:0x64748b,allPass||index<passed?0x059669:state.tested?0x9a6c26:0x334155,.32));
+    if(station.wifiAp){const centered=state.placement==='ceiling-center',clear=state.band==='5'&&state.channel==='40';station.wifiAp.position.x=centered?.46:.72;station.wifiDome.position.x=station.wifiAp.position.x;station.wifiDome.scaling.setAll(centered?1.25:.75);tint(station.wifiDome.material,clear?0x10b981:0xf59e0b,clear?0x059669:0xd97706,.12);station.printerSheet.isVisible=state.spooler==='running'&&state.queue==='resume'&&state.port==='approved'&&state.job==='release';}
+    if(station.thermostat){const code=String(state.code||''),branches=/Heating/i.test(code)&&/Comfortable/i.test(code)&&/Cooling/i.test(code);tint(station.thermostat,allPass?0x10b981:branches?0x537e96:0xc99849,allPass?0x059669:branches?0x29637c:0x9a6c26,.25);}
+    const output=Array.isArray(state.output)?state.output:[];station.codeNodes.forEach((material,index)=>tint(material,allPass||index<output.length?0xc8789e:0x475569,allPass||index<output.length?0x9c3e6f:0x1e293b,.25));
+    station.main.screen.redraw((ctx,w,h)=>{
+      let lines;
+      if(scenario.track==='network')lines=[state.ip?`IPv4: ${state.ip}  GW: ${state.gateway||'-'}`:state.portVlan?`Port VLAN: ${state.portVlan} (${state.mode||'-'})`:state.placement?`AP: ${state.placement}`:state.spooler?`Spooler: ${state.spooler} · Port: ${state.port||'-'}`:`Checks run: ${state.checkRuns||0}`,state.dns?`DNS: ${state.dns}`:state.band?`Band: ${state.band} GHz · Ch: ${state.channel||'-'} (${state.width||'-'} MHz)`:state.queue?`Queue: ${state.queue} · Job: ${state.job||'-'}`:`Tested: ${state.tested?'Yes':'Pending'}`];
+      else if(scenario.track==='ai')lines=[`AI audit runs: ${state.checkRuns||0}`,allPass?'Privacy, evidence and fairness checks pass':'Review prompt, sources and policy below'];
+      else if(scenario.track==='security')lines=[`Scope: ${state.scope?'AUTHORIZED':'Awaiting check'}`,allPass?'Defensive controls checked':`Triage checks passing: ${passed}/${results.length||3}`];
+      else lines=[`Fixture runs: ${state.checkRuns||0}`,output[0]!==undefined?`Out: ${output[0]}`:'Run program fixtures to see output'];
+      drawText(ctx,w,h,`${scenario.id} · ${String(scenario.title).slice(0,28)}`,lines);
+      ctx.fillStyle=allPass?'#267b61':state.tested?'#b08b4e':'#465468';ctx.fillRect(16,218,w-32,48);ctx.fillStyle='#f1f5f9';ctx.font='bold 17px sans-serif';ctx.fillText(allPass?'STATUS: CHECKS PASS · VERIFY THE TASK':state.tested?`STATUS: ${passed}/${results.length||3} CHECKS PASSING`:'STATUS: READY FOR WORKBENCH TEST',25,249);
+    });
+    if(caption)caption.textContent=allPass?`3D Station Status: All checks passing for ${scenario.id}. Ready to verify and explain!`:`3D Station Status: Live view synced with ${scenario.id}. Make changes below and test to update the 3D equipment.`;
+    return true;
+  }
+  function click(event){const button=event.target.closest?.('button[data-station-cam]');if(!button||!container.contains?.(button))return;const command=button.dataset.stationCam;runtime.cancel();if(presets[command])runtime.setView(presets[command].pos,presets[command].target);else if(command==='in'||command==='out')runtime.zoom(command);else if(command==='toggle'){runtime.paused?runtime.resume():runtime.pause();button.textContent=runtime.paused?'Resume 3D':'Pause 3D';}}
+  function change(event){if(disposed||event?.detail?.id&&event.detail.id!==scenario.id)return;if(syncFromState())runtime.schedule();}
+  function reveal(){runtime.setVisible(!benchColumn.hidden&&!benchColumn.closest?.('[hidden]'));}
+  runtime.bind();container.addEventListener('click',click);doc.addEventListener('cole:lab-state-change',change);doc.addEventListener('click',reveal);doc.addEventListener('keydown',reveal);
+  syncFromState();reveal();runtime.setView(presets.iso.pos,presets.iso.target);runtime.finish();
+  return ()=>{if(disposed)return;disposed=true;container.removeEventListener('click',click);doc.removeEventListener('cole:lab-state-change',change);doc.removeEventListener('click',reveal);doc.removeEventListener('keydown',reveal);runtime.dispose();container.remove();};
 }
 
 export function renderVirtualLabHubMarkup(activeTrack = 'all') {

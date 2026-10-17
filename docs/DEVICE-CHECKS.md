@@ -72,6 +72,14 @@ An actual 1,660-byte `cole-learning-labs-CODE-500.txt` download matched the repo
 
 At 768 × 1024 and 390 × 844, the beginner hardware and coding layouts had no horizontal page overflow. The four hardware camera buttons and visible coding controls were at least 48 CSS pixels high. The catalog exposed all five beginner links and the 29 investigation links without a canvas. These are connected desktop-browser and responsive-viewport observations; physical managed Chromebooks, tablets, Edge and assistive-technology acceptance checks remain necessary.
 
+## Babylon engine migration — October 17, 2026
+
+The babylon18 local in-app browser preview rendered the actual Babylon.js 9.31.0 hardware engine and all four non-hardware pathway stations. In the beginner hardware lab, a pointer drag fitted the loose DDR4 module into its motherboard slot; the guided clips, case, screws, cables, startup and original lesson-file steps then completed correctly. In INC-101, visible 3D screwdriver clicks removed both side-panel screws after shutdown and AC disconnection. Dragging the PC HDMI end from the motherboard output to the labeled graphics-card socket changed the real model and action log.
+
+NET-201's monitor displayed the current network settings upright after the canvas texture orientation correction. Saving the correct fictional configuration and running Test connection updated the ordinary checks and 3D status together. AI-301, SEC-401 and CODE-501 each mounted one Babylon station canvas and their Monitor camera preset worked. No browser warnings or errors were observed during these checks.
+
+At 768 × 1024 and 390 × 844, the beginner hardware view fit without horizontal overflow. Its four camera buttons remained 48 CSS pixels high; the narrow view's actual framebuffer was 348 × 405 pixels. Camera Fit/Zoom, route changes, native action controls and the current learning records remained usable. Automated tests additionally cover actual Babylon geometry/picking through a NullEngine GPU boundary, bounded shadows, asynchronous shader readiness at mount and context restoration, touch cancellation, explicit pause and disposal. These are connected desktop-browser and viewport observations, not physical Chromebook, tablet, Edge or battery-life measurements.
+
 ## Browser guidance
 
 - [ChromeOS: find and open files](https://support.google.com/chromebook/answer/1700055?hl=en).

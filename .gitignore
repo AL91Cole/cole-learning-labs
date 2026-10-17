@@ -1,4 +1,6 @@
 node_modules/
+.graphics-vendor/
+.npm-cache/
 .env
 .env.*
 !.env.example
