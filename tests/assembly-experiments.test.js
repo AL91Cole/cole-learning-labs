@@ -1,0 +1,39 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { SCENARIOS } from '../src/scenarios.js';
+import { initialHardwareState, applyHardwareAction, normalizeHardwareState, verifyHardware } from '../src/hardware.js';
+import { observationSnapshot, setExperimentDraft, startExperiment, captureExperimentResult, readExperiments, saveExperiment, experimentReport } from '../src/experiments.js';
+import { normalizeLabRecord } from '../src/records.js';
+const scenario=SCENARIOS.find(s=>s.id==='INC-106');
+test('every mechanical build step changes bounded observation evidence, including individual screw positions',()=>{
+  let state=applyHardwareAction(scenario.id,initialHardwareState(scenario.id),'enable-assembly').state;
+  const actions=['asm-fit-psu',...[0,1,2,3].map(i=>`asm-tighten-psu-${i}`),'asm-fit-board',...[0,1,2,3].map(i=>`asm-tighten-board-${i}`),'asm-fit-cpu','asm-close-retention','asm-apply-paste','asm-fit-cooler',...[0,3,1,2].map(i=>`asm-tighten-cooler-${i}`),'asm-connect-cpu-fan','asm-fit-ram','asm-close-ram-clips','asm-fit-gpu','asm-close-pcie-latch','asm-tighten-gpu-0','asm-tighten-gpu-1','asm-fit-ssd','asm-tighten-ssd-0','asm-tighten-ssd-1','asm-connect-atx','asm-connect-eps','asm-connect-gpu-power','asm-connect-sata-data','asm-connect-sata-power','asm-connect-front-panel','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1'];
+  for(const action of actions){const before=observationSnapshot(scenario,state);const result=applyHardwareAction(scenario.id,state,action);assert.equal(result.kind,'success',action+': '+result.message);state=result.state;const after=observationSnapshot(scenario,state);assert.notDeepEqual(after,before,action+' lost from observations');assert.equal(after.length,6);assert.ok(after.every(([label,value])=>label.length<=32&&value.length<=40));}
+});
+test('mechanical-only experiments preserve distinct before/after rows through event packing and saved records',()=>{
+  const s=SCENARIOS.find(s=>s.id==='INC-101');
+  let state=initialHardwareState(s.id);
+  for(const action of ['enable-assembly','power-off','unplug'])state=applyHardwareAction(s.id,state,action).state;
+  const record=normalizeLabRecord(s,{state});
+  setExperimentDraft(s,record,{predict:'Removing one panel screw should change its secured position.'});
+  assert.equal(startExperiment(s,record,state).ok,true);
+  const before=observationSnapshot(s,state);
+  state=applyHardwareAction(s.id,state,'asm-loosen-panel-0').state;
+  captureExperimentResult(s,record,state);
+  const restored=normalizeLabRecord(s,JSON.parse(JSON.stringify({...record,state})));
+  const draft=readExperiments(restored).draft;
+  assert.deepEqual(draft.before,before);
+  assert.deepEqual(draft.after,observationSnapshot(s,state));
+  assert.notDeepEqual(draft.before,draft.after);
+  setExperimentDraft(s,restored,{changed:'I removed panel screw one.',observed:'Its secured position changed from one to zero.',explain:'The case still needs its other screw removed before opening.'});
+  assert.equal(saveExperiment(s,restored).ok,true);
+  assert.match(experimentReport(restored),/01\/1111\/1111\/1111\/11\/11/);
+  assert.ok(restored.events.every(e=>e.message.length<=600));
+});
+test('null or absent mechanics in an enabled saved draft never synthesize completed assembly',()=>{
+  for(const id of ['INC-101','INC-106'])for(const assembly of [null,undefined]){
+    const fabricated={...initialHardwareState('INC-101'),assemblyEnabled:true,assembly,caseId:id,videoPort:'gpu',booted:true,documentOpened:true};
+    const state=normalizeHardwareState(id,fabricated);
+    assert.equal(state.booted,false);assert.equal(state.documentOpened,false);assert.equal(verifyHardware(id,state).ok,false);assert.equal(state.assembly.psuInstalled,false);assert.ok(state.assembly.boardScrews.every(value=>value===false));
+  }
+});

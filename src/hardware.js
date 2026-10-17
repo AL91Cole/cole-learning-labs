@@ -92,7 +92,7 @@ export function normalizeHardwareState(caseId, savedState) {
   const actions = new Set(['enable-assembly','power-off','unplug','plug-in','boot','video-gpu','video-board','input-hdmi','input-displayport','connect-signal','disconnect-signal','open-document','close-document','seat-ram','unseat-ram','disconnect-sata','install-original','choose-nvme',...PARTS.map(part => part[3]),...Object.keys(INSPECTIONS).map(part => `inspect-${part}`)]);
   if (Object.hasOwn(savedState, 'actions') && Array.isArray(savedState.actions)) state.actions = savedState.actions.filter(action => typeof action === 'string' && actions.has(action)).slice(-250);
   if(state.assemblyEnabled) {
-    state.assembly=normalizeAssemblyState(savedState.assembly,state);
+    state.assembly=normalizeAssemblyState(savedState.assembly ?? {},state);
     if(assemblyFailure(state,state.assembly)) { state.booted=false; state.documentOpened=false; }
     const allowed=new Set(assemblyActions(state,state.assembly).map(item=>item.id));
     if(Array.isArray(savedState.actions)) state.actions=savedState.actions.filter(action=>typeof action==='string'&&(actions.has(action)||allowed.has(action))).slice(-250);

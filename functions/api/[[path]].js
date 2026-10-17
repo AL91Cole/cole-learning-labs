@@ -179,6 +179,13 @@ function workPayload(value, labId) {
     events: workList(workRecord({ time: workString(40), message: workString(600), kind: workEnum(['info', 'warning', 'success']) }), 100),
     plan: workString(2000), notes: workString(4000), reflection: workString(2000), verified: workBoolean, closed: workBoolean
   });
+  if (scenario.track === 'hardware' && value.state) {
+    // Legacy drafts may omit both assembly fields. Once detailed mode is
+    // enabled, its complete mechanical record is required; null cannot imply
+    // that screws, paste, clips, or power-supply mounts were already verified.
+    if (value.state.assemblyEnabled === true && !plain(value.state.assembly)) invalidWork();
+    if (value.state.assembly === null && value.state.assemblyEnabled !== false) invalidWork();
+  }
   const json = JSON.stringify(value);
   if (encoder.encode(json).byteLength > MAX_WORK) fail(413, 'work_too_large', 'Work must be 64 KiB or smaller.');
   return json;

@@ -45,6 +45,35 @@ test('server drafts accept normalized hardware records with and without detailed
   }
 });
 
+test('enabled detailed mode cannot use a null or omitted mechanical record to forge a completed build', () => {
+  for (const id of ['INC-101', 'INC-106']) {
+    const forged = work(id);
+    Object.assign(forged.state, {
+      pcOn: true, acConnected: true, boardInstalled: true, cpuInstalled: true, coolerInstalled: true,
+      ramSeated: true, gpuInstalled: true, atxConnected: true, cpuPowerConnected: true,
+      gpuPowerConnected: true, frontPanelConnected: true, originalDriveInstalled: true,
+      sataDataConnected: true, sataPowerConnected: true, booted: true, documentOpened: true,
+      videoPort: 'gpu', monitorInput: 'hdmi', signalConnected: true, assemblyEnabled: true
+    });
+    forged.verified = true; forged.closed = true;
+    for (const replacement of [null, undefined]) {
+      const payload = structuredClone(forged);
+      if (replacement === undefined) delete payload.state.assembly;
+      else payload.state.assembly = replacement;
+      rejects(payload);
+    }
+  }
+  const independent = work('INC-101', false);
+  assert.equal(independent.state.assembly, null);
+  assert.deepEqual(JSON.parse(validate(independent, 'INC-101')), independent);
+  const legacy = structuredClone(independent);
+  delete legacy.state.assembly; delete legacy.state.assemblyEnabled;
+  assert.deepEqual(JSON.parse(validate(legacy, 'INC-101')), legacy);
+  const ambiguous = structuredClone(independent);
+  delete ambiguous.state.assemblyEnabled;
+  rejects(ambiguous);
+});
+
 test('server action history accepts every authored mechanical action and rejects lookalike commands', () => {
   const value = work();
   value.state.actions = ['enable-assembly', ...assemblyActions(value.state, value.state.assembly).map(item => item.id)];
