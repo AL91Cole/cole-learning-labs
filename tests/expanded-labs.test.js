@@ -38,7 +38,7 @@ test('nine distinct new cases cover each pathway and grade band without a public
   }
   for(const scenario of EXPANDED_SCENARIOS){
     assert.equal(supportsExpandedLab(scenario.id),true);
-    assert.equal(scenario.clues.length,3);assert.equal(scenario.questions.length,2);
+    assert.equal(scenario.clues.length,scenario.id==='NET-205'?4:3);assert.equal(scenario.questions.length,scenario.id==='NET-205'?3:2);
     assert.equal(Object.hasOwn(scenario,'rubric'),false);
     assert.ok(scenario.interviewFacts.every(item=>item.keywords.length>0 && typeof item.answer==='string'));
   }
@@ -168,7 +168,7 @@ test('renderers use native form controls, keep all data local, and reject inject
     const poison={...solved(scenario.id)};
     for(const key of Object.keys(SOLUTIONS[scenario.id]))poison[key]='<script>window.bad=true</script>';
     renderExpanded(root,scenario,poison,()=>{});
-    assert.match(root.innerHTML,/How to use this workspace/);
+    assert.match(root.innerHTML,/Use this workbench/);
     assert.match(root.innerHTML,/Apply my choices/);assert.match(root.innerHTML,/Run workspace test/);
     assert.match(root.innerHTML,/role="status"/);
     assert.doesNotMatch(root.innerHTML,/<script|<iframe|javascript:|window\.bad|rubric/i);

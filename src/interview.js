@@ -36,6 +36,38 @@ const ipv4 = value => typeof value === 'string' && /^\d{1,3}(?:\.\d{1,3}){3}$/u.
 const words = value => compact(value).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,'');
 const keywordWords = value => words(value).split(' ').map(word => word.length > 4 && word.endsWith('ies') ? word.slice(0,-3) + 'y' : word.length > 3 && word.endsWith('s') && !word.endsWith('ss') ? word.slice(0,-1) : word).join(' ');
 
+function asksForInquiryFact(id, question) {
+  const text = words(question);
+  const earlierEvent = /\bwhat (?:happened|was done|were you doing|did you do|did someone do)\b.{0,55}\b(?:before|earlier|recently)\b|\b(?:did|has|have|was)\b.{0,25}\b(?:anything|anyone|someone|any work)\b.{0,35}\b(?:change|changed|happen|happened|done|moved|replaced|installed)\b|\b(?:recent|earlier|previous) (?:work|changes?|events?|maintenance)\b/u.test(text);
+  const lastSuccess = /\bwhen\b.{0,45}\b(?:last |previously )?(?:work|worked|working|print|printed|printing)\b|\b(?:has|had|did)\b.{0,25}\b(?:ever|previously|earlier)\b.{0,25}\b(?:work|worked|print|printed)\b|\b(?:work|worked|print|printed)\b.{0,25}\b(?:before|earlier|last time)\b/u.test(text);
+  if (id === 'last-change') return earlierEvent || lastSuccess;
+  if (id === 'job-history') return earlierEvent || lastSuccess || /\b(?:already(?: been)? (?:tried|checked|attempted)|tried so far|previous attempts?|maintenance)\b/u.test(text);
+  if (id === 'affected-devices') return /\b(?:other|nearby|all|every|multiple|several)\s+(?:\w+\s+){0,2}(?:devices?|computers?|laptops?|tablets?|workstations?|machines?|people|users?|classrooms?)\b|\b(?:anyone|someone|who|anybody|somebody) else\b|\b(?:only (?:one|device|computer|laptop|tablet|workstation)|else (?:affected|failing|broken))\b/u.test(text);
+  return false;
+}
+
+function matchedCaseFact(scenario, question) {
+  if (!scenario || !CASE_IDS.has(scenario.id)) return null;
+  const normalized = ' ' + keywordWords(question) + ' ';
+  const facts = Array.isArray(scenario.interviewFacts) ? scenario.interviewFacts.slice(0,12) : [];
+  let best = null; let bestScore = 0;
+  for (const entry of facts) {
+    if (!entry || !Array.isArray(entry.keywords) || typeof entry.answer !== 'string' || !entry.answer.trim() || entry.answer.length > ANSWER_MAX) continue;
+    const score = entry.keywords.slice(0,12).reduce((total,keyword) => {
+      if (typeof keyword !== 'string' || !keyword.trim() || keyword.length > 45) return total;
+      const phrase = keywordWords(keyword);
+      return phrase && normalized.includes(' ' + phrase + ' ') ? total + phrase.length : total;
+    },requiredInquiryFacts(scenario).includes(entry.id) && asksForInquiryFact(entry.id,question) ? 1000 : 0);
+    if (score > bestScore) { best = entry; bestScore = score; }
+  }
+  return best;
+}
+
+function requiredInquiryFacts(scenario) {
+  if (!scenario || !CASE_IDS.has(scenario.id) || scenario.intake?.kind !== 'follow-up' || !Array.isArray(scenario.intake.factIds)) return [];
+  return [...new Set(scenario.intake.factIds.filter(id => typeof id === 'string' && /^[a-z][a-z0-9-]{0,44}$/u.test(id)))].slice(0,12);
+}
+
 // New scenarios supply visible case facts, not instructions or free-form generated text.
 // Only the shipped case IDs can use them. A question never becomes executable code or a prompt.
 function expandedCaseReply(scenario, question, state) {
@@ -46,18 +78,7 @@ function expandedCaseReply(scenario, question, state) {
   if (/\b(?:current|now|already|last)\b.*\b(?:tests?|checks?)\b|\b(?:tests?|checks?)\b.*\b(?:pass|ran|run|result|status)\b/iu.test(question) && flag(state,'tested') !== undefined) {
     return response(flag(state,'tested') ? 'A test has been run for the current workbench state. Read the visible test results to see what passed and what still needs attention. I cannot grade your explanation or assume that a test proves every requirement.' : 'The current workbench state has no fresh test yet. Make one change, run the built-in test, and read the result before deciding whether your hypothesis is supported.', 'current-state');
   }
-  const normalized = ' ' + keywordWords(question) + ' ';
-  const facts = Array.isArray(scenario.interviewFacts) ? scenario.interviewFacts.slice(0,12) : [];
-  let best = null; let bestScore = 0;
-  for (const entry of facts) {
-    if (!entry || !Array.isArray(entry.keywords) || typeof entry.answer !== 'string' || !entry.answer.trim() || entry.answer.length > ANSWER_MAX) continue;
-    const score = entry.keywords.slice(0,12).reduce((total,keyword) => {
-      if (typeof keyword !== 'string' || !keyword.trim() || keyword.length > 45) return total;
-      const phrase = keywordWords(keyword);
-      return phrase && normalized.includes(' ' + phrase + ' ') ? total + phrase.length : total;
-    },0);
-    if (score > bestScore) { best = entry; bestScore = score; }
-  }
+  const best = matchedCaseFact(scenario,question);
   return best ? response(best.answer,'case-fact') : null;
 }
 
@@ -179,6 +200,10 @@ function directAnswer(scenario, question, state = {}) {
   if (/^(?:hi|hello|hey)(?:[!,. ]|$)/iu.test(text) && words(text).split(' ').length <= 3) return response('Hi! I am the fictional requester for this case. You can ask what happened, what I observed, or the result I need. I answer from the case facts on this device, so I will say when a detail is not recorded.', 'conversation');
   if (/^(?:thanks|thank you|okay thanks|ok thanks)[!,. ]*$/iu.test(text)) return response('You are welcome. Keep a note of what the evidence shows, then try one change in the workbench and compare its test result with your hypothesis.', 'conversation');
   if (/\b(?:goal|requested result|need to (?:do|finish)|trying to|want to|what.*(?:need|want)|success look|complete the task)\b/iu.test(text)) return response(typeof scenario.goal === 'string' ? scenario.goal : 'Read the request card for the result this fictional requester needs.', 'request');
+  // Asking for missing history reveals a requester fact; it never replaces a safety instruction or a live bench observation.
+  if (scenario.id.startsWith('INC-') && /safe|safety|disconnect|unplug|internal|touch|power off/iu.test(text)) return caseReply(scenario,text,state);
+  const inquiryFact = matchedCaseFact(scenario,text);
+  if (inquiryFact && requiredInquiryFacts(scenario).includes(inquiryFact.id) && !followUpKind(text)) return response(inquiryFact.answer,'case-fact');
   if (/\b(?:last (?:work|worked|working)|ever work|when.*(?:work|working)|last known good)\b/iu.test(text) && scenario.id !== 'NET-203') {
     const known = scenario.questions?.find(item => /last work/iu.test(item.label));
     return response(known?.answer ?? 'The case does not record the last successful use. Ask about a specific symptom or recent change, and distinguish recorded facts from assumptions.', 'history');
@@ -196,7 +221,13 @@ function directAnswer(scenario, question, state = {}) {
   // Initial ticket observations must not overwrite the current workbench state after a student's repair.
   if (prerecorded && !/lights on|operating system load/iu.test(prerecorded.label)) return response(prerecorded.answer,'requester');
   const specific = caseReply(scenario,text,state) ?? expandedCaseReply(scenario,text,state);
-  if (specific) return specific;
+  if (specific) {
+    // A technical question can also uncover a contextual clue. Record the same requester fact rather than reveal it without discovery credit.
+    const required = requiredInquiryFacts(scenario);
+    const disclosed = Array.isArray(scenario.clues) ? scenario.clues.find(clue => required.includes(clue?.requiresFact) && typeof clue.text === 'string' && bounded(clue.text) === specific.answer) : undefined;
+    const requesterFact = disclosed && Array.isArray(scenario.interviewFacts) ? scenario.interviewFacts.find(entry => entry?.id === disclosed.requiresFact && typeof entry.answer === 'string' && entry.answer.length <= ANSWER_MAX) : undefined;
+    return requesterFact ? response(requesterFact.answer,'case-fact') : specific;
+  }
   if (/\b(?:privacy|private|personal data|real information|internet|ai service|chatbot|live ai|send|stored)\b/iu.test(text)) return response('This interview uses built-in facts in your browser, without an AI service. Keep personal information out of questions and notes. Saving or submitting work uses the separate privacy controls shown in the lab.', 'privacy');
   if (/\b(?:symptom|problem|wrong|broken|issue|happening|not work|equipment|device|machine)\b/iu.test(text)) return response(scenario.brief,'symptom');
   if (/\b(?:how.*(?:start|use)|what.*(?:first|next)|help|confused|where.*(?:begin|start))\b/iu.test(text)) return response('Let us take it one step at a time. Read the request and one clue, write your hypothesis, and test one change in the workbench. Then compare what happened with the request. Ask me about a specific part or symptom when you need another case fact.', 'how-to');
@@ -282,4 +313,58 @@ export function readQuestionEvents(events) {
     } catch { /* Damaged or unrelated saved events do not become interview text. */ }
   }
   return transcript;
+}
+
+function earnedInquiryFact(scenario, event, required) {
+  const pair = readQuestionEvents([event])[0];
+  if (!pair || followUpKind(pair.question)) return null;
+  const reply = directAnswer(scenario,pair.question);
+  if (!reply.accepted || reply.kind !== 'answer' || reply.topic !== 'case-fact') return null;
+  const entry = matchedCaseFact(scenario,pair.question) ?? (Array.isArray(scenario.interviewFacts) ? scenario.interviewFacts.find(fact => required.includes(fact?.id) && fact.answer === reply.answer) : undefined);
+  if (!entry || !required.includes(entry.id)) return null;
+  // Compare the same bounded event representation used when the learner asked. Saved text is not a source of new facts.
+  const canonical = readQuestionEvents([questionEvent(pair.question,reply)])[0];
+  if (canonical && canonical.question === pair.question && canonical.answer === pair.answer) return entry.id;
+  // Earlier releases used the shorter starter reply for some history questions. Preserve that recorded learning step.
+  const starters = Array.isArray(scenario.questions) ? scenario.questions.slice(0,12) : [];
+  for (const starter of starters) {
+    if (typeof starter?.label !== 'string' || typeof starter.answer !== 'string' || starter.answer.length > ANSWER_MAX || matchedCaseFact(scenario,starter.label)?.id !== entry.id) continue;
+    const legacy = readQuestionEvents([questionEvent(pair.question,response(starter.answer,'case-fact'))])[0];
+    if (legacy && legacy.question === pair.question && legacy.answer === pair.answer) return entry.id;
+  }
+  return null;
+}
+
+/** Inquiry is a learning step, not an authorization boundary. Only relevant, recorded case answers count. */
+export function inquiryProgress(scenario, events) {
+  const required = requiredInquiryFacts(scenario);
+  const earned = new Set();
+  for (const event of Array.isArray(events) ? events.slice(-100) : []) {
+    const id = earnedInquiryFact(scenario,event,required);
+    if (id) earned.add(id);
+  }
+  const found = required.filter(id => earned.has(id));
+  const complete = found.length === required.length;
+  const missing = typeof scenario?.intake?.missing === 'string' ? compact(scenario.intake.missing).slice(0,240) : '';
+  return {
+    required:required.length > 0,
+    complete,
+    found,
+    total:required.length,
+    message:required.length === 0 ? 'The request includes enough detail to begin. You can still ask questions.' : complete ? 'You found the missing request detail. Use it with your observations to test a cause.' : missing || 'Ask the requester about the missing detail before finishing this case.'
+  };
+}
+
+/** Keep earned requester facts available when a long workbench log reaches its existing 100-event limit. */
+export function retainInquiryEvents(scenario, events) {
+  if (!Array.isArray(events)) return [];
+  const required = requiredInquiryFacts(scenario);
+  if (!required.length) return events.slice(-100);
+  const kept = new Set(); const earned = new Set();
+  for (let index = 0; index < events.length && earned.size < required.length; index++) {
+    const id = earnedInquiryFact(scenario,events[index],required);
+    if (id && !earned.has(id)) { earned.add(id); kept.add(index); }
+  }
+  for (let index = events.length - 1; index >= 0 && kept.size < 100; index--) kept.add(index);
+  return [...kept].sort((a,b) => a - b).map(index => events[index]);
 }

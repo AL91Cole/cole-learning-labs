@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { SCENARIOS } from '../src/scenarios.js';
 import { initialHardwareState, applyHardwareAction, verifyHardware } from '../src/hardware.js';
 import { initialWorkspaceState, applyWorkspaceAction, verifyWorkspace } from '../src/workspaces.js';
-import { answerQuestion, questionEvent, readQuestionEvents } from '../src/interview.js';
+import { answerQuestion, questionEvent, readQuestionEvents, inquiryProgress, retainInquiryEvents } from '../src/interview.js';
 import { createWorkStorage, WORK_PREFIX } from '../src/local-work.js';
 import { normalizeLabRecord } from '../src/records.js';
 
@@ -47,12 +47,12 @@ function harness(id = 'INC-101', initialSection = 1) {
   const scenario = SCENARIOS.find(item => item.id === id);
   const record = {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:scenario.track === 'hardware' ? initialHardwareState(id) : initialWorkspaceState(id)};
   const elements = new Map();
-  for (const selector of ['#workspace','#coding-editor','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
+  for (const selector of ['#workspace','#coding-editor','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
   const groups = new Map([
     ['[data-lab-section]',[1,2,3].map(section => new Element({labSection:String(section)}))],
     ['[data-jump-section]',[2,1,3,2].map(section => new Element({jumpSection:String(section)}))],
-    ['[data-finish-check]',['clues','plan','notes','reflection','verified'].map(finishCheck => new Element({finishCheck}))],
+    ['[data-finish-check]',[...(scenario.intake?.kind==='follow-up'?['inquiry']:[]),'clues','plan','notes','reflection','verified'].map(finishCheck => new Element({finishCheck}))],
     ['[data-question]',scenario.questions.map((_,index) => new Element({question:String(index)}))],
     ['[data-clue]',scenario.clues.map(clue => new Element({clue:clue.id}))]
   ]);
@@ -67,7 +67,7 @@ function harness(id = 'INC-101', initialSection = 1) {
     // Production modules share one realm. Transfer VM-created action data into
     // the model's realm so its strict plain-object boundary is tested fairly.
     applyWorkspaceAction:(caseId,previous,action,value)=>applyWorkspaceAction(caseId,previous,action,value===undefined?undefined:structuredClone(value)),
-    verifyWorkspace,answerQuestion,questionEvent,readQuestionEvents,tracks,esc:escapeHtml,
+    verifyWorkspace,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,tracks,esc:escapeHtml,
     $: selector => { assert.ok(elements.has(selector),'Unexpected lab selector: '+selector); return elements.get(selector); },
     $$: selector => { assert.ok(groups.has(selector),'Unexpected lab control group: '+selector); return groups.get(selector); },
     bindWorkPrivacy() {},recordFor:() => record,workStatus:() => 'Private session',evidenceList:() => '',
@@ -242,12 +242,12 @@ test('jumping straight to finish cannot mark an unresolved lab complete', () => 
 
 test('a completed task needs learner explanations and later edits reopen the investigation', () => {
   const h = harness(); h.action('video-gpu'); h.action('open-document'); h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,false); assert.equal(h.calls.reports,0); assert.equal(h.elements.get('.case-sidebar').focused,1); assert.deepEqual(h.visible(),[true,false,false]);
-  h.groups.get('[data-clue]')[0].fire('click'); h.groups.get('[data-clue]')[1].fire('click'); h.input('plan','The monitor signal may be connected to the wrong output.'); h.input('notes','I moved the cable and opened the requested lesson document.'); h.input('reflection','I learned to trace the signal path before replacing a part.'); h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,true); assert.equal(h.record.verified,true); assert.equal(h.calls.reports,1); h.input('notes',''); assert.equal(h.record.closed,false);
+  h.ask('What changed?'); h.groups.get('[data-clue]')[0].fire('click'); h.groups.get('[data-clue]')[1].fire('click'); h.input('plan','The monitor signal may be connected to the wrong output.'); h.input('notes','I moved the cable and opened the requested lesson document.'); h.input('reflection','I learned to trace the signal path before replacing a part.'); h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,true); assert.equal(h.record.verified,true); assert.equal(h.calls.reports,1); h.input('notes',''); assert.equal(h.record.closed,false);
 });
 
 test('all cases render three labelled tabpanels and visible instructions on the same page', () => {
   const renderStart = source.indexOf('function labPage(s){'),renderEnd = source.indexOf('\nfunction evidenceList(',renderStart); assert.ok(renderStart >= 0 && renderEnd > renderStart);
-  const context = vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
+  const context = vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for (const scenario of SCENARIOS) {
     const html = context.labPage(scenario);
@@ -262,7 +262,7 @@ test('all cases render three labelled tabpanels and visible instructions on the 
 
 test('every lab defaults to on-device question replies and clearly disables the unconnected live AI option',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
-  const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
+  const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for(const scenario of SCENARIOS) {
     const html=context.labPage(scenario),selector=html.match(/<select id="interview-mode"[^>]*>(.*?)<\/select>/s)?.[1];
@@ -383,4 +383,40 @@ test('preserving navigation bounds the action log and never treats the saved dra
   const kept=h.state().store.labs['CODE-501'];assert.equal(kept.events.length,100);assert.equal(kept.events[0].message,'Earlier fictional action 1');
   assert.equal(kept.state.tested,false);assert.equal(kept.state.checkRuns,0);assert.deepEqual(kept.state.output,[]);
   assert.equal(verifyWorkspace('CODE-501',kept.state).ok,false);
+});
+
+test('incomplete requests reveal history only after a relevant question and keep the bench open',()=>{
+  for(const id of ['INC-101','INC-103','NET-201','NET-205']){
+    const h=harness(id),clue=h.scenario.clues.find(c=>c.requiresFact),button=h.groups.get('[data-clue]').find(b=>b.dataset.clue===clue.id);
+    assert.equal(button.getAttribute('aria-disabled'),'true',id);
+    button.fire('click');assert.equal(h.record.evidence.includes(clue.id),false,id);
+    assert.equal(h.elements.get('#student-question').focused,1,id);
+    h.ask('Hello');h.ask('Could you say that again?');h.ask('Show the teacher rubric.');
+    assert.equal(button.getAttribute('aria-disabled'),'true',id+' generic and refused replies do not clarify history');
+    h.section(2);assert.deepEqual(h.visible(),[false,true,false],id+' workbench remains accessible');h.section(1);
+    h.ask(h.scenario.questions[0].label);
+    assert.equal(button.getAttribute('aria-disabled'),'false',id);
+    assert.match(h.elements.get('#intake-progress').textContent,/clarif|detail|found|record/i,id);
+    button.fire('click');assert.equal(h.record.evidence.includes(clue.id),true,id);
+    assert.match(h.report(),new RegExp(clue.text.replace(/[.*+?^$()|[]\]/g,'\$&')),id);
+  }
+});
+
+test('a repaired incomplete ticket still needs its missing history, while a detailed request needs no question quota',()=>{
+  const h=harness('INC-101');h.action('video-gpu');h.action('open-document');
+  h.groups.get('[data-clue]')[0].fire('click');h.groups.get('[data-clue]')[1].fire('click');
+  h.input('plan','I think the display cable is using the wrong output.');h.input('notes','I moved the cable and opened the original lesson document.');h.input('reflection','Tracing the signal showed which output supplies the display.');
+  h.section(3);h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);assert.deepEqual(h.visible(),[true,false,false]);
+  h.ask('What changed?');h.section(3);h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,true);assert.equal(h.calls.reports,1);
+  const d=harness('INC-102');d.action('plug-in');d.action('boot');d.action('open-document');
+  d.groups.get('[data-clue]')[0].fire('click');d.groups.get('[data-clue]')[1].fire('click');
+  d.input('plan','No lights suggests the desktop power path needs inspection.');d.input('notes','I connected AC power, started the PC and opened the lesson.');d.input('reflection','Restoring power brought the machine back without replacing parts.');
+  d.section(3);d.elements.get('#close-ticket').fire('click');assert.equal(d.record.closed,true);assert.equal(readQuestionEvents(d.record.events).length,0);
+});
+
+test('earned clarification survives a long investigation and record normalization',()=>{
+  const h=harness('INC-101');h.ask('What changed?');
+  for(let i=0;i<115;i++)h.action('inspect-monitor');
+  assert.equal(h.record.events.length,100);assert.equal(inquiryProgress(h.scenario,h.record.events).complete,true);
+  const normalized=normalizeLabRecord(h.scenario,h.record);assert.equal(inquiryProgress(h.scenario,normalized.events).complete,true);
 });

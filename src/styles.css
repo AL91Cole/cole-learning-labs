@@ -172,3 +172,11 @@
 .pathway-card.rose .pathway-symbol{color:#edb2cf;background:#7b345333}.pathway-card.rose{border-color:#cda9ba}.pathway-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lab-card-visual.track-coding{background:linear-gradient(135deg,#251b32,#663858);color:#f4b9dc}.lab-card.rose:hover{border-color:#ac547f}.lab-visual-icon{overflow-wrap:anywhere}@media(max-width:1000px){.pathway-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:580px){.pathway-grid{grid-template-columns:minmax(0,1fr)}}
 
 .single-page-lab button,.single-page-lab input,.single-page-lab select,.single-page-lab textarea{scroll-margin-top:125px;scroll-margin-bottom:32px}
+
+/* Clear request context and touch-friendly inquiry feedback. */
+.request-kind{font-size:.8rem!important;font-weight:700;color:#315e64!important}
+.single-page-lab .intake-progress{border-left:3px solid #58d7bd;background:#0c2630;padding:12px 14px;margin:16px 0 0;color:#d2eee8;font-size:.94rem;line-height:1.65}
+.single-page-lab .question-button[aria-disabled=true]{border-style:dashed;color:#c8dae4;background:#182938}
+.single-page-lab .question-button[aria-disabled=true] span{color:#ffd383;white-space:nowrap}
+.single-page-lab .interview-mode-note{margin:12px 0 18px}
+.single-page-lab .interview-mode-note summary{min-height:48px;align-content:center;cursor:pointer;color:#9ee7d9;font-weight:600}

@@ -1,5 +1,5 @@
-import { normalizeHardwareState } from './hardware.js?release=20261016-pathways6';
-import { normalizeWorkspaceState } from './workspaces.js?release=20261016-pathways6';
+import { normalizeHardwareState } from './hardware.js?release=20261016-ticket-intake7';
+import { normalizeWorkspaceState } from './workspaces.js?release=20261016-ticket-intake7';
 
 // Local storage and uploaded drafts are data, never trusted HTML or object shapes.
 export function normalizeLabRecord(scenario, value) {
