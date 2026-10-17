@@ -62,7 +62,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     ['[data-question]',scenario.questions.map((_,index) => new Element({question:String(index)}))],
     ['[data-clue]',scenario.clues.map(clue => new Element({clue:clue.id}))]
   ]);
-  const calls = {saved:0,rendered:0,reports:0,notices:[]}; let workspaceAction;
+  const calls = {saved:0,rendered:0,reports:0,benchCancelled:0,notices:[]}; let workspaceAction;
   function renderBench(root,callback) {
     calls.rendered++; workspaceAction = callback;
     // The real renderer replaces inputs; this draft detects unexpected replacement.
@@ -79,6 +79,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     $$: selector => { assert.ok(groups.has(selector),'Unexpected lab control group: '+selector); return groups.get(selector); },
     bindWorkPrivacy() {},recordFor:() => record,workStatus:() => 'Private session',evidenceList:() => '',
     renderHardware(root,_id,_state,callback) { assert.equal(scenario.track,'hardware'); renderBench(root,callback); },
+    cancelHardwareInteraction(root) { assert.equal(root,elements.get('#workspace')); calls.benchCancelled++; },
     renderWorkspace(root,_scenario,_state,callback) { assert.notEqual(scenario.track,'hardware'); renderBench(root,callback); if(scenario.track==='coding'){const editor=new Element();editor.value=_state.code;elements.set('#coding-editor',editor);} },
     save() { calls.saved++; },showNotice(message) { calls.notices.push(message); },openReport() { calls.reports++; },renderRoute() {},
     normalizeLabRecord:(_scenario,value) => value,attachClassroomLab:() => null,matchMedia:() => ({matches:true}),Date
@@ -95,6 +96,15 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     report() { return context.reportText(scenario,record); }
   };
 }
+
+test('leaving the hardware workbench cancels gestures without rebuilding or changing the investigation', () => {
+  const h=harness('INC-101',2),before=structuredClone(h.record),renders=h.calls.rendered;
+  assert.equal(h.calls.benchCancelled,0);
+  h.section(3);assert.equal(h.calls.benchCancelled,1);
+  h.section(2);assert.equal(h.calls.benchCancelled,1);
+  h.section(1);assert.equal(h.calls.benchCancelled,2);
+  assert.deepEqual(h.record,before);assert.equal(h.calls.rendered,renders);
+});
 
 test('three in-page tabs expose one panel and preserve notes and unsubmitted workbench drafts', () => {
   const h = harness(); assert.deepEqual(h.visible(),[true,false,false]); assert.deepEqual(h.selected(),['true','false','false']);
@@ -346,6 +356,7 @@ function routeHarness(id='CODE-501') {
   const context=vm.createContext({
     SCENARIOS,learningRoute,retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),mountLabLearning:()=>()=>{},mountTeachingPage:()=>()=>{},renderCapstone:()=>'capstone',mountCapstone:()=>()=>{},capstoneReport:()=>'capstone report',checkCapstoneState:()=>({ok:false}),normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,
     applyWorkspaceAction:(caseId,previous,action,value)=>{order.push('save current draft');return applyWorkspaceAction(caseId,previous,action,structuredClone(value));},
+    disposeHardware(){order.push('dispose hardware gestures');},
     $:selector=>{if(selector==='#coding-editor')return editor;if(selector==='#main')return main;if(!elements.has(selector))elements.set(selector,new Element());return elements.get(selector);},
     $$:()=>[],document:{body:{classList:new Element().classList},title:''},history:{replaceState(){}},
     window:{addEventListener(name,listener){events.set(name,listener);},scrollTo(){}},
@@ -371,7 +382,7 @@ test('leaving a coding lab preserves its draft before DOM replacement and return
   const h=routeHarness(),draft=codingPrograms['CODE-501'];h.editor.value=draft;
   const oldRecord=h.state().store.labs['CODE-501'];oldRecord.verified=true;oldRecord.closed=true;
   h.navigate('#labs/coding');
-  assert.equal(h.editor,null);assert.deepEqual(h.order.slice(0,2),['save current draft','replace DOM']);
+  assert.equal(h.editor,null);assert.deepEqual(h.order.slice(0,3),['dispose hardware gestures','save current draft','replace DOM']);
   const kept=h.state().store.labs['CODE-501'];assert.equal(kept.state.code,draft);assert.equal(kept.state.tested,false);
   assert.equal(kept.verified,false);assert.equal(kept.closed,false);assert.match(kept.events.at(-1).message,/Draft program preserved/);
   assert.equal(h.writes.length,0);assert.equal(h.reads.length,0);assert.equal(h.state().manager.persistent,false);
@@ -400,7 +411,7 @@ test('route preservation writes to the device only after explicit device saving'
 test('route preservation does not recreate a deleted record from an old editor',()=>{
   const h=routeHarness();h.editor.value=codingPrograms['CODE-501'];delete h.state().store.labs['CODE-501'];
   h.navigate('#labs');assert.equal(Object.hasOwn(h.state().store.labs,'CODE-501'),false);
-  assert.deepEqual(h.order,['replace DOM']);assert.equal(h.writes.length,0);
+  assert.deepEqual(h.order,['dispose hardware gestures','replace DOM']);assert.equal(h.writes.length,0);
 });
 
 test('explicit resume replaces old editor drafts with the chosen saved work without preserving stale DOM',()=>{
@@ -410,7 +421,7 @@ test('explicit resume replaces old editor drafts with the chosen saved work with
   const writesBefore=h.writes.length;h.privacy().replaceStore(restored);
   assert.equal(h.editor.value,codingPrograms['CODE-501']);assert.equal(h.state().store.labs['CODE-501'].notes,'Chosen earlier fictional saved work.');
   assert.equal(h.state().store.labs['CODE-501'].events.length,0);assert.equal(h.writes.length,writesBefore);
-  assert.deepEqual(h.order,['replace DOM']);
+  assert.deepEqual(h.order,['dispose hardware gestures','replace DOM']);
 });
 
 test('explicit clear resets the session without resurrecting a pending coding draft',()=>{
@@ -419,7 +430,7 @@ test('explicit clear resets the session without resurrecting a pending coding dr
   assert.equal(h.editor.value,initialWorkspaceState('CODE-501').code);
   assert.equal(h.state().store.labs['CODE-501'].events.length,0);assert.equal(h.state().manager.persistent,false);
   assert.ok(h.writes.every(write=>!write.value.includes('Draft to discard')));
-  assert.deepEqual(h.order,['replace DOM']);
+  assert.deepEqual(h.order,['dispose hardware gestures','replace DOM']);
 });
 
 test('preserving navigation bounds the action log and never treats the saved draft as tested',()=>{

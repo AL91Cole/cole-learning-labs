@@ -1,3 +1,4 @@
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261017-workbench11';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },
@@ -33,6 +34,19 @@ const displayReady = s => s.pcOn && s.booted && displayPathReady(s);
 const result = (state, message, kind = 'info') => ({ state, message, kind });
 // A held cable and selected diagnostic tool belong to the picture, not student work.
 const benchInteractions = new WeakMap();
+const benchDisposers = new WeakMap();
+
+/** Call before route replacement or hiding the workbench to release active gestures. */
+export function disposeHardware(root) {
+  benchDisposers.get(root)?.();
+  benchDisposers.delete(root);
+}
+
+export function cancelHardwareInteraction(root) {
+  benchDisposers.get(root)?.cancel?.();
+  // Preserve the older click-to-connect controls, including their cancel affordance.
+  root?.querySelector?.('[data-hw-cable="cancel"]')?.click?.();
+}
 
 export function initialHardwareState(caseId = 'INC-101') {
   const id = clampCase(caseId);
@@ -254,10 +268,11 @@ function svgDefs() {
 }
 
 function screw(x, y) { return `<g class="hw-screw"><circle cx="${x}" cy="${y}" r="4.2" fill="#485568" stroke="#8290a1"/><path d="M${x-2} ${y}h4M${x} ${y-2}v4" stroke="#13202b" stroke-width="1.4"/></g>`; }
-function interactive(part, label, body, selected) { return `<g class="hw-hit ${selected === part ? 'hw-hit-selected' : ''}" role="button" tabindex="0" aria-label="Inspect ${label}" data-hw-action="inspect-${part}"><title>${label}: activate to inspect</title>${body}</g>`; }
+const PART_SOCKET = {board:'board-mount',cpu:'cpu-socket',cooler:'cooler-mount',ram:'dimm-a2',gpu:'pcie-x16',storage:'sata-bay',sata:'sata-data',atx:'atx-24',eps:'eps-8',front:'front-panel'};
+function interactive(part, label, body, selected) { return `<g class="hw-hit ${selected === part ? 'hw-hit-selected' : ''}" role="button" tabindex="0" aria-label="Inspect ${label}" data-hw-action="inspect-${part}" ${PART_SOCKET[part]?`data-hw-socket="${PART_SOCKET[part]}"`:''}><title>${label}: activate to inspect, or place a held compatible part</title>${body}</g>`; }
 function videoSocket(part, label, body, selected) {
   const port = part === 'gpu' ? 'gpu' : 'board';
-  return `<g class="hw-hit hw-picture-socket ${selected===part?'hw-hit-selected':''}" role="button" tabindex="0" aria-label="${label}: inspect socket or connect the held display cable" data-hw-connector="${port}"><title>${label}: pick up the virtual cable, then select this socket to connect</title>${body}</g>`;
+  return `<g class="hw-hit hw-picture-socket ${selected===part?'hw-hit-selected':''}" role="button" tabindex="0" aria-label="${label}: inspect socket or connect the held display cable" data-hw-connector="${port}" data-hw-socket="video-${port}"><title>${label}: pick up the virtual cable, then select this socket to connect</title>${body}</g>`;
 }
 function rearGraphicsPanel(s) {
   if (!s.gpuInstalled) return '<rect x="24" y="268" width="222" height="58" rx="3" fill="url(#hw-vents)" stroke="#607489" stroke-width="2"/><text x="42" y="292" fill="#b0c0cd" font-size="10">EMPTY EXPANSION SLOT</text><text x="42" y="311" fill="#89a0b0" font-size="9">Fit a graphics card to add video ports</text>';
@@ -270,7 +285,7 @@ function monitor(s, x=30, y=91, width=330, height=227) {
   const missingBootDrive = s.ramSeated && (!s.originalDriveInstalled || !s.sataDataConnected || !s.sataPowerConnected);
   const fault = noSignal ? {label:'NO SIGNAL',hint:`Source: ${s.monitorInput === 'hdmi' ? 'HDMI' : 'DisplayPort'} · Check both ends / source / PC output`} : memoryStopped ? {label:'MEMORY NOT DETECTED',hint:'POST stopped · check DIMM seating'} : missingBootDrive ? {label:'NO BOOT DEVICE',hint:'Check storage and boot connections'} : {label:'STARTUP INCOMPLETE',hint:'Read the startup / POST instrument below'};
   const inner = s.documentOpened ? `<rect x="${x+16}" y="${y+16}" width="${width-32}" height="${height-51}" rx="2" fill="#e7edf2"/><rect x="${x+16}" y="${y+16}" width="${width-32}" height="22" fill="#15547d"/><text x="${x+27}" y="${y+30}" fill="white" font-size="9">Lesson_Practice_File.docx</text><rect x="${x+64}" y="${y+52}" width="${width-128}" height="${height-106}" fill="#fff"/><text x="${x+78}" y="${y+72}" font-size="10" fill="#1b2b3d" font-weight="700">Classroom technology practice</text><path d="M${x+79} ${y+87}h${width-158}m-${width-158} 13h${width-168}m-${width-168} 13h${width-174}m-${width-174} 13h${width-158}" stroke="#aebdcb" stroke-width="2"/><rect x="${x+25}" y="${y+height-55}" width="${width-50}" height="13" rx="3" fill="#d6ede8"/><text x="${x+width/2}" y="${y+height-46}" text-anchor="middle" font-size="8" fill="#10624e">Original file opened · customer task delivered</text>` : isReady ? `<rect x="${x+15}" y="${y+15}" width="${width-30}" height="${height-48}" fill="url(#hw-screen)"/><path d="M${x+165} ${y+27}l75 30-30 100-65-40z" fill="#21cbb5" opacity=".1"/><g role="button" tabindex="0" aria-label="Open Lesson Practice File document" data-hw-action="open-document" class="hw-document-launch"><rect x="${x+35}" y="${y+39}" width="112" height="69" rx="6" fill="#183b53" stroke="#5fdfd0"/><path d="M${x+48} ${y+51}h19l7 7v24h-26z" fill="#dcebf1"/><path d="M${x+67} ${y+51}v8h7" fill="none" stroke="#20628c"/><text x="${x+60}" y="${y+75}" text-anchor="middle" fill="#13517c" font-size="13" font-weight="800">W</text><text x="${x+84}" y="${y+63}" fill="#fff" font-size="9">Open lesson</text><text x="${x+84}" y="${y+77}" fill="#a4d4dd" font-size="8">.docx · original file</text><text x="${x+91}" y="${y+98}" text-anchor="middle" fill="#6ee4ce" font-size="8">CLICK TO VERIFY DELIVERY</text></g><rect x="${x+15}" y="${y+height-51}" width="${width-30}" height="18" fill="#0a1929"/><rect x="${x+26}" y="${y+height-45}" width="8" height="8" fill="#57d5d0"/><text x="${x+48}" y="${y+height-38}" fill="#afc6d4" font-size="8">Classroom Desktop</text>` : `<rect x="${x+15}" y="${y+15}" width="${width-30}" height="${height-48}" fill="#040b12"/>${s.pcOn ? `<text x="${x+width/2}" y="${y+height/2-8}" text-anchor="middle" fill="${noSignal ? '#e7eef3' : '#f4bd6b'}" font-size="14" font-weight="700">${fault.label}</text><text x="${x+width/2}" y="${y+height/2+15}" text-anchor="middle" fill="#738ba0" font-size="9">${fault.hint}</text>` : `<circle cx="${x+width/2}" cy="${y+height/2-8}" r="13" fill="none" stroke="#33495e" stroke-width="2"/><path d="M${x+width/2} ${y+height/2-27}v19" stroke="#33495e" stroke-width="3"/><text x="${x+width/2}" y="${y+height/2+27}" text-anchor="middle" fill="#688095" font-size="9">PC POWER OFF</text>`}`;
-  return `<g filter="url(#hw-shadow)"><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="url(#hw-bezel)" stroke="#5e6e80" stroke-width="2"/>${inner}<circle cx="${x+width-22}" cy="${y+height-14}" r="3" fill="${s.pcOn ? '#42d8af' : '#b58b4b'}"/><text x="${x+width/2}" y="${y+height-13}" text-anchor="middle" fill="#8295aa" font-size="7" letter-spacing="2">CLASSROOM DISPLAY · ${s.monitorInput==='hdmi'?'HDMI':'DISPLAYPORT'}</text><path d="M${x+width/2-17} ${y+height}v29h34v-29M${x+width/2-72} ${y+height+41}h144l-20-12h-104z" fill="#303d4c" stroke="#617086"/></g>`;
+  return `<g filter="url(#hw-shadow)"><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="10" fill="url(#hw-bezel)" stroke="#5e6e80" stroke-width="2"/>${inner}<circle cx="${x+width-22}" cy="${y+height-14}" r="3" fill="${s.pcOn ? '#42d8af' : '#b58b4b'}"/><text x="${x+width/2}" y="${y+height-13}" text-anchor="middle" fill="#8295aa" font-size="7" letter-spacing="2">CLASSROOM DISPLAY · ${s.monitorInput==='hdmi'?'HDMI':'DISPLAYPORT'}</text><path d="M${x+width/2-17} ${y+height}v29h34v-29M${x+width/2-72} ${y+height+41}h144l-20-12h-104z" fill="#303d4c" stroke="#617086"/></g><g role="button" tabindex="0" class="hw-hit hw-monitor-port" data-hw-socket="monitor-hdmi" data-hw-action="inspect-monitor" aria-label="Inspect the monitor HDMI input"><rect x="${x+width-108}" y="${y+height+8}" width="102" height="31" rx="4" fill="#1c303e" stroke="${s.signalConnected?'#aebda5':'#a9afbb'}"/><path d="M${x+width-99} ${y+height+16}h24l-4 9h-16z" fill="#0b1722" stroke="#9cabb6"/><text x="${x+width-48}" y="${y+height+27}" text-anchor="middle" fill="#b6cad1" font-size="8">HDMI IN</text></g>`;
 }
 
 function rearSvg(s) {
@@ -288,7 +303,7 @@ function benchSvg(s, closeup = false) {
   ${interactive('board','motherboard specifications',`<rect x="30" y="55" width="268" height="353" rx="6" fill="transparent"/><text x="39" y="401" fill="${pcb?'#67bca3':'#64788c'}" font-size="9">01 / MICRO-ATX · DDR4 · SATA</text>`,selected)}
   ${pcb?interactive('cpu','LGA processor and CPU socket',`<rect x="82" y="113" width="102" height="100" rx="5" fill="#202c32" stroke="#758e91" stroke-width="2"/><rect x="94" y="125" width="78" height="76" fill="${s.cpuInstalled?'url(#hw-metal)':'#18272a'}" stroke="#4c6267"/>${s.cpuInstalled?'<text x="133" y="165" text-anchor="middle" fill="#12242e" font-size="9" font-weight="700">PROCESSOR</text>':'<path d="M100 132l66 61m-66 0l66-61" stroke="#3b5156"/>'}<path d="M90 210h89v-89" fill="none" stroke="#b5bbbd" stroke-width="2"/><path d="M97 128l7 0-7 7z" fill="#d7ae54"/>`,selected):''}
   ${pcb&&s.coolerInstalled?interactive('cooler','processor cooler and fan',`<rect x="78" y="108" width="111" height="111" rx="8" fill="url(#hw-metal)" stroke="#8e9ca7"/><path d="M85 113v101m7-101v101m7-101v101m7-101v101m7-101v101m7-101v101m7-101v101m7-101v101m7-101v101m7-101v101m7-101v101m7-101v101m7-101v101" stroke="#354653" stroke-width="2"/><circle cx="133" cy="163" r="47" fill="#172631" stroke="#627e8c" stroke-width="2"/><g class="${s.pcOn?'hw-fan-running':''}" style="transform-origin:133px 163px">${[0,60,120,180,240,300].map(a=>`<path d="M133 163C101 151 99 126 115 123C137 121 137 141 133 163Z" transform="rotate(${a} 133 163)" fill="#44657a" stroke="#6c8e9e"/>`).join('')}</g><circle cx="133" cy="163" r="12" fill="#afc2cb" stroke="#233d4c"/>${screw(86,116)}${screw(181,116)}${screw(86,211)}${screw(181,211)}<text x="133" y="234" text-anchor="middle" fill="#86abae" font-size="8">CPU COOLER / CPU_FAN</text>`,selected):''}
-  ${pcb?interactive('ram','DDR4 DIMM slot and memory',`<g transform="translate(215 90)"><rect width="19" height="169" rx="2" fill="#111e24" stroke="#597b6d"/><rect x="28" width="19" height="169" rx="2" fill="#111e24" stroke="#597b6d"/><path d="M8 7v152m28-152v152" stroke="#8a9d82" stroke-width="2"/>${s.ramSeated?'<rect x="27" y="3" width="21" height="162" rx="1" fill="#1f785c" stroke="#6cca9a"/><path d="M32 16v136m11-136v136" stroke="#d1b550"/><rect x="33" y="22" width="10" height="27" fill="#112d2c"/><rect x="33" y="57" width="10" height="27" fill="#112d2c"/><rect x="33" y="92" width="10" height="27" fill="#112d2c"/><rect x="33" y="127" width="10" height="24" fill="#112d2c"/><path d="M24 4h27v8H24zM24 156h27v8H24z" fill="#98b3a9"/>':s.caseId==='INC-103'?'<g transform="rotate(-7 37 83)"><rect x="27" y="-6" width="21" height="162" fill="#26775b" stroke="#c9a95e"/><rect x="33" y="18" width="9" height="105" fill="#122d2b"/></g><path d="M23 -2l-9-7m37 171l10 5" stroke="#efbd6c" stroke-width="3"/>':''}<text x="24" y="185" text-anchor="middle" fill="${s.ramSeated?'#84d4b0':'#bcb281'}" font-size="8">DDR4 · A2</text></g>`,selected):''}
+  ${pcb?interactive('ram','DDR4 DIMM slot and memory',`<g transform="translate(215 90)"><rect class="hw-socket-hitbox" x="-7" y="-10" width="64" height="205" rx="4" fill="transparent" pointer-events="all"/><rect width="19" height="169" rx="2" fill="#111e24" stroke="#597b6d"/><rect x="28" width="19" height="169" rx="2" fill="#111e24" stroke="#597b6d"/><path d="M8 7v152m28-152v152" stroke="#8a9d82" stroke-width="2"/>${s.ramSeated?'<rect x="27" y="3" width="21" height="162" rx="1" fill="#1f785c" stroke="#6cca9a"/><path d="M32 16v136m11-136v136" stroke="#d1b550"/><rect x="33" y="22" width="10" height="27" fill="#112d2c"/><rect x="33" y="57" width="10" height="27" fill="#112d2c"/><rect x="33" y="92" width="10" height="27" fill="#112d2c"/><rect x="33" y="127" width="10" height="24" fill="#112d2c"/><path d="M24 4h27v8H24zM24 156h27v8H24z" fill="#98b3a9"/>':s.caseId==='INC-103'?'<g transform="rotate(-7 37 83)"><rect x="27" y="-6" width="21" height="162" fill="#26775b" stroke="#c9a95e"/><rect x="33" y="18" width="9" height="105" fill="#122d2b"/></g><path d="M23 -2l-9-7m37 171l10 5" stroke="#efbd6c" stroke-width="3"/>':''}<text x="24" y="185" text-anchor="middle" fill="${s.ramSeated?'#84d4b0':'#bcb281'}" font-size="8">DDR4 · A2</text></g>`,selected):''}
   ${pcb?interactive('gpu','PCIe graphics card',`<rect x="52" y="276" width="215" height="17" fill="#152528" stroke="#607a70"/><path d="M59 283h198" stroke="#d0b46a" stroke-width="3"/>${s.gpuInstalled?`<rect x="48" y="263" width="229" height="77" rx="5" fill="#182d36" stroke="#729a9a" stroke-width="2"/><rect x="53" y="268" width="218" height="66" rx="4" fill="#243d48"/><circle cx="89" cy="301" r="25" fill="#112833" stroke="#738f99"/><path d="M89 278v46m-23-23h46m-39-16l33 32m0-32l-33 32" stroke="#4e7889" stroke-width="3"/><circle cx="89" cy="301" r="6" fill="#94b4bd"/><text x="133" y="295" fill="#8ad6c9" font-size="10" font-weight="700">PCIe GRAPHICS</text><text x="133" y="311" fill="#8caab4" font-size="8">Dedicated display output</text><rect x="251" y="270" width="15" height="15" fill="#080f15" stroke="${s.gpuPowerConnected?'#c8af6a':'#8fa0a5'}"/><path d="M48 263H33v80h15" fill="none" stroke="#98a8b2" stroke-width="4"/>`:'<text x="158" y="312" text-anchor="middle" fill="#678d86" font-size="9">PCIe x16 · GRAPHICS SLOT</text>'}`,selected):''}
   ${pcb?interactive('sata','motherboard SATA data ports',`<rect x="237" y="354" width="47" height="27" rx="2" fill="#332d19" stroke="#9f9154"/><rect x="242" y="359" width="15" height="16" fill="#121c21"/><rect x="264" y="359" width="15" height="16" fill="#121c21"/><text x="261" y="394" text-anchor="middle" fill="#b3a476" font-size="7">SATA_1 / 2</text>`,selected):''}
   ${interactive('power','power supply',`<rect x="309" y="55" width="105" height="149" rx="4" fill="#151e2b" stroke="#7b8794" stroke-width="2"/><text x="362" y="75" text-anchor="middle" fill="#b4c3cf" font-size="9" font-weight="700">POWER SUPPLY</text><circle cx="362" cy="122" r="33" fill="url(#hw-vents)" stroke="#627387"/><circle cx="362" cy="122" r="10" fill="#263342"/><path d="M338 99l48 46m-48 0l48-46m-24-9v66m-33-33h66" stroke="#465a6b" stroke-width="2"/><text x="362" y="177" text-anchor="middle" fill="#7e93a6" font-size="8">ATX · 400 W</text><text x="362" y="191" text-anchor="middle" fill="${s.acConnected?'#edbd71':'#6fddbb'}" font-size="8">${s.acConnected?'AC CONNECTED':'AC DISCONNECTED'}</text>`,selected)}
@@ -304,8 +319,65 @@ function displaySvg(s) { return `<svg class="hw-svg hw-svg-display" viewBox="0 0
 const installedFor = (s, part) => ({ board:s.boardInstalled,cpu:s.cpuInstalled,cooler:s.coolerInstalled,ram:s.ramSeated,gpu:s.gpuInstalled,storage:s.originalDriveInstalled,atx:s.atxConnected,eps:s.cpuPowerConnected,'gpu-power':s.gpuPowerConnected,sata:s.sataDataConnected,'sata-power':s.sataPowerConnected,front:s.frontPanelConnected })[part];
 function btn(action,label, extra='') { return `<button type="button" class="hw-action" data-hw-action="${action}" ${extra}>${label}</button>`; }
 
+const SOCKET_LABELS = [
+  ['board-mount','Case standoffs','board'],['cpu-socket','LGA CPU socket','cpu'],
+  ['cooler-mount','Cooler mount + CPU_FAN','cooler'],['dimm-a2','DDR4 DIMM A2','ram'],
+  ['pcie-x16','PCIe x16 slot','gpu'],['sata-bay','2.5-inch SATA bay','storage'],
+  ['atx-24','24-pin ATX_PWR','atx'],['eps-8','8-pin CPU_PWR / EPS','eps'],
+  ['gpu-6','6-pin GPU power','gpu-power'],['sata-data','SATA_1 data','sata'],
+  ['sata-power','Wide SATA power','sata-power'],['front-panel','F_PANEL switch','front'],
+  ['video-board','Motherboard HDMI output','rear'],['video-gpu','Graphics-card HDMI output','gpu'],
+  ['monitor-hdmi','Monitor HDMI input','monitor']
+];
+
+function partPicture(part) {
+  const bodies = {
+    board:'<path d="M9 7h43v34H9z" fill="#1c6655" stroke="#76b69d"/><rect x="17" y="13" width="15" height="14" fill="#9caeb2"/><path d="M39 12v23m5-23v23M14 34h20" stroke="#dfc67d" stroke-width="3"/>',
+    cpu:'<rect x="18" y="9" width="27" height="27" rx="2" fill="#9eabb5" stroke="#d6e2e6"/><rect x="23" y="14" width="17" height="17" fill="#6c808d"/><path d="M18 36l6 0-6-6z" fill="#f6ce77"/>',
+    cooler:'<rect x="14" y="6" width="34" height="36" rx="4" fill="#879aa6"/><circle cx="31" cy="24" r="15" fill="#132b3c" stroke="#c3d6df"/><path d="M31 11v26M18 24h26m-22-9l18 18m0-18l-18 18" stroke="#6898ad" stroke-width="4"/><circle cx="31" cy="24" r="4" fill="#c4dade"/>',
+    ram:'<path d="M6 15h50v19H6z" fill="#257458" stroke="#98c1a7"/><path d="M10 34h17m6 0h19" stroke="#e3c97b" stroke-width="4"/><g fill="#122c2b"><path d="M10 19h8v10h-8zM22 19h8v10h-8zM34 19h8v10h-8zM46 19h6v10h-6z"/></g>',
+    gpu:'<path d="M7 14h49v22H7z" fill="#375363" stroke="#99b8bd"/><circle cx="23" cy="25" r="9" fill="#162f3e" stroke="#92b6c8"/><path d="M23 17v16m-8-8h16M8 37h32" stroke="#c6b570" stroke-width="3"/><path d="M6 11v31" stroke="#b9c6ce" stroke-width="3"/>',
+    storage:'<rect x="14" y="5" width="34" height="39" rx="4" fill="#8497a5" stroke="#c4d1d8"/><path d="M19 12h24v22H19z" fill="#213747"/><text x="31" y="26" text-anchor="middle" fill="#c5e5e3" font-size="8">SSD</text><path d="M19 41h8m4 0h11" stroke="#f0d17f" stroke-width="3"/>',
+    nvme:'<rect x="8" y="17" width="46" height="14" rx="2" fill="#28735c" stroke="#a3c4ae"/><path d="M10 20h8v8h-8m13-8h13v8H23" fill="#172e30"/><path d="M50 19v10" stroke="#e6c984" stroke-width="4"/>',
+    'hdmi-pc':'<path d="M0 28h22m18 0h22" stroke="#c4a26a" stroke-width="5"/><path d="M20 17h22v20H20z" fill="#718491" stroke="#d1e0e5"/><path d="M23 17v-6h16v6" fill="#acbbc2"/>',
+    'hdmi-monitor':'<path d="M0 28h22m18 0h22" stroke="#c4a26a" stroke-width="5"/><path d="M20 17h22v20H20z" fill="#718491" stroke="#d1e0e5"/><path d="M23 17v-6h16v6" fill="#acbbc2"/>'
+  };
+  const cable = `<path d="M5 38C3 12 36 42 35 14" fill="none" stroke="${part==='sata'?'#da8b56':part==='front'?'#81a9b4':'#b5a160'}" stroke-width="5"/><rect x="27" y="5" width="23" height="16" rx="2" fill="#283947" stroke="#a8bbc6"/><path d="M32 9v8m5-8v8m5-8v8m4-8v8" stroke="#d9c58d" stroke-width="2"/>`;
+  return `<svg viewBox="0 0 62 48" aria-hidden="true" focusable="false">${bodies[part]||cable}</svg>`;
+}
+
+function renderManipulationTray(s) {
+  const available = PARTS.filter(([part]) => !installedFor(s,part)).length;
+  const fittedCards = [];
+  const cards = PARTS.map(([part,name,detail]) => {
+    const fitted = installedFor(s,part);
+    const card = `<button type="button" class="hw-pick-part ${fitted?'hw-pick-fitted':''}" data-hw-pick="${part}" data-hw-pick-label="${name}" aria-pressed="false" aria-label="${fitted?`${name}: fitted`:`Pick up ${name}. ${detail}`}" ${fitted?'disabled':''}>${partPicture(part)}<span><strong>${name}</strong><small>${fitted?'✓ Fitted':detail}</small></span>${fitted?'<em>In PC</em>':'<span class="hw-part-drag-handle" data-hw-drag-handle aria-hidden="true"><b>⠿</b><small>Drag</small></span>'}</button>`;
+    if (fitted) { fittedCards.push(card); return ''; }
+    return card;
+  }).filter(Boolean);
+  cards.push(...[['hdmi-pc','HDMI · PC end',s.videoPort==='gpu'?'At graphics card':'At motherboard'],['hdmi-monitor','HDMI · monitor end',s.signalConnected?'Fitted at monitor':'Loose at monitor'],['nvme','Spare M.2 NVMe','Compare its connector']].map(([part,name,detail]) => `<button type="button" class="hw-pick-part" data-hw-pick="${part}" data-hw-pick-label="${name}" aria-pressed="false" aria-label="Pick up ${name}. ${detail}">${partPicture(part)}<span><strong>${name}</strong><small>${detail}</small></span><span class="hw-part-drag-handle" data-hw-drag-handle aria-hidden="true"><b>⠿</b><small>Drag</small></span></button>`));
+  return `<section class="hw-handling" aria-label="Hands-on parts and cables"><div class="hw-handling-heading"><div><span class="hw-eyebrow">HANDS-ON WORKBENCH</span><h3>Pick a part. Find its connection.</h3></div><span class="hw-stock-count">${available} loose / ${PARTS.length} assembly items</span></div><p class="hw-handling-help">Mouse: drag a part. Touch or pen: drag its grip marked Drag; swipe the rest of a card to scroll the tray. You can also tap a part, then tap its labeled socket. Nothing changes until you choose a compatible destination; internal work still needs power off and AC unplugged.</p><div class="hw-pick-grid">${cards.join('')}</div>${fittedCards.length?`<details class="hw-fitted-inventory"><summary>${fittedCards.length} fitted items · view current inventory</summary><div class="hw-pick-grid">${fittedCards.join('')}</div></details>`:''}<div class="hw-held-readout"><p role="status" aria-live="polite" aria-atomic="true" data-hw-manipulation-status>Parts in the tray reflect the current PC. Pick up a loose part or either end of the HDMI cable.</p><button class="hw-action" type="button" data-hw-cancel-pick hidden>Cancel / put down</button></div></section>`;
+}
+
+function renderSocketList() {
+  return `<details class="hw-target-list" data-hw-target-list><summary>Large socket controls · tap or use keyboard</summary><p>These controls represent the same labeled sockets in the picture. Picking a part highlights its compatible connector shapes, not the cause of the fault.</p><div class="hw-target-grid">${SOCKET_LABELS.map(([socket,label,inspect])=>`<button type="button" data-hw-socket="${socket}" data-hw-action="inspect-${inspect}"><span aria-hidden="true">${socket.includes('video')||socket==='monitor-hdmi'?'▱':'▥'}</span>${label}</button>`).join('')}</div></details>`;
+}
+
+function extraBenchSockets(s) {
+  return `<g class="hw-physical-connectors"><g transform="translate(402 53)">${s.boardInstalled?`${!s.coolerInstalled?`<g role="button" tabindex="0" class="hw-hit" data-hw-socket="cooler-mount" data-hw-action="inspect-cooler" aria-label="Inspect CPU cooler mounting posts and CPU FAN"><rect x="75" y="222" width="118" height="27" rx="4" fill="#182d31" stroke="#698b87"/><text x="134" y="239" text-anchor="middle" fill="#b0cbc5" font-size="9">COOLER / CPU_FAN</text></g>`:''}<g role="button" tabindex="0" class="hw-hit" data-hw-socket="gpu-6" data-hw-action="inspect-gpu-power" aria-label="Inspect 6-pin GPU power connector"><rect x="247" y="261" width="45" height="33" rx="4" fill="#182b32" stroke="#8b957a"/><path d="M253 267h10v9h-10m15-9h10v9h-10" fill="#0b1722" stroke="#b5b396"/><text x="269" y="288" text-anchor="middle" fill="#c7c9ad" font-size="7">GPU 6-PIN</text></g>`:''}<g role="button" tabindex="0" class="hw-hit" data-hw-socket="sata-power" data-hw-action="inspect-sata-power" aria-label="Inspect wide SATA power connector on drive"><rect x="347" y="419" width="54" height="29" rx="3" fill="#182b32" stroke="#9a956f"/><path d="M353 426h40v8h-40z" fill="#101c24" stroke="#cfb875"/><text x="374" y="444" text-anchor="middle" fill="#d2c49c" font-size="6">SATA POWER</text></g></g></g>`;
+}
+
+function addBenchDetail(svg, s, view) {
+  if (view === 'display') return svg;
+  if (view === 'rear') return svg;
+  const floor = '<path d="M18 557L390 536l493 41-39 29H45z" fill="#040a12" opacity=".5"/><path d="M407 585h29m378 0h31" stroke="#596b78" stroke-width="8"/>';
+  const depth = `<path d="M860 53l25 20v514l-25-1z" fill="url(#hw-chassis)" stroke="#627387"/><path d="M867 143l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10m-12 8l12 10" stroke="#0a1420" stroke-width="5"/><g class="hw-hit" role="button" tabindex="0" data-hw-action="boot" aria-label="Press the virtual case power button"><path d="M867 97l12 6v23l-12-6z" fill="#182b37" stroke="#a4b6bf"/><circle cx="873" cy="111" r="3" fill="${s.pcOn?'#6de1ba':'#546c7f'}"/></g>`;
+  const rearInset = view === 'internals' ? '' : `<g class="hw-rear-inset"><text x="29" y="353" fill="#9ab4c7" font-size="8" letter-spacing="1">REAR HDMI OUTPUTS · DIFFERENT CONNECTION POINTS</text>${videoSocket('rear','motherboard HDMI output',`<rect x="28" y="361" width="159" height="30" rx="4" fill="#172734" stroke="#64768a"/><path d="M37 370h25l-4 11H41z" fill="#0c1722" stroke="#a4b3bc"/><text x="72" y="380" fill="#bbcad3" font-size="9">MOTHERBOARD</text>`,s.selectedPart)}${videoSocket('gpu','graphics-card HDMI output',`<rect x="194" y="361" width="169" height="30" rx="4" fill="#172734" stroke="#64768a"/><path d="M204 370h25l-4 11h-17z" fill="#0c1722" stroke="#a4b3bc"/><text x="238" y="380" fill="#bbcad3" font-size="9">GRAPHICS CARD</text>`,s.selectedPart)}<path d="M${s.videoPort==='gpu'?'216':'49'} 384v12" stroke="#d6af64" stroke-width="6"/><text x="359" y="414" text-anchor="end" fill="#b7a37a" font-size="8">Cable currently at ${s.videoPort==='gpu'?'graphics card':'motherboard'}</text></g>`;
+  return svg.replace('fill="url(#hw-grid)"/>',`fill="url(#hw-grid)"/>${floor}`).replace('</svg>',`${depth}${extraBenchSockets(s)}${rearInset}</svg>`);
+}
+
 function renderHardwareHelp(build) {
-  return '<section class="hw-help" aria-label="How to use this workbench"><h4>How to use this workbench <span>Keep these 3 steps in view</span></h4><ol><li><strong>1 · Inspect.</strong> Click or tap a labeled part, or choose it in the component menu. Read what you find. Inspecting only looks; it does not repair anything.</li><li><strong>2 · Change.</strong> Use <em>Make a change</em>' + (build ? ' or an <em>Install</em> button. Dragging is optional.' : ' below the inspection. No dragging is needed.') + ' For internal parts: <em>Power off</em>, then <em>Unplug AC</em> first. Monitor source and external display-cable controls do not open the PC.</li><li><strong>3 · Test.</strong> After internal work, choose <em>Connect AC</em>, then <em>Power on / test</em>. Check the monitor and open the lesson file. Then use <em>Check &amp; explain</em> on this page.</li></ol><p>Everything is virtual; leave your real device alone. Keyboard: Tab to a control, then Enter or Space. Arrow keys switch picture views.</p></section>';
+  return '<section class="hw-help" aria-label="How to use this workbench"><h4>How to use this workbench <span>Keep these 3 steps in view</span></h4><ol><li><strong>1 · Inspect.</strong> Click or tap a labeled part, or choose it in the component menu. Read what you find. Inspecting only looks; it does not repair anything.</li><li><strong>2 · Change.</strong> Use <em>Make a change</em>' + (build ? ' or an <em>Install</em> button. Dragging is optional.' : ' below the inspection. No dragging is needed.') + ' For internal parts: <em>Power off</em>, then <em>Unplug AC</em> first. Monitor source and external display-cable controls do not open the PC.</li><li><strong>3 · Test.</strong> After internal work, choose <em>Connect AC</em>, then <em>Power on / test</em>. Check the monitor and open the lesson file. Then use <em>Check &amp; explain</em> on this page.</li></ol><p>Everything is virtual; leave your real device alone. Drag a tray part onto a matching labeled socket, or tap the part and then the socket. Keyboard: Tab, then Enter or Space; Escape puts a held part down. Arrow keys switch picture views.</p></section>';
 }
 
 // These checkpoints describe the present equipment state, rather than awarding points for clicks.
@@ -391,6 +463,7 @@ function renderHardwareMission(id, s, mission) {
 }
 
 export function renderHardware(root, caseId, state, onAction) {
+  disposeHardware(root);
   state = normalizeHardwareState(caseId, state);
   let interaction = benchInteractions.get(root);
   if (!interaction || interaction.caseId !== state.caseId) {
@@ -401,7 +474,13 @@ export function renderHardware(root, caseId, state, onAction) {
   const restoreAction = root.contains(activeControl) ? activeControl.dataset?.hwAction : null;
   const restoreConnector = root.contains(activeControl) ? activeControl.dataset?.hwConnector : null;
   const restoreDiagnostic = root.contains(activeControl) ? activeControl.dataset?.hwDiagnostic : null;
+  const restorePick = root.contains(activeControl) ? activeControl.dataset?.hwPick : null;
+  const restoreSocket = root.contains(activeControl) ? activeControl.dataset?.hwSocket : null;
+  const restoreSocketButton = !!activeControl?.matches?.('button');
   const restoreComponentSelect = root.contains(activeControl) && activeControl.matches?.('[data-hw-inspect]');
+  const socketListOpen = root.querySelector('.hw-target-list')?.open;
+  const inventoryOpen = root.querySelector('.hw-fitted-inventory')?.open;
+  const displayControlsOpen = root.querySelector('.hw-display-controls')?.open;
   const previousCoachStage = root.querySelector('.hw-coach')?.dataset.hwCoachStage;
   const openCoachLevels = [...root.querySelectorAll('.hw-coach[open], .hw-coach details[open]')].map(details => details.dataset.hwCoachLevel);
   const id = clampCase(caseId), s = state, selection = INSPECTIONS[s.selectedPart] ? s.selectedPart : 'board';
@@ -420,19 +499,21 @@ export function renderHardware(root, caseId, state, onAction) {
   const activeView = interaction.cableHeld ? 'rear' : s.view;
   root.innerHTML = `<section class="hw-workbench" aria-label="Interactive hardware workbench">
     <div class="hw-status-bar"><span class="hw-status ${s.pcOn?'hw-status-on':''}"><i></i>PC ${s.pcOn?'ON':'OFF'}</span><span class="hw-status ${s.acConnected?'hw-status-live':'hw-status-safe'}"><i></i>AC ${s.acConnected?'CONNECTED':'DISCONNECTED'}</span><span class="hw-work-safety ${safe?'hw-work-safe':''}">${safe?'✓ Safe to change virtual components':'Power off + unplug before internal work'}</span></div>
-    ${renderHardwareMission(id,s,mission)}
     <div class="hw-power-controls" role="group" aria-label="Virtual PC power controls"><span class="hw-controls-label">Virtual power controls</span>${btn('power-off','① Power off')}${btn('unplug','② Unplug AC')}${btn('plug-in','③ Connect AC')}${btn('boot','④ Power on / test')}</div>
-    ${renderCableControls(s,interaction.cableHeld)}
-    ${renderMonitorControls(s)}
     <div class="hw-view-tabs" role="tablist" aria-label="Workbench view">${[['bench','Whole workbench'],['internals','Inside the PC'],['rear','Rear connections'],['display','Monitor']].map(([v,l])=>`<button type="button" role="tab" tabindex="${activeView===v?'0':'-1'}" aria-selected="${activeView===v}" data-hw-action="view-${v}">${l}</button>`).join('')}<span class="hw-bench-tag">VIRTUAL BENCH</span></div>
-    <p class="hw-canvas-help">Click or tap a labeled part to inspect it. You can also use the component controls below the picture.</p>
-    <div class="hw-canvas ${interaction.cableHeld?'hw-canvas-cable-held':''}" ${id==='INC-106'?'data-hw-dropzone="true"':''}>${activeView==='rear'?rearSvg(s):activeView==='display'?displaySvg(s):benchSvg(s,activeView==='internals')}${id==='INC-106'?'<span class="hw-drop-hint">Use an Install button, or drag a part onto the bench.</span>':''}</div>
+    <div class="hw-physical-workspace">${renderManipulationTray(s)}<div class="hw-equipment-pane">
+    <p class="hw-canvas-help"><strong>Equipment view.</strong> Drag a tray part to its matching connector, or tap a part and then a socket. Click or tap equipment without holding a part to inspect it.</p>
+    <div class="hw-canvas hw-equipment-stage ${interaction.cableHeld?'hw-canvas-cable-held':''}">${addBenchDetail(activeView==='rear'?rearSvg(s):activeView==='display'?displaySvg(s):benchSvg(s,activeView==='internals'),s,activeView)}<span class="hw-stage-caption">SIMULATED EQUIPMENT · CONNECTORS ARE SIMPLIFIED</span></div></div></div>
+    <div class="hw-quick-source" role="group" aria-label="Monitor source selector"><span>Monitor source: <strong>${s.monitorInput==='hdmi'?'HDMI':'DisplayPort'}</strong></span>${btn('input-hdmi','Select HDMI',`aria-pressed="${s.monitorInput==='hdmi'}"`)}${btn('input-displayport','Select DisplayPort',`aria-pressed="${s.monitorInput==='displayport'}"`)}</div>
+    ${renderSocketList()}
+    <details class="hw-display-controls"><summary>Display cable & monitor controls · connect, disconnect, inspect</summary>${renderCableControls(s,interaction.cableHeld)}${renderMonitorControls(s)}</details>
+    ${renderHardwareMission(id,s,mission)}
     ${renderDiagnostics(s,readouts,interaction.tool)}
     <div class="hw-delivery ${s.documentOpened?'hw-delivery-done':''}"><div><strong>${s.documentOpened?'Lesson file opened':fix?'Desktop restored · check the original task':'Check the customer’s original task'}</strong><span>${s.documentOpened?'Now finish your explanation and lab report. The original classroom OS and files are preserved.':ready?'Restore this workstation and open Lesson_Practice_File.docx.':'After the PC starts and shows the desktop, open Lesson_Practice_File.docx. The button will explain what is still missing.'}</span></div>${btn('open-document',s.documentOpened?'✓ Lesson file opened':ready?'Open lesson file':'Check lesson file')}</div>
     <div class="hw-inspect-controls" role="group" aria-label="Inspect a component without changing it"><span class="hw-controls-label">Look at a component</span>${[['monitor','Display'],['rear','Rear connections'],['power','Power'],['board','Board details'],['ram','Memory (RAM)'],['sata','Drive cables'],['storage','Original drive']].map(([p,l])=>`<button type="button" class="${selection===p?'hw-inspect-active':''}" aria-pressed="${selection===p}" data-hw-action="inspect-${p}">${l}</button>`).join('')}</div>
     <label class="hw-component-select"><span>Or choose any component</span><select data-hw-inspect>${[['monitor','Classroom display'],['rear','Rear video connections'],['power','Power supply & AC'],['board','Motherboard specifications'],['cpu','Processor socket'],['cooler','CPU cooler'],['ram','DDR4 memory'],['gpu','Graphics card'],['storage','Original SATA SSD'],['sata','SATA data cable'],['atx','24-pin motherboard power'],['eps','8-pin CPU power'],['gpu-power','Graphics card power'],['sata-power','SATA drive power'],['front','Front panel lead']].map(([p,label])=>`<option value="${p}" ${selection===p?'selected':''}>${label}</option>`).join('')}</select></label>
     <aside class="hw-inspector" aria-label="Selected component and available changes"><div class="hw-inspector-heading"><span class="hw-eyebrow">SELECTED COMPONENT</span><span class="hw-evidence-count">${s.evidence.length} inspected</span></div><h3>${partName}</h3><p>${INSPECTIONS[selection](s)}</p><div class="hw-change-heading"><strong>Make a change</strong><span>These controls change the virtual PC. Inspecting alone does not.</span></div><div class="hw-repair-actions">${repairs || '<p class="hw-inline-note">Use the Install buttons in the parts tray below, or the virtual power controls above.</p>'}</div></aside>
-    ${id==='INC-106'?`<section class="hw-parts-tray" aria-label="Compatible parts and cables"><div class="hw-tray-heading"><div><span class="hw-eyebrow">PARTS & CABLES</span><h3>Build with purpose.</h3></div><span>${completeParts} / ${PARTS.length} fitted</span></div><div class="hw-parts-grid">${PARTS.map(([part,name,detail,action])=>`<div class="hw-part ${installedFor(s,part)?'hw-part-installed':''}" draggable="${!installedFor(s,part)}" data-hw-drag="${action}"><div class="hw-part-icon" aria-hidden="true">${part==='ram'?'▥':part==='storage'?'▰':part==='cooler'?'◉':part==='board'?'▦':part==='gpu'?'▤':part==='cpu'?'▣':'⌁'}</div><div><strong>${name}</strong><span>${detail}</span></div><button type="button" data-hw-action="${action}" aria-label="${installedFor(s,part)?`${name} fitted`:`Install ${name}`}" ${installedFor(s,part)?'disabled':''}>${installedFor(s,part)?'✓ Fitted':'Install'}</button></div>`).join('')}</div></section>`:''}
+    ${id==='INC-106'?`<details class="hw-quick-install"><summary>Optional quick Install buttons</summary><section class="hw-parts-tray" aria-label="Compatible parts and cables"><div class="hw-tray-heading"><div><span class="hw-eyebrow">PARTS & CABLES</span><h3>Build with purpose.</h3></div><span>${completeParts} / ${PARTS.length} fitted</span></div><div class="hw-parts-grid">${PARTS.map(([part,name,detail,action])=>`<div class="hw-part ${installedFor(s,part)?'hw-part-installed':''}" ><div class="hw-part-icon" aria-hidden="true">${part==='ram'?'▥':part==='storage'?'▰':part==='cooler'?'◉':part==='board'?'▦':part==='gpu'?'▤':part==='cpu'?'▣':'⌁'}</div><div><strong>${name}</strong><span>${detail}</span></div><button type="button" data-hw-action="${action}" aria-label="${installedFor(s,part)?`${name} fitted`:`Install ${name}`}" ${installedFor(s,part)?'disabled':''}>${installedFor(s,part)?'✓ Fitted':'Install'}</button></div>`).join('')}</div></section></details>`:''}
     <p class="hw-model-note">A deterministic teaching model. Components and connectors are simplified for learning; no commands run on your real computer.</p>
   </section>`;
   // Delegation is assigned once per render; replacing the root never stacks listeners.
@@ -485,15 +566,27 @@ export function renderHardware(root, caseId, state, onAction) {
     if (target && ['Enter',' '].includes(event.key)) { event.preventDefault(); event.stopPropagation(); onAction(target.dataset.hwAction); }
   };
   root.onchange = event => { if (event.target.matches('[data-hw-inspect]')) { event.stopPropagation(); onAction(`inspect-${event.target.value}`); } };
-  root.ondragstart = event => { const part = event.target.closest('[data-hw-drag]'); if (part && event.dataTransfer) { event.dataTransfer.setData('text/plain', part.dataset.hwDrag); event.dataTransfer.effectAllowed = 'copy'; } };
-  root.ondragover = event => { if (event.target.closest('[data-hw-dropzone]')) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } };
-  root.ondrop = event => { if (event.target.closest('[data-hw-dropzone]')) { event.preventDefault(); const action = event.dataTransfer.getData('text/plain'); if (PARTS.some(p=>p[3]===action)) onAction(action); } };
+  root.ondragstart = event => { event.preventDefault(); };
+  root.ondragover = null; root.ondrop = null;
+  benchDisposers.set(root,mountWorkbenchInteractions(root,{onAction}));
+  if (socketListOpen && root.querySelector('.hw-target-list')) root.querySelector('.hw-target-list').open = true;
+  if (inventoryOpen && root.querySelector('.hw-fitted-inventory')) root.querySelector('.hw-fitted-inventory').open = true;
+  if (displayControlsOpen && root.querySelector('.hw-display-controls')) root.querySelector('.hw-display-controls').open = true;
   if (previousCoachStage === mission.stage) {
     for (const details of root.querySelectorAll('.hw-coach, .hw-coach details')) {
       if (openCoachLevels.includes(details.dataset.hwCoachLevel)) details.open = true;
     }
   }
-  if (restoreConnector) [...root.querySelectorAll('[data-hw-connector]')].find(control=>control.dataset.hwConnector===restoreConnector)?.focus({preventScroll:true});
+  if (restoreSocket) {
+    const same = [...root.querySelectorAll('[data-hw-socket]')].find(control=>control.dataset.hwSocket===restoreSocket && !!control.matches?.('button')===restoreSocketButton);
+    same?.focus({preventScroll:true});
+  }
+  else if (restorePick) {
+    const sources = [...root.querySelectorAll('[data-hw-pick]')];
+    const same = sources.find(control=>control.dataset.hwPick===restorePick && !control.disabled);
+    (same || sources.find(control=>!control.disabled))?.focus({preventScroll:true});
+  }
+  else if (restoreConnector) [...root.querySelectorAll('[data-hw-connector]')].find(control=>control.dataset.hwConnector===restoreConnector)?.focus({preventScroll:true});
   else if (restoreDiagnostic) [...root.querySelectorAll('[data-hw-diagnostic]')].find(control=>control.dataset.hwDiagnostic===restoreDiagnostic)?.focus({preventScroll:true});
   else if (restoreComponentSelect) root.querySelector('[data-hw-inspect]')?.focus({preventScroll:true});
   else if (restoreAction) {

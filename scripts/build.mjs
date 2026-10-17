@@ -13,10 +13,10 @@ export const PUBLIC_FILES = Object.freeze([
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
   'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
   'src/teaching.js', 'src/teaching.css', 'src/experiments.js', 'src/experiments.css', 'src/learning-tools.js', 'src/capstone.js', 'src/capstone.css',
-  'src/app.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js',
+  'src/app.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js', 'src/workbench-interactions.js',
   'src/privacy.js', 'src/interview.js', 'src/conversation.js', 'src/records.js', 'src/scenarios.js', 'src/workspaces.js',
   'src/expanded-labs.js', 'src/expanded-labs.css', 'src/coding-lab.js', 'src/coding-lab.css', 'src/interview.css',
-  'src/report-crypto.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
+  'src/report-crypto.js', 'src/report-downloads.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
   'src/secure-reports.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css'
 ]);

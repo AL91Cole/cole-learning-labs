@@ -46,7 +46,7 @@ test('picking up and putting down a display cable makes no equipment or saved-wo
   const before=structuredClone(current.state);
   current.click({hwCable:'pickup'});
   assert.match(current.root.innerHTML,/Cable held · choose a video socket/);
-  assert.match(current.root.innerHTML,/class="hw-canvas hw-canvas-cable-held"/);
+  assert.match(current.root.innerHTML,/class="[^"]*\bhw-canvas\b[^"]*\bhw-canvas-cable-held\b[^"]*"/);
   assert.match(current.root.innerHTML,/data-hw-cable="cancel"/);
   assert.deepEqual(current.state,before);
   assert.deepEqual(current.actions,[]);

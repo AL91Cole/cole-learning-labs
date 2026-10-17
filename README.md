@@ -50,6 +50,12 @@ The PDFs contain selectable text, but the workbook is untagged. Use the on-site 
 
 Original curriculum archives, workbook originals, teacher guides, speaking scripts, slide decks, answer keys, completed reports, and private teacher resources stay entirely outside this public checkout. The original slide decks expose solution guidance in visible slides and speaker notes. The optional input-event HTML remains an offline teacher tool. The public `teacher/index.html` demo does not secure files placed beside it. See [Curriculum publishing policy](docs/CURRICULUM-PUBLISHING.md) before adding any resource.
 
+## Equipment interaction and report saving
+
+Hardware labs offer a bounded parts tray beside the equipment picture, twelve component/cable fit targets, separate display-cable ends, current fitted inventory and visible connector detail. Mouse/trackpad and touch-grip drags request the same safety-checked model actions as tap and keyboard controls. Wrong sockets, unsafe internal work and incompatible storage do not bypass the model. This is a simplified equipment teaching simulation; it does not model physical force, complete teardown, individual fasteners or thermal physics.
+
+My report presents an approved local UTF-8 `.txt` download with a fictional case-only filename, optional feature-detected device file sharing, and copy/manual-selection alternatives. Saving does not submit work, and a chosen native app or cloud destination can receive the file. Requested download URLs receive a short handoff interval before cleanup. [Device checks](docs/DEVICE-CHECKS.md) distinguishes actual browser evidence from physical-device checks still required by a school.
+
 ## Lab and submission workflows
 
 | Workflow | Available behavior | Where work goes |
@@ -179,7 +185,7 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-The `20261016-curriculum10` source release (version `2.9.1`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
+The `20261017-workbench11` source release (version `2.10.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 
