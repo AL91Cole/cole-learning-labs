@@ -21,7 +21,7 @@ const tracks = Object.fromEntries(SCENARIOS.map(scenario => [scenario.track, {na
 class Element {
   constructor(dataset = {}) {
     this.dataset = dataset; this.hidden = false; this.value = ''; this.textContent = ''; this.innerHTML = ''; this.tabIndex = 0;
-    this.attributes = new Map(); this.listeners = new Map(); this.children = new Map(); this.focused = 0; this.scrolled = [];
+    this.attributes = new Map(); this.listeners = new Map(); this.children = new Map(); this.childNodes = []; this.focused = 0; this.scrolled = [];
     const classes = new Set();
     this.classList = {
       add: value => classes.add(value), remove: value => classes.delete(value), contains: value => classes.has(value),
@@ -38,16 +38,19 @@ class Element {
   removeAttribute(name) { this.attributes.delete(name); }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
   querySelector(selector) { if (!this.children.has(selector)) this.children.set(selector, new Element()); return this.children.get(selector); }
+  appendChild(child) { this.childNodes.push(child); return child; }
+  replaceChildren(...children) { this.childNodes = [...children]; }
   focus() { this.focused++; }
   scrollIntoView(options) { this.scrolled.push(options); }
   close() {}
 }
 
-function harness(id = 'INC-101', initialSection = 1) {
+function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQuestion) {
   const scenario = SCENARIOS.find(item => item.id === id);
   const record = {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:scenario.track === 'hardware' ? initialHardwareState(id) : initialWorkspaceState(id)};
   const elements = new Map();
-  for (const selector of ['#workspace','#coding-editor','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
+  for (const selector of ['#workspace','#coding-editor','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
+  elements.get('#question-suggestions').hidden=true;
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
   const groups = new Map([
     ['[data-lab-section]',[1,2,3].map(section => new Element({labSection:String(section)}))],
@@ -67,7 +70,8 @@ function harness(id = 'INC-101', initialSection = 1) {
     // Production modules share one realm. Transfer VM-created action data into
     // the model's realm so its strict plain-object boundary is tested fairly.
     applyWorkspaceAction:(caseId,previous,action,value)=>applyWorkspaceAction(caseId,previous,action,value===undefined?undefined:structuredClone(value)),
-    verifyWorkspace,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,tracks,esc:escapeHtml,
+    verifyWorkspace,answerQuestion:replyForQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,tracks,esc:escapeHtml,
+    document:{createElement(tagName){const element=new Element();element.tagName=tagName.toUpperCase();return element;}},
     $: selector => { assert.ok(elements.has(selector),'Unexpected lab selector: '+selector); return elements.get(selector); },
     $$: selector => { assert.ok(groups.has(selector),'Unexpected lab control group: '+selector); return groups.get(selector); },
     bindWorkPrivacy() {},recordFor:() => record,workStatus:() => 'Private session',evidenceList:() => '',
@@ -211,6 +215,42 @@ test('rejected private details are cleared without saving, logging, or echoing t
   }
 });
 
+test('optional follow-up suggestions render bounded plain text as ordinary buttons',()=>{
+  const markup='<img src=x onerror="alert(1)"> What is on the screen?';
+  const h=harness('INC-101',1,(...args)=>({...answerQuestion(...args),suggestions:['  What changed?  ','What changed?',markup,null,'x'.repeat(241),'What have you tried?','One more prompt']}));
+  assert.equal(h.elements.get('#question-suggestions').hidden,true);
+  h.ask('What happened?');
+  const group=h.elements.get('#question-suggestions'),buttons=group.childNodes.filter(child=>child.tagName==='BUTTON');
+  assert.equal(group.hidden,false);assert.equal(buttons.length,3);assert.deepEqual(buttons.map(button=>button.textContent),['What changed?',markup,'What have you tried?']);
+  for(const button of buttons){assert.equal(button.type,'button');assert.equal(button.innerHTML,'');}
+  assert.match(group.childNodes[0].textContent,/your own words/u);assert.equal(readQuestionEvents(h.record.events).length,1,'Suggestions are not sent automatically.');
+});
+
+test('a suggested follow-up uses current history and equipment without clearing an unfinished question',()=>{
+  const calls=[],prompt='Which port is the monitor using?';
+  const h=harness('INC-101',1,(scenario,question,state,history)=>{calls.push({question,history:structuredClone(history),videoPort:state.videoPort});return {...answerQuestion(scenario,question,state,history),suggestions:[prompt]};});
+  h.ask('What changed?');h.action('video-gpu');
+  const input=h.elements.get('#student-question'),draft=h.elements.get('#workspace').querySelector('[data-unsaved-workbench-draft]');input.value='Would it help if we';draft.value='An unfinished workbench choice';
+  const rendered=h.calls.rendered;h.section(2);h.section(1);
+  h.elements.get('#question-suggestions').childNodes.find(child=>child.tagName==='BUTTON').fire('click');
+  assert.equal(calls.length,2);assert.equal(calls[1].question,prompt);assert.equal(calls[1].history.length,1);assert.equal(calls[1].history[0].question,'What changed?');
+  assert.match(h.elements.get('#question-response').textContent,/graphics[- ]card|GPU/iu);
+  assert.equal(input.value,'Would it help if we');assert.equal(input.focused,2);assert.equal(draft.value,'An unfinished workbench choice');assert.equal(h.calls.rendered,rendered);
+  assert.equal(readQuestionEvents(h.record.events).length,2);assert.equal(readQuestionEvents(h.record.events)[1].question,prompt);assert.ok(h.report().includes(prompt));assert.equal(h.record.verified,false);
+});
+
+test('suggested questions pass through the same privacy refusal and never enter reports or progress',()=>{
+  const privateQuestion='My email is learner@example.org. What changed?';
+  const h=harness('INC-101',1,(...args)=>{const reply=answerQuestion(...args);return {...reply,suggestions:reply.kind==='privacy'?[]:[privateQuestion]};});
+  h.ask('Hello');const before=structuredClone(h.record),saved=h.calls.saved;
+  const input=h.elements.get('#student-question');input.value='My next fictional question';
+  h.elements.get('#question-suggestions').childNodes.find(child=>child.tagName==='BUTTON').fire('click');
+  assert.deepEqual(structuredClone(h.record),before);assert.equal(h.calls.saved,saved);assert.equal(input.value,'My next fictional question');
+  assert.equal(h.elements.get('#question-suggestions').hidden,true);assert.equal(h.elements.get('#question-suggestions').childNodes.length,0);
+  assert.doesNotMatch(h.report(),/learner@example\.org/u);assert.doesNotMatch(h.elements.get('#question-response').textContent,/learner@example\.org/u);
+  assert.equal(inquiryProgress(h.scenario,h.record.events).complete,false);
+});
+
 test('hypothesis tests observe actual equipment state and cannot finish the investigation alone', () => {
   const h = harness(); h.section(2); h.elements.get('#run-hypothesis-test').fire('click'); assert.deepEqual(h.visible(),[true,false,false]); assert.equal(h.record.events.length,0); assert.equal(h.record.verified,false);
   h.input('plan','The monitor cable may be using the wrong graphics output.'); h.section(2); h.elements.get('#run-hypothesis-test').fire('click'); assert.match(h.elements.get('#experiment-result').textContent,/not ready/iu); assert.equal(h.record.verified,false); assert.equal(h.record.closed,false);
@@ -255,7 +295,8 @@ test('all cases render three labelled tabpanels and visible instructions on the 
       const matches = html.match(new RegExp('<(?:aside|section|div)\\b[^>]*\\bid="'+id+'"[^>]*>','g')) || []; assert.equal(matches.length,1,scenario.id+' must include one '+id+' panel.'); assert.match(matches[0],/role="tabpanel"/u); assert.match(matches[0],new RegExp('aria-labelledby="lab-tab-'+(index+1)+'"','u')); assert.equal(/\bhidden(?:\s|=|>)/u.test(matches[0]),index !== 0);
       const tab = html.match(new RegExp('<button\\b[^>]*\\bid="lab-tab-'+(index+1)+'"[^>]*>','u'))?.[0]; assert.ok(tab); assert.match(tab,/role="tab"/u); assert.match(tab,new RegExp('aria-controls="'+id+'"','u')); assert.match(tab,new RegExp('aria-selected="'+String(index === 0)+'"','u')); assert.match(tab,new RegExp('tabindex="'+(index === 0 ? 0 : -1)+'"','u'));
     }
-    for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
+    for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','question-suggestions','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
+    assert.match(html,/<div id="question-suggestions"[^>]*role="group"[^>]*aria-label="Suggested follow-up questions"[^>]*hidden/u);
     assert.equal((html.match(/\brole="tabpanel"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,1); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/scripted simulation/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
   }
 });
@@ -275,7 +316,9 @@ test('every lab defaults to on-device question replies and clearly disables the 
     assert.match(options[1][2],/awaiting school\/privacy approval/u);
     assert.match(html,/Live AI is not connected\. It would send question text to an approved provider\./u);
     assert.match(html,/Teacher access, provider terms, privacy review, and a separate approved deployment are required before enabling it\./u);
-    assert.match(html,/Case-based responses run on this device\. This is a scripted simulation\./u);
+    assert.match(html,/This scripted simulation uses authored facts about this fictional case and your earlier questions\./u);
+    assert.match(html,/Replies run on this device and do not contact an AI provider\./u);
+    assert.match(html,/Use your own words\./u);assert.match(html,/Suggestions are optional\./u);
   }
 });
 

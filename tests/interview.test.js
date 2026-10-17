@@ -357,7 +357,7 @@ for (const [id,question,expected] of expandedQuestions) test(id + ': conversatio
   assert.equal(simpler.topic,'conversation-simple');
   const next = answerQuestion(entry,'What should I check next?',state,history);
   assert.equal(next.topic,'conversation-next');
-  assert.match(next.answer,/hypothesis.*one change.*disagree with your first idea/iu);
+  assert.match(next.answer,/I would check.*next\..*hypothesis.*one change/iu);
   for (const answer of [reply,why,simpler,next]) {
     assert.ok(answer.answer.length <= 300);
     assert.ok(!Object.hasOwn(answer,'grade') && !Object.hasOwn(answer,'verified'));

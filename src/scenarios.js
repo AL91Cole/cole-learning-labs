@@ -1,5 +1,5 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261016-ticket-intake7';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261016-ticket-intake7';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261016-conversation8';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261016-conversation8';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 
@@ -13,7 +13,7 @@ export const SCENARIOS = [
     intake: {kind:'follow-up',missing:'Find out what changed before the display stopped working.',factIds:['last-change']},
     clues: [clue('screen','Inspect the monitor','The monitor has power and its input is set to HDMI. It reports no video signal.'),clue('video','Inspect the video connection','The display cable is in the motherboard video socket. This desktop uses the dedicated graphics card below it.'),clue('power','Check power','The desktop is running. The fan and power light are on.'),{...clue('history','Record the recent change','The desk was moved this morning, and the display cable was disconnected and reconnected.'),requiresFact:'last-change'}],
     questions: [question('What changed?','The desk was moved and the display cable was reconnected.'),question('What did you try?','I pressed the monitor power button. The “No signal” message stayed.')],
-    interviewFacts: [{id:'last-change',keywords:['changed','moved','move','reconnected','before the problem','before it stopped'],answer:'The desk was moved this morning, and the display cable was reconnected after being unplugged. The display worked before the move.'}],
+    interviewFacts: [{id:'last-change',keywords:['changed','moved','move','reconnected','before the problem','before it stopped'],answer:'My display worked before the move. The desk was moved this morning, and the display cable was reconnected after being unplugged.',legacyAnswers:['The desk was moved this morning, and the display cable was reconnected after being unplugged. The display worked before the move.']}],
   },
   {
     id: 'INC-102', title: 'The Desktop That Will Not Start', track: 'hardware', grade: '7–8', minutes: 20,
@@ -32,7 +32,7 @@ export const SCENARIOS = [
     intake: {kind:'follow-up',missing:'Ask what work happened before startup stopped.',factIds:['last-change']},
     clues: [clue('boot','Read startup evidence','The startup check reports that memory is not detected.'),clue('ram','Inspect the memory slot','The DDR4 module is partly seated; one retaining clip is open.'),clue('spec','Read the motherboard label','The board accepts DDR4 memory. The installed module is compatible.'),{...clue('history','Record the earlier work','The PC worked before an earlier virtual memory-label inspection. It has not reached the operating system since that inspection.'),requiresFact:'last-change'}],
     questions: [question('What happened before the problem?','A student checked the memory label during an earlier virtual task.'),question('Does the operating system load?','No. Startup stops at the memory check.')],
-    interviewFacts: [{id:'last-change',keywords:['happened before','changed','inspection','memory label','earlier work','last work'],answer:'A student checked the memory label during an earlier virtual task. The PC worked before that inspection and has not reached the operating system since.'}],
+    interviewFacts: [{id:'last-change',keywords:['happened before','changed','inspection','memory label','earlier work','last work'],answer:'The PC worked before a student checked the memory label during an earlier virtual task. Since that inspection, I have not been able to reach the operating system.',legacyAnswers:['A student checked the memory label during an earlier virtual task. The PC worked before that inspection and has not reached the operating system since.']}],
   },
   {
     id: 'INC-104', title: 'The Missing Desktop', track: 'hardware', grade: '9–10', minutes: 25,
@@ -68,7 +68,7 @@ export const SCENARIOS = [
     intake: {kind:'follow-up',missing:'Find out which devices or services have the same problem.',factIds:['affected-devices']},
     clues: [clue('sheet','Read the configuration sheet','Use 10.24.8.25 with mask 255.255.255.0, gateway 10.24.8.1, and school DNS 10.24.8.53.'),clue('switch','Inspect the switch','The workstation link is up. The gateway and local DNS server are available.'),{...clue('ticket','Record the affected devices','Both the learning portal and the printer are unreachable from LAB-PC-12. Nearby workstations can use both services.'),requiresFact:'affected-devices'}],
     questions: [question('Does every device have the issue?','Only LAB-PC-12 is affected.'),question('Which portal is required?','The fictional internal name learn.school.test. This simulator never contacts it.')],
-    interviewFacts: [{id:'affected-devices',keywords:['every device','other device','other computer','nearby','only this','affected','printer','everyone'],answer:'Only LAB-PC-12 is affected. Both the learning portal and the printer fail on it, while nearby workstations can use both services.'}],
+    interviewFacts: [{id:'affected-devices',keywords:['every device','other device','other computer','nearby','only this','affected','printer','everyone'],answer:'Only LAB-PC-12 is affected. I cannot use the learning portal or printer on it, but nearby workstations can use both services.',legacyAnswers:['Only LAB-PC-12 is affected. Both the learning portal and the printer fail on it, while nearby workstations can use both services.']}],
   },
   {
     id: 'NET-202', title: 'Guest Wi-Fi & Share Permission Lockout', track: 'network', grade: '9–10', minutes: 25,

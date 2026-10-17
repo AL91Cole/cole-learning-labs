@@ -1,5 +1,5 @@
-import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261016-ticket-intake7';
-import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261016-ticket-intake7';
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261016-conversation8';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261016-conversation8';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });

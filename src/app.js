@@ -1,12 +1,12 @@
-import {SCENARIOS} from './scenarios.js?release=20261016-ticket-intake7';
-import {applyHardwareAction,verifyHardware,renderHardware} from './hardware.js?release=20261016-ticket-intake7';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261016-ticket-intake7';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261016-ticket-intake7';
-import {normalizeLabRecord} from './records.js?release=20261016-ticket-intake7';
-import {privacyPage} from './privacy.js?release=20261016-ticket-intake7';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261016-ticket-intake7';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261016-ticket-intake7';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261016-ticket-intake7';
+import {SCENARIOS} from './scenarios.js?release=20261016-conversation8';
+import {applyHardwareAction,verifyHardware,renderHardware} from './hardware.js?release=20261016-conversation8';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261016-conversation8';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261016-conversation8';
+import {normalizeLabRecord} from './records.js?release=20261016-conversation8';
+import {privacyPage} from './privacy.js?release=20261016-conversation8';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261016-conversation8';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261016-conversation8';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261016-conversation8';
 
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
@@ -71,7 +71,7 @@ function labPage(s){
     "<div class=\"lab-quick-start\" role=\"note\"><h2>How to use this lab</h2><ol><li><strong>Request & clues.</strong> Read. Ask what is missing. Collect two clues and write your idea.</li><li><strong>Workbench & test.</strong> Change one thing, then test. Save edited settings when shown.</li><li><strong>Check & explain.</strong> Check the goal. Explain your result and open your report.</li></ol><p class=\"lab-page-help\">Follow 1 → 2 → 3. Switch back any time; your work stays in place.</p><p class=\"lab-session-note\">Private practice: export before leaving. Device saving is optional. Keep names, emails, student IDs, and passwords out of your work.</p></div>",
     '<div id="classroom-status"></div><div class="lab-grid">',
     '<aside id="lab-problem" class="case-sidebar" tabindex="0" role="tabpanel" aria-labelledby="lab-tab-1"><section class="case-panel"><h2>1. Read the request</h2><p class="eyebrow">'+(s.intake?.kind==='follow-up'?'INCOMPLETE REQUEST · ASK FOLLOW-UP QUESTIONS':s.intake?.kind==='detailed'?'DETAILED REQUEST · READY TO INVESTIGATE':'YOUR PRACTICE TASK')+'</p><h2>'+esc(s.requester)+'</h2><blockquote>'+esc(s.brief)+'</blockquote><p class="intake-progress" id="intake-progress" role="status">'+esc(inquiryProgress(s,r.events).message)+'</p></section>',
-    '<section class="case-panel interview-panel"><h2>Ask the requester</h2><p class="panel-help">'+esc(s.intake?.kind==='follow-up'?s.intake.missing:'Need another detail? Ask in your own words, or use a starter question.')+'</p><details class="interview-mode-note"><summary>About these practice replies</summary><p>Conversational replies use this fictional case and your previous questions. They are scripted, may miss wording, and do not contact an AI provider.</p><label class="lab-field">Response mode<select id="interview-mode" aria-describedby="live-ai-status"><option value="device">On-device practice chat</option><option value="live" disabled>Live AI · awaiting school/privacy approval</option></select></label><p id="live-ai-status">Live AI is not connected. It would send question text to an approved provider. Teacher access, provider terms, privacy review, and a separate approved deployment are required before enabling it.</p></details><form id="question-form"><label class="lab-field" for="student-question">Your question<textarea id="student-question" maxlength="240" rows="2" placeholder="What happened just before this started?" aria-describedby="question-help"></textarea></label><button class="button" type="submit">Ask the virtual requester</button></form><p id="question-help" class="panel-help">Case-based responses run on this device. This is a scripted simulation. Ask about symptoms, timing, recent changes, or what was tried. Use fictional details only.</p><p id="question-response" class="question-response" role="status"></p><div class="intake-questions">'+s.questions.map((q,i)=>'<button data-question="'+i+'" class="question-button" aria-pressed="'+String(r.questions.includes(i))+'">'+esc(q.label)+' <span>'+(r.questions.includes(i)?'Read':'+')+'</span></button>').join('')+'</div><h3>Our conversation</h3><div id="interview-history" class="interview-history" role="log" aria-label="Questions and requester replies" aria-live="polite">'+interviewList(r)+'</div></section>',
+    '<section class="case-panel interview-panel"><h2>Talk with the requester</h2><p class="panel-help">'+esc(s.intake?.kind==='follow-up'?s.intake.missing:'Need another detail? Ask in your own words, then follow up on the reply.')+'</p><details class="interview-mode-note"><summary>About these practice replies</summary><p>This scripted simulation uses authored facts about this fictional case and your earlier questions. It can ask what you mean when a question is unclear. Replies run on this device and do not contact an AI provider.</p><label class="lab-field">Response mode<select id="interview-mode" aria-describedby="live-ai-status"><option value="device">On-device practice chat</option><option value="live" disabled>Live AI · awaiting school/privacy approval</option></select></label><p id="live-ai-status">Live AI is not connected. It would send question text to an approved provider. Teacher access, provider terms, privacy review, and a separate approved deployment are required before enabling it.</p></details><form id="question-form"><label class="lab-field" for="student-question">Your question<textarea id="student-question" maxlength="240" rows="2" placeholder="What were you doing when you first noticed it?" aria-describedby="question-help"></textarea></label><button class="button" type="submit">Ask the requester</button></form><p id="question-help" class="panel-help">Use your own words. You can follow up with “What happened next?” or “Can you explain that?” Suggestions are optional. Keep all details fictional.</p><p id="question-response" class="question-response" role="status"></p><div id="question-suggestions" class="interview-suggestions" role="group" aria-label="Suggested follow-up questions" hidden></div><div class="intake-questions">'+s.questions.map((q,i)=>'<button data-question="'+i+'" class="question-button" aria-pressed="'+String(r.questions.includes(i))+'">'+esc(q.label)+' <span>'+(r.questions.includes(i)?'Read':'+')+'</span></button>').join('')+'</div><h3>Our conversation</h3><div id="interview-history" class="interview-history" role="log" aria-label="Questions and requester replies" aria-live="off">'+interviewList(r)+'</div></section>',
     '<section class="case-panel"><h2>Read two clues</h2><p class="panel-help">Tap a clue to add it to your report. “Ask first” means the requester needs to supply that detail.</p><div class="clue-buttons">'+s.clues.map(c=>'<button data-clue="'+esc(c.id)+'" class="question-button '+(r.evidence.includes(c.id)?'logged':'')+'" aria-pressed="'+String(r.evidence.includes(c.id))+'">'+esc(c.label)+' <span>'+(r.evidence.includes(c.id)?'Added':'+')+'</span></button>').join('')+'</div><div id="evidence-detail" class="question-response" aria-live="polite"></div></section>',
     '<section class="case-panel guide-plan"><h2>Write your first idea</h2><label class="lab-field">What do you think, and why?<textarea id="plan" maxlength="2000" rows="3" placeholder="I think… because the clues show…">'+esc(r.plan)+'</textarea></label><p class="panel-help">This is your hypothesis: one sentence about what you think and the clue behind it. It is okay to change your mind.</p><div class="lab-step-actions"><button class="button" data-jump-section="2">Open workbench & test →</button></div></section></aside>',
     '<div id="lab-workbench" class="bench-column" tabindex="0" role="tabpanel" aria-labelledby="lab-tab-2" hidden><h2 class="lab-section-heading">2. Workbench & test</h2><div class="bench-label"><span><i class="status-dot"></i> YOUR PRACTICE WORKSPACE</span><span>VIRTUAL ONLY</span></div><div id="workspace" class="workspace"></div><div id="action-feedback" class="action-feedback" role="status">'+esc(r.events.length?eventMessage(r.events.at(-1)):'Use the controls in the workspace. Make one change, then check what happens.')+'</div><section class="case-panel hypothesis-test"><p class="eyebrow">TEST YOUR IDEA</p><h2>What does the evidence show?</h2><p class="panel-help">Your hypothesis:</p><p id="experiment-hypothesis">'+esc(r.plan||'Return to Request & clues and write your first idea.')+'</p><p class="panel-help">'+esc(s.track==='hardware'?'Use the virtual power and startup controls above, then check the current setup here. Does the result support your idea?':'Save or apply your choices above. This button repeats the workspace test and records the result beside your idea. You do not need to pass two different tests.')+'</p><button class="button" id="run-hypothesis-test">Run hypothesis test</button><div id="experiment-result" class="experiment-result" role="status">No experiment run in this view yet. Read the result after each change.</div></section><details class="case-panel bench-log"><summary class="panel-title"><strong>What I tried · action log</strong><span id="action-count">'+r.events.length+' actions</span></summary><ol id="bench-log">'+eventList(r)+'</ol></details><div class="lab-step-actions"><button class="lab-tool" data-jump-section="1">↑ Request & clues</button><button class="button" data-jump-section="3">Check & explain →</button></div></div>',
@@ -126,6 +126,18 @@ function bindLab(s){
   }
   function ask(question,reply){
     $('#question-response').textContent=reply.answer;
+    const suggestions=$('#question-suggestions');
+    suggestions.replaceChildren();
+    const prompts=Array.isArray(reply.suggestions)?[...new Set(reply.suggestions.filter(value=>typeof value==='string'&&value.trim()&&value.length<=240).map(value=>value.trim()))].slice(0,3):[];
+    suggestions.hidden=prompts.length===0;
+    if(prompts.length){
+      const help=document.createElement('p');help.className='panel-help';help.textContent='Try a follow-up, or keep asking in your own words.';suggestions.appendChild(help);
+      for(const prompt of prompts){
+        const button=document.createElement('button');button.type='button';button.className='question-button interview-followup';button.textContent=prompt;
+        button.addEventListener('click',()=>{ask(prompt,answerQuestion(s,prompt,r.state,readQuestionEvents(r.events)));$('#student-question').focus({preventScroll:true});});
+        suggestions.appendChild(button);
+      }
+    }
     const event=questionEvent(question,reply);
     if(event){logEvent(event);r.closed=false;$('#interview-history').innerHTML=interviewList(r);save();refreshStatus();}
   }
@@ -207,7 +219,7 @@ function openReport(s,r){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261016-ticket-intake7');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261016-conversation8');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -219,7 +231,7 @@ function openReport(s,r){
     const token=selection,key=publicFile;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261016-ticket-intake7');
+      const cryptoModule=await import('./report-crypto.js?release=20261016-conversation8');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=URL.createObjectURL(new Blob([protectedReport],{type:'application/octet-stream'}));urls.add(url);encrypted.href=url;encrypted.hidden=false;
