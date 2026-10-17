@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261017-babylon18';
+import { SCENARIOS } from './scenarios.js?release=20261017-classic20';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';

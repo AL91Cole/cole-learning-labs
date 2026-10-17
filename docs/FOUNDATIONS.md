@@ -14,9 +14,9 @@ Routes use `#learn/hardware`, `#learn/network`, `#learn/ai`, `#learn/security`, 
 
 ## Learning flow
 
-**Explore** shows pictures, short appearance cues and the job each item does. Selecting a picture, a 3D component or its ordinary item button records inspection. An original SVG portrait makes hardware recognizable even when a fitted cooler covers the CPU. Looking, zooming or choosing a tool does not repair equipment or complete practice.
+**Explore** shows pictures, short appearance cues and the job each item does. Selecting a picture, a diagram component or its ordinary item button records inspection. An original SVG portrait makes hardware recognizable even when a fitted cooler covers the CPU. Looking or choosing a tool does not repair equipment or complete practice.
 
-**Practice** presents three role questions one at a time, with feedback and an explicit Next control. After every item is explored and those checks are correct, a short mini-job shows one current action. Hardware uses the actual existing PC assembly model, with its power, clip, mount, screw and original-file checks. The prepared PC is off and unplugged, with its case open and memory in the tray. Every guided action has a large ordinary button; supported 3D part, screw and cable gestures request the same guarded operation. Zoom out, Fit PC, Zoom in and Focus part remain visible. Graphics load only while this hardware activity is open and remain optional.
+**Practice** presents three role questions one at a time, with feedback and an explicit Next control. After every item is explored and those checks are correct, a short mini-job shows one current action. Hardware uses the actual existing PC assembly model, with its power, clip, mount, screw and original-file checks. The prepared PC is off and unplugged, with its case open and memory in the tray. Every guided action has a large ordinary button. A still 2D schematic reflects the actual model state; no camera, engine loading or WebGL is required.
 
 The other topics use native illustrated buttons and bounded fictional state changes. Coding uses the existing restricted interpreter rather than browser execution; all three outputs are recomputed from the current source. An edit invalidates earlier results. No external AI provider, real scan, operating-system command, upload or credentials are used.
 

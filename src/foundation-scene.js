@@ -28,64 +28,52 @@ function readout(lab,record){
   return `<div class="foundation-visual-readout">${(lines[trackFor(lab)]||[]).map(([done,label])=>`<span data-foundation-state="${done?'done':'waiting'}">${done?'✓':'○'} ${label}</span>`).join('')}</div>`;
 }
 function portrait(lab,id){const item=itemsFor(lab).find(item=>item.id===id)||itemsFor(lab)[0];return item?`${illustration('hardware',item.id)}<div><strong>${escape(item.label)}</strong><p>${escape(item.looks)}</p></div>`:'';}
+
+const part=(id,label,body)=>`<g class="foundation-diagram-part" data-foundation-item="${id}" role="button" tabindex="0" aria-label="Inspect ${label}" aria-pressed="false"><title>${label}: choose to inspect</title>${body}</g>`;
+const screw=(x,y)=>`<circle cx="${x}" cy="${y}" r="4" fill="#485568" stroke="#8290a1"/><path d="M${x-2} ${y}h4m-2-2v4" stroke="#13202b" stroke-width="1.3"/>`;
+
+/** A schematic cutaway shows the real authored snapshot, including a closed panel. */
+function hardwareDiagram(record){
+  const h=record?.hardware||{},a=h.assembly||{},ram=!!h.ramSeated,panel=!!a.panelInstalled;
+  const screenReady=!!(h.pcOn&&h.booted&&h.gpuInstalled&&h.gpuPowerConnected&&h.signalConnected&&h.pcVideoConnected!==false&&h.videoPort==='gpu');
+  const screenTitle=h.documentOpened?'LESSON FILE OPEN':screenReady?'CLASSROOM DESKTOP':h.pcOn?'NO SIGNAL / CHECK STARTUP':'PC POWER OFF';
+  return `<svg class="foundation-pc-svg" viewBox="0 0 900 620" role="group" aria-label="Illustrated classroom PC cutaway, monitor, and side panel. Choose a component or use its labeled button below.">
+    <defs><pattern id="foundation-grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#173042" stroke-width=".6"/></pattern><linearGradient id="foundation-metal" x2="1" y2="1"><stop stop-color="#a5b1bd"/><stop offset=".45" stop-color="#667687"/><stop offset="1" stop-color="#394a5c"/></linearGradient><linearGradient id="foundation-case" x2="1" y2="1"><stop stop-color="#263544"/><stop offset="1" stop-color="#0e1926"/></linearGradient><linearGradient id="foundation-board" x2="1" y2="1"><stop stop-color="#173c31"/><stop offset="1" stop-color="#0d2824"/></linearGradient></defs>
+    <rect width="900" height="620" fill="#0a1420"/><rect width="900" height="620" fill="url(#foundation-grid)"/>
+    <text x="28" y="32" fill="#bdcddd" font-size="11" letter-spacing="2">CLASSROOM WORKSTATION / SCHEMATIC CUTAWAY</text>
+    ${part('monitor','monitor',`<rect x="25" y="70" width="340" height="232" rx="10" fill="url(#foundation-case)" stroke="#62758b" stroke-width="2"/><rect x="40" y="85" width="310" height="184" fill="${screenReady?'#10394e':'#040b12'}"/><text x="195" y="164" text-anchor="middle" fill="${h.documentOpened?'#75e0c3':'#ccdbe4'}" font-size="15" font-weight="700">${screenTitle}</text><text x="195" y="191" text-anchor="middle" fill="#819bb0" font-size="10">${h.documentOpened?'Original classroom file verified':screenReady?'Ready to open the original lesson file':'Display needs the correct cable and a running PC'}</text><text x="195" y="285" text-anchor="middle" fill="#9bb0c3" font-size="10">MONITOR · HDMI INPUT</text><path d="M178 302v27h34v-27m-87 41h140l-20-14H145z" fill="#303d4c" stroke="#617086"/>`)}
+    <g transform="translate(402 53)"><path d="M0 18L18 0h440v515l-18 18H0z" fill="#111b28" stroke="#667486" stroke-width="2"/><path d="M0 18h440V533m0-515l18-18" fill="none" stroke="#9ba7b6" stroke-opacity=".5"/><rect x="12" y="31" width="416" height="489" rx="3" fill="url(#foundation-case)" stroke="#526172"/>${screw(21,42)}${screw(419,42)}${screw(21,510)}${screw(419,510)}
+      ${part('board','motherboard',`<rect x="28" y="54" width="270" height="354" rx="7" fill="url(#foundation-board)" stroke="#397d6b" stroke-width="2"/><g fill="none" stroke="#326554" stroke-width="1.5"><path d="M59 82h99v54h65v135h48M45 208h72v67h97v100h65M57 217h46v74h83v110M188 78v53h58v221M38 332h61v51h97M47 90v66h25v49M133 71v32h51M158 303v37h-37v41"/></g><rect x="37" y="84" width="25" height="100" rx="2" fill="url(#foundation-metal)"/><text x="39" y="401" fill="#88c9b2" font-size="10">MOTHERBOARD · DDR4 · SATA</text>`)}
+      ${part('cpu','processor beneath the cooler',`<rect x="80" y="109" width="108" height="111" rx="5" fill="#202c32" stroke="#758e91" stroke-width="2"/><rect x="92" y="121" width="84" height="83" fill="url(#foundation-metal)" stroke="#4c6267"/><path d="M96 124h9l-9 9z" fill="#d7ae54"/><rect x="71" y="229" width="128" height="26" rx="4" fill="#15232d" stroke="#829b9f"/><text x="135" y="246" text-anchor="middle" fill="#c1d5da" font-size="10">CPU BENEATH COOLER</text>`)}
+      ${part('cooler','CPU cooler and fan',`<rect x="78" y="108" width="111" height="111" rx="8" fill="url(#foundation-metal)" stroke="#8e9ca7"/><path d="M85 113v101m10-101v101m10-101v101m10-101v101m10-101v101m10-101v101m10-101v101m10-101v101m10-101v101m10-101v101" stroke="#354653" stroke-width="2"/><circle cx="133" cy="163" r="47" fill="#172631" stroke="#627e8c" stroke-width="2"/>${[0,60,120,180,240,300].map(angle=>`<path d="M133 163C101 151 99 126 115 123C137 121 137 141 133 163Z" transform="rotate(${angle} 133 163)" fill="#44657a" stroke="#6c8e9e"/>`).join('')}<circle cx="133" cy="163" r="12" fill="#afc2cb" stroke="#233d4c"/>${screw(86,116)}${screw(181,116)}${screw(86,211)}${screw(181,211)}`)}
+      ${part('ram','DDR4 memory and retention clips',`<rect x="218" y="89" width="20" height="170" fill="#111e24" stroke="#597b6d"/><rect x="247" y="89" width="22" height="170" fill="#111e24" stroke="#597b6d"/>${ram?'<rect x="247" y="92" width="22" height="162" fill="#1f785c" stroke="#6cca9a"/><path d="M251 104v138m13-138v138" stroke="#d1b550"/><g fill="#112d2c"><rect x="254" y="109" width="9" height="27"/><rect x="254" y="145" width="9" height="27"/><rect x="254" y="181" width="9" height="27"/><rect x="254" y="217" width="9" height="24"/></g>':'<path d="M257 101v142" stroke="#d0ae58" stroke-dasharray="3 4"/>'}<path d="M244 88h28m-28 169h28" stroke="${a.ramClipsOpen?'#e7b76b':'#98b3a9'}" stroke-width="${a.ramClipsOpen?4:8}"/><text x="245" y="278" text-anchor="middle" fill="${ram?'#91d9b8':'#e7bd72'}" font-size="10">${ram?'DDR4 FITTED':'DDR4 SLOT EMPTY'}</text>`)}
+      ${part('gpu','graphics card',`<rect x="48" y="294" width="229" height="72" rx="5" fill="#182d36" stroke="#729a9a" stroke-width="2"/><rect x="53" y="299" width="218" height="61" rx="4" fill="#243d48"/><circle cx="89" cy="330" r="25" fill="#112833" stroke="#738f99"/><path d="M89 307v46m-23-23h46m-39-16l33 32m0-32l-33 32" stroke="#4e7889" stroke-width="3"/><circle cx="89" cy="330" r="6" fill="#94b4bd"/><text x="132" y="326" fill="#8ad6c9" font-size="11" font-weight="700">PCIe GRAPHICS</text><text x="132" y="344" fill="#8caab4" font-size="9">Dedicated display output</text><path d="M48 294H33v76h15" fill="none" stroke="#98a8b2" stroke-width="4"/>`)}
+      ${part('psu','power supply',`<rect x="309" y="55" width="105" height="149" rx="4" fill="#151e2b" stroke="#7b8794" stroke-width="2"/><text x="362" y="75" text-anchor="middle" fill="#b4c3cf" font-size="10">POWER SUPPLY</text><circle cx="362" cy="122" r="33" fill="#101a26" stroke="#627387"/><path d="M338 99l48 46m-48 0l48-46m-24-9v66m-33-33h66" stroke="#465a6b" stroke-width="2"/><text x="362" y="181" text-anchor="middle" fill="${h.acConnected?'#edbd71':'#6fddbb'}" font-size="9">${h.acConnected?'AC CONNECTED':'AC DISCONNECTED'}</text>`)}
+      ${part('ssd','original SATA SSD',`<rect x="308" y="316" width="107" height="132" rx="6" fill="#18232f" stroke="#7d8c9e" stroke-width="2"/><rect x="317" y="325" width="89" height="111" rx="4" fill="url(#foundation-metal)"/><rect x="325" y="336" width="73" height="64" rx="2" fill="#142430"/><text x="361" y="355" text-anchor="middle" fill="#d3e3ea" font-size="11">256 GB SSD</text><text x="361" y="376" text-anchor="middle" fill="#8eb3bd" font-size="9">ORIGINAL DRIVE</text><rect x="327" y="421" width="18" height="10" fill="#171e1f" stroke="#e2bb56"/><rect x="350" y="421" width="34" height="10" fill="#171e1f" stroke="#e2bb56"/>`)}
+      <path d="M315 156C301 153 309 150 296 151" fill="none" stroke="#b58b46" stroke-width="8"/><path d="M315 108C300 38 158 38 83 59" fill="none" stroke="#b39755" stroke-width="3"/><path d="M264 390C285 390 279 429 330 429" fill="none" stroke="#e5a343" stroke-width="6"/>
+      <text x="31" y="478" fill="#6c8196" font-size="9">CUTAWAY VIEW · PANEL ${panel?'FITTED':'REMOVED'}</text></g>
+    ${part('panel','side panel and its two screws',`<g transform="translate(62 391)"><rect width="252" height="151" rx="6" fill="url(#foundation-case)" stroke="#62758b" stroke-width="2"/>${screw(15,15)}${screw(237,135)}<path d="M40 42h172m-172 12h172m-172 12h172m-172 12h172m-172 12h172" stroke="#344a5d" stroke-width="4"/><text x="126" y="120" text-anchor="middle" fill="#acbdcc" font-size="11">SIDE PANEL · ${panel?'FITTED ON CASE':'IN THE PARTS TRAY'}</text></g>`)}
+    <text x="28" y="590" fill="#7d9ab0" font-size="11">SCHEMATIC WORKBENCH · ILLUSTRATIVE SCALE · CHOOSE A PART TO INSPECT</text>
+  </svg>`;
+}
+
+function hardwareReadout(record){const h=record?.hardware||{},a=h.assembly||{};return `<div class="foundation-visual-readout"><span>PC ${h.pcOn?'on':'off'}</span><span>AC ${h.acConnected?'connected':'disconnected'}</span><span>RAM ${h.ramSeated?'fitted':'in the parts tray'}</span><span>Memory clips ${a.ramClipsOpen?'open':'closed'}</span><span>Panel screws ${(Array.isArray(a.panelScrews)?a.panelScrews:[]).filter(Boolean).length}/2</span></div>`;}
+
 export function renderFoundationVisual(lab,record){
-  if(trackFor(lab)==='hardware')return `<div class="foundation-hardware-scene" data-foundation-hardware-scene><p class="foundation-scene-placeholder" data-foundation-scene-placeholder>Preparing the real 3D workstation. The labeled part buttons also work without graphics.</p></div><div class="foundation-part-portrait" data-foundation-part-portrait>${portrait(lab,'')}</div>`;
+  if(trackFor(lab)==='hardware')return `<div class="foundation-hardware-diagram">${hardwareDiagram(record)}${hardwareReadout(record)}</div><div class="foundation-part-portrait" data-foundation-part-portrait>${portrait(lab,'')}</div>`;
   return `<div class="foundation-equipment-map" role="group" aria-label="${escape(lab?.title||'Equipment explorer')}"><div class="foundation-equipment-grid">${itemsFor(lab).map(item=>`<button type="button" class="foundation-equipment-card" data-foundation-item="${escape(item.id)}" aria-pressed="false">${illustration(trackFor(lab),item.id)}<strong>${escape(item.label)}</strong><span>${escape(item.looks)}</span></button>`).join('')}</div>${readout(lab,record)}</div>`;
 }
 
-/** One stable host: the UI owns tabs; this adapter owns only its disposable view. */
-export function mountFoundationScene(host,{lab,record,onInspect=()=>{},onAction=()=>{},onStatus=()=>{}}={}){
+/** One native diagram host. Learning credit and guided actions belong to the model/controller. */
+export function mountFoundationScene(host,{lab,record,onInspect=()=>{},onStatus=()=>{}}={}){
   if(!host?.ownerDocument)return null;
-  const doc=host.ownerDocument;
-  let current=record,scene=null,module=null,disposed=false,loading=false,visible=!host.closest?.('[hidden]'),mode='explore',selected='',failed=false,paused=false,toolState='';
-  const hardware=trackFor(lab)==='hardware';
-  const findPart=id=>{
-    const aliases={storage:'ssd',power:'psu',display:'monitor',atx:'board',eps:'board','gpu-power':'gpu','sata-data':'ssd','sata-power':'ssd','cpu-fan':'cooler','front-panel':'panel','hdmi-pc':'monitor','hdmi-monitor':'monitor',ac:'psu'};
-    const raw=typeof id==='string'?id.replace(/^cable-/,''):'';
-    const part=aliases[raw]||(/^(panel|psu|board|cooler|gpu|ssd)-\d$/.exec(raw)?.[1])||raw;
-    return itemsFor(lab).some(item=>item.id===part)?part:'';
-  };
-  function status(kind,message){if(!disposed)onStatus({kind,message});}
-  function placeholder(message){const node=host.querySelector?.('[data-foundation-scene-placeholder]');if(node){node.textContent=message;node.hidden=false;}}
-  function applyTool(){
-    if(!scene)return;
-    const done=Array.isArray(current?.practice)?current.practice:[];
-    const jobs=Array.isArray(lab?.jobs)?lab.jobs:[];
-    const action=jobs.find(job=>!done.includes(job.id))?.action||jobs.find(job=>!done.includes(job.id))?.id||'';
-    const ready=mode==='practice'&&itemsFor(lab).every(item=>current?.explored?.includes(item.id))&&(lab.checks||[]).every(check=>current?.answers?.[check.id]===check.answer);
-    const tool=!ready?'inspect':/^asm-(tighten|loosen)-/.test(action)?'screwdriver':/^asm-(fit|remove)-/.test(action)?'move':/^(video-|plug-in|unplug|(?:asm-)?(?:connect|disconnect)-)/.test(action)?'cables':/apply-paste/.test(action)?'paste':/clean-paste/.test(action)?'clean':'inspect';
-    const cable=tool==='cables'?(action==='plug-in'||action==='unplug'?'ac':action.startsWith('video-')?'hdmi-pc':action.replace(/^asm-(?:connect|disconnect)-/,'')):'';
-    if(toolState===`${tool}:${cable}`)return;toolState=`${tool}:${cable}`;
-    scene.setTool?.(tool);if(cable)scene.setCable?.(cable);
-  }
-  function inspect(id){const part=findPart(id);if(!part||disposed)return;focus(part);onInspect(part);}
-  function actionResult(result){return result?.state?.hardware?{...result,state:result.state.hardware}:result;}
-  function action(action){if(disposed||!visible||doc.hidden||paused||mode!=='practice')return {kind:'warning',message:'Switch to the visible Practice workstation before making a repair.'};const result=onAction(action);return result?.then?result.then(actionResult):actionResult(result);}
-  async function load(){
-    if(!hardware||disposed||!visible||doc.hidden||paused||loading||scene||failed)return;
-    loading=true;status('loading','Preparing the 3D workstation…');
-    try{
-      module ||= await import('./assembly-scene.js?release=20261017-babylon18');
-      if(disposed||!visible||doc.hidden||paused)return;
-      scene=module.mountAssemblyScene(host.querySelector('[data-foundation-hardware-scene]'),{hardware:current?.hardware,assembly:current?.hardware?.assembly,onSelect:inspect,onAction:action,onInteraction:info=>status('info',info.message),onStatus:message=>{if(message.kind==='unavailable')failed=true;status(message.kind,message.message);}});
-      if(!scene){failed=true;placeholder('3D is unavailable here. Use the labeled part buttons and guided practice controls.');status('unavailable','Every lesson and practice action remains available without 3D.');return;}
-      const node=host.querySelector('[data-foundation-scene-placeholder]');if(node)node.hidden=true;
-      scene.fit?.();applyTool();if(selected)scene.select?.(selected==='monitor'?'display':selected);
-    }catch{failed=true;placeholder('The 3D view could not load. Use the labeled parts and guided practice controls.');status('unavailable','3D could not load. All learning activities remain available.');}
-    finally{loading=false;}
-  }
-  function focus(id){if(disposed||!itemsFor(lab).some(item=>item.id===id))return;selected=id;scene?.select?.(id==='monitor'?'display':id);host.querySelectorAll?.('[data-foundation-item]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.foundationItem===id)));if(hardware){const node=host.querySelector?.('[data-foundation-part-portrait]');if(node)node.innerHTML=portrait(lab,id);}}
-  function update(next){
-    if(disposed)return;current=next;
-    if(hardware){scene?.cancelInteraction?.();scene?.update(current?.hardware,current?.hardware?.assembly);applyTool();}
-    else{const active=doc.activeElement?.closest?.('[data-foundation-item]'),restore=active&&host.contains?.(active)?active.dataset.foundationItem:'';host.innerHTML=renderFoundationVisual(lab,current);if(selected)focus(selected);if(restore)[...host.querySelectorAll('[data-foundation-item]')].find(node=>node.dataset.foundationItem===restore)?.focus({preventScroll:true});}
-  }
-  function cancelInteraction(){scene?.cancelInteraction?.();}
-  function setVisible(value){if(disposed)return;visible=!!value;if(!visible||doc.hidden||paused){cancelInteraction();scene?.pause?.();}else if(scene)scene.resume?.();else void load();}
-  function visibility(){setVisible(visible);}
-  function camera(command){if(disposed)return;cancelInteraction();if(command==='pause'){paused=true;scene?.pause?.();return;}if(command==='resume'){paused=false;failed=false;if(visible&&!doc.hidden){if(scene)scene.resume?.();else void load();}return;}if(!visible||doc.hidden||paused)return;if(command==='in'||command==='out')scene?.zoom?.(command);else if(command==='fit')scene?.fit?.();else if(command==='focus')scene?.focusSelected?.();}
-  function click(event){const node=event.target.closest?.('[data-foundation-item]');if(!node||!host.contains(node))return;const id=node.dataset.foundationItem;if(itemsFor(lab).some(item=>item.id===id)){focus(id);inspect(id);}}
-  host.addEventListener('click',click);doc.addEventListener?.('visibilitychange',visibility);
-  if(hardware)void load();else status('ready','Choose a picture or a labeled item to inspect it.');
-  return{update,focus,camera,cancelInteraction,setVisible,setMode(value){mode=value==='practice'?'practice':'explore';cancelInteraction();applyTool();},dispose(){if(disposed)return;disposed=true;cancelInteraction();scene?.dispose?.();scene=null;host.removeEventListener('click',click);doc.removeEventListener?.('visibilitychange',visibility);}};
+  const doc=host.ownerDocument;let current=record,selected='',visible=!host.closest?.('[hidden]'),disposed=false;
+  function focus(id){if(disposed||!itemsFor(lab).some(item=>item.id===id))return;selected=id;host.querySelectorAll('[data-foundation-item]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.foundationItem===id)));const portraitNode=host.querySelector('[data-foundation-part-portrait]');if(portraitNode)portraitNode.innerHTML=portrait(lab,id);}
+  function update(next){if(disposed)return;current=next;const active=doc.activeElement?.closest?.('[data-foundation-item]'),restore=active&&host.contains(active)?active.dataset.foundationItem:'';host.innerHTML=renderFoundationVisual(lab,current);if(selected)focus(selected);if(restore)[...host.querySelectorAll('[data-foundation-item]')].find(node=>node.dataset.foundationItem===restore)?.focus({preventScroll:true});}
+  function inspect(event){if(disposed||!visible||doc.hidden)return;const node=event.target.closest?.('[data-foundation-item]');if(!node||!host.contains(node)||!itemsFor(lab).some(item=>item.id===node.dataset.foundationItem))return;focus(node.dataset.foundationItem);onInspect(node.dataset.foundationItem);}
+  function key(event){if(event.key!=='Enter'&&event.key!==' ')return;const node=event.target.closest?.('[data-foundation-item]');if(!node||node.tagName?.toLowerCase()==='button')return;event.preventDefault();inspect(event);}
+  host.addEventListener('click',inspect);host.addEventListener('keydown',key);
+  onStatus({kind:'ready',message:'Choose a component in the diagram or use the labeled part buttons.'});
+  return {update,focus,setVisible(value){visible=!!value;},setMode(){},camera(){},cancelInteraction(){},dispose(){if(disposed)return;disposed=true;host.removeEventListener('click',inspect);host.removeEventListener('keydown',key);}};
 }
+

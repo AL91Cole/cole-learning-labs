@@ -26,7 +26,7 @@ test('dragging maps only a known component to its matching mount or the parts tr
   assert.deepEqual(state, before, 'a proposal is not a committed equipment change');
 });
 
-test('3D move and screwdriver proposals remain subject to power and assembly prerequisites', () => {
+test('Move and screwdriver proposals remain subject to power and assembly prerequisites', () => {
   const live = detailed('INC-101');
   const screw = assemblyToolAction(live, live.assembly, 'screwdriver', 'panel-0');
   assert.equal(screw.action, 'asm-loosen-panel-0');
@@ -56,8 +56,7 @@ test('tool names and fastener indices are fixed, while inspect and wrong-surface
   assert.equal(attempt(state, 'asm-apply-paste').kind, 'warning', 'paste requires a fitted, exposed processor');
 });
 
-// A DOM adapter boundary tests the actual controller with the real model. Only
-// graphics creation is replaced; native pointer/raycast behavior has scene tests.
+// Native controls exercise the actual controller against the real model.
 function workbench(id = 'INC-106') {
   const source = readFileSync(new URL('../src/assembly-workbench.js', import.meta.url), 'utf8');
   const fields = new Map(), listeners = new Map(), doc = { activeElement: null };
@@ -109,22 +108,11 @@ test('accessible tool choices are ephemeral and fit, screw and paste buttons use
   bench.controller.dispose();
 });
 
-test('renderer gestures dispatch through the same power guards and interaction messages remain text', async () => {
-  const bench = workbench('INC-101');
-  bench.click('asmTool', 'screwdriver'); bench.click('asmCamera', 'load'); await settle();
-  assert.equal(bench.calls.tools.at(-1), 'screwdriver');
-  const before = structuredClone(bench.state);
-  const result = bench.sceneOptions.onAction('asm-loosen-panel-0');
-  assert.equal(result.kind, 'warning'); assert.deepEqual(bench.state, before);
-  const count = bench.committed.length;
-  bench.sceneOptions.onInteraction({ kind: 'dragging', message: '<img src=x onerror=payload()>' });
-  assert.equal(bench.fields.get('[data-asm-feedback]').textContent, '<img src=x onerror=payload()>');
-  assert.equal(bench.committed.length, count);
-  bench.controller.cancel();
-  const canceled = bench.calls.canceled;
-  bench.controller.setVisible(false);
-  assert.ok(bench.calls.canceled > canceled); assert.equal(bench.calls.pauses, 1);
-  assert.equal(bench.committed.length, count);
-  bench.controller.dispose();
-  assert.equal(bench.calls.disposed, 1); assert.equal(bench.listeners.size, 0);
+test('native tool controls keep power guards and report or section cancellation commits nothing',()=>{
+  const bench=workbench('INC-101'),before=structuredClone(bench.state);
+  bench.click('asmTool','screwdriver');bench.choose('[data-asm-fastener]','panel-0');bench.click('asmUseTool','turn');
+  assert.deepEqual(bench.state,before);assert.equal(bench.committed.at(-1),'asm-loosen-panel-0');
+  const count=bench.committed.length;bench.controller.cancel();bench.controller.setVisible(false);
+  bench.click('asmUseTool','turn');assert.deepEqual(bench.state,before);assert.equal(bench.committed.length,count);
+  bench.controller.dispose();assert.equal(bench.listeners.size,0);
 });
