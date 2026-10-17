@@ -5,11 +5,12 @@
   "bundlerVersion": "0.28.2",
   "patches": {
     "guidUpstreamSha256": "38f5c60124c605674eef651c88356cd90c1ce4c51685ff1e321457fb307a16dc",
-    "description": "RandomGUID uses crypto.getRandomValues without a weak fallback; identifiers are graphics-only."
+    "urlValidationUpstreamSha256": "54738dfb01394754e72a9260923c23dfcead19be4f97398ca5ad58c02fa67f05",
+    "description": "Graphics GUIDs use CSPRNG without weak fallback. CDN request-modification checks parse URLs and require exact HTTPS hostnames, no credentials or non-default port."
   },
-  "entrySha256": "e8bb7a544ebf49f3585c24bd4003f1b2d39c9d3c1f146d790a139adfe453e491",
-  "bundleSha256": "65d089e8a98bf33f669e47e00c77b8e8694813fa92866cf0b1cc32c368c44e9c",
-  "bundleBytes": 2295277,
+  "entrySha256": "6479d98a81e6cd370db91afbe51ae17b2992311405191ced1222c31456a15d28",
+  "bundleSha256": "2e374d361c0ff8eb7e70a228a7bb6692e75bba292ff3992e2c62ac479435af0d",
+  "bundleBytes": 2295467,
   "packages": {
     "node_modules/@babylonjs/core": {
       "version": "9.31.0",

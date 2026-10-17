@@ -34,3 +34,4 @@ export {ShaderStore} from '../.graphics-vendor/node_modules/@babylonjs/core/Engi
 export {Constants} from '../.graphics-vendor/node_modules/@babylonjs/core/Engines/constants.js';
 export {Tools} from '../.graphics-vendor/node_modules/@babylonjs/core/Misc/tools.js';
 export {GUID,RandomGUID} from '../.graphics-vendor/node_modules/@babylonjs/core/Misc/guid.js';
+export {WebRequest} from '../.graphics-vendor/node_modules/@babylonjs/core/Misc/webRequest.js';

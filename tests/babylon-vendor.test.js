@@ -25,6 +25,24 @@ test('graphics GUIDs use CSPRNG and remain separate from student or authenticati
     for(const id of ids)assert.match(id,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   }finally{Math.random=previous;}
 });
+test('vendor URL checks cannot skip request policy for lookalike hosts, credentials, paths or malformed URLs',()=>{
+  const check=url=>B.WebRequest._ShouldSkipRequestModifications(url),previous=B.WebRequest.SkipRequestModificationForBabylonCDN;
+  try{B.WebRequest.SkipRequestModificationForBabylonCDN=true;
+    for(const url of ['https://cdn.babylonjs.com/model','https://preview.babylonjs.com/a?b=c','https://CDN.BABYLONJS.COM:443/shader'])assert.equal(check(url),true,url);
+    for(const url of ['https://cdn.babylonjs.com.attacker.invalid/a','https://sub.cdn.babylonjs.com/a','https://cdn.babylonjs.com./a','https://attacker.invalid/cdn.babylonjs.com','https://attacker.invalid/?next=https://preview.babylonjs.com','https://attacker.invalid/#cdn.babylonjs.com','https://cdn.babylonjs.com@attacker.invalid/a','https://user@cdn.babylonjs.com/a','https://user:secret@cdn.babylonjs.com/a','https://preview.babylonjs.com:444/a','http://cdn.babylonjs.com/a','ws://cdn.babylonjs.com/a','javascript:cdn.babylonjs.com','//cdn.babylonjs.com/a','/cdn.babylonjs.com/a','','not a URL',null,{}])assert.equal(check(url),false,String(url));
+    B.WebRequest.SkipRequestModificationForBabylonCDN=false;assert.equal(check('https://cdn.babylonjs.com/a'),false);
+  }finally{B.WebRequest.SkipRequestModificationForBabylonCDN=previous;}
+});
+test('lookalike asset URLs retain request policy headers and modifiers',()=>{
+  const oldHeaders=B.WebRequest.CustomRequestHeaders,oldModifiers=B.WebRequest.CustomRequestModifiers,oldFlag=B.WebRequest.SkipRequestModificationForBabylonCDN;
+  let calls=0;
+  try{B.WebRequest.CustomRequestHeaders={'X-Practice-Policy':'required'};B.WebRequest.CustomRequestModifiers=[(request,url)=>{calls++;request.setRequestHeader('X-Modified','yes');return url;}];B.WebRequest.SkipRequestModificationForBabylonCDN=true;
+    const base={'X-Base':'keep'},lookalike=B.WebRequest._CollectCustomizations('https://cdn.babylonjs.com.attacker.invalid/a',base);
+    assert.deepEqual(lookalike.headers,{'X-Base':'keep','X-Practice-Policy':'required','X-Modified':'yes'});assert.equal(calls,1);assert.deepEqual(base,{'X-Base':'keep'});
+    assert.deepEqual(B.WebRequest._CollectCustomizations('https://cdn.babylonjs.com/a',base).headers,base);assert.equal(calls,1);
+    B.WebRequest.SkipRequestModificationForBabylonCDN=false;assert.equal(B.WebRequest._CollectCustomizations('https://cdn.babylonjs.com/a',base).headers['X-Practice-Policy'],'required');assert.equal(calls,2);
+  }finally{B.WebRequest.CustomRequestHeaders=oldHeaders;B.WebRequest.CustomRequestModifiers=oldModifiers;B.WebRequest.SkipRequestModificationForBabylonCDN=oldFlag;}
+});
 test('the bundled engine executes real PBR scene geometry, projection and picking without a browser or remote service',()=>{
   const engine=new B.NullEngine({renderWidth:320,renderHeight:240,textureSize:64});
   try{const scene=new B.Scene(engine);scene.useRightHandedSystem=true;
