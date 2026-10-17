@@ -29,12 +29,16 @@ function view(scenario,state) {
   return root.innerHTML;
 }
 
-function visibleWorkspaceGuide(scenario,state) {
+function availableWorkspaceGuide(scenario,state) {
     const html=view(scenario,state);
     const coding=supportsCodingLab(scenario.id),expanded=supportsExpandedLab(scenario.id);
     const pattern=coding?/<section class="ws-start code-start" aria-label="How to use this coding lab">(.*?)<\/section>/s:expanded?/<section class="exp-start" aria-label="How to use this lab">(.*?)<\/section>/s:/<section class="ws-start" aria-label="How to use this lab">(.*?)<\/section>/s;
-    const guide=html.match(pattern)?.[1];
-    assert.ok(guide,`${scenario.id}: instructions must remain on the page`);
+    const matched=html.match(pattern),guide=matched?.[1];
+    assert.ok(guide,`${scenario.id}: instructions must remain available beside the workspace`);
+    const before=html.slice(0,matched.index),disclosure=before.slice(before.lastIndexOf('<details'));
+    assert.ok(before.lastIndexOf('<details')>before.lastIndexOf('</details>'),`${scenario.id}: extended instructions belong to a native disclosure`);
+    assert.doesNotMatch(disclosure.match(/^<details\b([^>]*)>/)?.[1]||'',/\bopen\b/,`${scenario.id}: extended instructions start closed`);
+    assert.match(disclosure,/<summary\b[^>]*>[^<]+<\/summary>/,`${scenario.id}: help needs a named keyboard-accessible summary`);
     assert.doesNotMatch(guide,/<details\b|<summary\b|\bhidden\b|aria-hidden="true"/,scenario.id);
     assert.equal((guide.match(/<li>/g)||[]).length,3,scenario.id);
     assert.match(guide,coding?/Save and run do not submit work to a teacher/:expanded?/Apply and test do not submit work to a teacher/:/Neither button submits work to a teacher/,scenario.id);
@@ -58,55 +62,56 @@ function visibleWorkspaceGuide(scenario,state) {
     return {html,guide};
 }
 
-test('every settings workspace shows three instructions that name its real buttons',()=>{
+test('every settings workspace offers three optional instructions that name its visible real controls',()=>{
   assert.equal(SCENARIOS.length,29);
   assert.equal(SCENARIOS.filter(item=>item.track==='hardware').length,8);
   assert.equal(legacyScenarios.length,9);assert.equal(expandedScenarios.length,9);assert.equal(codingScenarios.length,3);
   for(const scenario of settingsScenarios) {
-    const {html}=visibleWorkspaceGuide(scenario,initialWorkspaceState(scenario.id));
+    const {html,guide}=availableWorkspaceGuide(scenario,initialWorkspaceState(scenario.id));
     assert.match(html,supportsCodingLab(scenario.id)?/Run the program to see results for every fixture/:supportsExpandedLab(scenario.id)?/No current full test/:/No current test results/,scenario.id);
+    assert.doesNotMatch(guide,/<button\b/,`${scenario.id}: closing help must not hide the repair or test controls`);
   }
 });
 
-test('instructions stay visible after a real saved change and test in all nine settings labs',()=>{
+test('optional instructions remain available after a real saved change and test in all nine settings labs',()=>{
   const saveActions={NET201:'save-network',NET202:'save-access',NET203:'save-recovery',AI301:'save-prompt',AI302:'save-claims',AI303:'save-code',SEC401:'save-triage',SEC402:'save-response',SEC403:'set-authorization'};
   for(const scenario of legacyScenarios) {
     const code=scenario.id.replaceAll('-','');
     let state=initialWorkspaceState(scenario.id);
-    const initial=visibleWorkspaceGuide(scenario,state).guide;
+    const initial=availableWorkspaceGuide(scenario,state).guide;
     if(code==='SEC403') state=applyWorkspaceAction(scenario.id,state,'acknowledge-scope',true).state;
     state=applyWorkspaceAction(scenario.id,state,saveActions[code],code==='SEC403'?'owner':state).state;
     assert.equal(state.workspaceEdits,1,scenario.id);
-    assert.equal(visibleWorkspaceGuide(scenario,state).guide,initial,scenario.id);
+    assert.equal(availableWorkspaceGuide(scenario,state).guide,initial,scenario.id);
     state=applyWorkspaceAction(scenario.id,state,'run-check').state;
     assert.equal(state.tested,true,scenario.id);
-    const {html,guide}=visibleWorkspaceGuide(scenario,state);
+    const {html,guide}=availableWorkspaceGuide(scenario,state);
     assert.equal(guide,initial,scenario.id);
     assert.match(html,/Your latest test results/,scenario.id);
   }
 });
 
-test('the nine new decision labs retain visible guidance after real saved changes and tests',()=>{
+test('the nine decision labs retain optional guidance after real saved changes and tests',()=>{
   for(const scenario of expandedScenarios) {
     let state=initialWorkspaceState(scenario.id);
-    const guideBefore=visibleWorkspaceGuide(scenario,state).guide;
+    const guideBefore=availableWorkspaceGuide(scenario,state).guide;
     const fields=expandedStateFields(scenario.id);
     const first=Object.keys(fields)[0],changed=fields[first].find(value=>value!==state[first]);
     assert.notEqual(changed,undefined,scenario.id);
     state=applyWorkspaceAction(scenario.id,state,'save-expanded',{[first]:changed}).state;
     assert.equal(state[first],changed,scenario.id);assert.equal(state.workspaceEdits,1,scenario.id);
     assert.equal(state.tested,false,scenario.id);
-    assert.equal(visibleWorkspaceGuide(scenario,state).guide,guideBefore,scenario.id);
+    assert.equal(availableWorkspaceGuide(scenario,state).guide,guideBefore,scenario.id);
     state=applyWorkspaceAction(scenario.id,state,'run-check').state;
     assert.equal(state.tested,true,scenario.id);assert.equal(state.checkRuns,1,scenario.id);
-    const {html,guide}=visibleWorkspaceGuide(scenario,state);
+    const {html,guide}=availableWorkspaceGuide(scenario,state);
     assert.equal(guide,guideBefore,scenario.id);
     assert.match(html,/<h3>Latest full test<\/h3><ul>/,scenario.id);
     assert.equal((html.match(/class="exp-(?:pass|revisit)"/g)||[]).length,state.results.length,scenario.id);
   }
 });
 
-test('the three coding labs retain visible guidance from draft changes through executed fixture results',()=>{
+test('the three coding labs retain optional guidance from draft changes through executed fixture results',()=>{
   const programs={
     'CODE-501':'print(quantity * 3);',
     'CODE-502':'if (temperature < 20) { print("Heating"); } else { if (temperature <= 25) { print("Comfortable"); } else { print("Cooling"); } }',
@@ -114,15 +119,15 @@ test('the three coding labs retain visible guidance from draft changes through e
   };
   for(const scenario of codingScenarios) {
     let state=initialWorkspaceState(scenario.id);
-    const guideBefore=visibleWorkspaceGuide(scenario,state).guide;
+    const guideBefore=availableWorkspaceGuide(scenario,state).guide;
     state=applyWorkspaceAction(scenario.id,state,'save-code',{code:programs[scenario.id]}).state;
     assert.equal(state.code,programs[scenario.id],scenario.id);assert.equal(state.workspaceEdits,1,scenario.id);
     assert.equal(state.tested,false,scenario.id);assert.deepEqual(state.output,[],scenario.id);
-    assert.equal(visibleWorkspaceGuide(scenario,state).guide,guideBefore,scenario.id);
+    assert.equal(availableWorkspaceGuide(scenario,state).guide,guideBefore,scenario.id);
     state=applyWorkspaceAction(scenario.id,state,'run-check').state;
     assert.equal(state.tested,true,scenario.id);assert.equal(state.checkRuns,1,scenario.id);
     assert.ok(state.results.every(result=>result.ok),scenario.id);
-    assert.equal(visibleWorkspaceGuide(scenario,state).guide,guideBefore,scenario.id);
+    assert.equal(availableWorkspaceGuide(scenario,state).guide,guideBefore,scenario.id);
     assert.ok(state.output.length>0,scenario.id);
   }
 });

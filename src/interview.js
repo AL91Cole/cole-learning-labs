@@ -1,4 +1,4 @@
-import { resolveQuestion } from './conversation.js?release=20261017-cables14';
+import { resolveQuestion } from './conversation.js?release=20261017-repair15';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;

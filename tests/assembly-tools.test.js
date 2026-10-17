@@ -70,7 +70,7 @@ function workbench(id = 'INC-106') {
   function parse(html) {
     return [...html.matchAll(/<button\b([^>]*)>/g)].map(([, attrs]) => element(Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([, name, value]) => [name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), value]))));
   }
-  for (const name of ['scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'fastener']) fields.set(`[data-asm-${name}]`, element());
+  for (const name of ['scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer', 'view-drawer', 'loading-title', 'loading-text', 'fastener']) fields.set(`[data-asm-${name}]`, element());
   for (const name of ['actions', 'tool-controls']) Object.defineProperty(fields.get(`[data-asm-${name}]`), 'innerHTML', { set(html) { dynamic.set(name, parse(html)); }, get() { return ''; } });
   const allButtons = () => [...buttons, ...[...dynamic.values()].flat()];
   const root = { ownerDocument: doc, closest: () => null, contains: target => allButtons().includes(target) || [...fields.values()].includes(target),
