@@ -1,3 +1,5 @@
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261016-pathways6';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261016-pathways6';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });
@@ -5,6 +7,7 @@ const checked = value => value ? ' checked' : '';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 
 export function initialWorkspaceState(id) {
+  if(supportsExpandedLab(id))return initialExpandedState(id);if(supportsCodingLab(id))return initialCodingState(id);
   const code = normalize(id);
   const common = { tested: false, results: [], workspaceEdits: 0, checkRuns: 0 };
   const states = {
@@ -23,6 +26,7 @@ export function initialWorkspaceState(id) {
 
 /** Bound browser-saved data before it reaches the simulation or an HTML template. */
 export function normalizeWorkspaceState(id, savedState) {
+  if(supportsExpandedLab(id))return normalizeExpandedState(id,savedState);if(supportsCodingLab(id))return normalizeCodingState(id,savedState);
   const state = initialWorkspaceState(id);
   if (!isRecord(savedState)) return state;
   const enums = {
@@ -203,6 +207,7 @@ const COACH = {
 
 /** Read-only learning feedback. Only actual, current tests count as passing checks. */
 export function getWorkspaceMission(id, savedState) {
+  if(supportsExpandedLab(id))return getExpandedMission(id,savedState);if(supportsCodingLab(id))return getCodingMission(id,savedState);
   const state=normalizeWorkspaceState(id,savedState);
   const checks=testMatrix(id,state);
   const tested=Boolean(state.tested);
@@ -299,6 +304,8 @@ const address = value => typeof value==='string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.
 
 /** Fixed local observations only: no shell, code execution, network, or state mutation. */
 export function workspaceDiagnostic(id, savedState, command) {
+  if(supportsExpandedLab(id))return expandedDiagnostic(id,savedState,command);
+  if(supportsCodingLab(id))return codingDiagnostic(id,savedState,command);
   const code=normalize(id), tools=WORKSPACE_TOOLS[code];
   if (!tools) return 'No software inspection tools are available for this case.';
   if (typeof command!=='string' || command.length>96 || /[\r\n]/.test(command)) return 'Use one of the displayed practice tools. Real targets and other commands are outside this simulation.';
@@ -357,6 +364,8 @@ function inspectionPanel(id) {
 }
 
 export function applyWorkspaceAction(id, previous, action, value) {
+  if(supportsExpandedLab(id))return applyExpandedAction(id,previous,action,value);
+  if(supportsCodingLab(id))return applyCodingAction(id,previous,action,value);
   const state = normalizeWorkspaceState(id,previous);
   const data = isRecord(value) ? value : {};
   const code = normalize(id);
@@ -400,6 +409,8 @@ export function applyWorkspaceAction(id, previous, action, value) {
 }
 
 export function verifyWorkspace(id, state) {
+  if(supportsExpandedLab(id))return verifyExpanded(id,state);
+  if(supportsCodingLab(id))return verifyCoding(id,state);
   state = normalizeWorkspaceState(id, state);
   const checks=testMatrix(id,state || initialWorkspaceState(id));
   if (!checks.length) return {ok:false,message:'This case uses the hardware bench verification.'};
@@ -464,6 +475,7 @@ function security(id,state) {
 
 /** Render only documented, fixed simulation controls. All state changes go to onAction. */
 export function renderWorkspace(root, scenario, state, onAction) {
+  if(supportsExpandedLab(scenario.id))return renderExpanded(root,scenario,state,onAction);if(supportsCodingLab(scenario.id))return renderCoding(root,scenario,state,onAction);
   state = normalizeWorkspaceState(scenario.id, state);
   const code=normalize(scenario.id);
   const body=code.startsWith('NET')?network(code,state):code.startsWith('AI')?ai(code,state):code.startsWith('SEC')?security(code,state):'<p>This case is available in the hardware bench.</p>';

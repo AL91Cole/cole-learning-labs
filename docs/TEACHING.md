@@ -1,6 +1,8 @@
 # Teaching with Cole Learning Labs
 
-Cole Learning Labs provides 15 browser-based investigations for grades 7–12. Use it for demonstrations, guided investigation, independent practice, and discussion on school devices.
+Cole Learning Labs provides 27 browser-based investigations across five pathways for grades 7–12. Use it for demonstrations, guided investigation, independent practice, and discussion on school devices.
+
+If a learner leaves a coding lab through the site menu or browser history, the current editor text is preserved as an untested program in that lab’s work. They must rerun fixtures before finishing. This does not enable device saving; private work still needs an export before closing the page.
 
 Created by Mx. Cole, the project supports a future goal of teaching Computer Technology through CTE; it does not represent completed CTE certification. Review each activity against your objectives, students’ needs, school policies, and available devices before assigning it.
 
@@ -18,11 +20,13 @@ Grade filters suggest a starting challenge; they do not establish readiness or p
 
 Each lab stays on one page with three accessible tabs. The selected section is visible; switching tabs preserves the same workbench and form controls rather than reloading them. Questions, notes, equipment state, and unapplied settings remain available when a learner returns. Basic instructions appear beside the controls rather than requiring a separate guide.
 
-1. **Request & clues.** Read the original task, ask the fictional requester a question, inspect clues, and write a hypothesis. Students may type their own question or choose a starter. Answers come from authored fictional case facts and supported simulation observations on the device; no external AI is contacted. Unsupported wording receives a fallback rather than an invented answer. Encourage learners to try a clearer question or return to the supplied evidence.
+1. **Request & clues.** Read the original task, ask the fictional requester a question, inspect clues, and write a hypothesis. Students may type their own question or choose a starter. Answers come from authored fictional case facts and supported simulation observations on the device; no external AI is contacted. Follow-ups such as “Why?”, “Explain that more simply”, and “What should I check next?” refer to the recent supported case topic and current observations. Unsupported wording receives a fallback rather than an invented answer. Encourage learners to try a clearer question or return to the supplied evidence.
 2. **Workbench & hypothesis testing.** Inspect, make one change, save edited software settings, and observe what happens. Quick inspection buttons make tools available without command memorization. Use the equipment's power/startup controls where needed, then run the hypothesis test. The test checks the current simulated setup; it does not judge the wording of the hypothesis or establish its causal explanation. The learner must decide what the evidence supports.
 3. **Check & explain.** Verify the original task, explain the change and test evidence, reflect on the hypothesis, and review the report. Simulation success is not an automatic grade or an automatic submission.
 
 Questions and replies join the bounded action log and report. They follow the same private-session or optional device-saving choice as other work, so the question box also needs the fictional-information rule. Avoid entering real names, email addresses, student IDs, passwords, or confidential incidents.
+
+Both response modes appear in the interface, but only **On-device simulation** is available. **Optional live AI** is disabled and unconnected. It is a future option requiring a reviewed service, approved provider/data terms, authenticated teacher access and applicable school/privacy approval before any question could be sent. No API key or provider integration is included in this release. The local option must remain available for learners who do not use an approved future live mode.
 
 Model the tabs once before independent work: ask one question, show where its reply appears, demonstrate a labeled inspection tool, and point out the hypothesis and report controls. Switch away from an unapplied setting and back to show that the draft remains. Teacher rubrics and answer keys remain outside the public student lab.
 
@@ -34,12 +38,32 @@ The software consoles accept only the displayed fixed practice commands and targ
 
 Other workspaces provide shared-folder read/write previews, recovery and service status, scripted AI-response and source previews, simulated code-request results, message sender/destination/header inspection, and defensive gateway probes. Keep inspection separate from the full test: reading a result does not mark the workspace tested, reproduce the scoped authorization defect, or submit work. Software inspections preserve unapplied form entries. After a meaningful change, learners need a fresh test and an explanation.
 
-## Four pathways
+## Five pathways
 
 - **Hardware & ServiceDesk — six investigations.** Trace display and power faults, reseat compatible memory, reconnect storage, preserve the original classroom drive, and assemble a virtual PC. Use the virtual safe-power sequence for internal changes. A repaired component, a working desktop, and delivery of the original lesson file are separate checkpoints.
-- **Network & Operating Systems — three investigations.** Repair IPv4/DNS settings, reach a share using the correct network and least privilege, and recover startup and update services without erasing classroom work. Test the saved settings and explain the output.
-- **AI Literacy & Audit — three investigations.** Improve a privacy-aware prompt, compare claims with a source, check equal treatment of equivalent tickets, and review safer secret/query/authorization patterns. These are authored examples and local checks, not a live AI assistant or code runner.
-- **Ethical Hacking & Penetration Testing — three investigations.** Inspect a fictional phishing message, correlate synthetic logs, and reproduce then patch an access-control defect in two supplied fictional records. Authorization and scope are part of the task.
+- **Network & Operating Systems — six investigations.** Repair IPv4/DNS settings, reach a share using the correct network and least privilege, recover startup and update services, survey wireless coverage, restore a print queue, and recover a verified backup without overwriting evidence. Test the saved settings and explain the output.
+- **AI Literacy & Audit — six investigations.** Improve a privacy-aware prompt, compare claims with a source, check equal treatment of equivalent tickets, review generated code, minimize data, reject source injection, and evaluate thresholds with human oversight. These are authored examples and local checks, with no live AI assistant.
+- **Ethical Hacking & Penetration Testing — six investigations.** Inspect phishing, correlate logs, patch an access-control defect, practice MFA recovery, contain a fictional incident, and verify a software package. Authorization and scope are part of every task.
+- **Coding Sandbox — three investigations.** Edit variables and arithmetic, repair conditional boundaries, and correct a readiness loop. The small teaching language supports only the documented constructs. Programs run through a local bounded interpreter, not full JavaScript, Python, an operating-system shell or a real device.
+
+### New assignments and discussion prompts
+
+| Lab | Practice and debrief |
+| --- | --- |
+| `NET-204` Wireless Survey & Classroom Coverage | Compare placement, signal, channel and width. Ask why a strong signal alone does not establish a suitable radio plan. |
+| `NET-205` The Stalled Print Queue | Restore the service, queue and destination while preserving the original handout. Ask why clearing all jobs fails the request. |
+| `NET-206` Backup Restore & File Integrity | Restore a verified version separately and compare it with the manifest. Ask why the newest file or a successful copy alone is insufficient. |
+| `AI-304` Minimum Data, Meaningful Permission | Choose invented input, no identifiers, a local route and an equivalent alternative. Discuss why a checkbox does not replace school review. |
+| `AI-305` Prompt Injection in a Source Card | Treat source text as evidence and reject its unrelated instruction. Ask learners to separate a cited fact from an attempted task override. |
+| `AI-306` Classifier Thresholds & Human Review | Inspect missed urgent cases, false alarms and both fictional groups. Require the four-example limitation and a human review decision. |
+| `SEC-404` MFA Recovery Without Sharing Secrets | Verify identity through the approved route, revoke the lost factor and retain an audit record. Never ask students to supply real passwords or recovery codes. |
+| `SEC-405` Ransomware Response & Evidence | Isolate the affected fictional endpoint, preserve evidence and stage a verified backup separately. Discuss the order of containment and recovery. |
+| `SEC-406` Software Supply Chain Verification | Compare publisher, signature and integrity before a limited standard-user pilot. Ask what HTTPS alone can and cannot establish. |
+| `CODE-501` The Supply Calculator | Use changing quantities to distinguish an expression from a hardcoded answer; include zero in the discussion. |
+| `CODE-502` The Classroom Thermostat | Predict output below, at and above each boundary, then test it. Discuss why both boundary values belong to the middle range. |
+| `CODE-503` The Workstation Readiness Loop | Trace the counter and compare the number of lines with the supplied station count. Ask learners to explain the off-by-one correction. |
+
+The coding editor preserves its draft across the three tabs. Apply the edited code before testing, inspect fixture output and errors, then test again after a change. The interpreter limits source length, nesting, loop counts, total execution steps and output. It cannot access browser objects, network services, files, device controls or arbitrary JavaScript. Reports include saved source and recorded output, so learners should review code as well as written notes before exporting. Technical fixture checks do not establish authorship or replace teacher review.
 
 ## Mission checkpoints and optional coach
 
@@ -97,7 +121,7 @@ The separate prepared implementation uses `CLASSROOM_ENABLED=true`, a migrated `
 
 The following describes the prepared workflow for a possible future reviewed release, not a current enrollment option:
 
-1. The verified teacher creates a class and selects assignments from the 15 supported labs. Distribute its code through the approved classroom process.
+1. The verified teacher creates a class and selects assignments from the 27 supported labs. Distribute its code through the approved classroom process.
 2. A learner explicitly joins using only that code. The prepared server generates a random neutral alias; a learner does not supply a name, email, school ID, or chosen alias. An alias is a display label, not verified identity or a recovery credential. A browser has one class session; a lost or logged-out session cannot be recovered using the alias or code. Use separate assigned profiles and export important work.
 3. Assigned drafts can then be shared from the lab. A visible connection explains the classroom and save state. Classroom work uses a separate local namespace from independent practice; independent records are not silently imported. The portal’s independent-labs choice turns off the active sharing flag while preserving saved work.
 4. The teacher reviews class progress and opens work details. The roster refreshes about every 15 seconds only while the real, authorized teacher view is open and visible. Pause/resume is available. Polling updates summaries and rows while preserving typed grading feedback; work details refresh on request.
@@ -132,5 +156,5 @@ Security activity is limited to the supplied fictional systems and actions. Comp
 
 Ask learners to describe the defensive lesson, explain the fix, retest both intended and denied behavior, and communicate uncertainty. For the authorization lab, a hidden link alone is not a permission check; the owner must retain access while another learner’s record is denied.
 
-AI activities use authored artifacts and visible local checks. No live AI model is contacted. The prompt checker has bounded rules and cannot assess every privacy or accuracy risk. Students remain responsible for comparing claims with sources and explaining their decisions.
+AI activities use authored artifacts and visible local checks. No live AI model is contacted; the optional live response mode remains disabled pending a separately reviewed implementation and school/privacy approval. Conversational wording and contextual follow-ups do not make the local responder a general AI model. The prompt checker has bounded rules and cannot assess every privacy or accuracy risk. Students remain responsible for comparing claims with sources and explaining their decisions.
 

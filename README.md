@@ -1,6 +1,8 @@
 # Cole Learning Labs
 
-A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 15 investigations for grades 7–12.
+A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 27 investigations across five pathways for grades 7–12.
+
+Coding drafts also survive normal site navigation and browser back/forward within this page. Leaving the editor preserves its current program as untested lab work; device persistence still requires the learner’s saving choice. Explicit resume, reset, and clear actions do not revive the previous editor draft.
 
 The site combines a light professional portfolio with dark teal and navy learning workspaces, a 3D-inspired computer bench, and a guided troubleshooting process. Learners inspect evidence, make changes, test the result, and explain whether the original task works.
 
@@ -13,23 +15,26 @@ Mx. Cole is developing the project toward a future goal of teaching Computer Tec
 | Pathway | Assignments | Practice focus |
 | --- | ---: | --- |
 | Hardware & ServiceDesk | 6 | Trace faults, handle virtual power safely, match components, restore the classroom desktop, and open the original lesson file |
-| Network & Operating Systems | 3 | Repair IP/DNS settings, apply least-privilege sharing, and recover startup and update services |
-| AI Literacy & Audit | 3 | Revise a privacy-aware prompt, compare claims with sources, check a matched ticket pair for bias, and review generated code |
-| Ethical Hacking & Penetration Testing | 3 | Triage phishing, correlate synthetic security logs, and patch and retest an authorized fictional record-access flaw |
+| Network & Operating Systems | 6 | Repair addressing, sharing and startup; survey wireless coverage; restore printing; recover a verified backup |
+| AI Literacy & Audit | 6 | Review prompts, claims, bias and generated code; minimize data; reject source injection; evaluate thresholds and human review |
+| Ethical Hacking & Penetration Testing | 6 | Investigate phishing, logs and authorization; practice MFA recovery, incident containment and package verification |
+| Coding Sandbox | 3 | Edit a supply calculator, thermostat decisions and a bounded readiness loop; compare output with changing fixtures |
 
 The 7–8, 9–10, and 11–12 grade bands are starting points for teacher selection and support. They do not establish an individual learner’s readiness.
 
-All 15 labs include mission checkpoints, feedback tied to the current simulation state, and optional progressive coaching clues. Hints move from an idea to evidence and then a more specific next step; they do not perform the action, pass a test, close a ticket, or earn a grade. Hardware checkpoints distinguish the repair, a working classroom desktop, and delivery of the requested lesson file. Other workspaces count passing checks only after a current test; changing settings requires testing again.
+All 27 labs include mission checkpoints, feedback tied to the current simulation state, and optional progressive coaching clues. Hints move from an idea to evidence and then a more specific next step; they do not perform the action, pass a test, close a ticket, or earn a grade. Hardware checkpoints distinguish the repair, a working classroom desktop, and delivery of the requested lesson file. Other workspaces count passing checks only after a current test; changing settings or a program requires testing again.
 
-AI activities use authored examples and local rule checks, with no live AI API. Security work stays inside fixed fictional simulations. The site does not scan real systems or execute student commands or uploaded code.
+AI activities use authored examples and local rule checks, with no live AI API. Security work stays inside fixed fictional simulations. The coding sandbox interprets a small teaching language with explicit size, loop, step and output limits; it is not full JavaScript or Python and cannot use browser, network, shell or device capabilities. No lab scans real systems or executes operating-system commands or uploaded programs.
 
 ## Investigate, try, and explain
 
-In **Request & clues**, learners can type their own question or use a starter. An offline, authored responder matches supported wording to fictional case facts and selected simulation observations. It does not contact an AI service or invent a fact when a question is outside its coverage; an honest fallback suggests using the supplied clues or another question. Questions and replies become part of the bounded action log and report, subject to the same private-session or explicit device-saving choice as other work. Keep personal information out of questions as well as notes.
+In **Request & clues**, learners can type their own question or use a starter. An offline, authored responder matches supported wording to fictional case facts and selected simulation observations. Short follow-ups such as “Why?”, “Explain that more simply”, and “What should I check next?” use the recent case topic and current equipment state. Saved answer text is not treated as a source of facts. It does not contact an AI service or invent a fact when a question is outside its coverage; an honest fallback suggests using the supplied clues or another question. Questions and replies become part of the bounded action log and report, subject to the same private-session or explicit device-saving choice as other work. Keep personal information out of questions as well as notes.
+
+The interview interface shows both response modes. **On-device simulation** is available. **Optional live AI** is visibly unavailable and unconnected: there is no provider call, API key, or student question upload. Offering a future live mode requires a separately reviewed implementation, approved provider and data terms, authenticated teacher controls, applicable school/privacy approval, and an equivalent local option. Selecting an interface mode or adding a key must not bypass those requirements or the independent classroom privacy gate.
 
 In **Workbench & hypothesis testing**, learners inspect the virtual equipment or software, save one change, and compare the observed result with their hypothesis. Hardware offers a two-step video-cable interaction, keyboard/touch alternatives, and power, display, startup, and drive readouts tied to current equipment state. Software labs offer fixed local tools: network diagnostics, shared-handout access, recovery/service checks, scripted AI previews, message inspection, and defensive policy probes. Quick buttons provide an alternative to typing. No tool runs an operating-system command, real network probe, database query, or uploaded code.
 
-The hypothesis test checks the current modeled setup. For software labs it runs the workspace checks; for hardware it verifies the current startup and original-task evidence after the learner has used the bench controls. It does not grade the wording of a hypothesis or automatically decide whether the learner's causal explanation is correct. Individual inspection tools do not award completion, and software inspections preserve unapplied form entries. In **Check & explain**, learners verify the original task, explain what changed and what the evidence supports, and review their report for the approved submission process. Teacher rubrics and answer keys remain outside the public lab and demo.
+The hypothesis test checks the current modeled setup. For software labs it runs the workspace checks; for hardware it verifies the current startup and original-task evidence after the learner has used the bench controls. Coding runs compare the saved program with the supplied fixtures; reports include the saved source and recorded output. A changed program needs another run. The test does not grade the wording of a hypothesis or automatically decide whether the learner's causal explanation is correct. Individual inspection tools do not award completion, and software inspections preserve unapplied form entries. In **Check & explain**, learners verify the original task, explain what changed and what the evidence supports, and review their report for the approved submission process. Teacher rubrics and answer keys remain outside the public lab and demo.
 
 ## Lab and submission workflows
 
@@ -55,7 +60,7 @@ Portfolio and lab pages use hash navigation and can be served statically.
 | `#home` | Professional introduction and learning entry points |
 | `#projects` | Selected work and project links |
 | `#about` | Background, education, and professional direction |
-| `#labs` | All 15 investigations and grade/pathway filters |
+| `#labs` | All 27 investigations and grade/pathway filters |
 | `#lab/INC-101` | An individual investigation |
 | `#educators` | Lesson guidance and assessment |
 | `#guide` | Student instructions |
@@ -127,10 +132,12 @@ Syntax checks cover the application, server modules, and scripts. Tests cover si
 | File | Responsibility |
 | --- | --- |
 | `index.html`, `src/app.js`, `src/styles.css` | Portfolio, routes, reports, and lab shell |
-| `src/scenarios.js` | All 15 student assignments; no teacher rubrics or answer keys |
-| `src/interview.js` | Bounded offline answers to student-written questions using fictional case facts; no live AI |
+| `src/scenarios.js` | Combined catalogue of all 27 student assignments; no teacher rubrics or answer keys |
+| `src/interview.js`, `src/interview.css` | Bounded conversational case replies and chat presentation; on-device authored facts, no live AI |
 | `src/hardware.js`, `src/hardware.css` | Virtual hardware bench, checkpoints, and coaching |
 | `src/workspaces.js`, `src/workspaces.css` | Network/OS, AI, and security workspaces and coaching |
+| `src/expanded-labs.js`, `src/expanded-labs.css` | Nine additional Network/OS, AI and security scenarios with local models and inspection tools |
+| `src/coding-lab.js`, `src/coding-lab.css` | Three coding scenarios, bounded teaching-language interpreter, fixture output and feedback |
 | `classroom.html`, `teacher/index.html` | Student and teacher entry points |
 | `src/classroom-portal.js`, `src/classroom-portal.css` | Classroom UI and memory-only fictional demo |
 | `src/classroom-client.js` | Explicitly joined assignment sharing and separate local storage scope |
@@ -157,11 +164,11 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-The `20261016-interactive5` source release keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
+The `20261016-pathways6` source release (version `2.6.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 
-Complete a representative repair and a lab from every other pathway. Check all 15 entry points, filters, keyboard focus, touch controls, zoom, resume/reset, report copy/download, and back/forward navigation. Confirm the three numbered tabs show the selected section without reloading or losing questions, notes, equipment state, or unapplied form entries. Try a supported student-written question and an unknown question, inspect a tool without changing settings, and compare a real simulation test with the written hypothesis. Instructions must remain beside the active controls. Review the fictional classroom demo, grade/return flow, and disabled-service behavior. Development verification of the prepared handler should use fictional teacher/student sessions to check ownership, isolation, locking, expiry/deletion, stale versions, and failure recovery. It does not replace the blocking privacy review or permit real enrollment.
+Complete a representative repair and a lab from every other pathway. Check all 27 entry points, filters, keyboard focus, touch controls, zoom, resume/reset, report copy/download, and back/forward navigation. Confirm the three numbered tabs show the selected section without reloading or losing questions, notes, equipment state, code or unapplied form entries. Try a supported student-written question, a contextual follow-up and an unknown question; confirm optional live AI remains unavailable. Inspect a tool without changing settings, and compare a real simulation test with the written hypothesis. For coding, test a changed fixture, syntax error, boundary input and bounded loop, then review the saved source/output in the report. Instructions must remain beside the active controls. Review the fictional classroom demo, grade/return flow, and disabled-service behavior. Development verification of the prepared handler should use fictional teacher/student sessions to check ownership, isolation, locking, expiry/deletion, stale versions, and failure recovery. It does not replace the blocking privacy review or permit real enrollment.
 
 Check that a fresh page does not read old work, device saving/resume require explicit choices, and clear-local-work removes saved copies without claiming to erase downloads or school submissions. For encrypted reports, use fictional test data to verify intended-key decryption, wrong keys/passphrases, corrupted files, file-size limits, no network or storage writes, and clear-page behavior. Do not create or commit real school keys or test with actual student records.
 

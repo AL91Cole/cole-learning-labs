@@ -54,6 +54,18 @@ const triageSettings = { verdict:'phishing', flags:['sender','destination','urge
 const responseSettings = { events:['EVT-102','EVT-103'], source:'198.51.100.24', port:'23', keepHttps:true };
 
 const workspaceRepairs = {
+  'NET-204': [['save-expanded',{placement:'ceiling-center',band:'5',channel:'40',width:'20'}]],
+  'NET-205': [['save-expanded',{spooler:'running',queue:'resume',port:'approved',job:'release'}]],
+  'NET-206': [['save-expanded',{snapshot:'B-17',destination:'recovery',preserve:'keep',integrity:'compare'}]],
+  'AI-304': [['save-expanded',{input:'fiction',identifiers:'none',route:'local',participation:'alternative'}]],
+  'AI-305': [['save-expanded',{boundary:'data',injected:'reject',citation:'S-12',review:'human'}]],
+  'AI-306': [['save-expanded',{threshold:'0.50',decision:'human',audit:'both',limitation:'small'}]],
+  'SEC-404': [['save-expanded',{identity:'approved',factor:'revoke',reset:'supervised',audit:'record'}]],
+  'SEC-405': [['save-expanded',{containment:'isolate',evidence:'preserve',notify:'team',recovery:'clean'}]],
+  'SEC-406': [['save-expanded',{package:'A',signature:'verify',digest:'verify',deployment:'pilot'}]],
+  'CODE-501': [['save-code',{code:'print(quantity * 3);'}]],
+  'CODE-502': [['save-code',{code:'if (temperature < 20) { print("Heating"); } else { if (temperature > 25) { print("Cooling"); } else { print("Comfortable"); } }'}]],
+  'CODE-503': [['save-code',{code:'let station = 1; repeat(stations) { print("Ready " + station); station = station + 1; }'}]],
   'NET-201': [['save-network', networkSettings]],
   'NET-202': [['save-access', accessSettings]],
   'NET-203': [['save-recovery', recoverySettings]],
@@ -68,13 +80,13 @@ const workspaceRepairs = {
   ]
 };
 
-test('the assignment catalogue has 15 distinct, implemented cases across four pathways', () => {
-  assert.equal(SCENARIOS.length, 15);
-  assert.equal(new Set(SCENARIOS.map(scenario => scenario.id)).size, 15);
+test('the assignment catalogue has 27 distinct, implemented cases across five pathways', () => {
+  assert.equal(SCENARIOS.length, 27);
+  assert.equal(new Set(SCENARIOS.map(scenario => scenario.id)).size, 27);
   const expected = [...Object.keys(hardwareRepairs), ...Object.keys(workspaceRepairs)].sort();
   assert.deepEqual(SCENARIOS.map(scenario => scenario.id).sort(), expected);
-  assert.deepEqual(Object.fromEntries(['hardware','network','ai','security'].map(track => [track, SCENARIOS.filter(scenario => scenario.track === track).length])), {
-    hardware:6, network:3, ai:3, security:3
+  assert.deepEqual(Object.fromEntries(['hardware','network','ai','security','coding'].map(track => [track, SCENARIOS.filter(scenario => scenario.track === track).length])), {
+    hardware:6, network:6, ai:6, security:6, coding:3
   });
 });
 
@@ -119,9 +131,10 @@ for (const [id, repair] of Object.entries(workspaceRepairs)) {
     assert.equal(checked.tested, true);
     assert.equal(verifyWorkspace(id, checked).ok, true);
 
-    // Reapplying the final choice is a new configuration action, even when the
-    // values happen to match. Previously recorded checks must not carry over.
-    const [action, value] = repair.at(-1);
+    // New configuration actions invalidate checks. Coding saves the actual source:
+    // changing even a comment requires a fresh run of that program version.
+    const [action, original] = repair.at(-1);
+    const value=id.startsWith('CODE-')?{code:original.code+'\n// Review this version.'}:original;
     const changed = workspaceStep(id, checked, action, value).state;
     assert.equal(changed.tested, false);
     assert.deepEqual(changed.results, []);

@@ -1,5 +1,7 @@
 /** Optional, fail-closed classroom service. Public simulations remain independent. */
 import { SCENARIOS } from '../../src/scenarios.js';
+import { EXPANDED_SCENARIOS, expandedStateFields } from '../../src/expanded-labs.js';
+import { CODING_SCENARIOS } from '../../src/coding-lab.js';
 // Production release lock. Only a reviewed code release may change this after the
 // applicable privacy, legal, district-agreement, and operational requirements are met.
 // Environment variables, request values, and runtime options cannot approve a release.
@@ -11,16 +13,7 @@ const MAX_WORK = 65_536;
 const MAX_BODY = MAX_WORK + 4_096;
 const MAX_SUBMISSIONS = 5;
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
-const LABS = Object.freeze({
-  'INC-101': 'The Blank Monitor', 'INC-102': 'The Desktop That Will Not Start',
-  'INC-103': 'The Interrupted Startup', 'INC-104': 'The Missing Desktop',
-  'INC-105': 'The Desktop That Still Will Not Boot', 'INC-106': 'Complete Desktop Assembly',
-  'NET-201': 'Static IP & DNS Misconfiguration', 'NET-202': 'Guest Wi-Fi & Share Permission Lockout',
-  'NET-203': 'Startup Crash & Broken Update Service', 'AI-301': 'Prompt Engineering & Student Privacy',
-  'AI-302': 'Hallucination Audit & Ticket Classifier Bias', 'AI-303': 'AI-Generated Python Security & Logic Audit',
-  'SEC-401': 'Phishing Triage & Least-Privilege Audit', 'SEC-402': 'SIEM Log Analysis & Exposed Legacy Ports',
-  'SEC-403': 'Authorized Web App: Patch & Retest'
-});
+const LABS = Object.freeze(Object.fromEntries(SCENARIOS.map(scenario=>[scenario.id,scenario.title])));
 const encoder = new TextEncoder();
 const keyCache = new Map();
 const certificateCache = new Map();
@@ -139,7 +132,10 @@ const workspaceCommonFields = {
   tested: workBoolean, workspaceEdits: workCount, checkRuns: workCount,
   results: workList(workRecord({ label: workString(300), ok: workBoolean }), 10)
 };
+const expandedWorkspaceFields=Object.fromEntries(EXPANDED_SCENARIOS.map(scenario=>[scenario.id,{testSignature:workString(160),...Object.fromEntries(Object.entries(expandedStateFields(scenario.id)).map(([field,values])=>[field,workEnum(values)]))}]));
+const codingWorkspaceFields=Object.fromEntries(CODING_SCENARIOS.map(scenario=>[scenario.id,{code:workString(4000),sourceAtRun:workString(4000),fixtureIndex:value=>Number.isInteger(value)&&value>=0&&value<=(scenario.id==='CODE-502'?3:2),output:workList(workString(300),20),errors:workList(workRecord({line:value=>Number.isInteger(value)&&value>=1&&value<=4001,message:workString(300)}),1)}]));
 const workspaceStateFields = {
+  ...expandedWorkspaceFields, ...codingWorkspaceFields,
   'NET-201': Object.fromEntries(['ip', 'mask', 'gateway', 'dns'].map(key => [key, workString(64)])),
   'NET-202': { network: workEnum(['School-Guest', 'Staff-Lab']), folder: workEnum(['All folders', 'Project Materials', 'No folders']), permission: workEnum(['Full control', 'Modify', 'Read', 'None', 'Administrator', 'Edit all folders', 'Read only', 'No access']) },
   'NET-203': { recovery: workEnum(['Keep current update', 'Roll back KB-LAB-17', 'Reset and erase files']), status: workEnum(['Stopped', 'Running']), startup: workEnum(['Disabled', 'Manual', 'Automatic']) },
@@ -430,7 +426,7 @@ async function handleTeacher(request, db, path, body, teacher, now) {
   if (suffix === '/assignments' && method === 'GET') return response({ assignments: (await all(db, 'SELECT * FROM assignments WHERE class_id=? ORDER BY created_at,id', classroom.id)).map(assignmentJSON) });
   if (suffix === '/assignments' && method === 'POST') {
     only(body, ['labId', 'title']);
-    if (typeof body.labId !== 'string' || !Object.hasOwn(LABS, body.labId)) fail(400, 'invalid_lab', 'Choose one of the fifteen supported labs.');
+    if (typeof body.labId !== 'string' || !Object.hasOwn(LABS, body.labId)) fail(400, 'invalid_lab', 'Choose one of the supported lab investigations.');
     const title = body.title == null || body.title === '' ? LABS[body.labId] : text(body.title, 120, 'an assignment title');
     if (await first(db, 'SELECT id FROM assignments WHERE class_id=? AND lab_id=?', classroom.id, body.labId)) fail(409, 'assignment_exists', 'This lab is already assigned to this class.');
     const id = crypto.randomUUID();

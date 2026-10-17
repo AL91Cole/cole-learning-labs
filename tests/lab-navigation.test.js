@@ -6,6 +6,8 @@ import { SCENARIOS } from '../src/scenarios.js';
 import { initialHardwareState, applyHardwareAction, verifyHardware } from '../src/hardware.js';
 import { initialWorkspaceState, applyWorkspaceAction, verifyWorkspace } from '../src/workspaces.js';
 import { answerQuestion, questionEvent, readQuestionEvents } from '../src/interview.js';
+import { createWorkStorage, WORK_PREFIX } from '../src/local-work.js';
+import { normalizeLabRecord } from '../src/records.js';
 
 const source = await readFile(new URL('../src/app.js', import.meta.url), 'utf8');
 const helperStart = source.indexOf('function interviewList(');
@@ -22,7 +24,7 @@ class Element {
     this.attributes = new Map(); this.listeners = new Map(); this.children = new Map(); this.focused = 0; this.scrolled = [];
     const classes = new Set();
     this.classList = {
-      add: value => classes.add(value), contains: value => classes.has(value),
+      add: value => classes.add(value), remove: value => classes.delete(value), contains: value => classes.has(value),
       toggle(value, force) { const enabled = force === undefined ? !classes.has(value) : Boolean(force); if (enabled) classes.add(value); else classes.delete(value); return enabled; }
     };
   }
@@ -45,7 +47,7 @@ function harness(id = 'INC-101', initialSection = 1) {
   const scenario = SCENARIOS.find(item => item.id === id);
   const record = {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:scenario.track === 'hardware' ? initialHardwareState(id) : initialWorkspaceState(id)};
   const elements = new Map();
-  for (const selector of ['#workspace','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
+  for (const selector of ['#workspace','#coding-editor','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
   const groups = new Map([
     ['[data-lab-section]',[1,2,3].map(section => new Element({labSection:String(section)}))],
@@ -61,12 +63,16 @@ function harness(id = 'INC-101', initialSection = 1) {
     root.children = new Map(); root.querySelector('[data-unsaved-workbench-draft]').value = '';
   }
   const context = vm.createContext({
-    scenario,record,initialSection,applyHardwareAction,verifyHardware,applyWorkspaceAction,verifyWorkspace,answerQuestion,questionEvent,readQuestionEvents,tracks,esc:escapeHtml,
+    scenario,record,initialSection,applyHardwareAction,verifyHardware,
+    // Production modules share one realm. Transfer VM-created action data into
+    // the model's realm so its strict plain-object boundary is tested fairly.
+    applyWorkspaceAction:(caseId,previous,action,value)=>applyWorkspaceAction(caseId,previous,action,value===undefined?undefined:structuredClone(value)),
+    verifyWorkspace,answerQuestion,questionEvent,readQuestionEvents,tracks,esc:escapeHtml,
     $: selector => { assert.ok(elements.has(selector),'Unexpected lab selector: '+selector); return elements.get(selector); },
     $$: selector => { assert.ok(groups.has(selector),'Unexpected lab control group: '+selector); return groups.get(selector); },
     bindWorkPrivacy() {},recordFor:() => record,workStatus:() => 'Private session',evidenceList:() => '',
     renderHardware(root,_id,_state,callback) { assert.equal(scenario.track,'hardware'); renderBench(root,callback); },
-    renderWorkspace(root,_scenario,_state,callback) { assert.notEqual(scenario.track,'hardware'); renderBench(root,callback); },
+    renderWorkspace(root,_scenario,_state,callback) { assert.notEqual(scenario.track,'hardware'); renderBench(root,callback); if(scenario.track==='coding'){const editor=new Element();editor.value=_state.code;elements.set('#coding-editor',editor);} },
     save() { calls.saved++; },showNotice(message) { calls.notices.push(message); },openReport() { calls.reports++; },renderRoute() {},
     normalizeLabRecord:(_scenario,value) => value,attachClassroomLab:() => null,matchMedia:() => ({matches:true}),Date
   });
@@ -94,6 +100,75 @@ test('three in-page tabs expose one panel and preserve notes and unsubmitted wor
   assert.equal(h.calls.rendered,1,'Changing tabs must not recreate the workbench.'); assert.equal(h.calls.saved,3,'Changing tabs must not save or change learner work.');
   assert.deepEqual(h.visible(),[true,false,false]); for (const tab of h.groups.get('[data-lab-section]')) assert.equal(tab.focused,1);
 });
+
+const codingPrograms={
+  'CODE-501':'print(quantity * 3);',
+  'CODE-502':'if (temperature < 20) { print("Heating"); } else { if (temperature <= 25) { print("Comfortable"); } else { print("Cooling"); } }',
+  'CODE-503':'let station = 1; repeat(stations) { print("Ready " + station); station = station + 1; }'
+};
+
+function explainCodingWork(h) {
+  h.groups.get('[data-clue]')[0].fire('click');h.groups.get('[data-clue]')[1].fire('click');
+  h.input('plan','The program should use its supplied input rather than a fixed answer.');
+  h.input('notes','I changed the program and ran every changing input fixture to compare its actual output.');
+  h.input('reflection','The passing fixtures support my hypothesis because the same program handles each supplied input.');
+}
+
+test('coding editor drafts remain intact across all three tabs without being saved or executed',()=>{
+  const h=harness('CODE-501'),editor=h.elements.get('#coding-editor'),savedSource=h.record.state.code;
+  editor.value=codingPrograms['CODE-501'];const savedBefore=h.calls.saved,renderedBefore=h.calls.rendered;
+  h.section(2);h.section(3);h.section(1);h.section(2);
+  assert.equal(h.elements.get('#coding-editor'),editor);
+  assert.equal(editor.value,codingPrograms['CODE-501']);assert.equal(h.record.state.code,savedSource);
+  assert.equal(h.record.state.tested,false);assert.equal(h.record.state.checkRuns,0);
+  assert.equal(h.calls.saved,savedBefore);assert.equal(h.calls.rendered,renderedBefore);
+});
+
+test('the hypothesis test saves and executes the actual coding draft instead of reusing an old passing source',()=>{
+  const h=harness('CODE-501');h.input('plan','The supplied quantity should determine the total for every fixture.');
+  h.action('run-check',{code:codingPrograms['CODE-501']});h.elements.get('#verify-task').fire('click');
+  assert.equal(h.record.verified,true);assert.equal(h.record.state.checkRuns,1);
+  h.elements.get('#coding-editor').value='print(6);';
+  h.elements.get('#run-hypothesis-test').fire('click');
+  assert.equal(h.record.state.code,'print(6);');assert.equal(h.record.state.sourceAtRun,'print(6);');
+  assert.equal(h.record.state.checkRuns,2);assert.equal(h.record.state.tested,true);
+  assert.equal(h.record.verified,false);assert.equal(h.record.closed,false);
+  assert.ok(h.record.state.results.some(result=>!result.ok));
+  assert.match(h.elements.get('#experiment-result').textContent,/not ready/iu);assert.equal(h.calls.reports,0);
+});
+
+for(const control of ['verify-task','close-ticket']) {
+  test('untested coding edits block '+control+' even after a previously completed program',()=>{
+    const h=harness('CODE-501');explainCodingWork(h);
+    h.action('run-check',{code:codingPrograms['CODE-501']});h.elements.get('#close-ticket').fire('click');
+    assert.equal(h.record.closed,true);assert.equal(h.record.verified,true);assert.equal(h.calls.reports,1);
+    h.elements.get('#coding-editor').value='print(6);';
+    const reportsBefore=h.calls.reports;
+    h.elements.get('#'+control).fire('click');
+    assert.equal(h.record.verified,false,'An earlier passing program cannot verify a different editor draft.');
+    assert.equal(h.record.closed,false,'The old completion cannot carry over to an untested draft.');
+    assert.equal(h.calls.reports,reportsBefore,'A failed finish must not open another completed report.');
+    assert.match(h.elements.get('#verify-result').textContent,/untested changes/iu);
+    assert.equal(h.record.state.code,codingPrograms['CODE-501'],'Checking does not silently overwrite saved source.');
+  });
+}
+
+for(const [id,program] of Object.entries(codingPrograms)) {
+  test(id+' finishes only after fresh execution and includes saved code and output in the report',()=>{
+    const h=harness(id);explainCodingWork(h);
+    h.elements.get('#coding-editor').value=program;h.section(3);h.elements.get('#close-ticket').fire('click');
+    assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);
+    h.section(2);h.elements.get('#run-hypothesis-test').fire('click');
+    assert.equal(h.record.state.code,program);assert.equal(h.record.state.sourceAtRun,program);
+    assert.equal(h.record.state.checkRuns,1);assert.equal(h.record.verified,true);assert.equal(h.record.closed,false);
+    h.section(3);h.elements.get('#close-ticket').fire('click');
+    assert.equal(h.record.closed,true);assert.equal(h.calls.reports,1);
+    const report=h.report();
+    assert.match(report,/Status: DELIVERED/u);assert.ok(report.includes('SAVED PRACTICE CODE\n'+program));
+    assert.ok(report.includes('PRACTICE OUTPUT\n'+h.record.state.output.join('\n')));
+    assert.equal(h.record.evidence.length,2);assert.equal(h.record.plan,h.elements.get('#plan').value);
+  });
+}
 
 test('tab keyboard controls use roving focus, wrap, Home, and End without replacing the workbench', () => {
   const h = harness(),tabs = h.groups.get('[data-lab-section]'); assert.deepEqual(tabs.map(tab => tab.tabIndex),[0,-1,-1]);
@@ -183,4 +258,129 @@ test('all cases render three labelled tabpanels and visible instructions on the 
     for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
     assert.equal((html.match(/\brole="tabpanel"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,1); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/scripted simulation/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
   }
+});
+
+test('every lab defaults to on-device question replies and clearly disables the unconnected live AI option',()=>{
+  const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
+  const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
+  vm.runInContext(source.slice(renderStart,renderEnd),context);
+  for(const scenario of SCENARIOS) {
+    const html=context.labPage(scenario),selector=html.match(/<select id="interview-mode"[^>]*>(.*?)<\/select>/s)?.[1];
+    assert.ok(selector,scenario.id+' must explain the available question response mode.');
+    const options=[...selector.matchAll(/<option\b([^>]*)>(.*?)<\/option>/gs)];
+    assert.equal(options.length,2,scenario.id);
+    assert.match(options[0][1],/value="device"/u);assert.doesNotMatch(options[0][1],/\bdisabled\b/u);
+    assert.equal(options[0][2],'On-device practice chat',scenario.id);
+    assert.match(options[1][1],/value="live"/u);assert.match(options[1][1],/\bdisabled\b/u);assert.doesNotMatch(options[1][1],/\bselected\b/u);
+    assert.match(options[1][2],/awaiting school\/privacy approval/u);
+    assert.match(html,/Live AI is not connected\. It would send question text to an approved provider\./u);
+    assert.match(html,/Teacher access, provider terms, privacy review, and a separate approved deployment are required before enabling it\./u);
+    assert.match(html,/Case-based responses run on this device\. This is a scripted simulation\./u);
+  }
+});
+
+function routeHarness(id='CODE-501') {
+  const draftStart=source.indexOf('function hasCodeDraft('),draftEnd=source.indexOf("\nwindow.addEventListener('beforeunload'",draftStart);
+  const routeStart=source.indexOf('function renderRoute('),routeEnd=source.indexOf("\n$('#menu-toggle').addEventListener",routeStart);
+  assert.ok(draftStart>=0 && draftEnd>draftStart && routeStart>=0 && routeEnd>routeStart);
+  const lifecycle=['save','resetLocalSession','bindWorkPrivacy','recordFor'].map(name=>{
+    const line=source.match(new RegExp('^function '+name+'\\([^\\n]*$','m'))?.[0];assert.ok(line,name);return line;
+  });
+  const hashListener=source.match(/^window\.addEventListener\('hashchange',[^\n]*$/m)?.[0];assert.ok(hashListener);
+  const data=new Map(),writes=[],reads=[],order=[],events=new Map(),elements=new Map();let editor=null,mounted;
+  const storage={
+    get length(){return data.size;},key(index){return [...data.keys()][index]??null;},
+    getItem(name){reads.push(name);return data.get(name)??null;},
+    setItem(name,value){writes.push({name,value});data.set(name,String(value));},removeItem(name){data.delete(name);}
+  };
+  const main=new Element();let markup='';
+  Object.defineProperty(main,'innerHTML',{get:()=>markup,set(value){order.push('replace DOM');markup=value;editor=null;}});
+  const location={hash:'#lab/'+id};
+  const initialStore={version:2,labs:{}};
+  const context=vm.createContext({
+    SCENARIOS,normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,
+    applyWorkspaceAction:(caseId,previous,action,value)=>{order.push('save current draft');return applyWorkspaceAction(caseId,previous,action,structuredClone(value));},
+    $:selector=>{if(selector==='#coding-editor')return editor;if(selector==='#main')return main;if(!elements.has(selector))elements.set(selector,new Element());return elements.get(selector);},
+    $$:()=>[],document:{body:{classList:new Element().classList},title:''},history:{replaceState(){}},
+    window:{addEventListener(name,listener){events.set(name,listener);},scrollTo(){}},
+    mountWorkControls(options){mounted=options;},workStatus:()=>'',showNotice(){},
+    onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
+    routeLink:()=>'',labCards(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
+  });
+  vm.runInContext('let store=initialStore,currentLab=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
+    'let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});\n'+lifecycle.join('\n')+'\n'+
+    'function labPage(s){currentLab=s;recordFor(s);return "lab "+s.id;}\nfunction bindLab(s){onBind(s,recordFor(s));}\n'+
+    source.slice(draftStart,draftEnd)+'\n'+source.slice(routeStart,routeEnd)+'\n'+hashListener+'\n'+
+    'globalThis.routeState=()=>({store,currentLab,manager:workStorage});\n'+
+    'globalThis.replaceRouteWork=value=>{store=value;};\n'+
+    'renderRoute(false);',context);
+  order.length=0;
+  return {context,storage,writes,reads,order,state:()=>context.routeState(),get editor(){return editor;},
+    navigate(hash){location.hash=hash;events.get('hashchange')();},
+    privacy(){context.bindWorkPrivacy(context.routeState().currentLab);return mounted;}
+  };
+}
+
+test('leaving a coding lab preserves its draft before DOM replacement and returns it through hash history',()=>{
+  const h=routeHarness(),draft=codingPrograms['CODE-501'];h.editor.value=draft;
+  const oldRecord=h.state().store.labs['CODE-501'];oldRecord.verified=true;oldRecord.closed=true;
+  h.navigate('#labs/coding');
+  assert.equal(h.editor,null);assert.deepEqual(h.order.slice(0,2),['save current draft','replace DOM']);
+  const kept=h.state().store.labs['CODE-501'];assert.equal(kept.state.code,draft);assert.equal(kept.state.tested,false);
+  assert.equal(kept.verified,false);assert.equal(kept.closed,false);assert.match(kept.events.at(-1).message,/Draft program preserved/);
+  assert.equal(h.writes.length,0);assert.equal(h.reads.length,0);assert.equal(h.state().manager.persistent,false);
+  h.navigate('#lab/CODE-501');assert.equal(h.editor.value,draft);
+  h.navigate('#guide');h.navigate('#lab/CODE-501');assert.equal(h.editor.value,draft);
+  assert.equal(h.state().store.labs['CODE-501'].events.length,1,'Returning and leaving unchanged code does not create extra saves.');
+});
+
+test('switching between coding cases keeps independent drafts in the current private session',()=>{
+  const h=routeHarness();h.editor.value=codingPrograms['CODE-501'];h.navigate('#lab/CODE-502');
+  h.editor.value=codingPrograms['CODE-502'];h.navigate('#lab/CODE-501');assert.equal(h.editor.value,codingPrograms['CODE-501']);
+  h.navigate('#lab/CODE-502');assert.equal(h.editor.value,codingPrograms['CODE-502']);
+  assert.equal(h.state().store.labs['CODE-501'].state.code,codingPrograms['CODE-501']);
+  assert.equal(h.state().store.labs['CODE-502'].state.code,codingPrograms['CODE-502']);
+  assert.equal(h.writes.length,0);assert.equal(h.reads.length,0);
+});
+
+test('route preservation writes to the device only after explicit device saving',()=>{
+  const h=routeHarness();assert.equal(h.state().manager.enable(h.state().store),true);const before=h.writes.length;
+  h.editor.value=codingPrograms['CODE-501'];h.navigate('#projects');
+  assert.equal(h.writes.length,before+1);assert.equal(h.state().manager.persistent,true);
+  const saved=JSON.parse(h.writes.at(-1).value);assert.equal(saved.labs['CODE-501'].state.code,codingPrograms['CODE-501']);
+  assert.equal(saved.labs['CODE-501'].state.tested,false);assert.equal(saved.labs['CODE-501'].closed,false);
+});
+
+test('route preservation does not recreate a deleted record from an old editor',()=>{
+  const h=routeHarness();h.editor.value=codingPrograms['CODE-501'];delete h.state().store.labs['CODE-501'];
+  h.navigate('#labs');assert.equal(Object.hasOwn(h.state().store.labs,'CODE-501'),false);
+  assert.deepEqual(h.order,['replace DOM']);assert.equal(h.writes.length,0);
+});
+
+test('explicit resume replaces old editor drafts with the chosen saved work without preserving stale DOM',()=>{
+  const h=routeHarness();h.editor.value='print("Unchosen old draft");';
+  const chosen={version:2,labs:{'CODE-501':normalizeLabRecord(SCENARIOS.find(s=>s.id==='CODE-501'),{state:{...initialWorkspaceState('CODE-501'),code:codingPrograms['CODE-501']},notes:'Chosen earlier fictional saved work.'})}};
+  h.storage.setItem(WORK_PREFIX,JSON.stringify(chosen));const restored=h.state().manager.resume();assert.ok(restored);
+  const writesBefore=h.writes.length;h.privacy().replaceStore(restored);
+  assert.equal(h.editor.value,codingPrograms['CODE-501']);assert.equal(h.state().store.labs['CODE-501'].notes,'Chosen earlier fictional saved work.');
+  assert.equal(h.state().store.labs['CODE-501'].events.length,0);assert.equal(h.writes.length,writesBefore);
+  assert.deepEqual(h.order,['replace DOM']);
+});
+
+test('explicit clear resets the session without resurrecting a pending coding draft',()=>{
+  const h=routeHarness();h.editor.value='print("Draft to discard");';
+  const privacy=h.privacy();privacy.onClear(h.state().manager.clearAll());
+  assert.equal(h.editor.value,initialWorkspaceState('CODE-501').code);
+  assert.equal(h.state().store.labs['CODE-501'].events.length,0);assert.equal(h.state().manager.persistent,false);
+  assert.ok(h.writes.every(write=>!write.value.includes('Draft to discard')));
+  assert.deepEqual(h.order,['replace DOM']);
+});
+
+test('preserving navigation bounds the action log and never treats the saved draft as tested',()=>{
+  const h=routeHarness(),record=h.state().store.labs['CODE-501'];
+  record.events=Array.from({length:100},(_,index)=>({time:'',kind:'info',message:'Earlier fictional action '+index}));
+  h.editor.value=codingPrograms['CODE-501'];h.navigate('#about');
+  const kept=h.state().store.labs['CODE-501'];assert.equal(kept.events.length,100);assert.equal(kept.events[0].message,'Earlier fictional action 1');
+  assert.equal(kept.state.tested,false);assert.equal(kept.state.checkRuns,0);assert.deepEqual(kept.state.output,[]);
+  assert.equal(verifyWorkspace('CODE-501',kept.state).ok,false);
 });
