@@ -14,7 +14,10 @@ function containsPrivateDetails(text) {
     || /(?:^|[^\w.])(?:\+?\d[\d ()-]{6,}\d)(?=$|[^\w.])/u.test(text)
     || /\b(?:student|school|social security|ssn)\s*(?:id|identifier|number)\s*(?:is|:|=|#)?\s*[a-z0-9-]{3,}/iu.test(text)
     || /\b(?:my|his|her|their|the student'?s?|a student'?s?)\s+(?:full |real )?(?:name|email|address|diagnosis|medical condition|phone number|date of birth)\b/iu.test(text)
-    || /\b(?:show|give|reveal|find|tell me|what is|what's)\b.{0,55}\b(?:student'?s? (?:name|email|id|diagnosis)|password|passphrase|private key|access token)\b/iu.test(text)
+    || /\b(?:show|give|reveal|find|tell me|what is|what's)\b.{0,55}\bstudent'?s? (?:name|email|id|diagnosis)\b/iu.test(text)
+    // Asking about a password policy is different from requesting a password value.
+    // Check each requested secret term so a policy question cannot mask a second request for an actual secret.
+    || /\b(?:show|give|reveal|find|tell me|what is|what's)\b.{0,55}\b(?:password|passphrase|private key|access token)\b(?![\s-]+(?:polic(?:y|ies)|expir(?:ation|y)|handling|requirements?|security|safety|rules?|strength|hygiene|resets?|storage|management|protection|rotation|hashing|encryption|reuse|recovery|complexity|length|best practices?|advice|guidance)\b)/iu.test(text)
     || /\b(?:password|passphrase|secret|api[- ]?key|access[- ]?token)\s*(?:is|:|=)\s*\S+/iu.test(text)
     || /\b(?:sk-(?:proj-)?[a-z0-9_-]{8,}|gh[pousr]_[a-z0-9]{12,})\b/iu.test(text);
 }
@@ -102,6 +105,7 @@ function caseReply(scenario, question, state) {
     if (/ai|send|model|service|account/iu.test(question)) return response('This activity uses fixed checks in your browser. Neither this interview nor the prompt audit sends questions to an AI service. Use fictional information and compare explanations with class notes.', 'privacy');
   }
   if (id === 'AI-302') {
+    if (/password[\s-]*(?:polic|expir|handl|rotat)|90[\s-]*day/iu.test(question)) return response('The fictional AI draft’s 90-day password-expiration claim is unsupported: source card v4.2 contains no password-expiration policy. Compare the claim with the source instead of treating a confident draft as evidence.', 'source');
     if (/source|claim|guide|confiden|true|policy|password|evidence|supported/iu.test(question)) return fact(scenario,'source');
     if (/bias|same|equal|categor|ticket|name|different|classif/iu.test(question)) return fact(scenario, /trait|guess|judg/iu.test(question) ? 'human' : 'pair');
   }
@@ -112,6 +116,7 @@ function caseReply(scenario, question, state) {
     if (/run|execut|python|test/iu.test(question)) return response('This is a code-review simulation. The test controls run a fixed matrix of review choices; they do not execute Python or arbitrary code.', 'scope');
   }
   if (id === 'SEC-401') {
+    if (/password[\s-]*(?:polic|expir|handl|rotat)/iu.test(question)) return response('This phishing case does not define a school password-expiration policy. Do not provide credentials in reply to an urgent message. Verify account requests through the school’s approved process.', 'message-safety');
     if (/sender|from|address|domain|message|phish|suspici|inbox/iu.test(question)) return fact(scenario,'sender');
     if (/link|url|click|destination|button/iu.test(question)) return fact(scenario,'link');
     if (/permission|access|rights|admin|read|helper|checklist/iu.test(question)) return fact(scenario,'scope');
