@@ -1022,12 +1022,16 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     onStatus({ kind: 'context-lost', message: 'The device paused 3D graphics. Your work is preserved; continue with the labeled assembly tools.' });
   }
   function restored() {
+    if (stopped) return;
     contextLost = false;
     onStatus({ kind: 'context-restored', message: '3D graphics restored. Your existing assembly state is unchanged.' });
     resize();
     requestRender();
     scene.executeWhenReady(()=>{if(!stopped)requestRender();});
   }
+  // The browser's DOM event precedes Babylon rebuilding native GPU resources.
+  // Only the engine's completed restoration may resume this on-demand view.
+  const contextRestored = engine.onContextRestoredObservable.add(restored);
   canvas.style.cursor = 'grab';
   function secondPointer(event) {
     if (gesture && event.pointerId !== gesture.id) cancelInteraction('Movement canceled: use one pointer at a time.');
@@ -1042,7 +1046,6 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   canvas.addEventListener('lostpointercapture', lost);
   canvas.addEventListener('pointerleave', leave);
   canvas.addEventListener('webglcontextlost', loss);
-  canvas.addEventListener('webglcontextrestored', restored);
   view.addEventListener('blur', lost);
   doc.addEventListener('pointerup', outsideUp);
   doc.addEventListener('pointerdown', secondPointer);
@@ -1175,7 +1178,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     canvas.removeEventListener('lostpointercapture', lost);
     canvas.removeEventListener('pointerleave', leave);
     canvas.removeEventListener('webglcontextlost', loss);
-    canvas.removeEventListener('webglcontextrestored', restored);
+    engine.onContextRestoredObservable.remove(contextRestored);
     scene.dispose();engine.dispose();canvas.remove();overlay?.remove();
     geometries.clear();
     materials.clear();

@@ -150,6 +150,9 @@ test('context loss preserves simulation data and restores the existing scene saf
   h.api.setView('top'); h.api.update(h.hardware, h.assembly);
   assert.equal(h.queue.size, 0);
   h.canvas.fire('webglcontextrestored'); h.flush();
+  assert.equal(h.events.at(-1).kind, 'context-lost', 'The DOM event is earlier than the native GPU rebuild');
+  assert.equal(h.renderer.renders.length, 1);
+  h.renderer.onContextRestoredObservable.notifyObservers(h.renderer); h.flush();
   assert.equal(h.events.at(-1).kind, 'context-restored');
   assert.equal(h.renderer.renders.length, 2);
   assert.deepEqual({ hardware: h.hardware, assembly: h.assembly }, original);
@@ -553,9 +556,31 @@ test('shader readiness redraws on demand after mount and context rebuild without
   h.api.resume();h.flush();h.page.hidden=true;h.page.fire('visibilitychange');h.ready[0]();assert.equal(h.queue.size,0);
   h.page.hidden=false;h.page.fire('visibilitychange');h.flush();
   h.canvas.fire('webglcontextlost');h.canvas.fire('webglcontextrestored');h.flush();
+  assert.equal(h.ready.length,1,'The DOM event must not compile or draw against resources still being rebuilt');
+  assert.equal(h.queue.size,0);
+  h.renderer.onContextRestoredObservable.notifyObservers(h.renderer);h.flush();
   assert.equal(h.ready.length,2,'Restored native effects can finish compiling after context restoration');
   h.ready[1]();assert.equal(h.queue.size,1);h.flush();assert.equal(h.queue.size,0);
   h.api.dispose();for(const callback of h.ready)callback();assert.equal(h.queue.size,0);
+});
+
+test('native context restoration and delayed shader compilation respect pause, page visibility and disposal',()=>{
+  const h=harness();h.flush();
+  h.canvas.fire('webglcontextlost');h.api.pause();h.canvas.fire('webglcontextrestored');
+  h.renderer.onContextRestoredObservable.notifyObservers(h.renderer);
+  assert.equal(h.queue.size,0,'A completed GPU rebuild must not override a paused workbench');
+  h.ready.at(-1)();assert.equal(h.queue.size,0);
+  h.api.resume();h.flush();
+  h.canvas.fire('webglcontextlost');h.page.hidden=true;h.page.fire('visibilitychange');
+  h.canvas.fire('webglcontextrestored');h.renderer.onContextRestoredObservable.notifyObservers(h.renderer);
+  h.ready.at(-1)();assert.equal(h.queue.size,0,'Hidden pages must not render even after shaders become ready');
+  h.page.hidden=false;h.page.fire('visibilitychange');h.flush();
+  const readyBefore=h.ready.length,eventsBefore=h.events.length;
+  h.api.dispose();
+  h.renderer.onContextRestoredObservable.notifyObservers(h.renderer);
+  for(const callback of h.ready)callback();
+  assert.equal(h.ready.length,readyBefore,'Disposal removes the engine restoration observer');
+  assert.equal(h.events.length,eventsBefore);assert.equal(h.queue.size,0);
 });
 
 test('native scene inputs stay detached so only the authored pointer controller interprets touch and camera gestures',()=>{
