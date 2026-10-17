@@ -1,6 +1,6 @@
-import * as THREE from './three.module.js?release=20261017-cables14';
-import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-cables14';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-cables14';
+import * as THREE from './three.module.js?release=20261017-repair15';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-repair15';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-repair15';
 
 /**
  * Original, procedural 3D hardware lab & workstation artwork.

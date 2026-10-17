@@ -1,6 +1,6 @@
-import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261017-cables14';
-import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261017-cables14';
-import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261017-cables14';
+import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261017-repair15';
+import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261017-repair15';
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261017-repair15';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },
@@ -139,9 +139,9 @@ export function applyHardwareAction(caseId, state, action) {
   if (typeof action !== 'string') return result(s, 'Select a documented workbench action.', 'warning');
   const record = (message, kind = 'info') => { s.actions.push(action); return result(s, message, kind); };
   if (action === 'enable-assembly') {
-    if(s.assemblyEnabled)return result(s,'Detailed assembly is already active.');
+    if(s.assemblyEnabled)return result(s,'Your workbench is ready.');
     s.assemblyEnabled=true; s.assembly=initialAssemblyState(s);
-    return record('Detailed assembly enabled. Every screw, retention clip, cable and thermal interface now participates in the startup checks. Work only on this virtual equipment.');
+    return record('Workbench ready. Read the ticket, inspect the equipment, then test one change.');
   }
   const detailedAliases={ 'install-board':'asm-fit-board','install-cpu':'asm-fit-cpu','install-cooler':'asm-fit-cooler','install-ram':'asm-fit-ram','seat-ram':'asm-fit-ram','unseat-ram':'asm-remove-ram','install-gpu':'asm-fit-gpu','install-drive':'asm-fit-ssd','install-original':'asm-fit-ssd','connect-atx':'asm-connect-atx','connect-cpu-power':'asm-connect-eps','connect-gpu-power':'asm-connect-gpu-power','connect-sata':'asm-connect-sata-data','disconnect-sata':'asm-disconnect-sata-data','connect-sata-power':'asm-connect-sata-power','connect-front-panel':'asm-connect-front-panel' };
   if(s.assemblyEnabled && (action.startsWith('asm-')||Object.hasOwn(detailedAliases,action))) {
@@ -541,7 +541,7 @@ export function renderHardware(root, caseId, state, onAction) {
   const mission = hardwareMission(id, s);
   const readouts = getHardwareReadouts(id, s);
   const activeView = interaction.cableHeld ? 'rear' : s.view;
-  root.innerHTML = `<section class="hw-workbench" aria-label="Interactive hardware workbench"><div class="hw-assembly-launch"><div><strong>Go inside the workstation</strong><p>Build and take apart a 3D PC, including screws, clips and thermal paste. Detailed checks stay active once you begin.</p></div>${btn('enable-assembly','Open detailed 3D assembly')}</div>
+  root.innerHTML = `<section class="hw-workbench" aria-label="Interactive hardware workbench">
     <div class="hw-status-bar"><span class="hw-status ${s.pcOn?'hw-status-on':''}"><i></i>PC ${s.pcOn?'ON':'OFF'}</span><span class="hw-status ${s.acConnected?'hw-status-live':'hw-status-safe'}"><i></i>AC ${s.acConnected?'CONNECTED':'DISCONNECTED'}</span><span class="hw-work-safety ${safe?'hw-work-safe':''}">${safe?'✓ Safe to change virtual components':'Power off + unplug before internal work'}</span></div>
     <div class="hw-power-controls" role="group" aria-label="Virtual PC power controls"><span class="hw-controls-label">Virtual power controls</span>${btn('power-off','① Power off')}${btn('unplug','② Unplug AC')}${btn('plug-in','③ Connect AC')}${btn('boot','④ Power on / test')}</div>
     <div class="hw-view-tabs" role="tablist" aria-label="Workbench view">${[['bench','Whole workbench'],['internals','Inside the PC'],['rear','Rear connections'],['display','Monitor']].map(([v,l])=>`<button type="button" role="tab" tabindex="${activeView===v?'0':'-1'}" aria-selected="${activeView===v}" data-hw-action="view-${v}">${l}</button>`).join('')}<span class="hw-bench-tag">VIRTUAL BENCH</span></div>

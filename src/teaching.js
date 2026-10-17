@@ -138,8 +138,8 @@ export function renderLabLearning(scenario,mode='guided') {
     ${processMarkup()}
     <p class="learning-goal"><strong>Practise:</strong> ${esc(lesson.goals[0])}</p>
     ${selected.id==='guided'?'<p class="learning-mode-task"><strong>Start here:</strong> Write one observation and one possible explanation. Before acting, predict what your test will show.</p>':selected.id==='independent'?'<p class="learning-mode-task"><strong>Your first decision:</strong> Choose a question or observation that will help you decide what to test. Explain your choice.</p>':'<p class="learning-mode-task"><strong>Challenge:</strong> Compare two possible explanations. Describe an observation that would favor one over the other, then test your prediction.</p>'}
-    <details class="learning-model"${selected.id==='guided'?' open':''}><summary>See a worked example of the process</summary><p>${esc(lesson.model)}</p><p>The example models reasoning. Apply the process to your own case and check its evidence.</p></details>
-    <details class="learning-words"${selected.id==='guided'?' open':''}><summary>Words you can tap to define</summary>${vocabularyMarkup(lesson)}</details>
+    <details class="learning-model"><summary>See a worked example of the process</summary><p>${esc(lesson.model)}</p><p>The example models reasoning. Apply the process to your own case and check its evidence.</p></details>
+    <details class="learning-words"><summary>Words you can tap to define</summary>${vocabularyMarkup(lesson)}</details>
   </section>`;
 }
 

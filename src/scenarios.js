@@ -1,5 +1,5 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261017-cables14';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261017-cables14';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261017-repair15';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261017-repair15';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 

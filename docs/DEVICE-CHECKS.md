@@ -48,6 +48,12 @@ The cables14 in-app browser preview connected the PC HDMI end from the motherboa
 
 The native cable picker retained keyboard focus after ArrowDown changed the selected cable. At 1366 × 768, 768 × 1024 and 390 × 844, the controls fit without horizontal page overflow; tool and connection buttons were at least 48 CSS pixels high and native cable/socket selects were 44 pixels high. The narrow connection buttons can wrap onto two lines. The final tablet toolbar uses three columns. Actual managed Chromebooks, physical touch devices, Edge and school filtering still need acceptance checks; these observations do not establish performance or touch precision on every device.
 
+## Ticket-first repair flow — October 17, 2026
+
+In the repair15 in-app browser preview, the catalog displayed direct ticket cards without a 3D room. INC-101 opened with the request and a question form; optional help, evidence, repair idea and conversation history were closed. A student-written follow-up received the expected fictional reply. Open workbench loaded the detailed PC automatically, with power/test controls, six tools and the equipment in the main view.
+
+At 768 × 1024, dragging the PC HDMI plug from the motherboard output to the labeled graphics-card output changed the actual simulation state. Reconnecting AC, testing the PC and opening the lesson passed the original-task check. The 768 × 1024 and 390 × 844 layouts had no horizontal page overflow. NET-201 had no canvas on its request tab and mounted its pathway scene only after entering the workbench. These are connected-browser and viewport checks; physical school devices and managed Edge remain acceptance checks.
+
 ## Browser guidance
 
 - [ChromeOS: find and open files](https://support.google.com/chromebook/answer/1700055?hl=en).

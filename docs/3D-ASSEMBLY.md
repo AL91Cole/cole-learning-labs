@@ -1,8 +1,10 @@
 # Detailed 3D assembly
 
-Source release: `20261017-cables14`, version `2.13.0`.
+Source release: `20261017-repair15`, version `2.14.0`.
 
-In a hardware investigation, open **Workbench & test → Open detailed 3D assembly**. Detailed mechanics stay active for that investigation until Start over. Choose **Load 3D view** when graphics are useful; all mechanical controls also work without WebGL. Existing investigations and earlier drafts retain their original fault when adopting detailed mechanics.
+Start with the investigation's ticket in **Request & clues**, then choose **Open workbench**. Entering that hardware section adopts detailed mechanics once and starts its 3D view. Existing investigations and earlier drafts retain their original fault and progress. Returning to the section keeps the same equipment, screws, paste and cable state. Detailed mechanics stay active until Start over; all mechanical controls also work without WebGL.
+
+The repair view puts the power controls, tool choices, equipment and current feedback first. Tool controls, component controls, camera options and longer build instructions use named native disclosures. Select a tool or a component to reveal its relevant controls, or open a drawer directly. Extended help, worked examples, vocabulary, experiment notebook and activity history start closed. The final **Check & explain** section retains the original-task check and report handoff.
 
 ## Equipment and controls
 
@@ -54,14 +56,14 @@ Internal cable changes require PC off, AC disconnected and the case panel remove
 
 ## School-device constraints
 
-Three.js is pinned and self-hosted; see [Third-party software](THIRD-PARTY.md). Graphics require WebGL2. The detailed assembly renderer starts after choosing Load 3D view. The home/library classroom hub and non-hardware station previews mount automatically, so their shared 3D library currently loads with the application. Load 3D view does not defer every 3D asset download.
+Three.js is pinned and self-hosted; see [Third-party software](THIRD-PARTY.md). Graphics require WebGL2. The home page and lab catalog contain no 3D classroom hub, and the initial request does not load the graphics engine. Entering a hardware workbench starts its detailed view. A non-hardware station preview loads only after entering that investigation's workbench. Leaving its section or route during a pending import prevents a late canvas mount. Camera options provide pause and resume; ordinary component controls remain available if graphics cannot load.
 
-The assembly scene uses procedural geometry, with no remote assets, physics dependency, continuous render loop, shadows or post-processing. Hub and pathway monitor textures are drawn locally on canvas. Rendering is requested only when needed, with pixel ratio capped at 1.5 and approximately 900,000 framebuffer pixels per view. The detailed scene pauses when its section is hidden; pathway previews skip rendering while hidden. Route changes dispose scene resources. Context loss preserves equipment state and leaves the ordinary controls available. Pause 3D is reversible and is not overridden by returning to a browser tab.
+The assembly scene uses procedural geometry, with no remote assets, physics dependency, continuous render loop, shadows or post-processing. Pathway monitor textures are drawn locally on canvas. Rendering is requested only when needed, with pixel ratio capped at 1.5 and approximately 900,000 framebuffer pixels per view. The detailed scene pauses when its section is hidden; pathway previews skip rendering while hidden. Route changes dispose scene resources. Context loss preserves equipment state and leaves the ordinary controls available. Pause 3D is reversible and is not overridden by returning to a browser tab.
 
 These limits support modest devices but do not establish performance on every Chromebook or tablet. Accept the release on actual managed school hardware, with its browser settings and filtering policy. No new network permissions, device access, telemetry, student service or live AI service is enabled. The production classroom privacy gate remains closed.
 
 ## Verification
 
-Automated tests cover complete build, full teardown/rebuild, screw order, power and cable interlocks, paste rework, malformed saves, old-action guards, report-compatible state and strict draft schemas. Tool and cable tests check fixed component/socket mappings, ordinary-button alternatives, text-only feedback, independent HDMI ends, bounded observation/report output and the shared model's safety rules. Renderer tests use actual Three scene geometry with a mock GPU adapter to check projected pointer interactions, wrong drops, cancellation, resource disposal, pause/context/resize behavior and fallback. They do not measure a physical device's GPU performance or establish native touch behavior.
+Automated tests cover complete build, full teardown/rebuild, screw order, power and cable interlocks, paste rework, malformed saves, old-action guards, report-compatible state and strict draft schemas. Navigation checks cover ticket-first entry, original-fault preservation, one-time mechanical setup, draft retention, closed optional guidance and disposal of pending graphics loads. Tool and cable tests check fixed component/socket mappings, ordinary-button alternatives, text-only feedback, independent HDMI ends, bounded observation/report output and the shared model's safety rules. Renderer tests use actual Three scene geometry with a mock GPU adapter to check projected pointer interactions, wrong drops, cancellation, resource disposal, pause/context/resize behavior and fallback. They do not measure a physical device's GPU performance or establish native touch behavior.
 
 Source tests and local previews do not verify that this release has reached production. Testing on actual managed Chromebooks, tablets, Edge devices and school networks remains necessary. Record release-specific browser evidence and remaining checks in [Device checks](DEVICE-CHECKS.md) rather than treating earlier release findings as verification of new tools.

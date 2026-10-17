@@ -63,7 +63,7 @@ test('support mode changes preserve unsaved questions, code, notes, and the expe
     for(const [selector,value] of Object.entries(drafts))assert.equal(view.node(selector).value,value);
     assert.equal(prediction.value,'I predict a different first counter will change the first line.');
     assert.deepEqual([...view.classes],['mode-'+mode]);
-    assert.equal(view.node('.intake-questions').open,mode==='guided');
+    assert.notEqual(view.node('.intake-questions').open,true,'Choosing a support level must not force optional starters open.');
     assert.equal(view.urls.at(-1),`#lab/CODE-503?mode=${mode}&sequence=opening-day`);
   }
   assert.equal(saves,saved,'A mode selection must not save or submit an unsubmitted editor draft.');

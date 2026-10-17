@@ -33,7 +33,7 @@ const BUILD = [
   'asm-fit-panel', 'asm-tighten-panel-0', 'asm-tighten-panel-1', 'video-gpu', 'plug-in', 'boot'
 ];
 
-test('detailed assembly is an explicit opt-in and preserves existing classroom faults', () => {
+test('entering the repair workbench enables detailed checks while preserving every ticket fault', () => {
   for (const id of hardwareIds) {
     const original = initialHardwareState(id);
     assert.equal(original.assemblyEnabled, false);
@@ -41,11 +41,46 @@ test('detailed assembly is an explicit opt-in and preserves existing classroom f
     const enabled = detailed(id);
     assert.equal(enabled.assemblyEnabled, true);
     assert.equal(enabled.assembly.version, 1);
-    for (const key of ['pcOn', 'acConnected', 'boardInstalled', 'ramSeated', 'videoPort', 'monitorInput', 'signalConnected', 'sataDataConnected']) {
+    for (const key of Object.keys(original).filter(key => !['assemblyEnabled', 'assembly', 'actions'].includes(key))) {
       assert.deepEqual(enabled[key], original[key], `${id}: enabling assembly silently repaired ${key}`);
     }
     assert.equal(verifyHardware(id, enabled).ok, false);
   }
+});
+
+test('entering a completed legacy repair keeps its physical result, delivered task, and written report', () => {
+  const scenario = SCENARIOS.find(item => item.id === 'INC-101');
+  const repaired = sequence('INC-101', initialHardwareState('INC-101'), ['video-gpu', 'open-document']);
+  assert.equal(verifyHardware('INC-101', repaired).ok, true);
+  const enabled = step('INC-101', repaired, 'enable-assembly').state;
+  assert.equal(enabled.documentOpened, true);
+  assert.equal(enabled.booted, true);
+  assert.equal(verifyHardware('INC-101', enabled).ok, true);
+  for (const key of Object.keys(repaired).filter(key => !['assemblyEnabled', 'assembly', 'actions'].includes(key))) assert.deepEqual(enabled[key], repaired[key], key);
+  const record = normalizeLabRecord(scenario, { state: enabled, plan: 'I traced the display signal.', notes: 'The GPU output restored the original lesson.', reflection: 'Both cable ends and the selected output matter.', verified: true });
+  assert.equal(record.verified, true); assert.equal(record.notes, 'The GPU output restored the original lesson.');
+});
+
+test('re-entering the workbench never reinitializes disturbed paste, removed screws, or prior actions', () => {
+  let state = sequence('INC-106', detailed('INC-106'), BUILD);
+  state = sequence('INC-106', state, ['power-off', 'unplug', 'asm-loosen-panel-0', 'asm-loosen-panel-1', 'asm-remove-panel', 'asm-disconnect-cpu-fan', ...[2, 1, 3, 0].map(index => `asm-loosen-cooler-${index}`), 'asm-remove-cooler']);
+  assert.equal(state.assembly.paste, 'dry');
+  const snapshot = structuredClone(state);
+  for (let entry = 0; entry < 3; entry++) state = step('INC-106', state, 'enable-assembly').state;
+  assert.deepEqual(state, snapshot);
+  assert.equal(state.assembly.panelInstalled, false);
+  assert.deepEqual(state.assembly.coolerScrews, [false, false, false, false]);
+  assert.equal(verifyHardware('INC-106', state).ok, false);
+});
+
+test('reading a saved ticket before the learner opens the workbench does not enable or repair equipment', () => {
+  const scenario = SCENARIOS.find(item => item.id === 'INC-108');
+  const original = initialHardwareState(scenario.id);
+  const restored = normalizeLabRecord(scenario, { state: JSON.parse(JSON.stringify(original)), notes: 'I will trace the display cable.' });
+  assert.deepEqual(restored.state, original);
+  assert.equal(restored.state.assemblyEnabled, false);
+  assert.equal(restored.state.signalConnected, false);
+  assert.equal(restored.notes, 'I will trace the display cable.');
 });
 
 test('the existing install aliases cannot skip fasteners or thermal preparation in detailed mode', () => {

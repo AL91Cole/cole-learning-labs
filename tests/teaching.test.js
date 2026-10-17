@@ -60,7 +60,7 @@ test('mode supports differ while every learner can still open example and vocabu
   const guided=renderLabLearning(SCENARIOS[0],'guided');
   const independent=renderLabLearning(SCENARIOS[0],'independent');
   const challenge=renderLabLearning(SCENARIOS[0],'challenge');
-  assert.match(guided,/class="learning-model" open/);
+  assert.doesNotMatch(guided,/class="learning-model" open/);
   assert.doesNotMatch(independent,/class="learning-model" open/);
   assert.doesNotMatch(challenge,/class="learning-model" open/);
   assert.match(independent,/Your first decision/);assert.match(challenge,/Compare two possible explanations/);
