@@ -1,6 +1,6 @@
 /* Optional sharing only after an explicit classroom join. No live AI or device surveillance. */
-import { SCENARIOS } from './scenarios.js?release=20261016-ticket-intake7';
-import { inquiryProgress, retainInquiryEvents } from './interview.js?release=20261016-ticket-intake7';
+import { SCENARIOS } from './scenarios.js?release=20261016-conversation8';
+import { inquiryProtectedEvents, retainInquiryEvents } from './interview.js?release=20261016-conversation8';
 export const CLASSROOM_ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
@@ -25,12 +25,7 @@ export function progressSnapshot(record, scenarioId) {
     plan: typeof value.plan === 'string' ? value.plan : '', notes: typeof value.notes === 'string' ? value.notes : '', reflection: typeof value.reflection === 'string' ? value.reflection : '',
     events: retainInquiryEvents(scenario,value.events), verified: value.verified === true, closed: value.closed === true
   }));
-  const earned = new Set(), protectedEvents = new Set();
-  for (const event of work.events) {
-    for (const id of inquiryProgress(scenario,[event]).found) {
-      if (!earned.has(id)) { earned.add(id); protectedEvents.add(event); }
-    }
-  }
+  const protectedEvents = new Set(inquiryProtectedEvents(scenario,work.events));
   while (new TextEncoder().encode(JSON.stringify(work)).byteLength > 60000 && work.events.length) {
     const removable = work.events.findIndex(event => !protectedEvents.has(event));
     if (removable < 0) break;

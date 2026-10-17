@@ -1,3 +1,4 @@
+import { resolveQuestion } from './conversation.js?release=20261016-conversation8';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
@@ -7,6 +8,7 @@ const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-30
 const compact = text => text.replace(/\s+/gu, ' ').trim();
 const bounded = text => text.length <= ANSWER_MAX ? text : text.slice(0, ANSWER_MAX - 1).trimEnd() + '…';
 const response = (answer, topic, kind = 'answer', accepted = true) => ({ accepted, answer:bounded(answer), kind, topic });
+const requesterStatement = text => typeof text === 'string' ? text.match(/^[“"]([^”"]+)[”"]/u)?.[1] || text : 'The request card has the available observations.';
 const validQuestion = value => typeof value === 'string' && compact(value).length > 0 && value.length <= QUESTION_MAX && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value);
 
 // A small precaution, not automatic de-identification. Free text can identify someone in ways these patterns cannot detect.
@@ -190,7 +192,7 @@ function caseReply(scenario, question, state) {
   return null;
 }
 
-function directAnswer(scenario, question, state = {}) {
+function caseAnswer(scenario, question, state = {}) {
   if (!validQuestion(question)) return response('Write one short question about the fictional case, up to 240 characters. Leave out private information.', 'question-format', 'clarify', false);
   const text = compact(question);
   if (containsPrivateDetails(text)) return response('Please leave out personal details, identifiers, passwords, and private records. Rephrase your question using fictional equipment or the case labels. This question was not added to the interview log.', 'privacy', 'privacy', false);
@@ -229,13 +231,42 @@ function directAnswer(scenario, question, state = {}) {
     return requesterFact ? response(requesterFact.answer,'case-fact') : specific;
   }
   if (/\b(?:privacy|private|personal data|real information|internet|ai service|chatbot|live ai|send|stored)\b/iu.test(text)) return response('This interview uses built-in facts in your browser, without an AI service. Keep personal information out of questions and notes. Saving or submitting work uses the separate privacy controls shown in the lab.', 'privacy');
-  if (/\b(?:symptom|problem|wrong|broken|issue|happening|not work|equipment|device|machine)\b/iu.test(text)) return response(scenario.brief,'symptom');
+  if (/\b(?:symptom|problem|wrong|broken|issue|happening|not work|equipment|device|machine)\b/iu.test(text)) return response(requesterStatement(scenario.brief),'symptom');
   if (/\b(?:how.*(?:start|use)|what.*(?:first|next)|help|confused|where.*(?:begin|start))\b/iu.test(text)) return response('Let us take it one step at a time. Read the request and one clue, write your hypothesis, and test one change in the workbench. Then compare what happened with the request. Ask me about a specific part or symptom when you need another case fact.', 'how-to');
   return response('That detail is not recorded in this fictional case. Try a specific question about the symptom, a recent change, the equipment, or the requester’s goal. This interview uses scripted case facts and may not understand every wording.', 'clarification', 'clarify');
 }
 
+function cleanHistory(history) {
+  return (Array.isArray(history) ? history.slice(-8) : []).filter(pair => pair && validQuestion(pair.question) && !containsPrivateDetails(pair.question) && !outOfScopeInstructions(pair.question) && typeof pair.answer === 'string' && pair.answer.length <= ANSWER_MAX);
+}
+
+function withSuggestions(reply, scenario, supplied) {
+  const candidates = Array.isArray(supplied) ? supplied : Array.isArray(scenario?.questions) ? scenario.questions.slice(0,3).map(item => item.label) : [];
+  return {...reply,suggestions:[...new Set(candidates.filter(item => validQuestion(item) && !containsPrivateDetails(item) && !outOfScopeInstructions(item)).map(compact))].slice(0,3)};
+}
+
+// Validate the original input before interpreting polite wording, typos, or references.
+// The resolver selects an authored topic; it never provides a new case fact.
+function directAnswer(scenario, question, state = {}, history = []) {
+  const original = caseAnswer(scenario,question,state);
+  if (!original.accepted || original.topic === 'scope' || original.topic === 'safety') return original;
+  const resolved = resolveQuestion(scenario,question,cleanHistory(history));
+  if (resolved.clarification) return withSuggestions(response(resolved.clarification.message,'clarification','clarify'),scenario,resolved.clarification.suggestions);
+  const alreadySpecific = original.kind === 'answer' && !['history','symptom','how-to','conversation'].includes(original.topic) && !resolved.contextual && !followUpKind(question);
+  const canonical = alreadySpecific ? question : typeof resolved.question === 'string' && validQuestion(resolved.question) ? resolved.question : question;
+  const mapped = canonical === question ? original : caseAnswer(scenario,canonical,state);
+  const result = mapped.kind === 'clarify' && original.kind === 'answer' && resolved.intent === 'unknown' ? original : mapped;
+  const ids = requiredInquiryFacts(scenario);
+  const match = result.topic === 'case-fact' ? matchedCaseFact(scenario,canonical) ?? scenario.interviewFacts?.find(entry => ids.includes(entry.id) && entry.answer === result.answer) : null;
+  const reply = {...result,canonicalQuestion:canonical,contextQuestion:resolved.contextQuestion,inquiryFactIds:match && ids.includes(match.id) ? [match.id] : []};
+  return result.kind === 'clarify' ? withSuggestions(reply,scenario) : reply;
+}
+
 function followUpKind(question) {
   const text = compact(question).replace(/[?.!]+$/u,'');
+  if (/^(?:(?:can|could|would) you )?(?:please )?(?:explain (?:that|it|this)(?: in (?:a )?different way)?|be more specific)$/iu.test(text)) return 'simple';
+  if (/^(?:(?:can|could|would) you )?(?:please )?(?:tell me why (?:that|it|this)(?: happened| matters)?|how so)$/iu.test(text)) return 'why';
+  if (/^(?:(?:and|so) )?what happened (?:next|after that)$/iu.test(text)) return 'timeline';
   if (/^(?:why|why is that|why does that (?:matter|happen)|how come|what makes you say that|what does that tell (?:me|us)|is that important)$/iu.test(text)) return 'why';
   if (/^(?:(?:can|could) you )?(?:please )?(?:explain|say|put|make|break)(?: that| it| this)? (?:more simply|simpler|in simple (?:words|terms)|in plain (?:words|language)|easier|down)|^(?:I do not|I don't|I didnt|I didn’t) understand(?: that| it)?$|^what do you mean(?: by that)?$/iu.test(text)) return 'simple';
   if (/^(?:(?:so|okay|ok)[, ]+)?(?:what (?:should|could|can) I (?:check|inspect|test|look at|try) next|what next|where (?:should|do) I (?:look|check) next|what (?:should|do) I do (?:with that|next))$/iu.test(text)) return 'next';
@@ -255,7 +286,7 @@ function recentCaseContext(scenario, state, history) {
 }
 
 function nextClue(scenario, context) {
-  const clues = Array.isArray(scenario.clues) ? scenario.clues.filter(clue => clue && typeof clue.id === 'string' && typeof clue.label === 'string' && clue.label.length <= 90) : [];
+  const clues = Array.isArray(scenario.clues) ? scenario.clues.filter(clue => clue && typeof clue.id === 'string' && typeof clue.label === 'string' && clue.label.length <= 90 && (!clue.requiresFact || context.reply.inquiryFactIds?.includes(clue.requiresFact))) : [];
   const relevant = words(context.question + ' ' + context.reply.topic).split(' ').filter(word => word.length > 3);
   let next = clues[0]; let bestScore = 0;
   for (const clue of clues) {
@@ -268,23 +299,41 @@ function nextClue(scenario, context) {
 
 /** Conversational case replies are computed locally from current case facts, never from a remote model.
  * History helps resolve short follow-ups; saved answer text is never treated as a source of facts. */
-export function answerQuestion(scenario, question, state = {}, history = []) {
-  const direct = directAnswer(scenario,question,state);
-  if (!direct.accepted) return direct;
-  const kind = followUpKind(question);
+function answerOne(scenario, question, state, history) {
+  const direct = directAnswer(scenario,question,state,history);
+  if (!direct.accepted || direct.topic === 'scope' || direct.topic === 'safety') return direct;
+  const kind = followUpKind(direct.canonicalQuestion || question);
   if (!kind) return direct;
-  const context = recentCaseContext(scenario,state,history);
-  if (!context) return response('I need a little more context. Ask about a specific symptom, clue, or part first, then I can explain that case fact or suggest what to inspect next. I do not have a recorded fact to refer back to yet.', 'conversation-context', 'clarify');
+  const context = recentCaseContext(scenario,state,cleanHistory(history));
+  if (!context) return withSuggestions(response('I need a little more context. Which part do you mean? Ask about a specific symptom, clue, or part first; I do not have a recorded fact to refer back to yet.','conversation-context','clarify'),scenario);
+  if (kind === 'timeline') {
+    const attempt = scenario.questions?.find(item => /try|tried/iu.test(item.label));
+    return attempt ? response('After I noticed the issue, this is what I tried: ' + attempt.answer,'conversation-timeline') : withSuggestions(response('A later event is not recorded in this case. Do you mean what was tried, what changed earlier, or the current result? I can describe the recorded observations, but I cannot fill in an unknown timeline.','conversation-timeline','clarify'),scenario);
+  }
   if (kind === 'next') {
     const clue = nextClue(scenario,context);
-    return response('I would check ' + (clue ? '“' + clue.label + '”' : 'the visible request and clues') + ' next. Record what you observe, compare it with your hypothesis, and test one change in the workbench. A useful test can disagree with your first idea.', 'conversation-next');
+    return withSuggestions(response('I would check ' + (clue ? '“' + clue.label + '”' : 'the visible request and clues') + ' next. ' + (clue?.text ? clue.text + ' ' : '') + 'Compare this evidence with your hypothesis before one change in the workbench.','conversation-next'),scenario,[context.question]);
   }
-  if (kind === 'why') return response('Here is the evidence I can point to: ' + context.reply.answer + ' Use that observation to decide what to test; it does not prove a cause on its own.', 'conversation-evidence');
+  if (kind === 'why') return response('Here is the evidence I can point to: ' + context.reply.answer + ' Use that observation to decide what to test; it does not prove a cause on its own.','conversation-evidence');
   if (kind === 'simple') {
     const sentence = context.reply.answer.match(/^.*?[.!?](?:\s|$)/u)?.[0].trim() ?? context.reply.answer;
-    return response('In simpler terms: ' + sentence + ' Check that observation on the workbench before deciding whether your idea fits.', 'conversation-simple');
+    return response('In simpler terms: ' + sentence + ' Check that observation on the workbench before deciding whether your idea fits.','conversation-simple');
   }
-  return response('Of course. The current case fact is: ' + context.reply.answer, 'conversation-repeat');
+  return response('Of course. The current case fact is: ' + context.reply.answer,'conversation-repeat');
+}
+
+/** Answers stay local. A two-part question receives both known answers; unknown details remain unknown. */
+export function answerQuestion(scenario, question, state = {}, history = []) {
+  const guard = caseAnswer(scenario,question,state);
+  if (!guard.accepted || guard.topic === 'scope' || guard.topic === 'safety') return guard;
+  const parts = compact(question).split(/\?\s+(?=(?:what|when|where|which|why|how|did|does|do|can|is|are|has|have)\b)|\s+and\s+(?=(?:what|when|where|which|why|how|did|does|do|can|is|are|has|have)\b)/iu);
+  if (parts.length === 1) return answerOne(scenario,question,state,history);
+  const replies = parts.slice(0,2).map(part => answerOne(scenario,part,state,history));
+  if (replies.some(reply => !reply.accepted)) return replies.find(reply => !reply.accepted);
+  const shorten = text => text.length <= 142 ? text : text.slice(0,139).trimEnd() + '…';
+  const answer = replies.map(reply => shorten(reply.answer)).join(' ');
+  const combined = {...response(answer,'conversation-parts',replies.some(reply => reply.kind === 'answer') ? 'answer' : 'clarify'),inquiryFactIds:[...new Set(replies.flatMap(reply => reply.inquiryFactIds || []))],contextQuestion:replies.find(reply => reply.contextQuestion)?.contextQuestion};
+  return withSuggestions(combined,scenario,replies.flatMap(reply => reply.suggestions || []));
 }
 
 /** Encode only accepted questions as bounded, structured text; blocked questions are never recorded. */
@@ -315,56 +364,84 @@ export function readQuestionEvents(events) {
   return transcript;
 }
 
-function earnedInquiryFact(scenario, event, required) {
+function earnedInquiryFacts(scenario, event, required, history) {
   const pair = readQuestionEvents([event])[0];
   if (!pair || followUpKind(pair.question)) return null;
-  const reply = directAnswer(scenario,pair.question);
-  if (!reply.accepted || reply.kind !== 'answer' || reply.topic !== 'case-fact') return null;
-  const entry = matchedCaseFact(scenario,pair.question) ?? (Array.isArray(scenario.interviewFacts) ? scenario.interviewFacts.find(fact => required.includes(fact?.id) && fact.answer === reply.answer) : undefined);
-  if (!entry || !required.includes(entry.id)) return null;
-  // Compare the same bounded event representation used when the learner asked. Saved text is not a source of new facts.
+  const reply = answerQuestion(scenario,pair.question,{},history);
+  if (!reply.accepted || reply.kind !== 'answer') return null;
+  const candidates = (reply.inquiryFactIds || []).filter(id => required.includes(id));
+  if (!candidates.length) return null;
   const canonical = readQuestionEvents([questionEvent(pair.question,reply)])[0];
-  if (canonical && canonical.question === pair.question && canonical.answer === pair.answer) return entry.id;
-  // Earlier releases used the shorter starter reply for some history questions. Preserve that recorded learning step.
-  const starters = Array.isArray(scenario.questions) ? scenario.questions.slice(0,12) : [];
-  for (const starter of starters) {
-    if (typeof starter?.label !== 'string' || typeof starter.answer !== 'string' || starter.answer.length > ANSWER_MAX || matchedCaseFact(scenario,starter.label)?.id !== entry.id) continue;
-    const legacy = readQuestionEvents([questionEvent(pair.question,response(starter.answer,'case-fact'))])[0];
-    if (legacy && legacy.question === pair.question && legacy.answer === pair.answer) return entry.id;
+  let ids = canonical && canonical.question === pair.question && canonical.answer === pair.answer ? candidates : [];
+  // For a two-part question, the unrelated current-state answer can change later.
+  // The relevant part must still contain its exact authored (possibly shortened) fact.
+  if (!ids.length && reply.topic === 'conversation-parts') {
+    ids = candidates.filter(id => scenario.interviewFacts?.some(entry => entry.id === id && pair.answer.includes(entry.answer.length <= 142 ? entry.answer : entry.answer.slice(0,139).trimEnd() + '…')));
   }
-  return null;
+  if (!ids.length) ids = candidates.filter(id => scenario.interviewFacts?.some(entry => entry.id === id && Array.isArray(entry.legacyAnswers) && entry.legacyAnswers.slice(0,4).some(answer => {
+    if (typeof answer !== 'string' || !answer.trim() || answer.length > ANSWER_MAX) return false;
+    const earlier = readQuestionEvents([questionEvent(pair.question,response(answer,'case-fact'))])[0];
+    return earlier && earlier.question === pair.question && earlier.answer === pair.answer;
+  })));
+  // Earlier supported starter answers keep their learning credit after wording improvements.
+  if (!ids.length) for (const starter of Array.isArray(scenario.questions) ? scenario.questions.slice(0,12) : []) {
+    if (typeof starter?.label !== 'string' || typeof starter.answer !== 'string' || starter.answer.length > ANSWER_MAX) continue;
+    const starterReply = directAnswer(scenario,starter.label);
+    const legacy = readQuestionEvents([questionEvent(pair.question,response(starter.answer,'case-fact'))])[0];
+    if (legacy && legacy.question === pair.question && legacy.answer === pair.answer) ids = candidates.filter(id => starterReply.inquiryFactIds?.includes(id));
+    if (ids.length) break;
+  }
+  return ids.length ? {ids,contextQuestion:reply.contextQuestion} : null;
 }
+
+function inquiryRecords(scenario, events) {
+  const required = requiredInquiryFacts(scenario);
+  if (!required.length || !Array.isArray(events)) return [];
+  const history = [], records = [];
+  for (const [index,event] of events.entries()) {
+    const pair = readQuestionEvents([event])[0];
+    if (!pair) continue;
+    const recent = history.slice(-8);
+    const earned = earnedInquiryFacts(scenario,event,required,recent.map(item => item.pair));
+    if (earned) {
+      const anchor = earned.contextQuestion ? recent.toReversed().find(item => compact(item.pair.question) === compact(earned.contextQuestion)) : undefined;
+      records.push({ids:earned.ids,indices:anchor ? [anchor.index,index] : [index]});
+    }
+    history.push({index,pair});
+  }
+  return records;
+}
+
+/** Protect the earned answer and its direct conversational anchor, never saved answer text as authority. */
+function inquiryProtectedIndices(scenario, events) {
+  const earned = new Set(), indices = new Set();
+  for (const record of inquiryRecords(scenario,events)) for (const id of record.ids) {
+    if (earned.has(id)) continue;
+    earned.add(id);record.indices.forEach(index => indices.add(index));
+  }
+  return [...indices].sort((a,b) => a-b);
+}
+
+export function inquiryProtectedEvents(scenario, events) {return inquiryProtectedIndices(scenario,events).map(index => events[index]);}
 
 /** Inquiry is a learning step, not an authorization boundary. Only relevant, recorded case answers count. */
 export function inquiryProgress(scenario, events) {
   const required = requiredInquiryFacts(scenario);
-  const earned = new Set();
-  for (const event of Array.isArray(events) ? events.slice(-100) : []) {
-    const id = earnedInquiryFact(scenario,event,required);
-    if (id) earned.add(id);
-  }
+  const earned = new Set(inquiryRecords(scenario,Array.isArray(events) ? events.slice(-100) : []).flatMap(record => record.ids));
   const found = required.filter(id => earned.has(id));
   const complete = found.length === required.length;
   const missing = typeof scenario?.intake?.missing === 'string' ? compact(scenario.intake.missing).slice(0,240) : '';
   return {
-    required:required.length > 0,
-    complete,
-    found,
-    total:required.length,
+    required:required.length > 0,complete,found,total:required.length,
     message:required.length === 0 ? 'The request includes enough detail to begin. You can still ask questions.' : complete ? 'You found the missing request detail. Use it with your observations to test a cause.' : missing || 'Ask the requester about the missing detail before finishing this case.'
   };
 }
 
-/** Keep earned requester facts available when a long workbench log reaches its existing 100-event limit. */
+/** Keep earned facts and any direct context needed to replay them inside the existing 100-event record. */
 export function retainInquiryEvents(scenario, events) {
   if (!Array.isArray(events)) return [];
-  const required = requiredInquiryFacts(scenario);
-  if (!required.length) return events.slice(-100);
-  const kept = new Set(); const earned = new Set();
-  for (let index = 0; index < events.length && earned.size < required.length; index++) {
-    const id = earnedInquiryFact(scenario,events[index],required);
-    if (id && !earned.has(id)) { earned.add(id); kept.add(index); }
-  }
-  for (let index = events.length - 1; index >= 0 && kept.size < 100; index--) kept.add(index);
-  return [...kept].sort((a,b) => a - b).map(index => events[index]);
+  if (!requiredInquiryFacts(scenario).length) return events.slice(-100);
+  const kept = new Set(inquiryProtectedIndices(scenario,events));
+  for (let index=events.length-1;index>=0 && kept.size<100;index--)kept.add(index);
+  return [...kept].sort((a,b)=>a-b).map(index=>events[index]);
 }
