@@ -1,5 +1,8 @@
 import { readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { auditCurriculumRepository } from './curriculum-policy.mjs';
+const curriculum = await auditCurriculumRepository();
+console.log(`Curriculum path policy checked ${curriculum.files} ${curriculum.mode} files. Document contents still require review.`);
 const files = [];
 async function scan(folder) {
   for (const entry of await readdir(folder, {withFileTypes:true})) {

@@ -34,7 +34,7 @@ Model the tabs once before independent work: ask one question, show where its re
 
 ## Detailed and incomplete support requests
 
-Seven incident/network tickets model a detailed request: useful symptoms, context, attempted fixes and a clear goal. Questions remain optional. Four tickets start incomplete: INC-101 and INC-103 need recent-work history, NET-201 needs the scope of affected devices, and NET-205 needs printing history. Learners can type a relevant question or use a starter. One relevant fact is enough; repeated or unrelated questions do not satisfy the clarification step. The matching history clue becomes available after the requester supplies it.
+Eight incident/network tickets model a detailed request: useful symptoms, context, attempted fixes and a clear goal. Questions remain optional. Five tickets start incomplete: INC-101, INC-103 and INC-108 need recent-work history, NET-201 needs the scope of affected devices, and NET-205 needs printing history. Learners can type a relevant question or use a starter. One relevant fact is enough; repeated or unrelated questions do not satisfy the clarification step. The matching history clue becomes available after the requester supplies it.
 
 Keep equipment inspection and testing available while learners investigate. A learner can discover a physical fault before asking, but should clarify the missing context before finishing the report. This models communication alongside troubleshooting. These browser-only progress checks are instructional, not secure grading or a way to hide answers from someone inspecting public source.
 
@@ -48,7 +48,7 @@ Other workspaces provide shared-folder read/write previews, recovery and service
 
 ## Five pathways
 
-- **Hardware & ServiceDesk — six investigations.** Trace display and power faults, reseat compatible memory, reconnect storage, preserve the original classroom drive, and assemble a virtual PC. Use the virtual safe-power sequence for internal changes. A repaired component, a working desktop, and delivery of the original lesson file are separate checkpoints.
+- **Hardware & ServiceDesk — eight investigations.** Trace display and power faults, reseat compatible memory, reconnect storage, preserve the original classroom drive, and assemble a virtual PC. Use the virtual safe-power sequence for internal changes. A repaired component, a working desktop, and delivery of the original lesson file are separate checkpoints.
 - **Network & Operating Systems — six investigations.** Repair IPv4/DNS settings, reach a share using the correct network and least privilege, recover startup and update services, survey wireless coverage, restore a print queue, and recover a verified backup without overwriting evidence. Test the saved settings and explain the output.
 - **AI Literacy & Audit — six investigations.** Improve a privacy-aware prompt, compare claims with a source, check equal treatment of equivalent tickets, review generated code, minimize data, reject source injection, and evaluate thresholds with human oversight. These are authored examples and local checks, with no live AI assistant.
 - **Ethical Hacking & Penetration Testing — six investigations.** Inspect phishing, correlate logs, patch an access-control defect, practice MFA recovery, contain a fictional incident, and verify a software package. Authorization and scope are part of every task.
@@ -108,6 +108,12 @@ One suggested four-level scale is **independent and well supported**, **mostly s
 The roster and reports contain learner-reported work. Browser-local state and shared JSON can be changed by a learner; an apparent completion or a server-held snapshot does not prove independent authorship. Teacher review of the evidence and reasoning remains necessary.
 
 ## Use independent reports now
+
+For optional paper or offline notes, use the revised [student workbook PDF](../assets/cole-learning-labs-student-workbook.pdf) (6 pages) or [unmarked practice quizzes PDF](../assets/cole-learning-labs-pop-quizzes.pdf) (8 pages). These reviewed public companions contain prompts without completed solutions. The workbook follows **Request & clues**, **Workbench & test**, and **Check & explain**; learners can record their own requester questions, hypothesis, experiment, and reflection. These files do not submit work or create a student account.
+
+The PDFs have selectable text, but the workbook lacks structural accessibility tags. Keep the on-site HTML Student Guide and in-lab instructions as the primary route. Choose an accessible alternative suited to the learner, and check reading and printing behavior on the school's actual device. The PDF companions are not certified accessible.
+
+Keep original workbook files, teacher slide decks and notes, guides, scripts, answer keys, worked reports, and archives outside the public checkout and in the school's approved private teacher resources. All three original slide decks contain solution guidance in visible slides or notes. The optional input-event HTML is an offline teacher diagnostic, not a public lab download. The public teacher demo and a folder name do not authorize access or protect confidential files. Review [Curriculum publishing policy](CURRICULUM-PUBLISHING.md) before sharing or adding curriculum.
 
 Independent labs require no classroom account. Work starts in the current page's memory; saving and resuming an unencrypted copy on the device require an explicit choice. Students can review and copy or download a `.txt` report, or use the optional school-approved teacher-key encrypted report process, and submit manually through Google Classroom, Microsoft Teams, or the school’s chosen system. There is no automatic LMS connection. If copying is blocked, use download; retain the export until receipt is confirmed. Questions and replies may appear in reports, so review them along with notes before export.
 
