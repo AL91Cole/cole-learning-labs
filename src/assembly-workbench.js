@@ -1,6 +1,6 @@
-import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261017-realism16';
-import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261017-realism16';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-realism16';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261017-foundations17';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261017-foundations17';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-foundations17';
 
 const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
 const NAMES = Object.fromEntries(GROUPS);
@@ -137,7 +137,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     if(disposed||!visible||loading||scene)return;
     loading=true; sceneFailed=false;status.textContent='Loading the local 3D equipment view…';
     try {
-      sceneModule ||= await import('./assembly-scene.js?release=20261017-realism16');
+      sceneModule ||= await import('./assembly-scene.js?release=20261017-foundations17');
       if(disposed||!visible||!loadRequested)return;
       scene=sceneModule.mountAssemblyScene(sceneHost,{hardware:current,assembly:current.assembly,onSelect:select,onAction:dispatch,onInteraction:info=>{if(!disposed)feedback(info.message);},onStatus:message=>{if(!disposed){status.textContent=message.message;if(['unavailable','context-lost'].includes(message.kind))fallback(message.message);else if(['ready','context-restored'].includes(message.kind)){sceneFailed=false;$('[data-asm-loading]')?.setAttribute('hidden','');syncViewControls();}}}});
       if(!scene){status.textContent='3D is unavailable on this device. Every repair action remains available in Part controls.';fallback(status.textContent);}

@@ -1,6 +1,6 @@
 # Detailed 3D assembly
 
-Source release: `20261017-realism16`, version `2.15.0`.
+Source release: `20261017-foundations17`, version `2.16.0`.
 
 Start with the investigation's ticket in **Request & clues**, then choose **Open workbench**. Entering that hardware section adopts detailed mechanics once and starts its 3D view. Existing investigations and earlier drafts retain their original fault and progress. Returning to the section keeps the same equipment, screws, paste and cable state. Detailed mechanics stay active until Start over; all mechanical controls also work without WebGL.
 

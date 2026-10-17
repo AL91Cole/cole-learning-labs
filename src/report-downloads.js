@@ -6,7 +6,7 @@ export const REPORT_SHARE_TYPE = 'text/plain';
 export function reportFilename(labId) {
   // Only an existing fictional lab identifier belongs in a download name.
   // Titles, aliases and student notes must never become attachment metadata.
-  const id = typeof labId === 'string' && /^(?:INC|NET|AI|SEC|CODE|CAP)-\d{3}$/.test(labId) ? `-${labId}` : '';
+  const id = typeof labId === 'string' && /^(?:HW|INC|NET|AI|SEC|CODE|CAP)-\d{3}$/.test(labId) ? `-${labId}` : '';
   return `cole-learning-labs${id}.txt`;
 }
 

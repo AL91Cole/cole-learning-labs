@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {SCENARIOS} from '../src/scenarios.js';
+import {FOUNDATION_LABS} from '../src/foundation-model.js';
 import {normalizeLabRecord} from '../src/records.js';
 import {inquiryProgress} from '../src/interview.js';
 import {renderLabLearning} from '../src/teaching.js';
@@ -18,7 +19,7 @@ function extract(start,end) {
   return source.slice(first,last);
 }
 function pages() {
-  const context=vm.createContext({SCENARIOS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryQuery:'',
+  const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryQuery:'',
     currentLab:null,labView:null,workStorage:{},recordFor:normalizeLabRecord,inquiryProgress,
     workStatus:()=> 'Private session',eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',
     renderVirtualLabHubMarkup(){assert.fail('Choosing a lab must not create a 3D classroom hub.');}});
