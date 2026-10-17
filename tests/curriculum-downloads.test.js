@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {PUBLIC_FILES} from '../scripts/build.mjs';
 import {SCENARIOS} from '../src/scenarios.js';
+import {FOUNDATION_LABS} from '../src/foundation-model.js';
 const read=file=>readFileSync(new URL(`../${file}`,import.meta.url));
 
 // Changing either reviewed document requires another content and visual review.
@@ -34,7 +35,7 @@ test('only the approved public PDFs receive a bounded shared download cache poli
 });
 test('README pathway totals are derived from the current investigation catalog',()=>{
   const md=read('README.md').toString();
-  assert.ok(md.includes(`with ${SCENARIOS.length} investigations across five pathways`));
+  assert.ok(md.includes(`with ${FOUNDATION_LABS.length} beginner labs and ${SCENARIOS.length} troubleshooting investigations across five pathways`));
   const labels={hardware:'Hardware & ServiceDesk',network:'Network & Operating Systems',ai:'AI Literacy & Audit',security:'Ethical Hacking & Penetration Testing',coding:'Coding Sandbox'};
   for(const [track,label] of Object.entries(labels)){
     const count=SCENARIOS.filter(s=>s.track===track).length;

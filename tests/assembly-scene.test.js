@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import * as THREE from '../src/three.module.js?release=20261017-realism16';
-import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-realism16';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js?release=20261017-realism16';
+import * as THREE from '../src/three.module.js?release=20261017-foundations17';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-foundations17';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js?release=20261017-foundations17';
 import { initialHardwareState } from '../src/hardware.js';
 import { initialAssemblyState } from '../src/assembly-model.js';
 
@@ -240,7 +240,7 @@ test('unsupported WebGL2 uses labeled-workbench fallback without creating listen
 });
 
 test('3D assets remain same-origin with no network or student-work storage in the view adapter', () => {
-  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-realism16';/);
+  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-foundations17';/);
   assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage|indexedDB)\b|https?:\/\//);
 });
 

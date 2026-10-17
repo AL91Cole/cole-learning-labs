@@ -16,7 +16,7 @@ test('report attachments contain UTF-8 bytes and consistent Windows-compatible l
 });
 
 test('filenames include only a fictional lab ID and cannot expose arbitrary titles, aliases or paths', () => {
-  for (const id of ['INC-108', 'NET-206', 'AI-306', 'SEC-406', 'CODE-503', 'CAP-601']) assert.equal(reportFilename(id), `cole-learning-labs-${id}.txt`);
+  for (const id of ['HW-100', 'INC-108', 'NET-206', 'AI-306', 'SEC-406', 'CODE-503', 'CAP-601']) assert.equal(reportFilename(id), `cole-learning-labs-${id}.txt`);
   for (const id of ['Jane Smith', 'student@example.test', 'INC-101-Jane', '../INC-101', 'INC-101\r\nsecret', 'inc-101', null, {}, 'a'.repeat(300)]) assert.equal(reportFilename(id), 'cole-learning-labs.txt');
 });
 

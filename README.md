@@ -1,6 +1,8 @@
 # Cole Learning Labs
 
-A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 29 investigations across five pathways for grades 7–12.
+A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 5 beginner labs and 29 troubleshooting investigations across five pathways for grades 7–12.
+
+**Start with the basics:** each pathway has a separate introductory lab with **Explore**, **Practice**, and **Check** tabs. Students identify pictured equipment or concepts, match their roles, and complete one short guided job before following a link to a troubleshooting ticket. Hardware uses the existing 3D PC and guarded assembly actions; the other topics use lightweight illustrated controls and local simulations. Beginner work stays only in page memory, survives ordinary site navigation, and clears when the page closes. Save a reviewed report before leaving. See [Beginner labs](docs/FOUNDATIONS.md).
 
 Coding drafts also survive normal site navigation and browser back/forward within this page. Leaving the editor preserves its current program as untested lab work; device persistence still requires the learner’s saving choice. Explicit resume, reset, and clear actions do not revive the previous editor draft.
 
@@ -22,7 +24,7 @@ Mx. Cole is developing the project toward a future goal of teaching Computer Tec
 
 The 7–8, 9–10, and 11–12 grade bands are starting points for teacher selection and support. They do not establish an individual learner’s readiness.
 
-All 29 labs include mission checkpoints, feedback tied to the current simulation state, and optional progressive coaching clues. Hints move from an idea to evidence and then a more specific next step; they do not perform the action, pass a test, close a ticket, or earn a grade. Hardware checkpoints distinguish the repair, a working classroom desktop, and delivery of the requested lesson file. Other workspaces count passing checks only after a current test; changing settings or a program requires testing again.
+All 29 investigations include mission checkpoints, feedback tied to the current simulation state, and optional progressive coaching clues. Hints move from an idea to evidence and then a more specific next step; they do not perform the action, pass a test, close a ticket, or earn a grade. Hardware checkpoints distinguish the repair, a working classroom desktop, and delivery of the requested lesson file. Other workspaces count passing checks only after a current test; changing settings or a program requires testing again.
 
 AI activities use authored examples and local rule checks, with no live AI API. Security work stays inside fixed fictional simulations. The coding sandbox interprets a small teaching language with explicit size, loop, step and output limits; it is not full JavaScript or Python and cannot use browser, network, shell or device capabilities. No lab scans real systems or executes operating-system commands or uploaded programs.
 
@@ -88,7 +90,8 @@ Portfolio and lab pages use hash navigation and can be served statically.
 | `#home` | Professional introduction and learning entry points |
 | `#projects` | Selected work and project links |
 | `#about` | Background, education, and professional direction |
-| `#labs` | All 29 investigations and grade/pathway filters |
+| `#labs` | Five beginner labs, plus 29 investigations with grade/pathway filters |
+| `#learn/hardware` | Beginner hardware lab; also `network`, `ai`, `security`, and `coding` |
 | `#lab/INC-101` | An individual investigation |
 | `#educators` | Lesson guidance and assessment |
 | `#guide` | Student instructions |
@@ -196,7 +199,7 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-The `20261017-realism16` source release (version `2.15.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Source changes and automated checks do not establish that this release has reached production or passed testing on physical school devices. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
+The `20261017-foundations17` source release (version `2.16.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Source changes and automated checks do not establish that this release has reached production or passed testing on physical school devices. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 

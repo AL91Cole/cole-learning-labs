@@ -62,6 +62,16 @@ A visible 3D screwdriver tap removed a side-panel screw. After safe shutdown, un
 
 These checks use a connected desktop browser and responsive viewports. They do not establish physical touch precision, battery life or performance on managed Chromebooks, Edge, Android tablets or iPads. Include the new camera buttons and close-up connector workflow in those school-device acceptance checks.
 
+## Beginner labs — October 17, 2026
+
+The foundations17 local in-app browser preview completed all five beginner activities through their visible Explore, Practice and Check controls. Hardware used the existing real assembly state: a pointer drag fitted the loose DDR4 module into its slot, then the ordinary controls closed clips, refitted the panel, secured both screws, connected HDMI and AC, booted and opened the original lesson file. Its report identified HW-100 and the completed hardware state; the download filename was `cole-learning-labs-HW-100.txt`.
+
+The networking mini-job connected a fictional workstation, assigned settings and reached the practice page. AI and security completed their authored evidence/review and scope/MFA/least-privilege flows. The coding starter produced failing outputs 3, 5 and 8; changing `+` to `*` passed quantities 0, 2 and 5 with outputs 0, 6 and 15. Editing after a pass reopened completion and cleared stale results. Navigating through the catalog and other beginner labs preserved the page-memory code draft.
+
+An actual 1,660-byte `cole-learning-labs-CODE-500.txt` download matched the report preview after UTF-8/CRLF normalization, including its current source and all three fixture results. Export required the existing approval checkbox. No browser warnings or errors were observed.
+
+At 768 × 1024 and 390 × 844, the beginner hardware and coding layouts had no horizontal page overflow. The four hardware camera buttons and visible coding controls were at least 48 CSS pixels high. The catalog exposed all five beginner links and the 29 investigation links without a canvas. These are connected desktop-browser and responsive-viewport observations; physical managed Chromebooks, tablets, Edge and assistive-technology acceptance checks remain necessary.
+
 ## Browser guidance
 
 - [ChromeOS: find and open files](https://support.google.com/chromebook/answer/1700055?hl=en).

@@ -1,6 +1,6 @@
-import * as THREE from './three.module.js?release=20261017-realism16';
-import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-realism16';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-realism16';
+import * as THREE from './three.module.js?release=20261017-foundations17';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-foundations17';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-foundations17';
 
 /**
  * Original, procedural 3D hardware lab & workstation artwork.
