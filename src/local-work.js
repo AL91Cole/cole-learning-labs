@@ -1,4 +1,4 @@
-import {normalizeLabRecord} from './records.js?release=20261016-pathways6';
+import {normalizeLabRecord} from './records.js?release=20261016-ticket-intake7';
 
 export const WORK_PREFIX = 'cole-learning-labs:v2';
 export const CLEAR_WORK_KEY = 'cole-learning-labs:clear-local-work';

@@ -1,4 +1,6 @@
 /* Optional sharing only after an explicit classroom join. No live AI or device surveillance. */
+import { SCENARIOS } from './scenarios.js?release=20261016-ticket-intake7';
+import { inquiryProgress, retainInquiryEvents } from './interview.js?release=20261016-ticket-intake7';
 export const CLASSROOM_ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
@@ -14,15 +16,26 @@ export function classroomStorageKey() {
   return selected ? `cole-learning-labs:v2:classroom:${selected.classId}:${selected.studentId}` : 'cole-learning-labs:v2';
 }
 
-export function progressSnapshot(record) {
+export function progressSnapshot(record, scenarioId) {
   const value = record && typeof record === 'object' && !Array.isArray(record) ? record : {};
+  const scenario = SCENARIOS.find(entry => entry.id === scenarioId);
   const work = JSON.parse(JSON.stringify({
     state: value.state && typeof value.state === 'object' && !Array.isArray(value.state) ? value.state : {},
     evidence: Array.isArray(value.evidence) ? value.evidence : [], questions: Array.isArray(value.questions) ? value.questions : [],
     plan: typeof value.plan === 'string' ? value.plan : '', notes: typeof value.notes === 'string' ? value.notes : '', reflection: typeof value.reflection === 'string' ? value.reflection : '',
-    events: Array.isArray(value.events) ? value.events.slice(-100) : [], verified: value.verified === true, closed: value.closed === true
+    events: retainInquiryEvents(scenario,value.events), verified: value.verified === true, closed: value.closed === true
   }));
-  while (new TextEncoder().encode(JSON.stringify(work)).byteLength > 60000 && work.events.length) work.events.shift();
+  const earned = new Set(), protectedEvents = new Set();
+  for (const event of work.events) {
+    for (const id of inquiryProgress(scenario,[event]).found) {
+      if (!earned.has(id)) { earned.add(id); protectedEvents.add(event); }
+    }
+  }
+  while (new TextEncoder().encode(JSON.stringify(work)).byteLength > 60000 && work.events.length) {
+    const removable = work.events.findIndex(event => !protectedEvents.has(event));
+    if (removable < 0) break;
+    work.events.splice(removable,1);
+  }
   if (new TextEncoder().encode(JSON.stringify(work)).byteLength > 61440) throw new Error('This draft is too large to share. Export the full report and shorten the notes before syncing.');
   return work;
 }
@@ -127,7 +140,7 @@ export function attachClassroomLab({ scenarioId, record, onRestore, storageKey =
     clearTimeout(timer);
     if (disposed || !checkSelection() || !ready) return false;
     if (busy) { queued = true; return false; }
-    const work = progressSnapshot(record), serialized = JSON.stringify(work);
+    const work = progressSnapshot(record,scenarioId), serialized = JSON.stringify(work);
     if (serialized === lastSaved) { queued = false; return true; }
     busy = true; queued = false; updateButtons(); say('Saving classroom draft…');
     try {
@@ -186,8 +199,8 @@ export function attachClassroomLab({ scenarioId, record, onRestore, storageKey =
       version = current.draft.version;
       const submissions = current.submissions || [];
       showSubmission(submissions[0] || null);
-      const local = JSON.stringify(progressSnapshot(record));
-      if (current.draft.work && JSON.stringify(progressSnapshot(current.draft.work)) !== local) {
+      const local = JSON.stringify(progressSnapshot(record,scenarioId));
+      if (current.draft.work && JSON.stringify(progressSnapshot(current.draft.work,scenarioId)) !== local) {
         say('A classroom draft is available. Choose which work to continue before syncing. Your browser work is unchanged.');
         resume.hidden = false; useLocal.hidden = false;
         resume.addEventListener('click', () => { if (checkSelection()) onRestore(current.draft.work); }, { once: true });

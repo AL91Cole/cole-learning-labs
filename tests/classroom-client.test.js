@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {CLASSROOM_ACTIVE_KEY,classroomStorageKey,classroomSelection,progressSnapshot,attachClassroomLab} from '../src/classroom-client.js';
 import {normalizeLabRecord} from '../src/records.js';
 import {SCENARIOS} from '../src/scenarios.js';
+import {answerQuestion,inquiryProgress,questionEvent} from '../src/interview.js';
 import {setImmediate as nextTurn} from 'node:timers/promises';
 
 function storage(value, check) {
@@ -40,6 +41,41 @@ test('large histories are bounded for upload without discarding learner explanat
   const before = JSON.stringify(record); const snapshot = progressSnapshot(record);
   assert.ok(new TextEncoder().encode(JSON.stringify(snapshot)).length <= 60000); assert.equal(snapshot.notes,record.notes); assert.equal(JSON.stringify(record),before); assert.ok(snapshot.events.length < record.events.length);
 });
+
+test('large classroom snapshots retain earned requester facts and restore a complete inquiry', () => {
+  const scenario = SCENARIOS.find(entry => entry.id === 'INC-101');
+  const question = 'What happened before this?';
+  const earned = {...questionEvent(question,answerQuestion(scenario,question)),time:'2000-01-01T00:00:00.000Z'};
+  const longQuestion = 'What does the monitor show? ' + '🛠'.repeat(90);
+  const other = questionEvent(longQuestion,answerQuestion(scenario,longQuestion));
+  assert.ok(other && other.message.length <= 600);
+  const events = [earned,...Array.from({length:99},(_,index) => ({...other,time:new Date(1000 + index).toISOString()}))];
+  const record = normalizeLabRecord(scenario,{events,plan:'🧰'.repeat(1000),notes:'🧰'.repeat(2000),reflection:'🧰'.repeat(1000),closed:true});
+  const before = JSON.stringify(record);
+  assert.equal(inquiryProgress(scenario,record.events).complete,true);
+  assert.ok(new TextEncoder().encode(before).byteLength > 60000,'The fixture must exercise size trimming, not only the event count.');
+  const snapshot = progressSnapshot(record,scenario.id);
+  assert.ok(new TextEncoder().encode(JSON.stringify(snapshot)).byteLength <= 60000);
+  assert.ok(snapshot.events.length < record.events.length);
+  assert.deepEqual(snapshot.events[0],earned,'The earliest earned fact must survive size trimming.');
+  assert.deepEqual(snapshot.events.at(-1),record.events.at(-1),'The newest remaining events stay in order.');
+  assert.deepEqual(snapshot.events.slice(1),record.events.slice(-(snapshot.events.length - 1)));
+  assert.equal(snapshot.plan,record.plan);assert.equal(snapshot.notes,record.notes);assert.equal(snapshot.reflection,record.reflection);
+  assert.equal(JSON.stringify(record),before,'Sharing must not remove local work.');
+  const restored = normalizeLabRecord(scenario,snapshot);
+  assert.equal(inquiryProgress(scenario,restored.events).complete,true);
+  assert.equal(restored.closed,true);
+  assert.deepEqual(Object.keys(snapshot).sort(),['state','evidence','questions','plan','notes','reflection','events','verified','closed'].sort());
+});
+
+test('an oversized snapshot fails instead of deleting the only earned requester fact', () => {
+  const scenario = SCENARIOS.find(entry => entry.id === 'INC-101');
+  const question = 'What changed?';
+  const record = {events:[questionEvent(question,answerQuestion(scenario,question))],notes:'🙂'.repeat(20000)};
+  const before = structuredClone(record);
+  assert.throws(() => progressSnapshot(record,scenario.id),/too large/);
+  assert.deepEqual(record,before);
+});
 test('oversized learner text requires an export rather than silently truncating the upload', () => assert.throws(()=>progressSnapshot({notes:'🙂'.repeat(20000)}),/too large/));
 
 class FakeNode {
@@ -73,7 +109,7 @@ async function connectedFixture(t,options={}) {
   let timerId=0,connection,restored=0;
   const fixture={
     requests,host,window:windowTarget,onPut:null,
-    record:normalizeLabRecord(SCENARIOS[0],{notes:'This belongs to learner A.',closed:true}),
+    record:normalizeLabRecord(SCENARIOS[0],{notes:'This belongs to learner A.',closed:true,events:[questionEvent('What changed?',answerQuestion(SCENARIOS[0],'What changed?'))]}),
     setSelection(studentId=STUDENT_B,classId=CLASS_A) { values.set(CLASSROOM_ACTIVE_KEY,JSON.stringify({studentId,classId})); },
     removeSelection() { values.delete(CLASSROOM_ACTIVE_KEY); },
     button(label) { const found=host.find(node=>node.tagName==='button' && node.textContent===label);assert.ok(found,`Missing button: ${label}`);return found; },
@@ -122,6 +158,25 @@ test('classroom reads and both write payloads bind to the selected learner ident
   assert.equal(writes[0].body.work.notes,'This belongs to learner A.');
   assert.equal(writes[1].body.assignmentId,ASSIGNMENT);
   assert.equal(writes[1].body.expectedVersion,1);
+});
+
+test('classroom saves pass the assigned lab to size trimming so restored inquiry remains complete',async t=>{
+  const f=await connectedFixture(t);
+  const scenario=SCENARIOS.find(entry=>entry.id==='INC-101');
+  const earned=f.record.events[0];
+  const question='What does the monitor show? '+'🛠'.repeat(90);
+  const event=questionEvent(question,answerQuestion(scenario,question));
+  f.record.events=[earned,...Array.from({length:99},()=>({...event}))];
+  f.record.notes='🧰'.repeat(2000);f.record.plan='🧰'.repeat(1000);f.record.reflection='🧰'.repeat(1000);
+  const before=JSON.stringify(f.record);
+  assert.ok(new TextEncoder().encode(before).byteLength>60000);
+  await f.button('Save classroom draft').click();await f.flush();
+  const saved=f.requests.find(request=>request.method==='PUT').body.work;
+  assert.ok(new TextEncoder().encode(JSON.stringify(saved)).byteLength<=60000);
+  assert.ok(saved.events.length<f.record.events.length);
+  assert.deepEqual(saved.events[0],earned);
+  assert.equal(inquiryProgress(scenario,normalizeLabRecord(scenario,saved).events).complete,true);
+  assert.equal(JSON.stringify(f.record),before);
 });
 
 test('a different learner in the same class blocks manual saves even before a storage event arrives',async t=>{

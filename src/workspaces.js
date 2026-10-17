@@ -1,5 +1,5 @@
-import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261016-pathways6';
-import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261016-pathways6';
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261016-ticket-intake7';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261016-ticket-intake7';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });
@@ -236,56 +236,56 @@ function missionPanel(id,state) {
 // These instructions explain the controls, not the answer to the case.
 const WORKSPACE_GUIDES = {
   NET201: [
-    ['Read the setup sheet', 'Compare the network diagram and the configuration sheet with the settings below.'],
-    ['Change and save', 'Edit the four network fields, then choose “Save network settings”.'],
-    ['Test and read', 'Choose “Test connection”. Read the results, change one thing if needed, and test again.']
+    ['Compare', 'Read the setup sheet beside the PC settings.'],
+    ['Change', 'Edit the network fields, then choose “Save network settings”.'],
+    ['Test', 'Choose “Test connection”. Read the results before trying another change.']
   ],
   NET202: [
-    ['Read the access request', 'Find out which folder the teacher needs and what they need to do with it.'],
-    ['Choose and save', 'Use the three menus, then choose “Save access settings”.'],
-    ['Try the teacher account', 'Choose “Test teacher access”. Use the results to check your choices.']
+    ['Read', 'Find the requested folder and what the teacher needs to do.'],
+    ['Choose', 'Set the three menus, then choose “Save access settings”.'],
+    ['Test', 'Choose “Test teacher access” and read what the account can do.']
   ],
   NET203: [
-    ['Read the startup message', 'Look at when the problem began and whether a recovery copy is available.'],
-    ['Choose and save', 'Choose the recovery action and both update-service settings. Select “Save recovery plan”.'],
-    ['Test the repair', 'Choose “Test startup and updates”. Check both the saved files and the update service.']
+    ['Inspect', 'Read the startup message and recovery preview.'],
+    ['Choose', 'Set the three menus, then choose “Save recovery plan”.'],
+    ['Test', 'Choose “Test startup and updates”. Check the files and update service.']
   ],
   AI301: [
-    ['Read the writing task', 'Use only imaginary information. The example has private-data placeholders to remove.'],
-    ['Write and save', 'Replace the example in the text box, then choose “Save prompt”.'],
-    ['Review the feedback', 'Choose “Check my prompt”. Read each result and revise your prompt if needed.']
+    ['Read', 'Read the writing task. Use imaginary information only.'],
+    ['Write', 'Revise the text box, then choose “Save prompt”.'],
+    ['Check', 'Choose “Check my prompt”. Use the feedback to revise and check again.']
   ],
   AI302: [
-    ['Read the source card', 'Compare each AI claim with the supplied source. Do not assume an AI claim is true.'],
-    ['Choose and save', 'Choose a finding for each claim and a category for both tickets. Select “Save my review”.'],
-    ['Check your review', 'Choose “Check my review”. Use the feedback to revisit the source and matching tickets.']
+    ['Compare', 'Read the source card, AI claims, and two matching tickets.'],
+    ['Review', 'Choose a finding for each claim and both ticket categories. Choose “Save my review”.'],
+    ['Check', 'Choose “Check my review”. Revisit any result that needs another look.']
   ],
   AI303: [
-    ['Read the code example', 'The preview is a practice example. You do not need to type or run code.'],
-    ['Choose and save', 'Use the three menus to review the code patterns. Select “Save code choices” to update the preview.'],
-    ['Test your choices', 'Choose “Test code choices”. Read which checks pass and which need another look.']
+    ['Read', 'Inspect the code preview. You do not need to type or run code.'],
+    ['Choose', 'Set the three menus, then choose “Save code choices”.'],
+    ['Test', 'Choose “Test code choices”. Compare the results with the updated preview.']
   ],
   SEC401: [
-    ['Read both messages', 'Select a message to inspect its sender and text-only destination. No message link is active.'],
-    ['Review and save', 'Review the urgent message, select evidence, and choose checklist access. Select “Save message review”.'],
-    ['Check your decisions', 'Choose “Check my review”. Explain which message details support your decision.']
+    ['Inspect', 'Open both messages. Read each sender and text-only destination; message links are inactive.'],
+    ['Decide', 'Choose a verdict, evidence, and checklist access. Choose “Save message review”.'],
+    ['Check', 'Choose “Check my review”. Use message details to explain your decision.']
   ],
   SEC402: [
-    ['Read the event log', 'Use the times and source addresses to find a related sequence. Select the two event boxes.'],
-    ['Plan and save', 'Fill in the defensive change below, then choose “Save response plan”.'],
-    ['Test the effect', 'Choose “Test response plan”. Check that the learning portal still works.']
+    ['Inspect', 'Compare times and source addresses. Select two related log events.'],
+    ['Plan', 'Choose a defensive change, then choose “Save response plan”.'],
+    ['Test', 'Choose “Test response plan”. Check that the learning portal still works.']
   ],
   SEC403: [
-    ['Agree to the practice scope', 'Read the scope statement and check the box. Only these two fictional records are available.'],
-    ['Observe, then change', 'Try both record buttons with the original rule. Choose an access rule and select “Save access rule”.'],
-    ['Test both records', 'Choose “Test both records”. Compare allowed and denied results, then explain what changed.']
+    ['Check the scope', 'Read the scope statement and check the box. Use only these two fictional records.'],
+    ['Try and change', 'Try both record buttons first. Choose a rule, then choose “Save access rule”.'],
+    ['Test', 'Choose “Test both records”. Compare the allowed and denied results.']
   ]
 };
 
 function workspaceGuide(id) {
   const steps = WORKSPACE_GUIDES[normalize(id)];
   if (!steps) return '';
-  return `<section class="ws-start" aria-label="How to use this lab"><h3>How to use this lab <span>Keep these 3 steps in view</span></h3><div class="ws-start-content"><ol>${steps.map(([title,text])=>`<li><b>${esc(title)}</b><span>${esc(text)}</span></li>`).join('')}</ol><p>Save applies your choices to this practice lab. Test checks them. Neither button submits work to a teacher. When you are ready, use Check &amp; explain on this page.</p></div></section>`;
+  return `<section class="ws-start" aria-label="How to use this lab"><h3>Use this workbench <span>Read → change → test</span></h3><div class="ws-start-content"><ol>${steps.map(([title,text])=>`<li><b>${esc(title)}</b><span>${esc(text)}</span></li>`).join('')}</ol><p>Save updates the model; Test checks it. Neither button submits work to a teacher. Next, open 3. Check &amp; explain.</p></div></section>`;
 }
 
 const WORKSPACE_TOOLS = {
