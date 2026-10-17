@@ -1,6 +1,6 @@
 {
   "name": "cole-learning-labs",
-  "version": "2.14.0",
+  "version": "2.15.0",
   "private": true,
   "type": "module",
   "description": "Alan Cole's professional portfolio and interactive technology learning lab",
@@ -11,6 +11,6 @@
     "build": "node scripts/build.mjs"
   },
   "engines": {
-    "node": ">=22.14.0"
+    "node": ">=22.15.0"
   }
 }

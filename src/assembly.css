@@ -58,7 +58,11 @@
 .asm-repair .asm-tool-buttons button{min-height:48px;min-width:0;font-size:.8rem;padding:.4rem .35rem;flex:none}
 .asm-repair .asm-layout{display:block;min-width:0}
 .asm-repair .asm-visual{padding:.45rem}
-.asm-repair .asm-scene{height:clamp(360px,58vh,660px);border-radius:8px}
+.asm-repair .asm-quick-view{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem;padding:0 .45rem .45rem;background:#0a1422}
+.asm-repair .asm-quick-view button{min-height:48px;min-width:0;padding:.45rem .3rem;font-size:.82rem;font-weight:600;touch-action:manipulation}
+.asm-repair .asm-quick-view button:disabled{opacity:.5;cursor:default}
+.asm-repair .asm-scene{height:clamp(360px,58vh,660px);border-radius:8px;scroll-margin-top:5.25rem}
+.larger-reading .asm-repair .asm-scene{scroll-margin-top:6rem}
 .asm-repair .asm-feedback{margin:0;padding:.55rem .75rem;border:0;border-top:1px solid var(--asm-edge);border-bottom:1px solid var(--asm-edge);border-radius:0;background:#102b32;font-size:.83rem;line-height:1.45;min-height:2.45rem}
 .asm-repair .asm-drawers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;background:#0c1927}
 .asm-repair .asm-drawer,.asm-repair .asm-help{margin:0;padding:0;border:0;border-bottom:1px solid var(--asm-edge);min-width:0;background:var(--asm-panel)}
@@ -85,4 +89,4 @@
 .asm-repair .asm-delivery>strong{display:block;margin:.65rem .75rem;font-size:.83rem;line-height:1.5}
 .asm-repair .asm-delivery>button{margin:0 0 .65rem .75rem;font-size:.8rem}
 @media(max-width:780px){.asm-repair .asm-scene{height:clamp(330px,52vh,520px)}.asm-repair .asm-power strong{flex-basis:auto}.asm-repair .asm-tool-controls[data-cable-mode=true]{grid-template-columns:repeat(2,minmax(0,1fr))}.asm-repair .asm-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:520px){.asm-repair .asm-machine-status{flex:1 1 100%}.asm-repair .asm-power{padding:.45rem}.asm-repair .asm-power button{flex:1 1 80px}.asm-repair .asm-tool-buttons{grid-template-columns:repeat(3,minmax(0,1fr))}.asm-repair .asm-tool-buttons button{font-size:.76rem}.asm-repair .asm-scene{height:clamp(310px,48vh,440px)}.asm-repair .asm-drawers{grid-template-columns:minmax(0,1fr)}.asm-repair .asm-tool-controls[data-cable-mode=true]{grid-template-columns:minmax(0,1fr)}.asm-repair .asm-drawer summary,.asm-repair .asm-help summary{font-size:.82rem}}
+@media(max-width:520px){.asm-repair .asm-machine-status{flex:1 1 100%}.asm-repair .asm-power{padding:.45rem}.asm-repair .asm-power button{flex:1 1 80px}.asm-repair .asm-tool-buttons{grid-template-columns:repeat(3,minmax(0,1fr))}.asm-repair .asm-tool-buttons button{font-size:.76rem}.asm-repair .asm-scene{height:clamp(310px,48vh,440px);scroll-margin-top:6rem}.asm-repair .asm-drawers{grid-template-columns:minmax(0,1fr)}.asm-repair .asm-tool-controls[data-cable-mode=true]{grid-template-columns:minmax(0,1fr)}.asm-repair .asm-drawer summary,.asm-repair .asm-help summary{font-size:.82rem}}

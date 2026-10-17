@@ -1,4 +1,4 @@
-import * as THREE from './three.module.js?release=20261017-repair15';
+import * as THREE from './three.module.js?release=20261017-realism16';
 
 const MAX_PIXEL_RATIO = 1.5;
 const MAX_RENDER_PIXELS = 900000;

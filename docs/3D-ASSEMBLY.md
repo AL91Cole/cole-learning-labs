@@ -1,6 +1,6 @@
 # Detailed 3D assembly
 
-Source release: `20261017-repair15`, version `2.14.0`.
+Source release: `20261017-realism16`, version `2.15.0`.
 
 Start with the investigation's ticket in **Request & clues**, then choose **Open workbench**. Entering that hardware section adopts detailed mechanics once and starts its 3D view. Existing investigations and earlier drafts retain their original fault and progress. Returning to the section keeps the same equipment, screws, paste and cable state. Detailed mechanics stay active until Start over; all mechanical controls also work without WebGL.
 
@@ -9,6 +9,8 @@ The repair view puts the power controls, tool choices, equipment and current fee
 ## Equipment and controls
 
 The authored workstation contains removable side panel, PSU, motherboard, processor, cooler, memory, graphics card and original SATA SSD. Eighteen individually modeled screws cover panel (2), PSU (4), board (4), cooler (4), GPU bracket (2) and SSD (2). The case frame and cosmetic ventilation remain fixed. Parts and removed screws move to the virtual tray. Clips, CPU retention, connected leads and exposed thermal paste reflect model state.
+
+The equipment uses original procedural artwork: charcoal case panels with beveled edges, distinct metal/plastic/rubber finishes, PCB traces and silkscreen markings, copper cooler details, modeled fastener heads, sleeved power bundles, and keyed connector housings. SATA data and power connections remain separate, with an L-key detail; the AC connector has its three pins in a triangular arrangement. These are simplified authored training models, with no commercial-game assets or downloaded texture maps.
 
 Choose a tool in the toolbar. Tapping the 3D screwdriver, paste syringe or cleaning wipe also selects its mode. Tool selection changes the interaction mode without changing the equipment or recording a repair. Every operation also has a large native control usable with touch, a trackpad, or Tab/Enter/Space.
 
@@ -23,7 +25,9 @@ Choose a tool in the toolbar. Tapping the 3D screwdriver, paste syringe or clean
 
 The Move tool shows a temporary part and matching destination. Its authored mount assists alignment and snaps the preview into place; only release requests an equipment change. An incompatible destination or release elsewhere cancels the move. The mechanical model can still reject a correctly aimed drop because a screw, lead, clip, or earlier component needs attention. It explains that reason without completing the repair. Equipment does not use free placement, gravity or physical collision. The illustrated bench retains its separate drag-to-socket workflow.
 
-Whole-PC, monitor, top, side, rear-I/O and zoom controls provide alternatives to camera dragging. In Inspect mode, vertical touch gestures scroll the page. Move parts and Connect cables capture touch movement inside the 3D canvas; switch back to Inspect or scroll outside the picture to move the page. Screws can be small at the default view, so use the selector and Turn button when needed.
+The always-visible controls below the equipment provide **Zoom out**, **Fit PC**, **Zoom in** and **Focus part**. Select equipment in the picture or component picker, then choose Focus part for a close inspection. Fit PC restores a useful view of the tower. These controls adjust the virtual camera; browser page zoom and ordinary scrolling remain available. Monitor, top, side and rear-I/O presets remain in View options.
+
+In Inspect mode, vertical touch gestures scroll the page. Move parts and Connect cables capture touch movement inside the 3D canvas; switch back to Inspect or scroll outside the picture to move the page. Screws can be small at the default view, so use the selector and Turn button when needed.
 
 Escape cancels a move. Changing tools or camera views, opening My report, hiding the workbench section, navigating away, losing window focus or losing graphics context also discards unfinished movement. The equipment and action history change only when the model accepts an operation; rejected attempts can still appear as feedback in the lab's activity log. Tool and camera choices are temporary view state.
 
@@ -59,6 +63,8 @@ Internal cable changes require PC off, AC disconnected and the case panel remove
 Three.js is pinned and self-hosted; see [Third-party software](THIRD-PARTY.md). Graphics require WebGL2. The home page and lab catalog contain no 3D classroom hub, and the initial request does not load the graphics engine. Entering a hardware workbench starts its detailed view. A non-hardware station preview loads only after entering that investigation's workbench. Leaving its section or route during a pending import prevents a late canvas mount. Camera options provide pause and resume; ordinary component controls remain available if graphics cannot load.
 
 The assembly scene uses procedural geometry, with no remote assets, physics dependency, continuous render loop, shadows or post-processing. Pathway monitor textures are drawn locally on canvas. Rendering is requested only when needed, with pixel ratio capped at 1.5 and approximately 900,000 framebuffer pixels per view. The detailed scene pauses when its section is hidden; pathway previews skip rendering while hidden. Route changes dispose scene resources. Context loss preserves equipment state and leaves the ordinary controls available. Pause 3D is reversible and is not overridden by returning to a browser tab.
+
+For the representative fitted INC-101 scene, the mock-renderer geometry audit counted 188 visible meshes and 11,468 visible triangles, compared with 219 meshes and 7,908 triangles in repair15. Repeated details use shared or merged geometry to add detail without increasing the visible mesh count. The full scene contains 17,588 triangles across fitted and loose variants. These are scene-budget measurements, not GPU draw-call measurements or a device frame-rate benchmark.
 
 These limits support modest devices but do not establish performance on every Chromebook or tablet. Accept the release on actual managed school hardware, with its browser settings and filtering policy. No new network permissions, device access, telemetry, student service or live AI service is enabled. The production classroom privacy gate remains closed.
 

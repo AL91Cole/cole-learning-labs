@@ -7,7 +7,7 @@ import { SCENARIOS } from '../src/scenarios.js';
 import { initialWorkspaceState, applyWorkspaceAction } from '../src/workspaces.js';
 
 const source = readFileSync(new URL('../src/virtual-lab-scene.js', import.meta.url), 'utf8');
-assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-repair15';/, 'virtual-lab-scene must use the local versioned Three bundle');
+assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-realism16';/, 'virtual-lab-scene must use the local versioned Three bundle');
 
 function createGlContext() {
   const noop = () => {};
