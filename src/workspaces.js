@@ -1,5 +1,5 @@
-import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261016-teaching9';
-import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261016-teaching9';
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261016-curriculum10';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261016-curriculum10';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });

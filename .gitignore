@@ -27,3 +27,21 @@ classroom-exports/
 # Private educator assessments belong outside this public repository.
 private-teacher-materials/
 teacher-rubrics/
+
+# Imported curriculum must be reviewed outside the public checkout first.
+# The existing teacher/index.html is a public demo, not a protected teacher folder.
+[Tt][Ee][Aa][Cc][Hh][Ee][Rr]/**
+!/teacher/index.html
+[Pp][Rr][Ii][Vv][Aa][Tt][Ee][-_ ][Cc][Uu][Rr][Rr][Ii][Cc][Uu][Ll][Uu][Mm]/
+[Pp][Rr][Ii][Vv][Aa][Tt][Ee][-_ ][Tt][Ee][Aa][Cc][Hh][Ee][Rr][-_ ][Mm][Aa][Tt][Ee][Rr][Ii][Aa][Ll][Ss]/
+[Tt][Ee][Aa][Cc][Hh][Ee][Rr][-_ ][Bb][Uu][Nn][Dd][Ll][Ee]/
+[Ii][Nn][Ss][Tt][Rr][Uu][Cc][Tt][Oo][Rr][-_ ][Bb][Uu][Nn][Dd][Ll][Ee]/
+*[Aa][Nn][Ss][Ww][Ee][Rr][-_ .]*[Kk][Ee][Yy]*
+*[Aa][Nn][Ss][Ww][Ee][Rr][Kk][Ee][Yy]*
+*[Ww][Oo][Rr][Kk][Ee][Dd][-_ .]*[Rr][Ee][Pp][Oo][Rr][Tt]*
+*[Ww][Oo][Rr][Kk][Ee][Dd][Rr][Ee][Pp][Oo][Rr][Tt]*
+*[Ii][Nn][Ss][Tt][Rr][Uu][Cc][Tt][Oo][Rr][-_ .]*[Gg][Uu][Ii][Dd][Ee]*
+*[Ii][Nn][Ss][Tt][Rr][Uu][Cc][Tt][Oo][Rr][Gg][Uu][Ii][Dd][Ee]*
+*[Ss][Pp][Ee][Aa][Kk][Ii][Nn][Gg][-_ .]*[Ss][Cc][Rr][Ii][Pp][Tt]*
+*[Ss][Pp][Ee][Aa][Kk][Ii][Nn][Gg][Ss][Cc][Rr][Ii][Pp][Tt]*
+*.[Zz][Ii][Pp]

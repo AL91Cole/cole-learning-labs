@@ -14,7 +14,7 @@ Mx. Cole is developing the project toward a future goal of teaching Computer Tec
 
 | Pathway | Assignments | Practice focus |
 | --- | ---: | --- |
-| Hardware & ServiceDesk | 6 | Trace faults, handle virtual power safely, match components, restore the classroom desktop, and open the original lesson file |
+| Hardware & ServiceDesk | 8 | Trace faults, handle virtual power safely, match components, restore the classroom desktop, and open the original lesson file |
 | Network & Operating Systems | 6 | Repair addressing, sharing and startup; survey wireless coverage; restore printing; recover a verified backup |
 | AI Literacy & Audit | 6 | Review prompts, claims, bias and generated code; minimize data; reject source injection; evaluate thresholds and human review |
 | Ethical Hacking & Penetration Testing | 6 | Investigate phishing, logs and authorization; practice MFA recovery, incident containment and package verification |
@@ -28,7 +28,7 @@ AI activities use authored examples and local rule checks, with no live AI API. 
 
 ## Investigate, try, and explain
 
-Support requests have two starting points: seven **detailed requests** model symptoms, context and attempted fixes; four **incomplete requests** (INC-101, INC-103, NET-201 and NET-205) require a relevant question about missing context. Their interview-only history clue is available after that fact is supplied. Physical inspections, safety instructions and the workbench remain available. Completion checks the relevant recorded fact, not a question quota; greetings, unrelated replies and privacy refusals do not count. This is a teaching workflow, not an authorization or tamper-proof assessment boundary. Earned requester facts remain in the existing bounded 100-event log.
+Support requests have two starting points: eight **detailed requests** model symptoms, context and attempted fixes; five **incomplete requests** (INC-101, INC-103, INC-108, NET-201 and NET-205) require a relevant question about missing context. Their interview-only history clue is available after that fact is supplied. Physical inspections, safety instructions and the workbench remain available. Completion checks the relevant recorded fact, not a question quota; greetings, unrelated replies and privacy refusals do not count. This is a teaching workflow, not an authorization or tamper-proof assessment boundary. Earned requester facts remain in the existing bounded 100-event log.
 
 Resuming an older completed record without the newly required clarification reopens that investigation while preserving its technical result, notes and evidence. Earlier supported starter replies still count when their transcript is present.
 
@@ -41,6 +41,14 @@ The interview interface shows both response modes. **On-device simulation** is a
 In **Workbench & test**, learners inspect the virtual equipment or software, save one change, and compare the observed result with their hypothesis. Hardware offers a two-step video-cable interaction, keyboard/touch alternatives, and power, display, startup, and drive readouts tied to current equipment state. Software labs offer fixed local tools: network diagnostics, shared-handout access, recovery/service checks, scripted AI previews, message inspection, and defensive policy probes. Quick buttons provide an alternative to typing. No tool runs an operating-system command, real network probe, database query, or uploaded code.
 
 The hypothesis test checks the current modeled setup. For software labs it runs the workspace checks; for hardware it verifies the current startup and original-task evidence after the learner has used the bench controls. Coding runs compare the saved program with the supplied fixtures; reports include the saved source and recorded output. A changed program needs another run. The test does not grade the wording of a hypothesis or automatically decide whether the learner's causal explanation is correct. Individual inspection tools do not award completion, and software inspections preserve unapplied form entries. In **Check & explain**, learners verify the original task, explain what changed and what the evidence supports, and review their report for the approved submission process. Teacher rubrics and answer keys remain outside the public lab and demo.
+
+## Downloadable curriculum companions
+
+The reviewed public downloads are the revised [student workbook PDF](assets/cole-learning-labs-student-workbook.pdf) (6 pages) and [unmarked practice quizzes PDF](assets/cole-learning-labs-pop-quizzes.pdf) (8 pages). They contain student prompts without completed solutions or answer keys. Use them for optional paper or offline notes alongside the current three-tab labs. They do not upload work or replace the report-export process.
+
+The PDFs contain selectable text, but the workbook is untagged. Use the on-site HTML Student Guide and lab instructions as the primary learning route, and provide suitable alternatives for individual access needs. No PDF accessibility certification is claimed.
+
+Original curriculum archives, workbook originals, teacher guides, speaking scripts, slide decks, answer keys, completed reports, and private teacher resources stay entirely outside this public checkout. The original slide decks expose solution guidance in visible slides and speaker notes. The optional input-event HTML remains an offline teacher tool. The public `teacher/index.html` demo does not secure files placed beside it. See [Curriculum publishing policy](docs/CURRICULUM-PUBLISHING.md) before adding any resource.
 
 ## Lab and submission workflows
 
@@ -123,7 +131,7 @@ The static application needs no dependency installation. Use **Node.js 24** for 
 npm run dev
 ```
 
-Open the printed local HTTP address. ES module imports need a server; opening `index.html` as a `file:` URL is not the supported preview method. A Python HTTP server can also preview the static pages, independent labs, and demo.
+Open the printed local HTTP address. ES module imports need a server; opening `index.html` as a `file:` URL is not the supported preview method. Use the supplied preview, which serves only approved public files. If another static server is needed, serve the reviewed `dist` output rather than the checkout root.
 
 ```sh
 npm run check
@@ -131,7 +139,7 @@ npm test
 npm run build
 ```
 
-Syntax checks cover the application, server modules, and scripts. Tests cover simulation state and verification, mission feedback and hints, saved-work handling, and the prepared classroom handler’s authentication, ownership, versioning, limits, and SQL behavior. Separate production-entry tests verify that the privacy gate blocks configuration, database, and identity access. Integration tests intentionally call the prepared handler; passing them neither activates production nor establishes legal compliance. A static preview returns an unavailable-service view for real classroom operations.
+`npm run check` covers application/server/script syntax and audits tracked repository paths for private curriculum names; source snapshots without a Git index are checked as a source tree. The strict build manifest and local preview allowlist independently limit published and served files. Filename checks and `.gitignore` are safeguards, not document-content review or a guarantee of confidentiality. Tests cover simulation state and verification, mission feedback and hints, saved-work handling, and the prepared classroom handler’s authentication, ownership, versioning, limits, and SQL behavior. Separate production-entry tests verify that the privacy gate blocks configuration, database, and identity access. Integration tests intentionally call the prepared handler; passing them neither activates production nor establishes legal compliance. A static preview returns an unavailable-service view for real classroom operations.
 
 ## Source layout
 
@@ -151,11 +159,12 @@ Syntax checks cover the application, server modules, and scripts. Tests cover si
 | `secure-reports.html`, `src/secure-reports.js`, `src/report-crypto.js` | Local key files and manually exchanged encrypted reports; no application upload |
 | `functions/api/[[path]].js`, `migrations/0001_classrooms.sql` | Optional classroom API and database structure |
 | `school-it.html`, `src/school.css` | School technology review page |
-| `scripts/serve.mjs`, `scripts/check.mjs` | Static preview and syntax verification |
+| `scripts/serve.mjs`, `scripts/check.mjs`, `scripts/curriculum-policy.mjs` | Public-file-only preview, syntax verification, and tracked curriculum-path audit |
 | `scripts/build.mjs` | Explicit public-file manifest and isolated `dist` output |
 | `.github/workflows/security-checks.yml` | Tests, artifact validation, and CodeQL source/workflow scans |
 | `SECURITY.md`, `docs/REPOSITORY-SECURITY.md` | Private vulnerability reporting and maintainer security procedures |
 | `docs/TEACHING.md` | Lesson preparation, assessment, and classroom workflows |
+| `docs/CURRICULUM-PUBLISHING.md` | Reviewed public companion PDFs, private teacher boundaries, and publishing checks |
 | `docs/CLASSROOM-SETUP.md` | Prepared backend setup and operational boundaries |
 | `docs/PRIVACY-RELEASE-GATE.md` | Blocking privacy evidence, operational gaps, and reviewed-release requirements |
 | `docs/STUDENT-DATA-DESIGN.md` | Data inventory, aliases, manual Classroom workflow, key custody, and access limitations |

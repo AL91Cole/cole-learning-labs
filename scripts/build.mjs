@@ -2,6 +2,7 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, mkdtemp, open, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 
@@ -10,6 +11,7 @@ export const PUBLIC_FILES = Object.freeze([
   'index.html', 'classroom.html', 'school-it.html', 'secure-reports.html', 'teacher/index.html',
   '_headers', '_routes.json',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
+  'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
   'src/teaching.js', 'src/teaching.css', 'src/experiments.js', 'src/experiments.css', 'src/learning-tools.js', 'src/capstone.js', 'src/capstone.css',
   'src/app.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js',
   'src/privacy.js', 'src/interview.js', 'src/conversation.js', 'src/records.js', 'src/scenarios.js', 'src/workspaces.js',
@@ -70,6 +72,9 @@ async function safeBuildDirectory(root, directory, prefix) {
 }
 
 export async function buildSite({ sourceRoot = PROJECT_ROOT } = {}) {
+  // Even an accidentally approved manifest entry cannot publish a private-named
+  // curriculum resource. Content review remains necessary for every new asset.
+  assertPublicCurriculumPaths(PUBLIC_FILES);
   const requested = path.resolve(sourceRoot);
   await directoryOnly(requested);
   const root = await realpath(requested);
