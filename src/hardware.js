@@ -1,4 +1,6 @@
-import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261017-workbench11';
+import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261017-assembly12';
+import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261017-assembly12';
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261017-assembly12';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },
@@ -28,22 +30,27 @@ const PARTS = [
 
 const clampCase = id => typeof id === 'string' && Object.hasOwn(CASES, id) ? id : 'INC-101';
 const safetyReady = s => !s.pcOn && !s.acConnected;
-const hardwareReady = s => s.boardInstalled && s.cpuInstalled && s.coolerInstalled && s.ramSeated && s.gpuInstalled && s.atxConnected && s.cpuPowerConnected && s.gpuPowerConnected && s.frontPanelConnected && s.originalDriveInstalled && s.sataDataConnected && s.sataPowerConnected;
+const hardwareReady = s => (!s.assemblyEnabled || !assemblyFailure(s,s.assembly)) && s.boardInstalled && s.cpuInstalled && s.coolerInstalled && s.ramSeated && s.gpuInstalled && s.atxConnected && s.cpuPowerConnected && s.gpuPowerConnected && s.frontPanelConnected && s.originalDriveInstalled && s.sataDataConnected && s.sataPowerConnected;
 const displayPathReady = s => s.gpuInstalled && s.gpuPowerConnected && s.videoPort === 'gpu' && s.signalConnected && s.monitorInput === 'hdmi';
-const displayReady = s => s.pcOn && s.booted && displayPathReady(s);
+const displayReady = s => (!s.assemblyEnabled || !assemblyFailure(s,s.assembly)) && s.pcOn && s.booted && displayPathReady(s);
 const result = (state, message, kind = 'info') => ({ state, message, kind });
 // A held cable and selected diagnostic tool belong to the picture, not student work.
 const benchInteractions = new WeakMap();
 const benchDisposers = new WeakMap();
+const assemblyBenches = new WeakMap();
+export function setHardwareVisible(root,visible) { assemblyBenches.get(root)?.setVisible(visible); }
 
 /** Call before route replacement or hiding the workbench to release active gestures. */
 export function disposeHardware(root) {
   benchDisposers.get(root)?.();
   benchDisposers.delete(root);
+  assemblyBenches.get(root)?.dispose();
+  assemblyBenches.delete(root);
 }
 
 export function cancelHardwareInteraction(root) {
   benchDisposers.get(root)?.cancel?.();
+  assemblyBenches.get(root)?.cancel?.();
   // Preserve the older click-to-connect controls, including their cancel affordance.
   root?.querySelector?.('[data-hw-cable="cancel"]')?.click?.();
 }
@@ -64,6 +71,7 @@ export function initialHardwareState(caseId = 'INC-101') {
     signalConnected: id !== 'INC-108',
     selectedDrive: id === 'INC-105' ? 'nvme' : 'sata',
     booted: ['INC-101','INC-107','INC-108'].includes(id), documentOpened: false,
+    assemblyEnabled: false, assembly: null,
     view: 'bench', selectedPart: CASES[id].select,
     evidence: [], actions: [], bootCount: 0
   };
@@ -81,14 +89,21 @@ export function normalizeHardwareState(caseId, savedState) {
   }
   if (Object.hasOwn(savedState, 'bootCount') && Number.isSafeInteger(savedState.bootCount) && savedState.bootCount >= 0) state.bootCount = Math.min(savedState.bootCount, 1000000);
   if (Object.hasOwn(savedState, 'evidence') && Array.isArray(savedState.evidence)) state.evidence = [...new Set(savedState.evidence.filter(part => typeof part === 'string' && Object.hasOwn(INSPECTIONS, part)))].slice(0, Object.keys(INSPECTIONS).length);
-  const actions = new Set(['power-off','unplug','plug-in','boot','video-gpu','video-board','input-hdmi','input-displayport','connect-signal','disconnect-signal','open-document','close-document','seat-ram','unseat-ram','disconnect-sata','install-original','choose-nvme',...PARTS.map(part => part[3]),...Object.keys(INSPECTIONS).map(part => `inspect-${part}`)]);
+  const actions = new Set(['enable-assembly','power-off','unplug','plug-in','boot','video-gpu','video-board','input-hdmi','input-displayport','connect-signal','disconnect-signal','open-document','close-document','seat-ram','unseat-ram','disconnect-sata','install-original','choose-nvme',...PARTS.map(part => part[3]),...Object.keys(INSPECTIONS).map(part => `inspect-${part}`)]);
   if (Object.hasOwn(savedState, 'actions') && Array.isArray(savedState.actions)) state.actions = savedState.actions.filter(action => typeof action === 'string' && actions.has(action)).slice(-250);
+  if(state.assemblyEnabled) {
+    state.assembly=normalizeAssemblyState(savedState.assembly ?? {},state);
+    if(assemblyFailure(state,state.assembly)) { state.booted=false; state.documentOpened=false; }
+    const allowed=new Set(assemblyActions(state,state.assembly).map(item=>item.id));
+    if(Array.isArray(savedState.actions)) state.actions=savedState.actions.filter(action=>typeof action==='string'&&(actions.has(action)||allowed.has(action))).slice(-250);
+  }
   // An old or edited browser save cannot display a delivered file through a broken signal path.
   if (!displayReady(state) || !hardwareReady(state)) state.documentOpened = false;
   return state;
 }
 
 function failureReason(s) {
+  if(s.assemblyEnabled) { const reason=assemblyFailure(s,s.assembly); if(reason)return reason; }
   if (!s.boardInstalled) return 'No motherboard is installed. Fit the board to the case standoffs first.';
   if (!s.atxConnected || !s.cpuPowerConnected) return 'No POST: the motherboard needs both 24-pin ATX power and 8-pin CPU power.';
   if (!s.frontPanelConnected) return 'The case power switch is not connected to the F_PANEL header.';
@@ -123,6 +138,19 @@ export function applyHardwareAction(caseId, state, action) {
   const s = normalizeHardwareState(id, state);
   if (typeof action !== 'string') return result(s, 'Select a documented workbench action.', 'warning');
   const record = (message, kind = 'info') => { s.actions.push(action); return result(s, message, kind); };
+  if (action === 'enable-assembly') {
+    if(s.assemblyEnabled)return result(s,'Detailed assembly is already active.');
+    s.assemblyEnabled=true; s.assembly=initialAssemblyState(s);
+    return record('Detailed assembly enabled. Every screw, retention clip, cable and thermal interface now participates in the startup checks. Work only on this virtual equipment.');
+  }
+  const detailedAliases={ 'install-board':'asm-fit-board','install-cpu':'asm-fit-cpu','install-cooler':'asm-fit-cooler','install-ram':'asm-fit-ram','seat-ram':'asm-fit-ram','unseat-ram':'asm-remove-ram','install-gpu':'asm-fit-gpu','install-drive':'asm-fit-ssd','install-original':'asm-fit-ssd','connect-atx':'asm-connect-atx','connect-cpu-power':'asm-connect-eps','connect-gpu-power':'asm-connect-gpu-power','connect-sata':'asm-connect-sata-data','disconnect-sata':'asm-disconnect-sata-data','connect-sata-power':'asm-connect-sata-power','connect-front-panel':'asm-connect-front-panel' };
+  if(s.assemblyEnabled && (action.startsWith('asm-')||Object.hasOwn(detailedAliases,action))) {
+    const change=applyAssemblyAction(s,s.assembly,detailedAliases[action]||action);
+    const next={...s,...change.hardware,assemblyEnabled:true,assembly:change.assembly};
+    if(change.kind!=='warning')next.actions=[...s.actions,action].slice(-250);
+    return result(next,change.message,change.kind);
+  }
+  if (action.startsWith('asm-')) return result(s,'Enable detailed assembly before using these tools.','warning');
   if (action.startsWith('view-')) {
     const view = action.slice(5);
     if (['bench', 'internals', 'rear', 'display'].includes(view)) s.view = view;
@@ -463,8 +491,17 @@ function renderHardwareMission(id, s, mission) {
 }
 
 export function renderHardware(root, caseId, state, onAction) {
-  disposeHardware(root);
   state = normalizeHardwareState(caseId, state);
+  if (state.assemblyEnabled && root?.ownerDocument?.createElement) {
+    const mounted = assemblyBenches.get(root);
+    if (mounted && mounted.caseId === state.caseId) { mounted.update(state); return; }
+    disposeHardware(root);
+    const controller = mountAssemblyWorkbench(root, { state, onAction });
+    controller.caseId = state.caseId;
+    assemblyBenches.set(root, controller);
+    return;
+  }
+  disposeHardware(root);
   let interaction = benchInteractions.get(root);
   if (!interaction || interaction.caseId !== state.caseId) {
     interaction = { caseId:state.caseId, cableHeld:false, tool:'power' };
@@ -497,7 +534,7 @@ export function renderHardware(root, caseId, state, onAction) {
   const mission = hardwareMission(id, s);
   const readouts = getHardwareReadouts(id, s);
   const activeView = interaction.cableHeld ? 'rear' : s.view;
-  root.innerHTML = `<section class="hw-workbench" aria-label="Interactive hardware workbench">
+  root.innerHTML = `<section class="hw-workbench" aria-label="Interactive hardware workbench"><div class="hw-assembly-launch"><div><strong>Go inside the workstation</strong><p>Build and take apart a 3D PC, including screws, clips and thermal paste. Detailed checks stay active once you begin.</p></div>${btn('enable-assembly','Open detailed 3D assembly')}</div>
     <div class="hw-status-bar"><span class="hw-status ${s.pcOn?'hw-status-on':''}"><i></i>PC ${s.pcOn?'ON':'OFF'}</span><span class="hw-status ${s.acConnected?'hw-status-live':'hw-status-safe'}"><i></i>AC ${s.acConnected?'CONNECTED':'DISCONNECTED'}</span><span class="hw-work-safety ${safe?'hw-work-safe':''}">${safe?'✓ Safe to change virtual components':'Power off + unplug before internal work'}</span></div>
     <div class="hw-power-controls" role="group" aria-label="Virtual PC power controls"><span class="hw-controls-label">Virtual power controls</span>${btn('power-off','① Power off')}${btn('unplug','② Unplug AC')}${btn('plug-in','③ Connect AC')}${btn('boot','④ Power on / test')}</div>
     <div class="hw-view-tabs" role="tablist" aria-label="Workbench view">${[['bench','Whole workbench'],['internals','Inside the PC'],['rear','Rear connections'],['display','Monitor']].map(([v,l])=>`<button type="button" role="tab" tabindex="${activeView===v?'0':'-1'}" aria-selected="${activeView===v}" data-hw-action="view-${v}">${l}</button>`).join('')}<span class="hw-bench-tag">VIRTUAL BENCH</span></div>

@@ -1,6 +1,6 @@
-import {learningModes,renderLabLearning} from './teaching.js?release=20261017-workbench11';
-import {renderExperiments,mountExperiments} from './experiments.js?release=20261017-workbench11';
-import {transferCaseFor} from './scenarios.js?release=20261017-workbench11';
+import {learningModes,renderLabLearning} from './teaching.js?release=20261017-assembly12';
+import {renderExperiments,mountExperiments} from './experiments.js?release=20261017-assembly12';
+import {transferCaseFor} from './scenarios.js?release=20261017-assembly12';
 
 export function learningRoute(hash) {
   const [path,query='']=String(hash||'').replace(/^#/,'').split('?'),params=new URLSearchParams(query);

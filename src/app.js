@@ -1,18 +1,18 @@
-import {SCENARIOS} from './scenarios.js?release=20261017-workbench11';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction} from './hardware.js?release=20261017-workbench11';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261017-workbench11';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261017-workbench11';
-import {normalizeLabRecord} from './records.js?release=20261017-workbench11';
-import {privacyPage} from './privacy.js?release=20261017-workbench11';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261017-workbench11';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261017-workbench11';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261017-workbench11';
+import {SCENARIOS} from './scenarios.js?release=20261017-assembly12';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261017-assembly12';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261017-assembly12';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261017-assembly12';
+import {normalizeLabRecord} from './records.js?release=20261017-assembly12';
+import {privacyPage} from './privacy.js?release=20261017-assembly12';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261017-assembly12';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261017-assembly12';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261017-assembly12';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261017-workbench11';
-import {learningRoute,mountLabLearning} from './learning-tools.js?release=20261017-workbench11';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261017-workbench11';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261017-workbench11';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261017-workbench11';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261017-assembly12';
+import {learningRoute,mountLabLearning} from './learning-tools.js?release=20261017-assembly12';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261017-assembly12';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261017-assembly12';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261017-assembly12';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -110,6 +110,7 @@ function bindLab(s){
     labView={id:s.id,section:index+1};
     tabs.forEach((button,i)=>{button.setAttribute('aria-selected',String(i===index));button.tabIndex=i===index?0:-1;});
     panels.forEach((panel,i)=>{panel.hidden=i!==index;});
+    if(s.track==='hardware')setHardwareVisible(workspace,index===1);
     if(moveFocus){(focusTab?tabs[index]:panels[index]).focus({preventScroll:true});panels[index].scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
   }
   function refreshStatus(){
@@ -201,7 +202,7 @@ function bindLab(s){
   return {runHypothesisTest,currentTaskResult};
 }
 
-function reportText(s,r){return `COLE LEARNING LABS — INVESTIGATION REPORT\n${s.id} · ${s.title}\nGrades ${s.grade} · ${tracks[s.track].name}\nStatus: ${r.closed?'DELIVERED':r.verified?'TECHNICALLY VERIFIED — TICKET OPEN':'IN PROGRESS'}\n\nORIGINAL TASK\n${s.goal}\n\nEVIDENCE\n${r.evidence.map(id=>'- '+(s.clues.find(c=>c.id===id)?.text||id)).join('\n')||'No evidence recorded.'}\n\nQUESTIONS I ASKED\n${readQuestionEvents(r.events).map(pair=>'Q: '+pair.question+'\nRequester: '+pair.answer).join('\n\n')||'No interview questions recorded.'}\n\nWORKING HYPOTHESIS\n${r.plan||'Not recorded.'}\n\nTEST NOTES\n${r.notes||'Not recorded.'}${s.track==='coding'?'\n\nSAVED PRACTICE CODE\n'+(r.state.code||'Not recorded.')+'\n\nPRACTICE OUTPUT\n'+(Array.isArray(r.state.output)?r.state.output.join('\n'):r.state.output||'No output recorded.'):''}\n\nEXPERIMENT RECORD\n${experimentReport(r)}\n\nACTION LOG\n${r.events.filter(e=>!readQuestionEvents([e]).length).map(e=>'- '+eventMessage(e)).join('\n')||'No actions recorded.'}\n\nREFLECTION\n${r.reflection||'Not recorded.'}\n\nThis is a simulated learning activity. Private-session work stays on this page unless exported or explicitly saved on this device. If you explicitly join an enabled classroom, assigned lab drafts and submitted snapshots may be shared with that teacher. Technical progress is student-reported; teachers review and grade submissions.\n`;}
+function reportText(s,r){return `COLE LEARNING LABS — INVESTIGATION REPORT\n${s.id} · ${s.title}\nGrades ${s.grade} · ${tracks[s.track].name}\nStatus: ${r.closed?'DELIVERED':r.verified?'TECHNICALLY VERIFIED — TICKET OPEN':'IN PROGRESS'}\n\nORIGINAL TASK\n${s.goal}\n\nEVIDENCE\n${r.evidence.map(id=>'- '+(s.clues.find(c=>c.id===id)?.text||id)).join('\n')||'No evidence recorded.'}\n\nQUESTIONS I ASKED\n${readQuestionEvents(r.events).map(pair=>'Q: '+pair.question+'\nRequester: '+pair.answer).join('\n\n')||'No interview questions recorded.'}\n\nWORKING HYPOTHESIS\n${r.plan||'Not recorded.'}\n\nTEST NOTES\n${r.notes||'Not recorded.'}${s.track==='coding'?'\n\nSAVED PRACTICE CODE\n'+(r.state.code||'Not recorded.')+'\n\nPRACTICE OUTPUT\n'+(Array.isArray(r.state.output)?r.state.output.join('\n'):r.state.output||'No output recorded.'):''}\n\nEXPERIMENT RECORD\n${experimentReport(r)}${s.track==='hardware'&&r.state.assemblyEnabled?'\n\nDETAILED ASSEMBLY STATUS\n'+['panel','psu','board','cooler','gpu','ssd'].map(group=>{const values=r.state.assembly[group+'Screws'];return group+': '+values.filter(Boolean).length+'/'+values.length+' screws secured';}).join('\n')+'\nThermal interface: '+r.state.assembly.paste+'\nCPU fan lead: '+(r.state.assembly.cpuFanConnected?'connected':'disconnected')+'\nCPU retention: '+(r.state.assembly.retentionOpen?'open':'closed')+'\nMemory clips: '+(r.state.assembly.ramClipsOpen?'open':'closed')+'\nPCIe latch: '+(r.state.assembly.pcieLatchOpen?'open':'closed'):''}\n\nACTION LOG\n${r.events.filter(e=>!readQuestionEvents([e]).length).map(e=>'- '+eventMessage(e)).join('\n')||'No actions recorded.'}\n\nREFLECTION\n${r.reflection||'Not recorded.'}\n\nThis is a simulated learning activity. Private-session work stays on this page unless exported or explicitly saved on this device. If you explicitly join an enabled classroom, assigned lab drafts and submitted snapshots may be shared with that teacher. Technical progress is student-reported; teachers review and grade submissions.\n`;}
 function openReport(s,r,customContent){
   cancelHardwareInteraction($('#workspace'));
   reportCleanup?.();
@@ -235,7 +236,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261017-workbench11');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261017-assembly12');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -247,7 +248,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261017-workbench11');
+      const cryptoModule=await import('./report-crypto.js?release=20261017-assembly12');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;

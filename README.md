@@ -52,7 +52,7 @@ Original curriculum archives, workbook originals, teacher guides, speaking scrip
 
 ## Equipment interaction and report saving
 
-Hardware labs offer a bounded parts tray beside the equipment picture, twelve component/cable fit targets, separate display-cable ends, current fitted inventory and visible connector detail. Mouse/trackpad and touch-grip drags request the same safety-checked model actions as tap and keyboard controls. Wrong sockets, unsafe internal work and incompatible storage do not bypass the model. This is a simplified equipment teaching simulation; it does not model physical force, complete teardown, individual fasteners or thermal physics.
+Hardware labs offer a bounded parts tray beside the equipment picture, twelve component/cable fit targets, separate display-cable ends, current fitted inventory and visible connector detail. Mouse/trackpad and touch-grip drags request the same safety-checked model actions as tap and keyboard controls. Wrong sockets, unsafe internal work and incompatible storage do not bypass the model. The optional detailed assembly mode adds a real, rotatable 3D workstation and complete teardown/rebuild of its seven removable components, 18 screws, retention mechanisms, leads and thermal-paste preparation. Screw tension, paste spread, temperature and physical force remain simplified teaching rules. See [3D assembly](docs/3D-ASSEMBLY.md).
 
 My report presents an approved local UTF-8 `.txt` download with a fictional case-only filename, optional feature-detected device file sharing, and copy/manual-selection alternatives. Saving does not submit work, and a chosen native app or cloud destination can receive the file. Requested download URLs receive a short handoff interval before cleanup. [Device checks](docs/DEVICE-CHECKS.md) distinguishes actual browser evidence from physical-device checks still required by a school.
 
@@ -185,7 +185,7 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-The `20261017-workbench11` source release (version `2.10.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
+The `20261017-assembly12` source release (version `2.11.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 

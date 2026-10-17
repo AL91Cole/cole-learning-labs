@@ -1,6 +1,6 @@
-import {normalizeHardwareState, verifyHardware} from './hardware.js?release=20261017-workbench11';
-import {normalizeWorkspaceState, verifyWorkspace, getWorkspaceMission} from './workspaces.js?release=20261017-workbench11';
-import {inquiryProtectedEvents} from './interview.js?release=20261017-workbench11';
+import {normalizeHardwareState, verifyHardware} from './hardware.js?release=20261017-assembly12';
+import {normalizeWorkspaceState, verifyWorkspace, getWorkspaceMission} from './workspaces.js?release=20261017-assembly12';
+import {inquiryProtectedEvents} from './interview.js?release=20261017-assembly12';
 
 // Experiment writing shares the existing local-work, clear, and manual-export
 // lifecycle. It is not a grade, an identity record, or proof of authorship.
@@ -121,6 +121,20 @@ const displayValue = value => typeof value==='boolean' ? (value?'Yes':'No') : ty
  * prompts, logs, response bodies, secrets, or arbitrary saved-state fields. */
 export function observationSnapshot(scenario,savedState) {
   const id=scenario.id,state=scenario.track==='hardware' ? normalizeHardwareState(id,savedState) : normalizeWorkspaceState(id,savedState);
+  if(scenario.track==='hardware' && state.assemblyEnabled) {
+    const a=state.assembly;
+    const fitted=[['PSU',a.psuInstalled],['board',state.boardInstalled],['CPU',state.cpuInstalled],['cooler',state.coolerInstalled],['RAM',state.ramSeated],['GPU',state.gpuInstalled],['SSD',state.originalDriveInstalled]].filter(([,ready])=>ready).map(([label])=>label).join(' ')||'None';
+    // Keep six bounded rows so the existing 600-character experiment event
+    // preserves each individual fastener bit, rather than truncating evidence.
+    return [
+      ['PC / AC / POST / lesson',`${state.pcOn?'On':'Off'} / ${state.acConnected?'yes':'no'} / ${state.booted?'pass':'no'} / ${state.documentOpened?'open':'closed'}`],
+      ['Fitted parts',fitted],
+      ['P/PSU/B/C/G/S screws (1=secured)',['panel','psu','board','cooler','gpu','ssd'].map(group=>a[group+'Screws'].map(value=>value?'1':'0').join('')).join('/')+' '+state.selectedDrive.toUpperCase()],
+      ['CPU/RAM/PCIe clips; panel',[a.retentionOpen,a.ramClipsOpen,a.pcieLatchOpen].map(open=>open?'open':'closed').join('/')+'; panel '+(a.panelInstalled?'on':'off')],
+      ['Paste / CPU fan',a.paste+' / '+(a.cpuFanConnected?'connected':'disconnected')],
+      ['ATX/EPS/GPU/F/data/SATA (1=yes)',[state.atxConnected,state.cpuPowerConnected,state.gpuPowerConnected,state.frontPanelConnected,state.sataDataConnected,state.sataPowerConnected].map(value=>value?'1':'0').join('')+' / '+(state.videoPort==='gpu'?'GPU':'board')+' '+(state.monitorInput==='hdmi'?'HDMI':'DP')+' '+(state.signalConnected?'fitted':'loose')]
+    ].map(([label,value])=>[text(label,32),text(value,40)]);
+  }
   if (scenario.track==='hardware') return [
     ['PC and AC power',(state.pcOn?'On':'Off')+' / AC '+(state.acConnected?'connected':'disconnected')],
     ['Installed components',[['Board',state.boardInstalled],['CPU',state.cpuInstalled],['Cooler',state.coolerInstalled],['RAM',state.ramSeated],['GPU',state.gpuInstalled]].filter(([,ready])=>ready).map(([label])=>label).join(', ') || 'None'],
