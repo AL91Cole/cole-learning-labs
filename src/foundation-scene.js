@@ -65,7 +65,7 @@ export function mountFoundationScene(host,{lab,record,onInspect=()=>{},onAction=
     if(!hardware||disposed||!visible||doc.hidden||paused||loading||scene||failed)return;
     loading=true;status('loading','Preparing the 3D workstation…');
     try{
-      module ||= await import('./assembly-scene.js?release=20261017-foundations17');
+      module ||= await import('./assembly-scene.js?release=20261017-babylon18');
       if(disposed||!visible||doc.hidden||paused)return;
       scene=module.mountAssemblyScene(host.querySelector('[data-foundation-hardware-scene]'),{hardware:current?.hardware,assembly:current?.hardware?.assembly,onSelect:inspect,onAction:action,onInteraction:info=>status('info',info.message),onStatus:message=>{if(message.kind==='unavailable')failed=true;status(message.kind,message.message);}});
       if(!scene){failed=true;placeholder('3D is unavailable here. Use the labeled part buttons and guided practice controls.');status('unavailable','Every lesson and practice action remains available without 3D.');return;}

@@ -60,7 +60,7 @@ test('the initial application module graph does not download a 3D engine or scen
   }
   await visit(appUrl);
   assert.ok(seen.size>10,'Check the actual local module graph, not only one import line.');
-  assert.doesNotMatch([...seen].join('\n'),/\/(?:virtual-lab-scene|assembly-scene|three\.(?:module|core)(?:\.min)?)\.js(?:$|\n)/);
+  assert.doesNotMatch([...seen].join('\n'),/\/(?:virtual-lab-scene|assembly-scene|babylon|three\.(?:module|core)(?:\.min)?)\.js(?:$|\n)/);
 });
 
 test('every investigation begins with the ticket and leaves optional help closed',()=>{

@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import * as THREE from '../src/three.module.js?release=20261017-foundations17';
-import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-foundations17';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js?release=20261017-foundations17';
+import * as BABYLON from '../src/babylon.js?release=20261017-babylon18';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-babylon18';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js?release=20261017-babylon18';
 import { initialHardwareState } from '../src/hardware.js';
 import { initialAssemblyState } from '../src/assembly-model.js';
 
@@ -29,83 +29,53 @@ class Surface extends EventTarget {
   }
 }
 
-function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, caseId = 'INC-106', onAction, left = 0, top = 0 } = {}) {
-  const page = new Surface(); page.hidden = false;
-  const view = new Surface(); page.defaultView = view; view.devicePixelRatio = dpr;
-  let nextFrame = 1;
-  const queue = new Map();
-  view.requestAnimationFrame = callback => { const id = nextFrame++; queue.set(id, callback); return id; };
-  view.cancelAnimationFrame = id => queue.delete(id);
-  let observer;
-  view.ResizeObserver = class {
-    constructor(callback) { this.callback = callback; observer = this; }
-    observe(element) { this.element = element; }
-    disconnect() { this.disconnected = true; }
-  };
-  const dimensions = { width, height };
-  const element = () => ({ style: {}, children: [], attributes: new Map(), setAttribute(key, value) { this.attributes.set(key, value); }, appendChild(child) { this.children.push(child); child.parent = this; }, remove() { if (this.parent) this.parent.children = this.parent.children.filter(child => child !== this); } });
-  page.createElement = element;
-  const host = {
-    ownerDocument: page, children: [],
-    getBoundingClientRect: () => ({ ...dimensions, left, top }),
-    appendChild(canvas) { this.children.push(canvas); canvas.parent = this; }
-  };
-  const canvas = new Surface();
-  canvas.style = {}; canvas.attributes = new Map(); canvas.captures = new Set();
-  canvas.setAttribute = (key, value) => canvas.attributes.set(key, value);
-  canvas.getBoundingClientRect = host.getBoundingClientRect;
-  canvas.setPointerCapture = id => canvas.captures.add(id);
-  canvas.hasPointerCapture = id => canvas.captures.has(id);
-  canvas.releasePointerCapture = id => canvas.captures.delete(id);
-  canvas.remove = () => { host.children = host.children.filter(child => child !== canvas); };
-  let renderer;
-  class MockRenderer {
-    constructor(options) {
-      if (unavailable) throw new Error('WebGL2 not available');
-      this.options = options; this.domElement = canvas; this.renders = [];
-      renderer = this;
-    }
-    setClearColor() {}
-    setPixelRatio(ratio) { this.ratio = ratio; }
-    setSize(w, h) { canvas.width = Math.floor(w * this.ratio); canvas.height = Math.floor(h * this.ratio); }
-    render(scene, camera) { this.renders.push({ scene, camera }); }
-    dispose() { this.disposed = true; }
+function sceneNodes(scene){return [...scene.transformNodes,...scene.meshes];}
+function sceneWalk(scene,visit){sceneNodes(scene).forEach(visit);}
+function worldBounds(node){node.computeWorldMatrix(true);const bounds=node.getHierarchyBoundingVectors(true);return{...bounds,center:bounds.min.add(bounds.max).scale(.5)};}
+function distance(a,b){return BABYLON.Vector3.Distance(a,b);}
+function harness({width=1366,height=600,dpr=3,unavailable=false,caseId='INC-106',onAction,left=0,top=0}={}){
+  const page=new Surface();page.hidden=false;
+  const view=new Surface();page.defaultView=view;view.devicePixelRatio=dpr;
+  let nextFrame=1,observer,renderer;
+  const queue=new Map(),ready=[];
+  view.requestAnimationFrame=callback=>{const id=nextFrame++;queue.set(id,callback);return id;};view.cancelAnimationFrame=id=>queue.delete(id);
+  view.ResizeObserver=class{constructor(callback){this.callback=callback;observer=this;}observe(element){this.element=element;}disconnect(){this.disconnected=true;}};
+  const dimensions={width,height};
+  const element=()=>({style:{},children:[],attributes:new Map(),setAttribute(key,value){this.attributes.set(key,value);},appendChild(child){this.children.push(child);child.parent=this;},remove(){if(this.parent)this.parent.children=this.parent.children.filter(child=>child!==this);}});
+  const host={ownerDocument:page,children:[],getBoundingClientRect:()=>({...dimensions,left,top}),appendChild(node){this.children.push(node);node.parent=this;}};
+  const canvas=new Surface();canvas.style={};canvas.attributes=new Map();canvas.captures=new Set();canvas.setAttribute=(key,value)=>canvas.attributes.set(key,value);canvas.getBoundingClientRect=host.getBoundingClientRect;canvas.setPointerCapture=id=>canvas.captures.add(id);canvas.hasPointerCapture=id=>canvas.captures.has(id);canvas.releasePointerCapture=id=>canvas.captures.delete(id);canvas.remove=()=>{host.children=host.children.filter(child=>child!==canvas);};
+  page.createElement=tag=>tag==='canvas'?canvas:element();
+  class TestEngine extends BABYLON.NullEngine{
+    constructor(surface,antialias,options){if(unavailable)throw new Error('Graphics unavailable');super({renderWidth:1,renderHeight:1,textureSize:512,deterministicLockstep:false});this._renderingCanvas=surface;this.options={...options,antialias};this.renders=[];renderer=this;}
+    setSize(w,h){this._options.renderWidth=w;this._options.renderHeight=h;canvas.width=w;canvas.height=h;}
+    setHardwareScalingLevel(value){this.qaScaling=value;}
+    getHardwareScalingLevel(){return this.qaScaling||1;}
+    get ratio(){return 1/this.getHardwareScalingLevel();}
+    dispose(){super.dispose();this.disposed=true;}
   }
-  const context = vm.createContext({ THREE: { ...THREE, WebGLRenderer: MockRenderer }, assemblyToolAction, assemblyDropAction, assembledPartFitted, ASSEMBLY_CABLES, cableConnection, assemblyCableAction });
-  const code = source.replace(/^import[^\n]*\n/gm, '').replace('export function mountAssemblyScene', 'function mountAssemblyScene');
-  const mount = vm.runInContext(`${code}\nmountAssemblyScene;`, context);
-  const hardware = initialHardwareState(caseId);
-  const assembly = initialAssemblyState(hardware);
-  const events = []; const selections = []; const actions = []; const interactions = [];
-  const api = mount(host, { hardware, assembly, onStatus: value => events.push(value), onSelect: id => selections.push(id), onAction: action => { actions.push(action); return onAction?.(action); }, onInteraction: info => interactions.push(info) });
-  const flush = () => {
-    let count = 0;
-    while (queue.size) {
-      assert.ok(++count < 20, 'The scene must settle without a perpetual animation loop');
-      const [id, callback] = queue.entries().next().value;
-      queue.delete(id); callback(0);
-    }
-  };
-  const project = point => {
-    const camera = renderer.renders.at(-1).camera;
-    const projected = new THREE.Vector3(...point).project(camera);
-    return { clientX: left + (projected.x + 1) * dimensions.width / 2, clientY: top + (1 - projected.y) * dimensions.height / 2 };
-  };
-  const component = id => renderer.renders.at(-1).scene.children.find(node => node.userData.selectId === id && node.userData.partKey);
-  const cableNode = (id, port = false) => renderer.renders.at(-1).scene.children.find(node => port ? node.userData.cablePortId === id : node.userData.cableEndpointId === id);
-  const pointFor = id => {
-    const node = component(id) || cableNode(id) || cableNode(id, true) || renderer.renders.at(-1).scene.children.find(node => node.userData.selectId === id);
-    const point = new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3());
-    return project(point.toArray());
-  };
-  const pointer = (type, position, extra = {}) => canvas.fire(type, { button: 0, pointerId: 1, pointerType: 'mouse', ...position, ...extra });
-  return { api, host, page, view, canvas, dimensions, renderer, queue, observer, hardware, assembly, events, selections, actions, interactions, flush, project, pointFor, pointer, component, cableNode };
+  class TestScene extends BABYLON.Scene{
+    render(...args){renderer.renders.push({scene:this,camera:this.activeCamera});return super.render(...args);}
+    executeWhenReady(callback){ready.push(callback);}
+  }
+  const context=vm.createContext({BABYLON:new Proxy(BABYLON,{get(target,name){return name==='Engine'?TestEngine:name==='Scene'?TestScene:target[name];}}),assemblyToolAction,assemblyDropAction,assembledPartFitted,ASSEMBLY_CABLES,cableConnection,assemblyCableAction});
+  const code=source.replace(/^import[^\n]*\n/gm,'').replace('export function mountAssemblyScene','function mountAssemblyScene');
+  const mount=vm.runInContext(code+'\nmountAssemblyScene;',context);
+  const hardware=initialHardwareState(caseId),assembly=initialAssemblyState(hardware),events=[],selections=[],actions=[],interactions=[];
+  const api=mount(host,{hardware,assembly,onStatus:value=>events.push(value),onSelect:id=>selections.push(id),onAction:action=>{actions.push(action);return onAction?.(action);},onInteraction:info=>interactions.push(info)});
+  const flush=()=>{let count=0;while(queue.size){assert.ok(++count<20,'The scene must settle without a perpetual animation loop');const[id,callback]=queue.entries().next().value;queue.delete(id);callback(0);}};
+  const project=point=>{const scene=renderer.renders.at(-1).scene,camera=scene.activeCamera;const p=BABYLON.Vector3.Project(new BABYLON.Vector3(...point),BABYLON.Matrix.Identity(),scene.getTransformMatrix(),camera.viewport.toGlobal(dimensions.width,dimensions.height));return{clientX:left+p.x,clientY:top+p.y};};
+  const component=id=>sceneNodes(renderer.renders.at(-1).scene).find(node=>node.metadata?.selectId===id&&node.metadata?.partKey);
+  const cableNode=(id,port=false)=>sceneNodes(renderer.renders.at(-1).scene).find(node=>port?node.metadata?.cablePortId===id:node.metadata?.cableEndpointId===id);
+  const pointFor=id=>{const node=component(id)||cableNode(id)||cableNode(id,true)||sceneNodes(renderer.renders.at(-1).scene).find(node=>node.metadata?.selectId===id);return project(worldBounds(node).center.asArray());};
+  const pointer=(type,position,extra={})=>canvas.fire(type,{button:0,pointerId:1,pointerType:'mouse',...position,...extra});
+  return{api,host,page,view,canvas,dimensions,renderer,queue,observer,hardware,assembly,events,selections,actions,interactions,flush,project,pointFor,pointer,component,cableNode,ready};
 }
 
-test('3D is an on-demand, bounded-resolution adapter using real procedural Three geometry', () => {
+test('3D is an on-demand, bounded-resolution adapter using real procedural Babylon geometry', () => {
   const h = harness();
   assert.equal(h.renderer.options.powerPreference, 'low-power');
   assert.equal(h.renderer.options.antialias, false);
+  assert.equal(h.renderer.options.doNotHandleTouchAction, true);
   assert.equal(h.queue.size, 1);
   h.flush();
   assert.equal(h.renderer.renders.length, 1);
@@ -116,11 +86,11 @@ test('3D is an on-demand, bounded-resolution adapter using real procedural Three
   assert.equal(h.canvas.attributes.has('tabindex'), false);
   const { scene } = h.renderer.renders[0];
   const ids = new Set(); let triangles = 0; let meshes = 0;
-  scene.traverse(object => {
-    if (object.userData.selectId) ids.add(object.userData.selectId);
-    if (object.isMesh) {
+  sceneWalk(scene, object => {
+    if (object.metadata?.selectId) ids.add(object.metadata.selectId);
+    if (object instanceof BABYLON.Mesh&&object.getClassName()!=='LinesMesh') {
       meshes += 1;
-      triangles += ((object.geometry.index?.count ?? object.geometry.attributes.position.count) / 3) * (object.isInstancedMesh ? object.count : 1);
+      triangles += object.getTotalIndices()/3;
     }
   });
   for (const id of ['board', 'cpu', 'cooler', 'ram', 'gpu', 'ssd', 'psu', 'panel', 'atx', 'cpu-fan']) assert.ok(ids.has(id), id);
@@ -145,10 +115,10 @@ test('updates preserve authored work, coalesce frames, and fit removed parts to 
   assert.deepEqual({ hardware: h.hardware, assembly: h.assembly }, before);
   assert.deepEqual({ hardware: nextHardware, assembly: nextAssembly }, snapshot);
   const scene = h.renderer.renders.at(-1).scene;
-  const movable = id => scene.children.find(node => node.userData.selectId === id && node.userData.partKey);
-  assert.equal(movable('cpu').position.x, movable('cpu').userData.loose[0]);
-  assert.equal(movable('psu').position.x, movable('psu').userData.loose[0]);
-  assert.equal(movable('panel').position.x, movable('panel').userData.loose[0]);
+  const movable = id => sceneNodes(scene).find(node => node.metadata?.selectId === id && node.metadata?.partKey);
+  assert.equal(movable('cpu').position.x, movable('cpu').metadata.loose[0]);
+  assert.equal(movable('psu').position.x, movable('psu').metadata.loose[0]);
+  assert.equal(movable('panel').position.x, movable('panel').metadata.loose[0]);
   h.api.dispose();
 });
 
@@ -215,23 +185,23 @@ test('an uncaptured pointer released outside the canvas cannot leave camera gest
 test('dispose releases the canvas, observers, event handlers, GPU objects, and pending frame', () => {
   const h = harness(); h.flush();
   const resources = new Set();
-  h.renderer.renders[0].scene.traverse(object => {
+  sceneWalk(h.renderer.renders[0].scene, object => {
     if (object.geometry) resources.add(object.geometry);
     for (const material of Array.isArray(object.material) ? object.material : object.material ? [object.material] : []) resources.add(material);
   });
-  const released = new Set(); for (const resource of resources) resource.addEventListener('dispose', () => released.add(resource));
+  const released = new Set(); for (const resource of resources) resource.onDisposeObservable?.add(() => released.add(resource));
   h.api.zoom('out'); assert.equal(h.queue.size, 1);
   h.api.dispose(); h.api.dispose();
   assert.equal(h.queue.size, 0); assert.equal(h.host.children.length, 0);
   assert.equal(h.observer.disconnected, true); assert.equal(h.renderer.disposed, true);
   assert.equal(h.canvas.listenerCount(), 0); assert.equal(h.page.listenerCount(), 0); assert.equal(h.view.listenerCount(), 0);
-  assert.equal(released.size, resources.size, 'Each real shared geometry and material is disposed');
+  for(const resource of resources)assert.ok(released.has(resource)||resource.isDisposed?.(),'Each real shared geometry and material is disposed');
   const renders = h.renderer.renders.length;
   h.api.resume(); h.api.setView('side'); h.api.update(h.hardware, h.assembly); h.flush();
   assert.equal(h.renderer.renders.length, renders);
 });
 
-test('unsupported WebGL2 uses labeled-workbench fallback without creating listeners or canvas', () => {
+test('unavailable graphics uses labeled-workbench fallback without creating listeners or canvas', () => {
   const h = harness({ unavailable: true });
   assert.equal(h.api, null); assert.equal(h.host.children.length, 0);
   assert.equal(h.events.length, 1); assert.equal(h.events[0].kind, 'unavailable');
@@ -240,25 +210,25 @@ test('unsupported WebGL2 uses labeled-workbench fallback without creating listen
 });
 
 test('3D assets remain same-origin with no network or student-work storage in the view adapter', () => {
-  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-foundations17';/);
+  assert.match(source, /^import \* as BABYLON from '\.\/babylon\.js\?release=20261017-babylon18';/);
   assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage|indexedDB)\b|https?:\/\//);
 });
 
 test('real raycast drag fits only on release into the matching authored socket', () => {
   const h = harness(); h.flush(); h.api.setView('top'); h.api.setTool('move'); h.flush();
   const origin = h.component('cpu').position.clone();
-  const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').userData.fitted);
+  const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').metadata.fitted);
   h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
   assert.equal(h.actions.length, 0, 'A preview must never change the model');
   assert.equal(h.component('cpu').visible, false);
-  assert.ok(h.renderer.renders.at(-1).scene.children.some(node => node.userData.assemblyGhost));
+  assert.ok(sceneNodes(h.renderer.renders.at(-1).scene).some(node => node.metadata?.assemblyGhost));
   assert.equal(h.interactions.at(-1).kind, 'valid');
   h.pointer('pointerup', to); h.flush();
   assert.deepEqual(h.actions, ['asm-fit-cpu']);
   assert.equal(h.component('cpu').visible, true);
-  assert.deepEqual(h.component('cpu').position.toArray(), origin.toArray());
+  assert.deepEqual(h.component('cpu').position.asArray(), origin.asArray());
   assert.equal(h.canvas.captures.size, 0);
-  assert.equal(h.renderer.renders.at(-1).scene.children.some(node => node.userData.assemblyGhost), false);
+  assert.equal(sceneNodes(h.renderer.renders.at(-1).scene).some(node => node.metadata?.assemblyGhost), false);
   h.api.dispose();
 });
 
@@ -274,7 +244,7 @@ test('loose equipment is directly selectable on the bench rather than hidden beh
 
 test('an incompatible 3D socket cancels the ghost without dispatching an action', () => {
   const h = harness(); h.flush(); h.api.setView('top'); h.api.setTool('move'); h.flush();
-  const from = h.pointFor('cpu'); const to = h.project(h.component('ram').userData.fitted);
+  const from = h.pointFor('cpu'); const to = h.project(h.component('ram').metadata.fitted);
   h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
   assert.equal(h.interactions.at(-1).kind, 'dragging');
   h.pointer('pointerup', to); h.flush();
@@ -288,12 +258,12 @@ test('a rejected model action restores the ghost before a synchronous scene upda
   let h;
   h = harness({ onAction: () => {
     assert.equal(h.component('cpu').visible, true, 'Model callback never observes a hidden original');
-    assert.equal(h.renderer.renders.at(-1).scene.children.some(node => node.userData.assemblyGhost), false);
+    assert.equal(sceneNodes(h.renderer.renders.at(-1).scene).some(node => node.metadata?.assemblyGhost), false);
     h.api.update(h.hardware, h.assembly);
     return { kind: 'warning', message: 'Fit and secure the board first.' };
   } });
   h.flush(); h.api.setView('top'); h.api.setTool('move'); h.flush();
-  const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').userData.fitted);
+  const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').metadata.fitted);
   h.pointer('pointerdown', from); h.pointer('pointermove', to); h.pointer('pointerup', to); h.flush();
   assert.deepEqual(h.actions, ['asm-fit-cpu']);
   assert.equal(h.interactions.at(-1).message, 'Fit and secure the board first.');
@@ -319,7 +289,7 @@ test('Escape, blur, modal cancel, second pointer, state update, and camera chang
   ];
   for (const cancel of cases) {
     const h = harness(); h.flush(); h.api.setView('top'); h.api.setTool('move'); h.flush();
-    const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').userData.fitted);
+    const from = h.pointFor('cpu'); const to = h.project(h.component('cpu').metadata.fitted);
     h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
     assert.equal(h.component('cpu').visible, false);
     cancel(h);
@@ -327,7 +297,7 @@ test('Escape, blur, modal cancel, second pointer, state update, and camera chang
     assert.equal(h.component('cpu').visible, true);
     assert.equal(h.canvas.captures.size, 0);
     assert.deepEqual(h.actions, [], String(cancel));
-    assert.equal(h.renderer.renders.at(-1).scene.children.some(node => node.userData.assemblyGhost), false);
+    assert.equal(sceneNodes(h.renderer.renders.at(-1).scene).some(node => node.metadata?.assemblyGhost), false);
     h.api.dispose();
   }
 });
@@ -382,12 +352,12 @@ test('HDMI PC-end drag fits the authored GPU output only on release', () => {
   h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
   assert.deepEqual(h.actions, []);
   assert.equal(h.interactions.at(-1).kind, 'valid');
-  assert.equal(h.renderer.renders.at(-1).scene.children.find(node => node.userData.assemblyCableGhost).visible, true);
+  assert.equal(sceneNodes(h.renderer.renders.at(-1).scene).find(node => node.metadata?.assemblyCableGhost).visible, true);
   h.pointer('pointerup', to); h.flush();
   assert.deepEqual(h.actions, ['video-gpu']);
   assert.equal(h.canvas.captures.size, 0);
   assert.equal(h.cableNode('hdmi-pc').visible, true);
-  assert.equal(h.renderer.renders.at(-1).scene.children.find(node => node.userData.assemblyCableGhost).visible, false);
+  assert.equal(sceneNodes(h.renderer.renders.at(-1).scene).find(node => node.metadata?.assemblyCableGhost).visible, false);
   assert.equal(h.hardware.videoPort, 'board', 'Only the authoritative callback may change the model');
   h.api.dispose();
 });
@@ -441,7 +411,7 @@ test('cable ghost and captured pointer are discarded by modal, escape, state cha
     h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
     cancel(h); h.pointer('pointerup', to); h.flush();
     assert.deepEqual(h.actions, []); assert.equal(h.canvas.captures.size, 0); assert.equal(h.cableNode('hdmi-pc').visible, true);
-    assert.equal(h.renderer.renders.at(-1).scene.children.find(node => node.userData.assemblyCableGhost).visible, false);
+    assert.equal(sceneNodes(h.renderer.renders.at(-1).scene).find(node => node.metadata?.assemblyCableGhost).visible, false);
     h.api.dispose();
   }
 });
@@ -478,7 +448,7 @@ test('a rejected cable attempt restores visual state before a reentrant authorit
   let h;
   h = harness({ caseId: 'INC-101', onAction: () => {
     assert.equal(h.cableNode('hdmi-pc').visible, true);
-    assert.equal(h.renderer.renders.at(-1).scene.children.find(node => node.userData.assemblyCableGhost).visible, false);
+    assert.equal(sceneNodes(h.renderer.renders.at(-1).scene).find(node => node.metadata?.assemblyCableGhost).visible, false);
     h.api.update(h.hardware, h.assembly);
     return { kind: 'warning', message: 'The existing display lead is still attached.' };
   } });
@@ -507,15 +477,15 @@ test('Fit PC opens close to the tower and keeps its case inside desktop and tabl
     const h=harness({width,height:600});h.flush();
     const camera=h.renderer.renders.at(-1).camera;
     for(const x of [-2.85,2.85])for(const y of [-.25,6.4])for(const z of [-1.12,1.62]){
-      const projected=new THREE.Vector3(x,y,z).project(camera);
-      assert.ok(Math.abs(projected.x)<1&&Math.abs(projected.y)<1,`The tower must fit at ${width}px: ${projected.toArray()}`);
+      const projected=BABYLON.Vector3.Project(new BABYLON.Vector3(x,y,z),BABYLON.Matrix.Identity(),h.renderer.renders.at(-1).scene.getTransformMatrix(),camera.viewport.toGlobal(h.dimensions.width,h.dimensions.height));
+      assert.ok(projected.x>0&&projected.x<h.dimensions.width&&projected.y>0&&projected.y<h.dimensions.height,`The tower must fit at ${width}px: ${projected.asArray()}`);
     }
-    const initial=camera.position.distanceTo(new THREE.Vector3(0,3.05,.12));
+    const initial=distance(camera.position,new BABYLON.Vector3(0,3.05,.12));
     h.api.resetView();h.flush();
-    const whole=camera.position.distanceTo(new THREE.Vector3(-.45,2.65,0));
+    const whole=distance(camera.position,new BABYLON.Vector3(-.45,2.65,0));
     assert.ok(initial<whole*.8,'Fit PC should show a larger tower than Whole bench');
     h.api.focusSelected();h.flush();
-    assert.ok(camera.position.distanceTo(new THREE.Vector3(0,3.05,.12))-initial<.001,'Focus without a selection falls back to Fit PC');
+    assert.ok(distance(camera.position,new BABYLON.Vector3(0,3.05,.12))-initial<.001,'Focus without a selection falls back to Fit PC');
     assert.equal(h.queue.size,0);assert.deepEqual(h.actions,[]);h.api.dispose();
   }
 });
@@ -524,13 +494,13 @@ test('Focus part pivots onto the processor and zoom reaches a bounded close-up w
   const h=harness();h.flush();const original=structuredClone({hardware:h.hardware,assembly:h.assembly});
   h.api.select('cpu');h.api.focusSelected();h.flush();
   const camera=h.renderer.renders.at(-1).camera;
-  const center=new THREE.Box3().setFromObject(h.component('cpu')).getCenter(new THREE.Vector3());
-  assert.ok(camera.getWorldDirection(new THREE.Vector3()).dot(center.clone().sub(camera.position).normalize())>.9999,'Camera must pivot onto the selected processor');
-  assert.ok(camera.position.distanceTo(center)<3,'Processor focus must get closer than the old whole-PC minimum distance');
+  const center=worldBounds(h.component('cpu')).center;
+  assert.ok(BABYLON.Vector3.Dot(camera.getForwardRay(1).direction,center.subtract(camera.position).normalize())>.9999,'Camera must pivot onto the selected processor');
+  assert.ok(distance(camera.position,center)<3,'Processor focus must get closer than the old whole-PC minimum distance');
   for(let i=0;i<25;i++)h.api.zoom('in');h.flush();
-  assert.ok(camera.position.distanceTo(center)>=2.19&&camera.position.distanceTo(center)<=2.21);
+  assert.ok(distance(camera.position,center)>=2.19&&distance(camera.position,center)<=2.21);
   for(let i=0;i<35;i++)h.api.zoom('out');h.flush();
-  assert.ok(camera.position.distanceTo(center)<=40.001);
+  assert.ok(distance(camera.position,center)<=40.001);
   assert.deepEqual(h.actions,[]);assert.deepEqual({hardware:h.hardware,assembly:h.assembly},original);
   assert.equal(h.queue.size,0);h.api.dispose();
 });
@@ -538,7 +508,7 @@ test('Focus part pivots onto the processor and zoom reaches a bounded close-up w
 test('fit and focus discard a held part before changing the camera',()=>{
   for(const method of ['fit','focusSelected']){
     const h=harness();h.flush();h.api.setView('top');h.api.setTool('move');h.flush();
-    const from=h.pointFor('cpu'),to=h.project(h.component('cpu').userData.fitted);
+    const from=h.pointFor('cpu'),to=h.project(h.component('cpu').metadata.fitted);
     h.pointer('pointerdown',from);h.pointer('pointermove',to);h.flush();
     assert.equal(h.component('cpu').visible,false);
     h.api[method]();h.pointer('pointerup',to);h.flush();
@@ -549,12 +519,12 @@ test('fit and focus discard a held part before changing the camera',()=>{
 
 test('a camera preset restores a useful equipment view after a close-up',()=>{
   const h=harness({caseId:'INC-101'});h.flush();
-  const target=new THREE.Vector3(-.45,2.65,0);
+  const target=new BABYLON.Vector3(-.45,2.65,0);
   for(const preset of ['iso','side','top','rear-io']){
     h.api.select('cpu');h.api.focusSelected();h.flush();
     h.api.zoom('in');h.flush();
     h.api.setView(preset);h.flush();
-    assert.ok(h.renderer.renders.at(-1).camera.position.distanceTo(target)>10,`${preset} restores a wider equipment view`);
+    assert.ok(distance(h.renderer.renders.at(-1).camera.position,target)>10,`${preset} restores a wider equipment view`);
   }
   assert.equal(h.actions.length,0);assert.equal(h.queue.size,0);h.api.dispose();
 });
@@ -562,16 +532,53 @@ test('a camera preset restores a useful equipment view after a close-up',()=>{
 test('board labels and physical connector details stay procedural with a bounded visible draw budget',()=>{
   const h=harness({caseId:'INC-101'});h.flush();
   const scene=h.renderer.renders.at(-1).scene;let visible=0,triangles=0;
-  scene.traverse(object=>{
-    if(!object.isMesh)return;
+  sceneWalk(scene,object=>{
+    if(!(object instanceof BABYLON.Mesh)||object.getClassName()==='LinesMesh')return;
     for(let ancestor=object;ancestor;ancestor=ancestor.parent)if(!ancestor.visible)return;
-    visible++;triangles+=(object.geometry.index?.count??object.geometry.attributes.position.count)/3*(object.isInstancedMesh?object.count:1);
-    for(const material of Array.isArray(object.material)?object.material:[object.material])assert.equal(material.map??null,null,'Equipment detail must not add downloaded texture maps');
+    visible++;triangles+=object.getTotalIndices()/3;
+    for(const material of Array.isArray(object.material)?object.material:[object.material])assert.equal(material.getActiveTextures().length,0,'Equipment detail must not add downloaded texture maps');
   });
   assert.ok(visible<210,`${visible} visible meshes must remain below the previous 219-mesh baseline`);
   assert.ok(triangles<13000,`${triangles} visible triangles must remain bounded`);
-  const silk=h.component('board').children.find(node=>node.userData.detail==='board-silkscreen');
-  assert.ok(silk?.geometry.attributes.position.count>0);
-  for(const id of ['atx','hdmi-pc','sata-data','sata-power','ac'])assert.ok(h.cableNode(id).children.some(node=>node.userData.detail==='keyed-housing'));
+  const silk=h.component('board').getChildren().find(node=>node.metadata?.detail==='board-silkscreen');
+  assert.ok(silk?.getTotalVertices()>0);
+  for(const id of ['atx','hdmi-pc','sata-data','sata-power','ac'])assert.ok(h.cableNode(id).getChildren().some(node=>node.metadata?.detail==='keyed-housing'));
   h.api.dispose();
+});
+
+test('shader readiness redraws on demand after mount and context rebuild without reviving hidden or disposed views',()=>{
+  const h=harness();h.flush();assert.equal(h.ready.length,1);assert.equal(h.queue.size,0);
+  h.ready[0]();assert.equal(h.queue.size,1);h.flush();assert.equal(h.queue.size,0);
+  h.api.pause();h.ready[0]();assert.equal(h.queue.size,0,'Compilation must not override explicit pause');
+  h.api.resume();h.flush();h.page.hidden=true;h.page.fire('visibilitychange');h.ready[0]();assert.equal(h.queue.size,0);
+  h.page.hidden=false;h.page.fire('visibilitychange');h.flush();
+  h.canvas.fire('webglcontextlost');h.canvas.fire('webglcontextrestored');h.flush();
+  assert.equal(h.ready.length,2,'Restored native effects can finish compiling after context restoration');
+  h.ready[1]();assert.equal(h.queue.size,1);h.flush();assert.equal(h.queue.size,0);
+  h.api.dispose();for(const callback of h.ready)callback();assert.equal(h.queue.size,0);
+});
+
+test('native scene inputs stay detached so only the authored pointer controller interprets touch and camera gestures',()=>{
+  const h=harness();h.flush();const scene=h.renderer.renders.at(-1).scene;
+  assert.equal(scene.useRightHandedSystem,true);assert.equal(scene._inputManager._alreadyAttached,false);
+  assert.equal(h.canvas.listeners.get('pointerdown').size,1,'One authored handler must dispatch each action');
+  assert.equal(h.canvas.listeners.get('wheel')?.size||0,0,'Page scrolling and browser zoom stay available');
+  assert.equal(scene.activeCamera.fov,42*Math.PI/180);assert.equal(scene.activeCamera.minZ,.1);assert.equal(scene.activeCamera.maxZ,100);
+  h.api.dispose();
+});
+
+test('contact shadows use a single bounded map and large opaque equipment only, with native lifecycle cleanup',()=>{
+  const h=harness();h.flush();const scene=h.renderer.renders.at(-1).scene;
+  const generators=scene.lights.map(light=>light.getShadowGenerator()).filter(Boolean);
+  assert.equal(generators.length,1);const shadow=generators[0],map=shadow.getShadowMap();
+  assert.equal(shadow.mapSize,512);assert.equal(map.getSize().width,512);
+  assert.ok(map.renderList.length>0&&map.renderList.length<=12,'Pins and leads must not expand the shadow draw list');
+  for(const mesh of map.renderList){
+    const size=worldBounds(mesh),dimensions=size.max.subtract(size.min).asArray().sort((a,b)=>b-a);
+    assert.ok(dimensions[0]>=.8&&dimensions[1]>=.3);assert.equal(mesh.material.alpha,1);
+    assert.equal(mesh.geometry.metadata?.flexibleLead||false,false);
+    assert.doesNotMatch(mesh.metadata?.selectId||'',/^(panel|psu|board|cooler|gpu|ssd)-\d+$/);
+  }
+  assert.equal(h.queue.size,0);let released=false;map.onDisposeObservable.add(()=>released=true);
+  h.api.dispose();assert.equal(released,true);
 });

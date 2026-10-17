@@ -1,5 +1,5 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261017-foundations17';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261017-foundations17';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261017-babylon18';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261017-babylon18';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 
