@@ -179,7 +179,7 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-The `20261016-teaching9` source release (version `2.9.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
+The `20261016-curriculum10` source release (version `2.9.1`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 
