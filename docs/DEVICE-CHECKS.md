@@ -42,6 +42,12 @@ In the tools13 local in-app browser preview, visible 3D screwdriver taps removed
 
 At 768 × 1024 and 390 × 844 viewport sizes, the page had no horizontal overflow and the five tool buttons were 48 CSS pixels high. Automated tests additionally cover incorrect sockets, unsafe model proposals, screw-head visibility, all eight loose-component selection targets, interruption cleanup and the ordinary-button alternatives. This is browser and synthetic input evidence; new physical Chromebook, tablet and Edge tool testing remains outstanding.
 
+## 3D cable checks — October 17, 2026
+
+The cables14 in-app browser preview connected the PC HDMI end from the motherboard output to the graphics-card output by dragging. A separate INC-108 session dragged the loose monitor end into the monitor HDMI input and connected the AC plug to the PSU inlet. After powering off, disconnecting AC and removing the panel, dragging SATA data to Cable rest disconnected it; dragging the parked end back to its labeled SSD data socket reconnected it. Feedback and the action log reflected the accepted model operations.
+
+The native cable picker retained keyboard focus after ArrowDown changed the selected cable. At 1366 × 768, 768 × 1024 and 390 × 844, the controls fit without horizontal page overflow; tool and connection buttons were at least 48 CSS pixels high and native cable/socket selects were 44 pixels high. The narrow connection buttons can wrap onto two lines. The final tablet toolbar uses three columns. Actual managed Chromebooks, physical touch devices, Edge and school filtering still need acceptance checks; these observations do not establish performance or touch precision on every device.
+
 ## Browser guidance
 
 - [ChromeOS: find and open files](https://support.google.com/chromebook/answer/1700055?hl=en).

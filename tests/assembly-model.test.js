@@ -42,6 +42,7 @@ test('a fully assembled workstation can be safely torn down and rebuilt without 
   for (const lead of ['atx', 'eps', 'gpu-power', 'sata-data', 'sata-power', 'front-panel', 'cpu-fan']) run(machine, `asm-disconnect-${lead}`);
   screws(machine, 'loosen', 'psu'); run(machine, 'asm-remove-psu');
   run(machine, 'asm-disconnect-display');
+  machine.hardware.pcVideoConnected = false; // Independent PC-end fixture; monitor removal alone is insufficient.
   screws(machine, 'loosen', 'gpu'); run(machine, 'asm-open-pcie-latch'); run(machine, 'asm-remove-gpu');
   screws(machine, 'loosen', 'ssd'); run(machine, 'asm-remove-ssd');
   run(machine, 'asm-open-ram-clips'); run(machine, 'asm-remove-ram');
@@ -98,9 +99,12 @@ test('excess paste remains a teaching fault and needs cleaning before a fresh ap
 
 test('GPU and SSD cannot be lifted through connected leads or attached screws', () => {
   const machine = setup(); build(machine); openPanel(machine);
+  machine.hardware.videoPort = 'gpu';
   run(machine, 'asm-open-pcie-latch'); run(machine, 'asm-remove-gpu', 'warning');
   run(machine, 'asm-loosen-gpu-0', 'warning'); run(machine, 'asm-disconnect-gpu-power');
   run(machine, 'asm-remove-gpu', 'warning'); run(machine, 'asm-disconnect-display');
+  const stillAttached = run(machine, 'asm-remove-gpu', 'warning'); assert.match(stillAttached.message, /at the PC/);
+  machine.hardware.pcVideoConnected = false;
   run(machine, 'asm-remove-gpu', 'warning'); screws(machine, 'loosen', 'gpu'); run(machine, 'asm-remove-gpu');
   run(machine, 'asm-remove-ssd', 'warning'); run(machine, 'asm-loosen-ssd-0', 'warning');
   run(machine, 'asm-disconnect-sata-data'); run(machine, 'asm-remove-ssd', 'warning'); run(machine, 'asm-disconnect-sata-power');

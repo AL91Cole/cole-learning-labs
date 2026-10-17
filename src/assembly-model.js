@@ -89,7 +89,6 @@ function transition(h, a, action) {
   if (action === 'asm-connect-display' || action === 'asm-disconnect-display') {
     const connect = action === 'asm-connect-display';
     if (!!h.signalConnected === connect) return reject(connect ? 'The monitor lead is already connected.' : 'The monitor lead is already disconnected.');
-    if (connect && h.videoPort === 'gpu' && !h.gpuInstalled) return reject('Fit the graphics card before attaching the monitor lead.');
     h.signalConnected = connect;
     return accept(connect ? 'HDMI lead connected. Check the chosen monitor source and PC output.' : 'HDMI lead disconnected. Classroom files stay on the original SSD.');
   }
@@ -181,6 +180,7 @@ function transition(h, a, action) {
   if (!!h[key] === fit) return reject(`This component is already ${fit ? 'fitted' : 'in the parts tray'}.`);
   if (fit && part !== 'board' && (!h.boardInstalled || !all(a.boardScrews))) return reject('Fit the motherboard and secure its four standoff screws first.');
   if (part === 'board' && !fit) {
+    if (h.pcVideoConnected !== false && h.videoPort === 'board') return reject('Disconnect the HDMI cable at the PC before lifting the motherboard.');
     if (Object.values(PARTS).some(partKey => partKey !== key && h[partKey])) return reject('Remove the cooler, CPU, memory, graphics card, and SSD before lifting the motherboard.');
     if (Object.values(LEADS).some(([leadKey]) => h[leadKey] || a[leadKey])) return reject('Disconnect every internal lead before lifting the motherboard.');
     if (!none(a.boardScrews)) return reject('Remove all four motherboard screws before lifting the board.');
@@ -200,7 +200,7 @@ function transition(h, a, action) {
   if (part === 'gpu') {
     if (!a.pcieLatchOpen) return reject('Open the PCIe retention latch first.');
     if (!fit && h.gpuPowerConnected) return reject('Disconnect the graphics card power lead first.');
-    if (!fit && h.signalConnected && h.videoPort === 'gpu') return reject('Disconnect the monitor HDMI lead before lifting the graphics card.');
+    if (!fit && h.pcVideoConnected !== false && h.videoPort === 'gpu') return reject('Disconnect the HDMI cable at the PC before lifting the graphics card.');
     if (!fit && !none(a.gpuScrews)) return reject('Remove both graphics bracket screws before lifting the card.');
   }
   if (part === 'ssd' && !fit) {

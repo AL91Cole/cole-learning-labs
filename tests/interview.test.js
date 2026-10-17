@@ -64,7 +64,7 @@ test('hardware answers follow current model observations after a virtual repair'
   state.videoPort = 'gpu';
   assert.match(ask('INC-101','What does the monitor show?',state).answer,/can show the desktop/iu);
   state.pcOn = false;
-  assert.match(ask('INC-101','What does the monitor show?',state).answer,/desktop is off.*not ready/iu);
+  assert.match(ask('INC-101','What does the monitor show?',state).answer,/PC off.*not ready/iu);
   const memory = initial('INC-103'); memory.ramSeated = true;
   assert.match(ask('INC-103','Is the memory seated now?',memory).answer,/currently seated.*startup test/iu);
   const storage = initial('INC-104'); storage.sataDataConnected = true;
@@ -234,7 +234,7 @@ test('short conversational follow-ups stay grounded in the current fictional cas
   assert.match(why.answer,/evidence.*motherboard output/iu);
   const simple = conversation('INC-101','Can you explain that more simply?',history);
   assert.equal(simple.topic,'conversation-simple');
-  assert.match(simple.answer,/simpler terms.*desktop is on/iu);
+  assert.match(simple.answer,/simpler terms.*PC on/iu);
   const next = conversation('INC-101','What should I check next?',history);
   assert.equal(next.topic,'conversation-next');
   assert.match(next.answer,/Inspect the video connection.*hypothesis.*one change/iu);

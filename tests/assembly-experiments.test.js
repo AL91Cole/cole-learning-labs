@@ -37,3 +37,32 @@ test('null or absent mechanics in an enabled saved draft never synthesize comple
     assert.equal(state.booted,false);assert.equal(state.documentOpened,false);assert.equal(verifyHardware(id,state).ok,false);assert.equal(state.assembly.psuInstalled,false);assert.ok(state.assembly.boardScrews.every(value=>value===false));
   }
 });
+
+test('both HDMI ends produce separate bounded experiment evidence and survive report packing',()=>{
+  const s=SCENARIOS.find(item=>item.id==='INC-101');
+  let state=initialHardwareState(s.id);
+  for(const action of ['enable-assembly','video-gpu','open-document'])state=applyHardwareAction(s.id,state,action).state;
+  const record=normalizeLabRecord(s,{state});
+  setExperimentDraft(s,record,{predict:'Disconnecting the PC end will remove the picture while the monitor end remains fitted.'});
+  assert.equal(startExperiment(s,record,state).ok,true);
+  const before=observationSnapshot(s,state);
+  state=applyHardwareAction(s.id,state,'disconnect-video').state;
+  const pcLoose=observationSnapshot(s,state);
+  assert.notDeepEqual(pcLoose,before);
+  assert.match(pcLoose.at(-1)[1],/PCout MONin/);
+  assert.equal(state.booted,true,'external HDMI work does not erase a running OS');
+  assert.equal(state.documentOpened,false);
+  captureExperimentResult(s,record,state);
+  const restored=normalizeLabRecord(s,JSON.parse(JSON.stringify({...record,state})));
+  assert.deepEqual(readExperiments(restored).draft.after,pcLoose);
+  state=applyHardwareAction(s.id,state,'video-gpu').state;
+  state=applyHardwareAction(s.id,state,'disconnect-signal').state;
+  const monitorLoose=observationSnapshot(s,state);
+  assert.match(monitorLoose.at(-1)[1],/PCin MONout/);
+  assert.notDeepEqual(monitorLoose,pcLoose);
+  assert.ok([...before,...pcLoose,...monitorLoose].every(([label,value])=>label.length<=32&&value.length<=40));
+  assert.ok(restored.events.every(event=>event.message.length<=600));
+  const ordinary=observationSnapshot(s,{...initialHardwareState(s.id),videoPort:'gpu',pcVideoConnected:false,documentOpened:true});
+  assert.match(ordinary.find(([label])=>label==='Display signal path')[1],/PC out \/ MON in/);
+  assert.match(ordinary.find(([label])=>label==='Startup and document')[1],/document closed/);
+});
