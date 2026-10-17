@@ -73,8 +73,8 @@ function testMatrix(id, state) {
   switch (normalize(id)) {
     case 'NET201': return [
       {label:'Workstation address matches the configuration sheet',ok:state.ip==='10.24.8.25' && state.mask==='255.255.255.0'},
-      {label:'Gateway reachable at 10.24.8.1',ok:state.ip==='10.24.8.25' && state.mask==='255.255.255.0' && state.gateway==='10.24.8.1'},
-      {label:'learn.school.test resolves through school DNS',ok:state.ip==='10.24.8.25' && state.gateway==='10.24.8.1' && state.dns==='10.24.8.53'}
+      {label:'Default gateway matches the assigned VLAN 8 router',ok:state.ip==='10.24.8.25' && state.mask==='255.255.255.0' && state.gateway==='10.24.8.1'},
+      {label:'learn.school.test resolves through school DNS',ok:state.ip==='10.24.8.25' && state.mask==='255.255.255.0' && state.dns==='10.24.8.53'}
     ];
     case 'NET202': return [
       {label:'Internal share is reachable on Staff-Lab',ok:state.network==='Staff-Lab'},
@@ -213,7 +213,7 @@ export function getWorkspaceMission(id, savedState) {
   const target=currentCheck<0?null:coach?.checks[currentCheck];
   const changed=(Number(state.workspaceEdits)||0)>0;
   const stage=complete?'Verified':tested?'Troubleshoot':changed?'Ready to test':'Investigate';
-  const next=complete?'Choose Check & finish, then Check the original task. Explain which results support your decision in your report.':currentCheck<0?'Your saved choices are ready to check. Run the workspace test to gather evidence.':target?.[0] || 'Inspect the request, apply a change, and test its effect.';
+  const next=complete?'Choose Check & explain, then Check the original task. Explain which results support your decision in your report.':currentCheck<0?'Your saved choices are ready to check. Run the workspace test to gather evidence.':target?.[0] || 'Inspect the request, apply a change, and test its effect.';
   return {
     stage,tested,passed,total:checks.length,complete,currentCheck,
     attempts:Math.max(0,Number(state.checkRuns)||0),
@@ -280,13 +280,87 @@ const WORKSPACE_GUIDES = {
 function workspaceGuide(id) {
   const steps = WORKSPACE_GUIDES[normalize(id)];
   if (!steps) return '';
-  return `<section class="ws-start" aria-label="How to use this lab"><h3>How to use this lab <span>Keep these 3 steps in view</span></h3><div class="ws-start-content"><ol>${steps.map(([title,text])=>`<li><b>${esc(title)}</b><span>${esc(text)}</span></li>`).join('')}</ol><p>Save applies your choices to this practice lab. Test checks them. Neither button submits work to a teacher. When you are ready, use Check &amp; finish on this page.</p></div></section>`;
+  return `<section class="ws-start" aria-label="How to use this lab"><h3>How to use this lab <span>Keep these 3 steps in view</span></h3><div class="ws-start-content"><ol>${steps.map(([title,text])=>`<li><b>${esc(title)}</b><span>${esc(text)}</span></li>`).join('')}</ol><p>Save applies your choices to this practice lab. Test checks them. Neither button submits work to a teacher. When you are ready, use Check &amp; explain on this page.</p></div></section>`;
+}
+
+const WORKSPACE_TOOLS = {
+  NET201:{title:'Workstation diagnostic console',commands:['ipconfig','ping 10.24.8.1','nslookup learn.school.test']},
+  NET202:{title:'Shared-folder access console',commands:['ipconfig','net use','read handout','write handout']},
+  NET203:{title:'Recovery and service console',commands:['boot status','service school-update','list classroom-files']},
+  AI301:{title:'Fictional response preview',commands:['preview response','inspect privacy']},
+  AI302:{title:'Evidence review desk',commands:['open source','compare tickets']},
+  AI303:{title:'Code-review request console',commands:['inspect key','inspect query','request own','request other']},
+  SEC401:{title:'Message inspection tools',commands:['inspect sender','inspect link','inspect headers']},
+  SEC402:{title:'Gateway investigation console',commands:['show listeners','probe portal','inspect source']},
+  SEC403:{title:'Practice application inspector',commands:['show session','inspect rule']}
+};
+const inspectionViews = new WeakMap();
+const address = value => typeof value==='string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(value) && value.split('.').every(part=>Number(part)<=255) ? value : 'Invalid address';
+
+/** Fixed local observations only: no shell, code execution, network, or state mutation. */
+export function workspaceDiagnostic(id, savedState, command) {
+  const code=normalize(id), tools=WORKSPACE_TOOLS[code];
+  if (!tools) return 'No software inspection tools are available for this case.';
+  if (typeof command!=='string' || command.length>96 || /[\r\n]/.test(command)) return 'Use one of the displayed practice tools. Real targets and other commands are outside this simulation.';
+  const key=command.trim().toLowerCase().replace(/\s+/g,' ');
+  if (key==='help') return `Available practice tools: ${tools.commands.join(' · ')}. Inspect the saved settings; save changes before inspecting again. These tools do not complete the workspace test.`;
+  if (!tools.commands.includes(key)) return 'Use one of the displayed practice tools. Real targets and other commands are outside this simulation.';
+  const state=normalizeWorkspaceState(id,savedState);
+  let output='';
+  if (code==='NET201') {
+    const local=state.ip==='10.24.8.25' && state.mask==='255.255.255.0';
+    if (key==='ipconfig') output=`LAB-PC-12 · saved adapter configuration\nIPv4: ${address(state.ip)}\nSubnet mask: ${address(state.mask)}\nDefault gateway: ${address(state.gateway)}\nDNS: ${address(state.dns)}\nPhysical link: up · VLAN 8\nAn active link does not prove that the configuration is correct.`;
+    if (key==='ping 10.24.8.1') output=local?'Simulated ping 10.24.8.1\nReply from 10.24.8.1: bytes=32 time=1ms TTL=64\nPackets: sent=4 received=4 lost=0\nThis local-subnet reply does not prove the default gateway field or DNS is configured correctly. Compare ipconfig with the setup sheet.':'Simulated ping 10.24.8.1\nDestination unreachable in this fixed VLAN 8 practice model.\nPackets: sent=4 received=0 lost=4\nCompare the workstation address and subnet mask with the setup sheet.';
+    if (key==='nslookup learn.school.test') output=local && state.dns==='10.24.8.53'?'Simulated DNS lookup\nServer: 10.24.8.53\nName: learn.school.test\nAddress: 10.24.8.80\nThe local fictional DNS server answers. This does not test the default gateway or prove that a web page has opened.':'Simulated DNS lookup\nNo answer for learn.school.test.\nCheck the saved workstation address, subnet mask, and preferred DNS server in this fixed practice model. A successful ping alone does not prove name resolution.';
+  } else if (code==='NET202') {
+    const reachable=state.network==='Staff-Lab', folder=state.folder==='Project Materials' || state.folder==='All folders';
+    const readable=reachable && folder && ['Read','Modify','Full control'].includes(state.permission);
+    if (key==='ipconfig') output=`Training adapter\nNetwork: ${state.network}\nLink: connected\nInternal staff share route: ${reachable?'available':'isolated by guest network policy'}\nThe account in this console is fictional teacher-training.`;
+    if (key==='net use') output=`Share policy preview\nNetwork: ${state.network}\nShare scope: ${state.folder}\nPermission: ${state.permission}\nProject Materials: ${reachable && folder?'reachable':'not reachable'}\nThis preview does not change permissions.`;
+    if (key==='read handout') output=readable?'OPEN /shares/project-materials/handout.txt\nFictional handout: draw the workstation, switch, gateway, and DNS path.\nResult: read allowed. Check whether the share also exposes unrelated folders or unnecessary edit rights.':'OPEN /shares/project-materials/handout.txt\nResult: unavailable or access denied.\nCheck the network path, shared folder, and read permission separately.';
+    if (key==='write handout') output=reachable && folder && ['Modify','Full control'].includes(state.permission)?'SIMULATED WRITE /shares/project-materials/handout.txt\nResult: edit allowed. No file was changed.\nThe teacher requested reading a handout; editing is unnecessary access.':'SIMULATED WRITE /shares/project-materials/handout.txt\nResult: edit denied. No file was changed.\nA read-only task should not require editing. Test reading separately.';
+  } else if (code==='NET203') {
+    if (key==='boot status') output=`STUDIO-PC-04 · simulated startup\n${state.recovery==='Roll back KB-LAB-17'?'Last known good update restored. OS reaches the classroom desktop.':state.recovery==='Reset and erase files'?'Reset reaches a fresh desktop, but classroom documents have been erased.':'BOOT-31: startup still stops after KB-LAB-17.'}\nThis inspection does not run the full recovery test.`;
+    if (key==='service school-update') output=`SERVICE: School Update\nStatus: ${state.status}\nStartup type: ${state.startup}\n${state.status==='Running'?'The service is running now.':'The service is not running now.'}\n${state.startup==='Automatic'?'It is configured to start automatically after a restart.':'It is not configured for automatic startup.'}`;
+    if (key==='list classroom-files') output=state.recovery==='Reset and erase files'?'Classroom Documents\nNo files remain after the simulated erase-and-reset choice.\nThe task requires preserving existing work.':'Classroom Documents\nlesson-plan.docx · project-notes.txt · class-slides.pptx\nAll three fictional files are preserved by the selected recovery plan.';
+  } else if (code==='AI301') {
+    if (key==='inspect privacy') output=`Local rule review · saved prompt\nFictional context stated: ${promptChecks(state.prompt)[0].ok?'yes':'not detected'}\nPrivate-data warning: ${promptChecks(state.prompt)[1].ok?'no listed pattern detected':'listed sensitive pattern detected'}\nThis limited rule checker cannot prove the absence of personal information. Review the complete prompt yourself.`;
+    if (key==='preview response') output=promptChecks(state.prompt).every(check=>check.ok)?'SCRIPTED PRACTICE RESPONSE · not a live AI model\nA computer network connects devices so they can exchange data and share resources.\nPractice: which device forwards traffic between networks?\nCompare this explanation with your class notes before using it.':'SCRIPTED PRACTICE RESPONSE · not a live AI model\nThis saved prompt still needs review. Inspect its privacy patterns and check whether it asks for a short explanation, practice question, and comparison with class notes. No prompt is sent anywhere.';
+  } else if (code==='AI302') {
+    if (key==='open source') output='SOURCE CARD v4.2\nCheck the display cable first. Record the test result.\nNo supplied source establishes a password-expiration rule or a judgement about a learner’s effort. Compare each claim with what the source actually states.';
+    if (key==='compare tickets') output='SIDE-BY-SIDE TECHNICAL EVIDENCE\nTicket A: monitor has power; HDMI cable disconnected.\nTicket B: monitor has power; HDMI cable disconnected.\nThe names differ; the technical symptoms are the same. Choose categories from evidence, then save your review.';
+  } else if (code==='AI303') {
+    if (key==='inspect key') output=state.secret==='environment'?'MISSING-KEY PREVIEW\nKey is read from environment configuration. A missing key raises an error before use.\nNo real secret or environment is read in this lab.':'SOURCE PREVIEW\nA placeholder key is embedded in the example source. Real embedded keys can leak when source is shared.\nNo real secret is present or used.';
+    if (key==='inspect query') output=state.query==='parameterized'?'QUERY PREVIEW\nSQL instructions use a fixed placeholder; record_id is passed as a separate parameter.\nNo database or submitted SQL is executed.':'QUERY PREVIEW\nThe draft concatenates record_id into the SQL instruction string. Input can change the query structure.\nNo database or submitted SQL is executed.';
+    if (key==='request own') output='SIMULATED GET /records/101 · learner-101\nHTTP 200 · the owner’s fictional practice record is available.\nTest another user as well; a successful owner request alone cannot establish safe authorization.';
+    if (key==='request other') output=state.authorization==='owner'?'SIMULATED GET /records/102 · learner-101\nHTTP 403 · the selected ownership check denies another learner’s fictional record.':'SIMULATED GET /records/102 · learner-101\nHTTP 200 · another learner’s fictional record is exposed.\nSigning in or hiding a link does not enforce ownership on the server.';
+  } else if (code==='SEC401') {
+    const urgent=state.message!=='routine';
+    if (key==='inspect sender') output=`SELECTED MESSAGE · sender inspection\nFrom: ${urgent?'verify@school-account-check.test':'helpdesk@school.test'}\nClaimed school domain: school.test\n${urgent?'The displayed sender domain differs from the claimed school domain.':'The displayed sender matches the school.test training domain. That alone does not prove a real message is safe.'}`;
+    if (key==='inspect link') output=`SELECTED MESSAGE · text-only destination\n${urgent?'https://school-account-check.test/verify':'https://portal.school.test/checklist'}\n${urgent?'The destination requests credentials outside the school.test portal.':'The displayed destination is a fictional school portal; open real resources through an approved bookmark.'}\nNo link was opened and no request was made.`;
+    if (key==='inspect headers') output=`SIMULATED MESSAGE HEADERS\nFrom: ${urgent?'verify@school-account-check.test':'helpdesk@school.test'}\nReply-To: ${urgent?'verify@school-account-check.test':'helpdesk@school.test'}\nAuthentication results: not supplied by this training message\nA sender address or padlock is not proof of trust. Use the supplied message evidence and approved reporting process.`;
+  } else if (code==='SEC402') {
+    if (key==='show listeners') output=`SAVED GATEWAY POLICY · fictional listeners\nTCP 23 / Telnet: ${state.port==='23'?'closed':'open'}\nTCP 443 / learning portal: ${state.keepHttps && state.port!=='443'?'available':'unavailable'}\nUDP 53 / DNS: ${state.port==='53'?'closed':'available'}\nInspect the effect on the needed service as well as the suspicious activity.`;
+    if (key==='probe portal') output=state.keepHttps && state.port!=='443'?'SIMULATED PORTAL PROBE\nHTTPS / TCP 443 → HTTP 200\nThe classroom learning portal remains available in the selected policy. This does not prove that the suspicious source was contained.':'SIMULATED PORTAL PROBE\nHTTPS / TCP 443 → unavailable\nThe selected response interrupts the learning portal. Review which service the task requires preserving.';
+    if (key==='inspect source') output=`CORRELATED SOURCE REVIEW\n198.51.100.24: 18 failures at 09:12, then success at 09:13.\nSaved block: ${address(state.source)}\nSuspicious source contained: ${state.source==='198.51.100.24'?'yes':'no'}\nDocumentation addresses and synthetic events only. The logs do not establish a person’s identity.`;
+  } else if (code==='SEC403') {
+    if (key==='show session') output='FICTIONAL SESSION\nActive account: learner-101\nOwn record: 101 · supplied test record: 102\nInspecting the session does not request a record or reproduce a defect. Use the scoped record buttons for those observations.';
+    if (key==='inspect rule') output=`CURRENT ACCESS RULE\n${state.patch==='owner'?'The simulated server compares the record owner with learner-101 before returning a record.':state.patch==='hidden'?'Other record links are hidden, but the simulated server still returns records without checking ownership.':'The simulated server returns records to a signed-in user without checking ownership.'}\nScope acknowledged: ${state.scope?'yes':'no'}. Run the scoped requests and full test separately.`;
+  }
+  return output.slice(0,600);
+}
+
+function inspectionPanel(id) {
+  const tools=WORKSPACE_TOOLS[normalize(id)];
+  if (!tools) return '';
+  return `<section class="ws-inspector" aria-label="Hands-on practice tools"><div class="ws-inspector-heading"><div><span class="ws-section-label">TRY A TOOL · READ THE RESULT</span><h3>${esc(tools.title)}</h3></div><span class="ws-simulation-label">LOCAL SIMULATION</span></div><p>Tap a tool or type a command below. It reads your <b>saved choices</b>; save changes first. Inspecting does not change settings, complete a test, or submit work.</p><div class="ws-tool-buttons">${tools.commands.map(command=>`<button class="ws-button ws-button-secondary" type="button" data-inspect="${esc(command)}">${esc(command)}</button>`).join('')}</div><form class="ws-command-form" data-inspect-form><label class="ws-field"><span>Practice command <small>Use a tool above or type help. No real targets or personal information.</small></span><input name="command" maxlength="96" placeholder="help" autocomplete="off" spellcheck="false" autocapitalize="none"></label><button class="ws-button" type="submit">Run practice tool</button></form><pre class="ws-inspector-output" data-inspection-output role="status" aria-live="polite" aria-atomic="true">Choose a tool to inspect the current practice setup. No system command or network request runs.</pre></section>`;
 }
 
 export function applyWorkspaceAction(id, previous, action, value) {
   const state = normalizeWorkspaceState(id,previous);
   const data = isRecord(value) ? value : {};
   const code = normalize(id);
+  if (action==='inspect-command') return outcome(state,workspaceDiagnostic(id,state,data.command));
   const save = (properties, message) => { Object.assign(state, properties); state.tested=false; state.results=[]; state.workspaceEdits+=1; return outcome(normalizeWorkspaceState(id,state),message); };
   if (action==='save-network' && code==='NET201') {
     const values=Object.fromEntries(['ip','mask','gateway','dns'].map(key=>[key,typeof data[key] === 'string' ? data[key].trim() : '']));
@@ -320,7 +394,7 @@ export function applyWorkspaceAction(id, previous, action, value) {
     state.results=testMatrix(id,state); state.tested=true; state.checkRuns+=1;
     const passed=state.results.length>0 && state.results.every(result=>result.ok);
     const mission=getWorkspaceMission(id,state);
-    return outcome(state,passed?`All ${mission.total} practice checks passed. Choose Check & finish, check the original task, then finish your report.`:`${mission.passed} of ${mission.total} checks pass. ${mission.next} Save your change and test again.`,passed?'success':'warning');
+    return outcome(state,passed?`All ${mission.total} practice checks passed. Choose Check & explain, check the original task, then finish your report.`:`${mission.passed} of ${mission.total} checks pass. ${mission.next} Save your change and test again.`,passed?'success':'warning');
   }
   return outcome(state,'That action is not available in this workspace.','warning');
 }
@@ -346,13 +420,23 @@ const run = (label='Test my choices') => `<button class="ws-button ws-button-tes
 function results(state) {
   if (!state.tested) return '<div class="ws-test-placeholder"><span class="ws-status-dot" aria-hidden="true"></span><span>No current test results. Save your choices, then use the Test or Check button. Test again after every change.</span></div>';
   const complete=state.results.length>0 && state.results.every(item=>item.ok);
-  return `<section class="ws-test-results" aria-label="Simulation test results"><h3>Your latest test results</h3><p>${complete?'All checks passed. Choose “Check & finish”, then “Check the original task”.':'A “Try again” result is a clue. Change your choices, save, and test again.'}</p><ul>${state.results.map(item=>`<li class="${item.ok?'ws-pass':'ws-fail'}"><span>${item.ok?'Passed':'Try again'}</span>${esc(item.label)}</li>`).join('')}</ul></section>`;
+  return `<section class="ws-test-results" aria-label="Simulation test results"><h3>Your latest test results</h3><p>${complete?'All checks passed. Choose “Check & explain”, then “Check the original task”.':'A “Try again” result is a clue. Change your choices, save, and test again.'}</p><ul>${state.results.map(item=>`<li class="${item.ok?'ws-pass':'ws-fail'}"><span>${item.ok?'Passed':'Try again'}</span>${esc(item.label)}</li>`).join('')}</ul></section>`;
 }
 function terminal(lines) { return `<div class="ws-terminal" aria-label="Simulated console"><div class="ws-console-heading">LOCAL SIMULATION OUTPUT</div>${lines.map(line=>`<div>${esc(line)}</div>`).join('')}</div>`; }
+function recoveryConsole(state) {
+  const recovered=state.recovery==='Roll back KB-LAB-17', erased=state.recovery==='Reset and erase files';
+  return terminal([
+    recovered?'BOOT      Classroom desktop loaded after rollback':erased?'BOOT      Fresh desktop loaded after reset':'BOOT-31   Startup blocked after KB-LAB-17',
+    'Snapshot  Last known good state available',
+    erased?'Files     Classroom documents erased':'Files     Classroom documents intact',
+    `Service   School Update: ${state.status} / ${state.startup}`,
+    'Preview   Saved choices only; run the full test separately'
+  ]);
+}
 function network(id,state) {
-  if (id==='NET201') return `<div class="ws-topology" aria-label="Lab network diagram"><div><span aria-hidden="true">▣</span><b>LAB-PC-12</b><small>${esc(state.ip)}</small></div><i aria-hidden="true"></i><div><span aria-hidden="true">▥</span><b>LAB SWITCH</b><small>Link up · VLAN 8</small></div><i aria-hidden="true"></i><div><span aria-hidden="true">◉</span><b>GATEWAY</b><small>10.24.8.1</small></div><div class="ws-dns-node"><span aria-hidden="true">⌘</span><b>SCHOOL DNS</b><small>10.24.8.53</small></div></div><div class="ws-two-col"><form class="ws-panel" data-form="save-network"><h3>Change network settings</h3><div class="ws-fields">${input('ip','IP address',state.ip)}${input('mask','Subnet mask',state.mask)}${input('gateway','Default gateway',state.gateway)}${input('dns','Preferred DNS server',state.dns)}</div>${submit('Save network settings')}</form><section class="ws-panel"><div class="ws-section-label">CONFIGURATION SHEET / VLAN 8</div><h3>Library workstation</h3><dl class="ws-key-values"><dt>Workstation</dt><dd>10.24.8.25</dd><dt>Subnet mask</dt><dd>255.255.255.0</dd><dt>Gateway</dt><dd>10.24.8.1</dd><dt>DNS</dt><dd>10.24.8.53</dd><dt>Portal</dt><dd>learn.school.test</dd></dl>${run('Test connection')}${terminal(state.tested?state.results.map(r=>`${r.ok?'OK  ':'FAIL'} ${r.label}`):['Adapter connected · physical link available','Waiting for a diagnostic run…'])}</section></div>`;
-  if (id==='NET202') return `<div class="ws-two-col"><form class="ws-panel" data-form="save-access"><h3>Choose network and folder access</h3><div class="ws-fields">${select('network','Connected network',state.network,['School-Guest','Staff-Lab'])}${select('folder','Folder to share',state.folder,['All folders','Project Materials','No folders'])}${select('permission','What the teacher can do',state.permission,['Full control','Modify','Read','None'])}</div>${submit('Save access settings')}</form><section class="ws-panel"><div class="ws-section-label">ACCESS REQUEST</div><h3>Project Materials</h3><div class="ws-folder" aria-hidden="true">▱</div><p>Verified teacher account → read the project handout.</p><p class="ws-muted">Guest clients are isolated from internal shares. The teacher does not need editing rights or unrelated folders.</p>${run('Test teacher access')}${terminal(state.tested?state.results.map(r=>`${r.ok?'ALLOW / OK':'REVIEW    '} ${r.label}`):['Identity: teacher-training (verified)','Resource: /shares/project-materials','Requested operation: read'])}</section></div>`;
-  return `<div class="ws-two-col"><section class="ws-panel"><div class="ws-section-label">RECOVERY CONSOLE / STUDIO-PC-04</div><h3>Startup stopped</h3>${terminal(['BOOT-31  Failed after KB-LAB-17','Snapshot  Last known good state available','Files     Classroom documents intact','Service   School Update: Stopped / Disabled'])}<p class="ws-muted">This console simulates fixed recovery choices. It does not run commands on your device.</p></section><form class="ws-panel" data-form="save-recovery"><h3>Choose a recovery plan</h3>${select('recovery','Update recovery action',state.recovery,['Keep current update','Roll back KB-LAB-17','Reset and erase files'])}${select('status','School Update service',state.status,['Stopped','Running'])}${select('startup','How the service starts after a restart',state.startup,['Disabled','Manual','Automatic'])}${submit('Save recovery plan')}${run('Test startup and updates')}</form></div>`;
+  if (id==='NET201') return `<div class="ws-topology" aria-label="Lab network diagram"><div><span aria-hidden="true">▣</span><button type="button" class="ws-device-control" data-inspect="ipconfig">Inspect LAB-PC-12</button><small>${esc(state.ip)}</small></div><i aria-hidden="true"></i><div><span aria-hidden="true">▥</span><b>LAB SWITCH</b><small>Link up · VLAN 8</small></div><i aria-hidden="true"></i><div><span aria-hidden="true">◉</span><button type="button" class="ws-device-control" data-inspect="ping 10.24.8.1">Test gateway</button><small>10.24.8.1</small></div><div class="ws-dns-node"><span aria-hidden="true">⌘</span><button type="button" class="ws-device-control" data-inspect="nslookup learn.school.test">Query school DNS</button><small>10.24.8.53</small></div></div><div class="ws-two-col"><form class="ws-panel" data-form="save-network"><h3>Change network settings</h3><div class="ws-fields">${input('ip','IP address',state.ip)}${input('mask','Subnet mask',state.mask)}${input('gateway','Default gateway',state.gateway)}${input('dns','Preferred DNS server',state.dns)}</div>${submit('Save network settings')}</form><section class="ws-panel"><div class="ws-section-label">CONFIGURATION SHEET / VLAN 8</div><h3>Library workstation</h3><dl class="ws-key-values"><dt>Workstation</dt><dd>10.24.8.25</dd><dt>Subnet mask</dt><dd>255.255.255.0</dd><dt>Gateway</dt><dd>10.24.8.1</dd><dt>DNS</dt><dd>10.24.8.53</dd><dt>Portal</dt><dd>learn.school.test</dd></dl>${run('Test connection')}${terminal(state.tested?state.results.map(r=>`${r.ok?'OK  ':'FAIL'} ${r.label}`):['Adapter connected · physical link available','Waiting for a diagnostic run…'])}</section></div>`;
+  if (id==='NET202') return `<div class="ws-two-col"><form class="ws-panel" data-form="save-access"><h3>Choose network and folder access</h3><div class="ws-fields">${select('network','Connected network',state.network,['School-Guest','Staff-Lab'])}${select('folder','Folder to share',state.folder,['All folders','Project Materials','No folders'])}${select('permission','What the teacher can do',state.permission,['Full control','Modify','Read','None'])}</div>${submit('Save access settings')}</form><section class="ws-panel"><div class="ws-section-label">ACCESS REQUEST</div><h3>Project Materials</h3><button type="button" class="ws-folder-control" data-inspect="read handout"><span aria-hidden="true">▱</span>Open handout preview</button><p>Verified teacher account → read the project handout.</p><p class="ws-muted">Guest clients are isolated from internal shares. The teacher does not need editing rights or unrelated folders.</p>${run('Test teacher access')}${terminal(state.tested?state.results.map(r=>`${r.ok?'ALLOW / OK':'REVIEW    '} ${r.label}`):['Identity: teacher-training (verified)','Resource: /shares/project-materials','Requested operation: read'])}</section></div>`;
+  return `<div class="ws-two-col"><section class="ws-panel"><div class="ws-section-label">RECOVERY CONSOLE / STUDIO-PC-04</div><h3>Saved recovery preview</h3>${recoveryConsole(state)}<p class="ws-muted">This console simulates fixed recovery choices. It does not run commands on your device.</p></section><form class="ws-panel" data-form="save-recovery"><h3>Choose a recovery plan</h3>${select('recovery','Update recovery action',state.recovery,['Keep current update','Roll back KB-LAB-17','Reset and erase files'])}${select('status','School Update service',state.status,['Stopped','Running'])}${select('startup','How the service starts after a restart',state.startup,['Disabled','Manual','Automatic'])}${submit('Save recovery plan')}${run('Test startup and updates')}</form></div>`;
 }
 function ai(id,state) {
   if (id==='AI301') return `<div class="ws-two-col"><section class="ws-panel ws-note"><div class="ws-section-label">PROMPT REVIEW / PRIVACY FIRST</div><h3>Describe the task, protect the learner.</h3><p>Build a prompt for an imaginary learner. Ask for a short explanation of networks, one practice question, and a comparison with class notes.</p><ul><li>Leave out names, email addresses, grades, and health information.</li><li>State the topic and the kind of help needed.</li><li>Keep a human verification step.</li></ul><p class="ws-muted">This is a transparent rule checker. It cannot judge all privacy risks or predict an AI model’s answer.</p></section><form class="ws-panel" data-form="save-prompt"><h3>Prompt workspace</h3><label class="ws-field"><span>Your revised prompt</span><textarea name="prompt" rows="9" maxlength="3000">${esc(state.prompt)}</textarea></label>${submit('Save prompt')}${run('Check my prompt')}</form></div>`;
@@ -383,7 +467,28 @@ export function renderWorkspace(root, scenario, state, onAction) {
   state = normalizeWorkspaceState(scenario.id, state);
   const code=normalize(scenario.id);
   const body=code.startsWith('NET')?network(code,state):code.startsWith('AI')?ai(code,state):code.startsWith('SEC')?security(code,state):'<p>This case is available in the hardware bench.</p>';
-  root.innerHTML=`<div class="ws-desktop"><div class="ws-windowbar"><span class="ws-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(scenario.id)} <span aria-hidden="true">/</span> ${esc(scenario.title)}</span><span class="ws-local-badge">PRACTICE ONLY</span></div><div class="ws-body">${workspaceGuide(scenario.id)}${missionPanel(scenario.id,state)}${body}${results(state)}</div></div>`;
+  root.innerHTML=`<div class="ws-desktop"><div class="ws-windowbar"><span class="ws-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(scenario.id)} <span aria-hidden="true">/</span> ${esc(scenario.title)}</span><span class="ws-local-badge">PRACTICE ONLY</span></div><div class="ws-body">${workspaceGuide(scenario.id)}${missionPanel(scenario.id,state)}${body}${inspectionPanel(scenario.id)}${results(state)}</div></div>`;
+  const previous=inspectionViews.get(root), signature=JSON.stringify(state);
+  const display=root.querySelector('[data-inspection-output]');
+  const commandInput=root.querySelector('[data-inspect-form] [name="command"]');
+  if (previous?.id===code && previous.signature===signature && display) {
+    display.textContent=previous.output;
+    if (commandInput) commandInput.value=previous.command;
+  }
+  const inspect=command=>{
+    const output=workspaceDiagnostic(scenario.id,state,command);
+    inspectionViews.set(root,{id:code,signature,output,command:typeof command==='string'?command.slice(0,96):''});
+    if (display) display.textContent=output;
+    onAction('inspect-command',{command});
+  };
+  root.querySelectorAll('[data-inspect]').forEach(button=>button.addEventListener('click',()=>{
+    if (commandInput) commandInput.value=button.dataset.inspect;
+    inspect(button.dataset.inspect);
+  }));
+  root.querySelector('[data-inspect-form]')?.addEventListener('submit',event=>{
+    event.preventDefault();
+    inspect(commandInput?.value || '');
+  });
   root.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>onAction(button.dataset.action,button.dataset.value)));
   root.querySelector('[data-scope]')?.addEventListener('change',event=>onAction('acknowledge-scope',event.target.checked));
   root.querySelectorAll('[data-form]').forEach(form=>form.addEventListener('submit',event=>{

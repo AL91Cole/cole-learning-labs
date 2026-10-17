@@ -14,11 +14,25 @@ Created by Mx. Cole, the project supports a future goal of teaching Computer Tec
 
 Grade filters suggest a starting challenge; they do not establish readiness or prevent a teacher from selecting another activity with support.
 
-## One page for each investigation
+## One investigation, three tabs
 
-The request, interactive workbench, notes, and finish checks remain visible together in numbered sections. Begin with the request, use the controls described beside the workbench, then explain and check the result. Learners can scroll naturally or use section shortcuts to move around the same page without hiding sections or losing their work. They do not need to open a separate guide to learn the basic controls.
+Each lab stays on one page with three accessible tabs. The selected section is visible; switching tabs preserves the same workbench and form controls rather than reloading them. Questions, notes, equipment state, and unapplied settings remain available when a learner returns. Basic instructions appear beside the controls rather than requiring a separate guide.
 
-Model the page once before independent work: point out the request, demonstrate one labeled control, show where to write notes, and identify the finish check and report controls. Optional clues remain available within the activity. Teacher rubrics and answer keys remain outside the public student lab.
+1. **Request & clues.** Read the original task, ask the fictional requester a question, inspect clues, and write a hypothesis. Students may type their own question or choose a starter. Answers come from authored fictional case facts and supported simulation observations on the device; no external AI is contacted. Unsupported wording receives a fallback rather than an invented answer. Encourage learners to try a clearer question or return to the supplied evidence.
+2. **Workbench & hypothesis testing.** Inspect, make one change, save edited software settings, and observe what happens. Quick inspection buttons make tools available without command memorization. Use the equipment's power/startup controls where needed, then run the hypothesis test. The test checks the current simulated setup; it does not judge the wording of the hypothesis or establish its causal explanation. The learner must decide what the evidence supports.
+3. **Check & explain.** Verify the original task, explain the change and test evidence, reflect on the hypothesis, and review the report. Simulation success is not an automatic grade or an automatic submission.
+
+Questions and replies join the bounded action log and report. They follow the same private-session or optional device-saving choice as other work, so the question box also needs the fictional-information rule. Avoid entering real names, email addresses, student IDs, passwords, or confidential incidents.
+
+Model the tabs once before independent work: ask one question, show where its reply appears, demonstrate a labeled inspection tool, and point out the hypothesis and report controls. Switch away from an unapplied setting and back to show that the draft remains. Teacher rubrics and answer keys remain outside the public student lab.
+
+## Equipment and software tools
+
+The hardware bench supports a two-step video-cable move: pick up the virtual cable, then choose the labeled port. Keyboard and touch controls provide alternatives to dragging or selecting a small diagram part. The power, display, startup/POST, and drive instruments show the current modeled state. Inspecting a readout does not repair a component or earn completion. Internal changes still require the virtual safe-power sequence; learners never open or unplug their real Chromebook or tablet.
+
+The software consoles accept only the displayed fixed practice commands and targets. A learner can choose a quick button or type a supported command such as `ipconfig`, `ping 10.24.8.1`, or `nslookup learn.school.test` in the network case. Responses follow saved simulation settings; save edited values before inspecting again. These tools do not execute commands, contact a network, or change the learner's device. A successful local ping does not prove that every required field is correct, that DNS works, or that the original task is delivered.
+
+Other workspaces provide shared-folder read/write previews, recovery and service status, scripted AI-response and source previews, simulated code-request results, message sender/destination/header inspection, and defensive gateway probes. Keep inspection separate from the full test: reading a result does not mark the workspace tested, reproduce the scoped authorization defect, or submit work. Software inspections preserve unapplied form entries. After a meaningful change, learners need a fresh test and an explanation.
 
 ## Four pathways
 
@@ -63,7 +77,7 @@ The roster and reports contain learner-reported work. Browser-local state and sh
 
 ## Use independent reports now
 
-Independent labs require no classroom account. Progress remains in the current browser profile and origin. Students can copy or download a `.txt` report and submit it manually through Google Classroom, Microsoft Teams, or the school’s chosen process. There is no automatic LMS connection. If copying is blocked, use download; retain the export until receipt is confirmed.
+Independent labs require no classroom account. Work starts in the current page's memory; saving and resuming an unencrypted copy on the device require an explicit choice. Students can review and copy or download a `.txt` report, or use the optional school-approved teacher-key encrypted report process, and submit manually through Google Classroom, Microsoft Teams, or the school’s chosen system. There is no automatic LMS connection. If copying is blocked, use download; retain the export until receipt is confirmed. Questions and replies may appear in reports, so review them along with notes before export.
 
 Use the canonical HTTPS `www.colelearninglabs.com` address consistently. Preview, `pages.dev`, apex, and `www` addresses have separate storage. Changing devices/profiles, clearing site data, or blocking storage can remove access to local work. A cache refresh is different from deleting saved site data. Export before troubleshooting or leaving a shared profile, then reset the needed work before the next learner uses that profile. Local storage is not a long-term gradebook.
 
@@ -83,8 +97,8 @@ The separate prepared implementation uses `CLASSROOM_ENABLED=true`, a migrated `
 
 The following describes the prepared workflow for a possible future reviewed release, not a current enrollment option:
 
-1. The verified teacher creates a class and selects assignments from the 15 supported labs. Distribute its code and teacher-assigned aliases through the classroom process.
-2. A learner explicitly joins. An alias is a display label, not verified identity or a recovery credential. A browser has one class session; a lost or logged-out session cannot be recovered using the alias or code. Use separate assigned profiles and export important work.
+1. The verified teacher creates a class and selects assignments from the 15 supported labs. Distribute its code through the approved classroom process.
+2. A learner explicitly joins using only that code. The prepared server generates a random neutral alias; a learner does not supply a name, email, school ID, or chosen alias. An alias is a display label, not verified identity or a recovery credential. A browser has one class session; a lost or logged-out session cannot be recovered using the alias or code. Use separate assigned profiles and export important work.
 3. Assigned drafts can then be shared from the lab. A visible connection explains the classroom and save state. Classroom work uses a separate local namespace from independent practice; independent records are not silently imported. The portal’s independent-labs choice turns off the active sharing flag while preserving saved work.
 4. The teacher reviews class progress and opens work details. The roster refreshes about every 15 seconds only while the real, authorized teacher view is open and visible. Pause/resume is available. Polling updates summaries and rows while preserving typed grading feedback; work details refresh on request.
 5. A learner submission captures a fixed snapshot of the saved version. Later draft changes do not overwrite it or its teacher grade. The teacher reviews evidence, enters a grade/feedback manually, and can return the version for revision. Version checks reject stale changes rather than silently replacing another view’s work.
@@ -96,13 +110,13 @@ The prepared code’s 90-day class expiry is a development default, not an appro
 
 ## Device, accessibility, and school IT preparation
 
-The responsive lab includes a PC close-up view, labeled component selector, section shortcuts, keyboard alternatives, larger text, and controls sized for touch. Inputs use at least 16px text. Use these supports alongside vocabulary help, paired discussion, extra time, or an oral explanation.
+The responsive lab includes a PC close-up view, labeled component selector, accessible in-page tabs, keyboard alternatives, larger text, and controls sized for touch. Inputs use at least 16px text. Quick tool buttons avoid requiring learners to memorize commands. Use these supports alongside vocabulary help, paired discussion, extra time, or an oral explanation.
 
 Earlier Chrome layout checks at 1366 × 768, 1024 × 768, and 768 × 1024 found no page-level horizontal overflow. The privacy release passed 110 automated checks without skips, including production-gate tests. Previous Chrome verification covered all 15 lab entry checks at 1366 × 768. A complete hardware repair, reload/resume, network feedback, optional hints preserving an unsaved setting, and the HTTPS fictional teacher review were exercised. The teacher review at 768 × 1024 had no page-level horizontal overflow and a 16px feedback field. **Microsoft Edge has not been tested in an actual connected Edge browser session.** Do not treat shared browser technology as an Edge test or a guarantee that a school-managed Chromebook behaves the same way.
 
 Before a lesson:
 
-- Complete a representative assignment on the actual managed device and student network. Check keyboard/touch interactions, focus, zoom, reading comfort, local resume, report copy/download, and any separately enabled sign-in.
+- Complete a representative assignment on the actual managed device and student network. Check keyboard/touch tab switching, focus, zoom, reading comfort, local resume, report copy/download, and any separately enabled sign-in. Confirm that unapplied form entries, questions, and equipment state survive switching sections. Try both a supported question and an unknown one, and compare an inspection with the full hypothesis test.
 - Review school policies that affect JavaScript, storage, cookies, downloads, clipboard, or Cloudflare challenges. A connected classroom should open as a full browser page, not an embedded sign-in frame.
 - Share [School IT review](../school-it.html) with the district. It documents educational purpose, data destinations, browser requirements, canonical hostnames, and authorized GoGuardian category or allow-rule review. The school controls filtering; no site metadata or category request guarantees access.
 - Give younger learners context before opening professional/project links. External services and school-managed extensions have their own interfaces and data practices.
