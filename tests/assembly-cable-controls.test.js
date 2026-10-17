@@ -8,8 +8,7 @@ import { ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure } from '../src/ass
 import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
 const detailed=id=>applyHardwareAction(id,initialHardwareState(id),'enable-assembly').state;
 function attempt(state,action){const before=structuredClone(state);const result=applyHardwareAction(state.caseId,state,action);assert.deepEqual(state,before);return result;}
-// Exercise the native cable controls and scene adapter with the real equipment
-// model. The scene is a stub; native raycasting and touch remain separate QA.
+// Exercise native cable controls with the real equipment model.
 function cableBench(id = 'INC-106') {
   const source = readFileSync(new URL('../src/assembly-workbench.js', import.meta.url), 'utf8');
   const fields = new Map(), listeners = new Map(), doc = { activeElement: null };
@@ -101,18 +100,14 @@ test('malformed native picker values and forged button commands do not become eq
   bench.controller.dispose();
 });
 
-test('the selected cable reaches the renderer and report or section cancellation commits nothing',async()=>{
+test('selected native cable status persists and report or section cancellation commits nothing',()=>{
   const bench=cableBench('INC-101');bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-monitor');
-  bench.click('asmCamera','load');await settle();
-  assert.equal(bench.calls.tools.at(-1),'cables');assert.equal(bench.calls.cable,'hdmi-monitor');
+  assert.match(bench.fields.get('[data-asm-cable-state]').textContent,/HDMI.*monitor/i);
   const before=structuredClone(bench.state),count=bench.committed.length;
-  bench.sceneOptions.onSelect('cable-atx');
-  assert.equal(bench.calls.cable,'atx');
-  assert.ok(bench.fields.get('[data-asm-cable-state]').textContent.startsWith(ASSEMBLY_CABLES.find(item=>item.id==='atx').label+':'));
-  bench.controller.cancel();const canceled=bench.calls.canceled;bench.controller.setVisible(false);
-  assert.ok(bench.calls.canceled>canceled);assert.equal(bench.calls.pauses,1);
+  bench.controller.cancel();bench.controller.setVisible(false);bench.click('asmCableAction','disconnect');
   assert.deepEqual(bench.state,before);assert.equal(bench.committed.length,count);
-  bench.controller.dispose();assert.equal(bench.calls.disposed,1);assert.equal(bench.listeners.size,0);
+  bench.controller.setVisible(true);assert.match(bench.fields.get('[data-asm-cable-state]').textContent,/HDMI.*monitor/i);
+  bench.controller.dispose();assert.equal(bench.listeners.size,0);
 });
 
 test('the actual report includes both disconnected HDMI ends and the other authored cable states',()=>{

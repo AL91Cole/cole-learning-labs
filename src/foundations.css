@@ -25,9 +25,13 @@
 .foundation-stage{min-width:0;margin-bottom:.85rem}
 .foundation-visual{min-width:0;scroll-margin-top:5.25rem;border:1px solid var(--foundation-edge);border-radius:10px;overflow:hidden;background:#091724}
 .foundation-visual svg{display:block;max-width:100%;height:auto}
-.foundation-visual [data-foundation-hardware-scene]{height:clamp(300px,48vh,500px);position:relative;min-width:0;background:radial-gradient(ellipse at 50% 35%,#173a4c,#081622)}
-.foundation-visual [data-foundation-hardware-scene] canvas{display:block;width:100%;height:100%;touch-action:pan-y}
-.foundation-scene-placeholder{position:absolute;inset:0;margin:0;display:flex;align-items:center;justify-content:center;padding:1.2rem;text-align:center;color:var(--foundation-muted);font-size:1rem;line-height:1.6;pointer-events:none}
+.foundation-hardware-diagram{background:#0a1420}
+.foundation-pc-svg{display:block;width:100%;height:auto;max-height:620px;touch-action:pan-y}
+.foundation-diagram-part{cursor:pointer;outline:none}
+.foundation-diagram-part:hover>rect,.foundation-diagram-part[aria-pressed=true]>rect{stroke:#55ddc2;stroke-width:3}
+.foundation-diagram-part:focus-visible{outline:3px solid #71e4ce;outline-offset:3px}
+.foundation-diagram-part:focus-visible>rect{stroke:#b5fff0;stroke-width:4}
+.foundation-hardware-diagram>.foundation-visual-readout{padding:.7rem;border-top:1px solid var(--foundation-edge)}
 .foundation-part-portrait{display:grid;grid-template-columns:120px minmax(0,1fr);gap:.8rem;align-items:center;padding:.75rem;border-top:1px solid var(--foundation-edge);background:#102b38}
 .foundation-part-portrait svg{width:120px;height:85px;object-fit:contain}
 .foundation-part-portrait strong{display:block;font-size:1rem;color:#b9f6e5}
@@ -41,9 +45,6 @@
 .foundation-visual-readout{display:flex;gap:.45rem;flex-wrap:wrap;padding:.8rem 0 0;font-size:.84rem;line-height:1.5}
 .foundation-visual-readout>span{border:1px solid var(--foundation-edge);background:#102432;border-radius:6px;padding:.4rem .65rem}
 .foundation-visual-readout [data-foundation-state=done]{color:#a5f2d9;border-color:#54b99b}
-.foundation-camera{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem;margin:.5rem 0}
-.foundation-camera button{min-width:0;font-size:.85rem;padding:.55rem .3rem}
-.foundation-camera button:disabled{opacity:.45;cursor:default}
 .foundation-item-buttons{display:flex;gap:.45rem;flex-wrap:wrap;margin:.75rem 0}
 .foundation-item-buttons button{min-width:0;flex:1 1 150px;text-align:left;font-size:.88rem;line-height:1.4}
 .foundation-item-buttons span{color:#9de8d3;font-size:.76rem}
@@ -70,4 +71,4 @@
 .foundation-code-workspace [data-foundation-code-results] li>strong,.foundation-code-workspace [data-foundation-code-results] li>span{display:block;line-height:1.55}
 .foundation-code-workspace [data-foundation-code-results] li>span{font-size:.85rem;color:var(--foundation-muted)}
 @media(max-width:700px){.foundation-heading{padding:1rem}.foundation-body{padding:.75rem}.foundation-answer-options{grid-template-columns:minmax(0,1fr)}.foundation-item-buttons button{flex-basis:130px}.foundation-prompt{padding:.9rem}.foundation-handoff>*{flex:1 1 100%;justify-content:center}.foundation-tabs{gap:.3rem;padding:.45rem}.foundation-tabs button{font-size:.86rem;padding:.55rem .3rem;gap:.35rem}.foundation-equipment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:420px){.foundation-tabs button>span{width:1.35rem;height:1.35rem}.foundation-camera{gap:.3rem}.foundation-camera button{font-size:.78rem}.foundation-item-buttons button{flex-basis:110px}.foundation-visual{scroll-margin-top:6rem}.foundation-equipment-grid{grid-template-columns:minmax(0,1fr)}.foundation-part-portrait{grid-template-columns:96px minmax(0,1fr);gap:.6rem}.foundation-part-portrait svg{width:96px;height:74px}}
+@media(max-width:420px){.foundation-tabs button>span{width:1.35rem;height:1.35rem}.foundation-item-buttons button{flex-basis:110px}.foundation-visual{scroll-margin-top:6rem}.foundation-equipment-grid{grid-template-columns:minmax(0,1fr)}.foundation-part-portrait{grid-template-columns:96px minmax(0,1fr);gap:.6rem}.foundation-part-portrait svg{width:96px;height:74px}}

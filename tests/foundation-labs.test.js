@@ -117,7 +117,7 @@ test('every non-coding mini-job follows the actual model one step at a time and 
   }
 });
 
-test('an out-of-order 3D action cannot skip the guided hardware step',()=>{
+test('an out-of-order equipment action cannot skip the guided hardware step',()=>{
   const view=fixture();prepare(view);const before=structuredClone(view.record.hardware);
   const result=view.sceneOptions.onAction('asm-tighten-panel-0');assert.equal(result.kind,'warning');assert.deepEqual(view.record.hardware,before);assert.deepEqual(view.record.practice,[]);assert.match(view.fields.get('[data-foundation-feedback]').textContent,/Fit the DDR4|memory clips/);view.controller.dispose();
 });
@@ -131,10 +131,9 @@ test('coding drafts remain on the same editor across tabs and only fresh execute
   view.input('print(6);');assert.equal(view.record.results.length,0);assert.equal(foundationSummary('coding',view.record).complete,false);assert.equal(editor.value,'print(6);');view.controller.dispose();
 });
 
-test('camera actions are view-only and report gestures cancel before opening the existing review flow',()=>{
-  const view=fixture();view.sceneOptions.onStatus({kind:'ready',message:'Equipment ready.'});const before=structuredClone(view.record);
-  for(const camera of ['out','fit','in','focus'])view.click('foundationCamera',camera);
-  assert.deepEqual(view.calls.camera,['out','fit','in','focus']);assert.deepEqual(view.record,before);assert.equal(view.calls.changed,0);
+test('the classic beginner view has no camera/loading controls and reports use the existing review flow',()=>{
+  const view=fixture();const before=structuredClone(view.record);
+  assert.doesNotMatch(view.markup,/foundation-camera|data-foundation-camera|\b3D\b|graphics loading|loading workstation|<canvas/i);assert.deepEqual(view.calls.camera,[]);assert.deepEqual(view.record,before);assert.equal(view.calls.changed,0);
   view.tab('check');view.calls.order.length=0;view.click('foundationReport');assert.deepEqual(view.calls.order,['cancel','report']);assert.equal(view.calls.report,view.record);assert.equal(view.calls.reports,1);view.controller.dispose();
 });
 

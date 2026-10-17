@@ -28,7 +28,15 @@ On October 17, 2026, a real report downloaded in connected desktop Chrome was co
 
 Physical Microsoft Edge, Chromebook, Android and iPad sessions were not connected for this verification. Treat those as required school-device acceptance checks before classroom use. Responsive layout and synthetic pointer-type tests are useful evidence but do not replace those checks. No independent accessibility or universal-device certification is claimed.
 
-## Detailed 3D assembly verification — October 17, 2026
+## Classic equipment diagrams — October 17, 2026
+
+The `20261017-classic20` local browser preview restored the PR #6 equipment artwork without a canvas or graphics engine. INC-101 was repaired through the native cable controls and opened the original lesson file. HW-100 completed all nine component inspections, three role questions and nine guarded mini-job actions. INC-106 completed a full detailed build through the current native controls: PSU, motherboard, processor, fresh paste, cooler fasteners/fan, memory clips, graphics latch/bracket, original SSD, internal leads, case screws, display and startup. The original lesson file opened, and the report retained the mechanical state and action log. A wrong cooler-screw order was refused with the correct next position.
+
+At a 768 × 1024 browser viewport the workbench had no horizontal page overflow, no canvas and no visible HTML workbench buttons shorter than 44 pixels. These are responsive browser observations, not tests on a physical tablet, Chromebook or Microsoft Edge. Existing report download and security/privacy regressions remain required. The automated runtime-graph and packaging checks reject retired engine/scene imports and graphics-vendor assets.
+
+## Historical 3D assembly checks — before the classic visual release
+
+The entries below describe superseded 3D versions, not the current 2D interface. Keep them only as historical evidence; camera, GPU and 3D gesture results do not validate this release.
 
 The connected in-app browser rendered the actual WebGL2 scene. A complete INC-106 build was performed through visible controls: PSU, board, CPU, paste, cooler cross-pattern fasteners/fan, memory clips, GPU latch/bracket, original SSD and leads, panel and startup. It opened the original lesson file. A deliberately wrong cooler-screw order was rejected. The report preview contained all 18 screw positions, paste condition, fan lead and retention state.
 

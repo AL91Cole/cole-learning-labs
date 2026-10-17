@@ -89,54 +89,9 @@ test('worked examples and vocabulary remain available without opening themselves
   }
 });
 
-function previewFixture({id='NET-201',hidden=true,pending=false,fail=false}={}) {
-  const listeners=new Map(),calls={loads:0,mounts:0,disposals:0};
-  const doc={addEventListener(name,handler){listeners.set(name,handler);},removeEventListener(name,handler){if(listeners.get(name)===handler)listeners.delete(name);}};
-  const host={ownerDocument:doc,hidden,isConnected:true},scenario=SCENARIOS.find(item=>item.id===id);
-  let resolve;
-  const graphics={mountLabStation3D(target,options){assert.equal(target,host);assert.equal(options.scenario,scenario);calls.mounts++;return ()=>calls.disposals++;}};
-  const boundary=extract('function mountInvestigationPreview(','\nfunction checkCapstoneState(');
-  const imports=[...boundary.matchAll(/import\('\.\/virtual-lab-scene\.js\?release=[^']+'\)/g)];
-  assert.equal(imports.length,1,'One lazy scene boundary belongs to the active investigation.');
-  const mount=vm.runInNewContext(boundary.replace(imports[0][0],'loadGraphics()')+';mountInvestigationPreview',{
-    loadGraphics(){calls.loads++;return pending?new Promise(done=>{resolve=done;}):fail?Promise.reject(new Error('Graphics unavailable')):Promise.resolve(graphics);}
-  });
-  const dispose=mount(host,scenario,()=>({state:{}}));
-  return {calls,host,listeners,dispose,resolve(){assert.ok(resolve);resolve(graphics);},
-    section(section,eventId=id){host.hidden=section!==2;listeners.get('cole:lab-section-change')?.({detail:{id:eventId,section}});}};
-}
-const settle=()=>new Promise(resolve=>setImmediate(resolve));
-
-test('software graphics load only for the matching visible repair section and mount once',async()=>{
-  const preview=previewFixture();assert.equal(preview.calls.loads,0);
-  preview.section(1);preview.section(3);preview.section(2,'NET-202');
-  assert.equal(preview.calls.loads,0,'Another lab cannot trigger this scene.');
-  preview.section(2);await settle();
-  assert.equal(preview.calls.loads,1);assert.equal(preview.calls.mounts,1);
-  preview.section(1);preview.section(2);await settle();
-  assert.equal(preview.calls.mounts,1,'Returning reuses the existing station.');
-  preview.dispose();assert.equal(preview.calls.disposals,1);assert.equal(preview.listeners.size,0);
-  const hardware=previewFixture({id:'INC-101',hidden:false});
-  assert.equal(hardware.dispose,null);assert.equal(hardware.calls.loads,0);assert.equal(hardware.listeners.size,0);
-});
-
-test('pending software graphics never mount after leaving repair, detaching or disposing its route',async()=>{
-  for(const reason of ['hidden','detached','disposed']) {
-    const preview=previewFixture({pending:true});preview.section(2);
-    assert.equal(preview.calls.loads,1,reason);
-    if(reason==='hidden')preview.section(1);
-    if(reason==='detached')preview.host.isConnected=false;
-    if(reason==='disposed')preview.dispose();
-    preview.resolve();await settle();assert.equal(preview.calls.mounts,0,reason);
-    if(reason!=='disposed')preview.dispose();
-    assert.equal(preview.listeners.size,0,reason);
-  }
-});
-
-test('unavailable optional software graphics do not replace the actual workspace',async()=>{
-  const preview=previewFixture({fail:true});preview.section(2);await settle();
-  assert.equal(preview.calls.loads,1);assert.equal(preview.calls.mounts,0);
-  assert.equal(preview.host.isConnected,true);assert.equal(preview.host.hidden,false);
-  preview.section(1);preview.section(2);await settle();assert.equal(preview.calls.loads,2,'A new repair entry may retry optional graphics.');
-  preview.dispose();assert.equal(preview.listeners.size,0);
+test('all workbenches use the current local models without a 3D preview mount',()=>{
+  assert.doesNotMatch(source,/mountInvestigationPreview|mountLabStation3D|virtual-lab-scene/);
+  assert.match(source,/renderHardware\(workspace,s.id,r.state,action\)/);
+  assert.match(source,/renderWorkspace\(workspace,s,r.state,action\)/);
+  assert.match(source,/!r.state.assemblyEnabled\)action\('enable-assembly'\)/);
 });
