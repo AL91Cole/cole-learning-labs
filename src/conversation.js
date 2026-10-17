@@ -1,5 +1,5 @@
 /** Small, on-device language resolver. It selects an authored case question; it never invents a fact. */
-const IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
+const IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
 const compact = value => value.replace(/\s+/gu,' ').trim();
 const valid = value => typeof value === 'string' && value.length <= 240 && compact(value).length > 0 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value);
 // Correct only a few unambiguous classroom words, rather than guessing arbitrary names or text.
@@ -35,6 +35,18 @@ const rules = {
   'INC-106':[
     rule('hardware.acceptance',/\b(?:finished|done|ready|deliver|prove|pass|working|result|open|document)\b/u,'What is the acceptance task?'),
     rule('hardware.build',/\b(?:fit|compatible|right|wrong|choose|pick|piece|pieces|parts|specification|assemble|build)\b/u,'Which component types does the build specification require?')
+  ],
+  'INC-107':[
+    rule('hardware.monitor-input',/\b(?:listening|listen|source|select|selector|input|hdmi|displayport|button|presentation)\b/u,'Which input source is the monitor using?'),
+    rule('hardware.video',/\b(?:wire|wires|cable|plug|plugged|connection|socket|graphics|port|both ends)\b/u,'Are both display cable ends connected?'),
+    rule('hardware.display',/\b(?:blank|black|dark|no picture|no signal|monitor|screen|display|picture)\b/u,'What does the monitor display now?'),
+    rule('hardware.power',/\b(?:lights|light|fans|fan|humming|running|tower|computer|boot|startup)\b/u,'Is the tower running?')
+  ],
+  'INC-108':[
+    rule('hardware.video',/\b(?:wire|wires|cable|plug|plugged|connection|socket|graphics|port|both ends|loose|unplugged|disconnected)\b/u,'Are both display cable ends connected?'),
+    rule('hardware.monitor-input',/\b(?:listening|source|selector|input|hdmi|displayport)\b/u,'Which input source is the monitor using?'),
+    rule('hardware.display',/\b(?:blank|black|dark|no picture|no signal|monitor|screen|display|picture)\b/u,'What does the monitor display now?'),
+    rule('hardware.power',/\b(?:lights|light|fans|fan|humming|running|tower|computer|boot|startup)\b/u,'Is the tower running?')
   ],
   'NET-201':[
     rule('network.affected',/\b(?:whole room|whole class|just (?:me|mine|you|yours|this one)|other ones|anyone else|everybody|everyone|all of them|only one|other (?:people|computers|devices|machines|laptops))\b/u,'Which other devices have the issue?'),

@@ -1,7 +1,11 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261016-conversation8';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261016-conversation8';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261016-teaching9';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261016-teaching9';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
+
+/** A shared symptom with different evidence and repairs for a fresh transfer attempt. */
+export const TRANSFER_CASES = Object.freeze(['INC-101','INC-107','INC-108']);
+export const transferCaseFor = id => TRANSFER_CASES.includes(id) ? TRANSFER_CASES[(TRANSFER_CASES.indexOf(id) + 1) % TRANSFER_CASES.length] : null;
 
 /** Fictional classroom cases. No student information or live systems are used. */
 export const SCENARIOS = [
@@ -59,6 +63,25 @@ export const SCENARIOS = [
     brief: 'Build a classroom desktop from the labeled parts. Use the motherboard specification, disconnect power during internal work, and finish with an acceptance test.',
     clues: [clue('spec','Read the build specification','The board uses DDR4 memory, a PCIe graphics card, and a prepared SATA classroom drive.'),clue('parts','Inspect the parts tray','The tray includes both compatible parts and distractors. Read each label before installation.'),clue('acceptance','Read the acceptance task','The build is delivered only after the system starts, the display works, and Lesson_Practice_File.docx opens.')],
     questions: [question('Which result matters?','A usable classroom desktop with Lesson_Practice_File.docx open.'),question('Can I change internal parts with power connected?','No. Power off and disconnect the AC cable in the virtual bench first.')],
+  },
+  {
+    id: 'INC-107', title: 'No Picture After a Presentation', track: 'hardware', grade: '7–8', minutes: 15,
+    summary: 'Compare a monitor’s selected source with the cable that actually carries the picture.', requester: 'Ms. Patel · Presentation room',
+    goal: 'Restore the classroom picture and open Lesson_Practice_File.docx without replacing the computer.',
+    brief: '“The desktop was displaying my lesson before a presentation. We used the monitor’s Source button to show a different input. Now the tower is still running, but the monitor reads No signal · DisplayPort. The HDMI cable is fully fitted at both ends, including the lower graphics-card output. Turning the monitor off and back on did not change the selected source. Please bring back my original lesson file.”',
+    intake: {kind:'detailed',missing:'',factIds:[]},
+    clues: [clue('screen','Read the monitor source','The monitor is powered on. Its source display says DisplayPort, with no signal on that input.'),clue('video','Trace both HDMI ends','The HDMI teaching cable is fitted at the monitor and the PC’s dedicated graphics-card output. No DisplayPort cable is attached.'),clue('power','Check the running computer','The tower power light and fans are on. The original classroom OS has already loaded.'),clue('history','Read the presentation history','The picture worked before the monitor source was changed for a presentation. The PC and its components were not changed.')],
+    questions: [question('What changed before the problem?','I used the Source button for a presentation. The picture worked before that change; the computer was not opened.'),question('What did you try?','I switched the monitor off and back on. It remembered the DisplayPort source, and No signal stayed on screen.')],
+  },
+  {
+    id: 'INC-108', title: 'No Picture at the Moved Desk', track: 'hardware', grade: '9–10', minutes: 20,
+    summary: 'Ask about the recent change, then trace the complete display path before choosing a repair.', requester: 'Mr. Brooks · Flexible classroom',
+    goal: 'Restore the picture and open the original Lesson_Practice_File.docx.',
+    brief: '“The tower lights up, but I cannot see my lesson on the monitor. It says No signal. I tried the monitor’s power button once. Can you help me get the lesson ready?” Ask what happened before the problem, then compare the reply with both ends of the virtual cable.',
+    intake: {kind:'follow-up',missing:'Ask what changed before the display stopped working.',factIds:['last-change']},
+    clues: [clue('screen','Read the monitor source','The monitor has power and is listening to HDMI. It reports no signal.'),clue('video','Inspect both display-cable ends','The PC end remains on the dedicated graphics-card output. The HDMI plug at the monitor end is loose and its socket is empty.'),clue('power','Check the running computer','The tower is running and the original classroom OS has loaded. Its internal components remain fitted.'),{...clue('history','Record the desk change','The lesson picture worked before the desk was moved. The monitor was lifted separately, and its cable was pulled loose.'),requiresFact:'last-change'}],
+    questions: [question('What happened before the problem?','The desk was moved. The picture worked before the monitor was lifted separately and its cable was pulled loose.'),question('What did you try?','I pressed the monitor power button. The monitor came back on with the same No signal message.')],
+    interviewFacts: [{id:'last-change',keywords:['changed','moved','move','lifted','before the problem','last work','last worked'],answer:'The picture worked before the desk was moved. The monitor was lifted separately, and its display cable was pulled loose. No one opened the virtual PC.'}],
   },
   {
     id: 'NET-201', title: 'The Offline Library Workstation', track: 'network', grade: '9–10', minutes: 25,

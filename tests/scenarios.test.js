@@ -32,6 +32,8 @@ function workspaceFlow(id, actions) {
 
 const hardwareRepairs = {
   'INC-101': ['video-gpu'],
+  'INC-107': ['input-hdmi'],
+  'INC-108': ['connect-signal'],
   'INC-102': ['plug-in', 'boot'],
   'INC-103': ['power-off', 'unplug', 'seat-ram', 'plug-in', 'boot'],
   'INC-104': ['power-off', 'unplug', 'connect-sata', 'plug-in', 'boot'],
@@ -80,13 +82,13 @@ const workspaceRepairs = {
   ]
 };
 
-test('the assignment catalogue has 27 distinct, implemented cases across five pathways', () => {
-  assert.equal(SCENARIOS.length, 27);
-  assert.equal(new Set(SCENARIOS.map(scenario => scenario.id)).size, 27);
+test('the assignment catalogue has 29 distinct, implemented cases across five pathways', () => {
+  assert.equal(SCENARIOS.length, 29);
+  assert.equal(new Set(SCENARIOS.map(scenario => scenario.id)).size, 29);
   const expected = [...Object.keys(hardwareRepairs), ...Object.keys(workspaceRepairs)].sort();
   assert.deepEqual(SCENARIOS.map(scenario => scenario.id).sort(), expected);
   assert.deepEqual(Object.fromEntries(['hardware','network','ai','security','coding'].map(track => [track, SCENARIOS.filter(scenario => scenario.track === track).length])), {
-    hardware:6, network:6, ai:6, security:6, coding:3
+    hardware:8, network:6, ai:6, security:6, coding:3
   });
 });
 

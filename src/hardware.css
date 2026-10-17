@@ -211,3 +211,14 @@
   .hw-readout strong { font-size:12px; }
 }
 @media(pointer:coarse) { .hw-cable-station button,.hw-diagnostics button { min-height:48px; } }
+
+.hw-monitor-controls { margin:12px 0; padding:16px; border:1px solid #365367; border-radius:12px; background:#112332; }
+.hw-monitor-controls h3 { margin:4px 0 0; color:#e6f1f4; font-size:16px; }
+.hw-monitor-controls p { color:#b9cedb; font-size:13px; line-height:1.55; }
+.hw-monitor-indicator { display:inline-block; padding:7px 10px; border:1px solid #947342; border-radius:8px; color:#f2ca86; font-size:12px; line-height:1.5; }
+.hw-monitor-linked { border-color:#368a78; color:#8ee5cc; }
+.hw-source-select,.hw-monitor-cable { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.hw-monitor-controls .hw-action { min-height:44px; }
+.hw-monitor-controls .hw-action[aria-pressed="true"] { border-color:#58d2bb; background:#173f40; color:#d4fff3; }
+@container(max-width:480px) { .hw-monitor-controls .hw-action { flex:1 1 auto; } }
+@media(pointer:coarse) { .hw-monitor-controls .hw-action { min-height:48px; } }

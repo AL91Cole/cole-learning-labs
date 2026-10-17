@@ -4,7 +4,7 @@ The repository includes a classroom API and a teacher/student portal. This is pr
 
 The independent public labs begin in browser memory; optional device saving and ordinary local exports require an explicit learner action. Real classroom joining, server drafts, submissions, and grades are unavailable in this release. In a future approved release, students would explicitly join an enabled classroom before that workflow sends assignment work to its server. A fictional portal demo is separate from real class data. Do not enter real student records into a demonstration.
 
-Release `20261016-conversation8` (version `2.8.0`) offers 27 independent labs across five pathways. Conversational interview replies use on-device authored case facts and recent question context. The optional live AI response mode is visible but disabled and unconnected; there is no provider request or API key. Future live processing needs a separately reviewed implementation, approved provider/data terms, authenticated teacher controls and applicable school/privacy approval. It cannot be enabled by a student mode choice, teacher email or environment flag, and it does not change this classroom service's hardcoded production lock.
+Release `20261016-teaching9` (version `2.9.0`) offers 29 independent labs across five pathways. Conversational interview replies use on-device authored case facts and recent question context. The optional live AI response mode is visible but disabled and unconnected; there is no provider request or API key. Future live processing needs a separately reviewed implementation, approved provider/data terms, authenticated teacher controls and applicable school/privacy approval. It cannot be enabled by a student mode choice, teacher email or environment flag, and it does not change this classroom service's hardcoded production lock.
 
 ## Use Google Classroom without importing a roster
 
@@ -81,7 +81,7 @@ API responses are private/no-store and do not grant CORS access. All mutations r
 | --- | --- |
 | Active classes per approved teacher | 10 |
 | Memberships per class, including lost sessions | 100 |
-| Assigned lab choices | The 27 supported lab IDs; one assignment per lab per class |
+| Assigned lab choices | The 29 supported lab IDs; one assignment per lab per class |
 | Class name / generated alias / assignment title | 100 characters / server-generated `Learner-XXXX-XXXX` / 120 characters |
 | Work per saved draft or submitted snapshot | 64 KiB of JSON; bounded nesting, lists, strings, and keys |
 | Individual work string / teacher feedback | 16,000 / 4,000 characters |

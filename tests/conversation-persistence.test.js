@@ -65,6 +65,7 @@ test('event retention stays bounded even when callers reuse the same event objec
 test('previously saved requester wording keeps its clarification credit after voice improvements',()=>{
   for(const scenario of SCENARIOS.filter(s=>s.intake?.kind==='follow-up')){
     const fact=scenario.interviewFacts.find(item=>scenario.intake.factIds.includes(item.id));
+    if(scenario.id==='INC-108')continue; // New in this release; no prior saved wording exists.
     assert.ok(fact.legacyAnswers?.length,scenario.id);
     const question=scenario.questions[0].label;
     for(const answer of fact.legacyAnswers){
