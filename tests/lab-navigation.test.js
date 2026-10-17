@@ -80,6 +80,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     bindWorkPrivacy() {},recordFor:() => record,workStatus:() => 'Private session',evidenceList:() => '',
     renderHardware(root,_id,_state,callback) { assert.equal(scenario.track,'hardware'); renderBench(root,callback); },
     cancelHardwareInteraction(root) { assert.equal(root,elements.get('#workspace')); calls.benchCancelled++; },
+    setHardwareVisible(root,visible) { assert.equal(root,elements.get('#workspace')); assert.equal(typeof visible,'boolean'); },
     renderWorkspace(root,_scenario,_state,callback) { assert.notEqual(scenario.track,'hardware'); renderBench(root,callback); if(scenario.track==='coding'){const editor=new Element();editor.value=_state.code;elements.set('#coding-editor',editor);} },
     save() { calls.saved++; },showNotice(message) { calls.notices.push(message); },openReport() { calls.reports++; },renderRoute() {},
     normalizeLabRecord:(_scenario,value) => value,attachClassroomLab:() => null,matchMedia:() => ({matches:true}),Date

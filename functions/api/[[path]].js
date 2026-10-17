@@ -114,8 +114,29 @@ function workFields(value, schema) {
   return true;
 }
 const workRecord = schema => value => workFields(value, schema);
+// Assembly saves have a fixed, versioned shape. No identity mappings, arbitrary
+// component metadata, or renderer objects belong in a classroom draft.
+const assemblyStateFields = {
+  version: workEnum([1]),
+  ...Object.fromEntries(['panelInstalled', 'psuInstalled', 'retentionOpen', 'ramClipsOpen', 'pcieLatchOpen', 'cpuFanConnected'].map(key => [key, workBoolean])),
+  ...Object.fromEntries(Object.entries({ panelScrews: 2, psuScrews: 4, boardScrews: 4, coolerScrews: 4, gpuScrews: 2, ssdScrews: 2 }).map(([key, count]) => [key, value => Array.isArray(value) && value.length === count && Array.from({ length: count }, (_, index) => Object.getOwnPropertyDescriptor(value, String(index))?.value).every(workBoolean)])),
+  paste: workEnum(['clean', 'pea', 'excess', 'dry'])
+};
+const assemblyState = value => {
+  if (value === null) return true;
+  workFields(value, assemblyStateFields);
+  return Object.keys(value).length === Object.keys(assemblyStateFields).length;
+};
+const assemblyActionIds = [
+  ...Object.entries({ panel: 2, psu: 4, board: 4, cooler: 4, gpu: 2, ssd: 2 }).flatMap(([group, count]) => Array.from({ length: count }, (_, index) => [`asm-tighten-${group}-${index}`, `asm-loosen-${group}-${index}`]).flat()),
+  ...['panel', 'psu', 'board', 'cpu', 'cooler', 'ram', 'gpu', 'ssd'].flatMap(part => [`asm-fit-${part}`, `asm-remove-${part}`]),
+  ...['retention', 'ram-clips', 'pcie-latch'].flatMap(part => [`asm-open-${part}`, `asm-close-${part}`]),
+  'asm-clean-paste', 'asm-apply-paste', 'asm-excess-paste',
+  ...['atx', 'eps', 'gpu-power', 'sata-data', 'sata-power', 'front-panel', 'cpu-fan', 'display'].flatMap(lead => [`asm-connect-${lead}`, `asm-disconnect-${lead}`])
+];
 const hardwareParts = ['monitor', 'rear', 'power', 'board', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'sata', 'atx', 'eps', 'gpu-power', 'sata-power', 'front'];
 const hardwareActions = [
+  'enable-assembly', ...assemblyActionIds,
   'power-off', 'unplug', 'plug-in', 'boot', 'video-gpu', 'video-board', 'input-hdmi', 'input-displayport', 'connect-signal', 'disconnect-signal', 'open-document', 'close-document',
   'seat-ram', 'unseat-ram', 'disconnect-sata', 'install-original', 'choose-nvme',
   'install-board', 'install-cpu', 'install-cooler', 'install-ram', 'install-gpu', 'install-drive',
@@ -123,7 +144,8 @@ const hardwareActions = [
   ...hardwareParts.map(part => `inspect-${part}`)
 ];
 const hardwareStateFields = {
-  ...Object.fromEntries(['pcOn', 'acConnected', 'boardInstalled', 'cpuInstalled', 'coolerInstalled', 'ramSeated', 'gpuInstalled', 'atxConnected', 'cpuPowerConnected', 'gpuPowerConnected', 'frontPanelConnected', 'originalDriveInstalled', 'sataDataConnected', 'sataPowerConnected', 'booted', 'documentOpened', 'signalConnected'].map(key => [key, workBoolean])),
+  ...Object.fromEntries(['pcOn', 'acConnected', 'boardInstalled', 'cpuInstalled', 'coolerInstalled', 'ramSeated', 'gpuInstalled', 'atxConnected', 'cpuPowerConnected', 'gpuPowerConnected', 'frontPanelConnected', 'originalDriveInstalled', 'sataDataConnected', 'sataPowerConnected', 'booted', 'documentOpened', 'signalConnected', 'assemblyEnabled'].map(key => [key, workBoolean])),
+  assembly: assemblyState,
   monitorInput: workEnum(['hdmi','displayport']), videoPort: workEnum(['board', 'gpu']), selectedDrive: workEnum(['sata', 'nvme']),
   view: workEnum(['bench', 'internals', 'rear', 'display']), selectedPart: workEnum(hardwareParts),
   evidence: workList(workEnum(hardwareParts), hardwareParts.length), actions: workList(workEnum(hardwareActions), 250), bootCount: workCount

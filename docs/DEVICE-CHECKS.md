@@ -28,6 +28,14 @@ On October 17, 2026, a real report downloaded in connected desktop Chrome was co
 
 Physical Microsoft Edge, Chromebook, Android and iPad sessions were not connected for this verification. Treat those as required school-device acceptance checks before classroom use. Responsive layout and synthetic pointer-type tests are useful evidence but do not replace those checks. No independent accessibility or universal-device certification is claimed.
 
+## Detailed 3D assembly verification — October 17, 2026
+
+The connected in-app browser rendered the actual WebGL2 scene. A complete INC-106 build was performed through visible controls: PSU, board, CPU, paste, cooler cross-pattern fasteners/fan, memory clips, GPU latch/bracket, original SSD and leads, panel and startup. It opened the original lesson file. A deliberately wrong cooler-screw order was rejected. The report preview contained all 18 screw positions, paste condition, fan lead and retention state.
+
+A fresh INC-101 session verified the simplified controls and initial keyboard focus, blocked a case-screw removal while powered, then safely opened the panel and removed the cooler. Refitting with disturbed paste produced the expected startup warning; cleaning and applying fresh paste changed the modeled thermal state. Responsive views at 1366 × 768 and 768 × 1024 had no horizontal overflow and all visible equipment buttons were at least 44 pixels high. The normal narrow in-app view also rendered the scene with vertical page scrolling available. This is browser/viewport evidence, not a physical tablet or Chromebook test. Chrome extension control was unavailable during this check; no new physical Edge test is claimed.
+
+Before classroom acceptance, test the detailed mode on managed Chromebooks, Edge, Android and iPad: rotate/scroll without accidental actions; choose parts and fasteners by keyboard/touch; pause/resume; switch investigation sections; trigger the graphics-disabled fallback; download and open the report; and complete a build without device overheating or excessive battery use. Confirm the school's filtering policy permits the site's own script files; no external graphics CDN is required.
+
 ## Browser guidance
 
 - [ChromeOS: find and open files](https://support.google.com/chromebook/answer/1700055?hl=en).

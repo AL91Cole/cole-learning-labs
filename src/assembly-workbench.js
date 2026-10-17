@@ -1,0 +1,105 @@
+import { assemblyActions, assemblyFailure } from './assembly-model.js?release=20261017-assembly12';
+
+const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
+const NAMES = Object.fromEntries(GROUPS);
+const escape = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const button=(id,label)=>`<button type="button" data-assembly-action="${escape(id)}">${escape(label)}</button>`;
+const groupFor = id => {
+  if(/paste/.test(id))return 'paste';
+  if(/retention/.test(id))return 'cpu';
+  if(/ram/.test(id))return 'ram';
+  if(/pcie/.test(id))return 'gpu';
+  if(/cpu-fan/.test(id))return 'cooler';
+  if(/display/.test(id))return 'display';
+  if(/^asm-(?:atx|eps|gpu-power|sata-data|sata-power|front-panel)$/.test(id))return 'cables';
+  if(/(?:connect|disconnect)-/.test(id))return 'cables';
+  return GROUPS.find(([key])=>id.includes(`-${key}`))?.[0]||'board';
+};
+
+/** DOM controls are the complete interface. WebGL is a disposable view of this model. */
+export function mountAssemblyWorkbench(root,{state,onAction}) {
+  let current=state,selected='panel',scene=null,disposed=false,visible=!root.closest?.('[hidden]'),loading=false,loadRequested=false,sceneFailed=false;
+  let sceneModule=null;
+  const doc=root.ownerDocument;
+  root.onclick=null;root.onkeydown=null;root.onchange=null;
+  root.innerHTML=`<section class="asm-bench" aria-label="Detailed assembly workbench">
+    <div class="asm-heading"><div><span class="hw-eyebrow">DETAILED EQUIPMENT LAB</span><h3>Inside the workstation</h3></div><span class="asm-badge">3D · assembly & teardown</span></div>
+    <div class="asm-power" role="group" aria-label="Virtual PC power controls">${button('power-off','1. Power off')}${button('unplug','2. Disconnect AC')}${button('plug-in','3. Connect AC')}${button('boot','4. Power on / test')}<strong data-asm-power></strong></div>
+    <p class="asm-next" data-asm-next></p>
+    <div class="asm-layout"><div class="asm-visual"><div class="asm-scene" data-asm-scene role="img" aria-label="Rotatable 3D workstation. All equipment actions are also available in the component controls."><div class="asm-loading" data-asm-loading><strong>Your equipment is ready.</strong><span>Load the optional 3D view, or use the detailed controls below.</span></div></div>
+      <div class="asm-camera" role="group" aria-label="3D camera controls"><button type="button" data-asm-camera="load">Load 3D view</button><button type="button" data-asm-camera="iso">Whole PC</button><button type="button" data-asm-camera="top">Top</button><button type="button" data-asm-camera="side">Side</button><button type="button" data-asm-camera="in">Zoom +</button><button type="button" data-asm-camera="out">Zoom −</button><button type="button" data-asm-camera="off">Pause 3D</button></div>
+      <p class="asm-view-status" data-asm-view-status role="status">3D loads only when you choose it. Detailed controls work without graphics.</p>
+      <p class="asm-tip">Drag horizontally to rotate; swipe vertically to scroll. Tap equipment to select it. Use a component button for the same controls without aiming.</p></div>
+    <aside class="asm-controls" aria-label="Component controls"><label>Choose a component<select aria-label="Choose a component" data-asm-select>${GROUPS.map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label><div class="asm-part-tabs" role="group" aria-label="Equipment sections">${GROUPS.map(([key,label])=>`<button type="button" data-asm-part="${key}">${label}</button>`).join('')}</div><h4 data-asm-part-title></h4><p data-asm-part-state></p><div class="asm-actions" data-asm-actions></div><p class="asm-feedback" data-asm-feedback role="status" aria-live="polite">Choose a component, then one action. The model explains anything that needs to happen first.</p></aside></div>
+    <details class="asm-help"><summary>How to build or take apart this virtual PC</summary><ol><li>Power off and disconnect virtual AC. Remove the case screws and side panel for internal work.</li><li>Select a component in the picture or the list. Fit or remove it using the large controls. Keep loose screws in the virtual tray.</li><li>Fit parts on their mounts, secure their fasteners, close clips, and connect the correct leads. Tighten the cooler diagonally: 1, 4, 2, 3.</li><li>Use Clean surfaces and Apply pea-sized paste with the cooler removed. Lifting a cooler breaks its paste seal; clean and reapply before refitting.</li><li>Reattach the side panel and its screws, connect AC, then test startup. Finish by opening the original lesson file.</li></ol><p>For teardown, disconnect the leads and release fasteners and clips before removing a part. Removal never erases the original SSD. Use the same controls with a mouse, touch, Tab, Enter or Space.</p><p>This is one authored training workstation. Screw tension, paste spread and temperatures are simplified teaching checks; manufacturer procedures vary.</p></details>
+    <div class="asm-delivery"><strong data-asm-delivery></strong>${button('video-gpu','Monitor → graphics card')}${button('input-hdmi','Monitor source: HDMI')}${button('open-document','Open original lesson file')}</div>
+  </section>`;
+  const $=selector=>root.querySelector(selector);
+  const sceneHost=$('[data-asm-scene]'),status=$('[data-asm-view-status]');
+  function select(id) {
+    const key=NAMES[id]?id:groupFor(`asm-${id}`);
+    selected=key;
+    $('[data-asm-select]').value=key;
+    renderControls(); scene?.select?.(id==='paste'?'cpu':id);
+  }
+  function renderControls() {
+    const active=doc.activeElement?.dataset?.assemblyAction;
+    const a=current.assembly;
+    $('[data-asm-part-title]').textContent=NAMES[selected];
+    const partStates={panel:`Side panel ${a.panelInstalled?'fitted':'set aside'}. ${a.panelScrews.filter(Boolean).length}/2 screws secured.`,board:`Motherboard ${current.boardInstalled?'on its standoffs':'in the tray'}. ${a.boardScrews.filter(Boolean).length}/4 screws secured.`,cpu:`CPU ${current.cpuInstalled?'seated':'in the tray'}. Retention ${a.retentionOpen?'open':'closed'}.`,paste:`Thermal interface: ${a.paste==='pea'?'fresh pea-sized paste':a.paste==='clean'?'clean surfaces':a.paste==='excess'?'too much paste':'used paste — clean and reapply'}.`,cooler:`Cooler ${current.coolerInstalled?'fitted':'in the tray'}. ${a.coolerScrews.filter(Boolean).length}/4 screws secured. Fan lead ${a.cpuFanConnected?'connected':'disconnected'}.`,ram:`Memory ${current.ramSeated?'seated':'in the tray / not fully seated'}. Clips ${a.ramClipsOpen?'open':'closed'}.`,gpu:`Graphics card ${current.gpuInstalled?'fitted':'in the tray'}. ${a.gpuScrews.filter(Boolean).length}/2 bracket screws. Latch ${a.pcieLatchOpen?'open':'closed'}.`,ssd:`Original SSD ${current.originalDriveInstalled?'in its bay':'safely in the tray'}. ${a.ssdScrews.filter(Boolean).length}/2 screws. OS and files preserved.`,cables:`ATX ${current.atxConnected?'✓':'○'} · CPU ${current.cpuPowerConnected?'✓':'○'} · GPU ${current.gpuPowerConnected?'✓':'○'} · SATA data ${current.sataDataConnected?'✓':'○'} · SATA power ${current.sataPowerConnected?'✓':'○'} · Front panel ${current.frontPanelConnected?'✓':'○'}`,display:`HDMI ${current.signalConnected?'connected':'disconnected'}. PC output: ${current.videoPort}. Monitor source: ${current.monitorInput}.`};
+    partStates.psu=`Power supply ${a.psuInstalled?'fitted':'in the tray'}. ${a.psuScrews.filter(Boolean).length}/4 mounting screws. Disconnect all PSU power leads before removal.`;
+    $('[data-asm-part-state]').textContent=partStates[selected];
+    const currentOperation = id => {
+      const screw=/^asm-(tighten|loosen)-(panel|psu|board|cooler|gpu|ssd)-(\d)$/.exec(id);
+      if(screw)return (screw[1]==='loosen')===a[screw[2]+'Screws'][Number(screw[3])];
+      const part=/^asm-(fit|remove)-(panel|psu|board|cpu|cooler|ram|gpu|ssd)$/.exec(id);
+      if(part){const fitted={panel:a.panelInstalled,psu:a.psuInstalled,board:current.boardInstalled,cpu:current.cpuInstalled,cooler:current.coolerInstalled,ram:current.ramSeated,gpu:current.gpuInstalled,ssd:current.originalDriveInstalled}[part[2]];return (part[1]==='remove')===fitted;}
+      const clip=/^asm-(open|close)-(retention|ram-clips|pcie-latch)$/.exec(id);
+      if(clip)return (clip[1]==='close')===a[{retention:'retentionOpen','ram-clips':'ramClipsOpen','pcie-latch':'pcieLatchOpen'}[clip[2]]];
+      const cable=/^asm-(connect|disconnect)-(.+)$/.exec(id);
+      if(cable){const fitted=cable[2]==='cpu-fan'?a.cpuFanConnected:current[{'atx':'atxConnected','eps':'cpuPowerConnected','gpu-power':'gpuPowerConnected','sata-data':'sataDataConnected','sata-power':'sataPowerConnected','front-panel':'frontPanelConnected','display':'signalConnected'}[cable[2]]];return (cable[1]==='disconnect')===fitted;}
+      return true;
+    };
+    const actions=assemblyActions(current,a).filter(item=>groupFor(item.id)===selected&&currentOperation(item.id));
+    $('[data-asm-actions]').innerHTML=actions.map(item=>`<button type="button" data-assembly-action="${escape(item.id)}" class="${item.disabled?'asm-action-wait':'asm-action-ready'}" title="${escape(item.reason||'Ready to do')}">${escape(item.label)}</button>`).join('');
+    root.querySelectorAll('[data-asm-part]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.asmPart===selected)));
+    const controls=[...root.querySelectorAll('[data-assembly-action]')];
+    if(active){const target=controls.find(el=>el.dataset.assemblyAction===active);(target||$('[data-asm-actions] button')||$('[data-asm-select]'))?.focus({preventScroll:true});}
+  }
+  function update(next) {
+    current=next;
+    $('[data-asm-power]').textContent=`PC ${current.pcOn?'ON':'OFF'} · AC ${current.acConnected?'connected':'disconnected'}`;
+    const reason=assemblyFailure(current,current.assembly);
+    $('[data-asm-next]').textContent=current.pcOn?'Inspect the virtual equipment. Power off and disconnect AC before opening the case.':current.acConnected?'Disconnect virtual AC before internal work.':reason?`Before startup: ${reason}`:'Assembly checks ready. Connect AC, start the PC and test the original task.';
+    $('[data-asm-delivery]').textContent=current.documentOpened?'Original lesson file opened. Explain your investigation in Check & explain.':current.booted?'Original OS loaded. Check the monitor and open the lesson file.':'Startup tests use your actual assembly, fasteners, thermal interface and cable state.';
+    renderControls(); scene?.update(current,current.assembly);
+  }
+  async function loadScene() {
+    loadRequested=true;
+    if(disposed||!visible||loading||scene)return;
+    loading=true; sceneFailed=false;status.textContent='Loading the local 3D equipment view…';
+    try {
+      sceneModule ||= await import('./assembly-scene.js?release=20261017-assembly12');
+      if(disposed||!visible||!loadRequested)return;
+      scene=sceneModule.mountAssemblyScene(sceneHost,{hardware:current,assembly:current.assembly,onSelect:select,onStatus:message=>{if(!disposed)status.textContent=message.message;}});
+      if(!scene){sceneFailed=true;status.textContent='3D is unavailable on this device. Every assembly and teardown action remains available in the component controls.';}
+      else { $('[data-asm-loading]')?.setAttribute('hidden','');scene.select?.(selected); }
+    } catch { sceneFailed=true; status.textContent='The 3D view could not load. Continue with the complete component controls, or choose Load 3D view to retry.'; }
+    finally {loading=false;}
+  }
+  function click(event) {
+    const target=event.target.closest('button');if(!target||!root.contains(target))return;
+    if(target.dataset.assemblyAction){const response=onAction(target.dataset.assemblyAction);if(!disposed&&response)$('[data-asm-feedback]').textContent=response.message;return;}
+    if(target.dataset.asmPart){select(target.dataset.asmPart);return;}
+    const camera=target.dataset.asmCamera;
+    if(camera==='load'){loadRequested=true;if(scene){scene.resume();status.textContent='3D view resumed.';}else void loadScene();}
+    else if(camera==='off'){loadRequested=false;scene?.pause();status.textContent='3D paused. Component controls remain active.';}
+    else if(camera==='in'||camera==='out')scene?.zoom(camera);
+    else if(camera)scene?.setView(camera);
+  }
+  function change(event){if(event.target.matches('[data-asm-select]'))select(event.target.value);}
+  root.addEventListener('click',click);root.addEventListener('change',change);
+  update(state);
+  if(visible)$('[data-asm-select]')?.focus({preventScroll:true});
+  return {update,cancel(){scene?.pause();if(visible&&loadRequested)scene?.resume();},setVisible(value){visible=value;if(value){if(loadRequested&&!scene&&!loading&&!sceneFailed)void loadScene();else if(loadRequested)scene?.resume();}else scene?.pause();},dispose(){disposed=true;loadRequested=false;scene?.dispose();scene=null;root.removeEventListener('click',click);root.removeEventListener('change',change);}};
+}
