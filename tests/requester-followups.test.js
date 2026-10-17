@@ -69,3 +69,20 @@ test('explanation and timeline wording cannot disguise private details or reveal
     assert.doesNotMatch(reply.answer,/learner@example\.org/u);
   }
 });
+
+test('requester observations distinguish a loose PC HDMI end from a connected monitor end',()=>{
+  for(const id of ['INC-101','INC-107','INC-108']) {
+    const scenario=SCENARIOS.find(entry=>entry.id===id);
+    const state={...initialHardwareState(id),videoPort:'gpu',monitorInput:'hdmi',signalConnected:true,pcVideoConnected:false};
+    const question='What does the picture show now?';
+    const reply=answerQuestion(scenario,question,state);
+    assert.equal(reply.topic,'current-state',id);
+    assert.match(reply.answer,/PC HDMI disconnected/iu,id);
+    assert.doesNotMatch(reply.answer,/can show the desktop|desktop is visible/iu,id);
+    assert.ok(reply.answer.length<=300);
+    const next=answerQuestion(scenario,'What about now?',{...state,pcVideoConnected:true},[{question,answer:reply.answer}]);
+    assert.match(next.answer,/can show the desktop|desktop is visible/iu,id);
+    const legacy={...state};delete legacy.pcVideoConnected;
+    assert.match(answerQuestion(scenario,question,legacy).answer,/can show the desktop|desktop is visible/iu,'an old draft without the new flag retains its known fitted PC end');
+  }
+});

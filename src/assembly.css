@@ -3,6 +3,8 @@
 .asm-actions .asm-action-ready{border-color:#36bda4;background:#12433f}.asm-actions .asm-action-wait{color:#b0c1d2;background:#1a2b3e}
 
 /* 3D Virtual Learning Lab Room Hub & Pathway Stations */
+.asm-cable-state{flex-basis:100%;margin:.6rem 0 0;font-size:.88rem;line-height:1.5;color:#bce8df;overflow-wrap:anywhere}
+.asm-tool-controls[data-cable-mode=true]{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.3fr) repeat(2,minmax(0,1fr));align-items:end}.asm-tool-controls[data-cable-mode=true]>label{min-width:0}.asm-tool-controls[data-cable-mode=true]>p{grid-column:1/-1}.asm-tool-controls[data-cable-mode=true]>button{min-width:0}@media(max-width:1000px){.asm-bench .asm-tool-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.asm-tool-controls[data-cable-mode=true]{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .vlab-hub{margin:1.5rem auto;padding:1.35rem;background:linear-gradient(145deg,#091526,#0f2138);border:1px solid #2b4868;border-radius:18px;color:#e6f0fa;box-shadow:0 20px 48px rgba(4,12,24,.42)}
 .vlab-hub-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
 .vlab-hub-header h2{font-size:clamp(1.35rem,2.4vw,1.85rem);margin:.2rem 0;color:#f8fafc}

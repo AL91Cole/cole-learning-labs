@@ -1,9 +1,10 @@
-import { ASSEMBLY_FASTENERS, normalizeAssemblyState } from './assembly-model.js?release=20261017-tools13';
+import { ASSEMBLY_FASTENERS, normalizeAssemblyState } from './assembly-model.js?release=20261017-cables14';
 
 /** Fixed tool choices shared by the accessible controls and the 3D workbench. */
 export const ASSEMBLY_TOOLS = Object.freeze([
   Object.freeze({ id: 'inspect', label: 'Inspect', description: 'Select equipment to read its state and available actions.' }),
   Object.freeze({ id: 'move', label: 'Move parts', description: 'Move a loose part onto its matching mount, or a fitted part into the tray.' }),
+  Object.freeze({ id: 'cables', label: 'Connect cables', description: 'Move a cable end to its labeled socket, or park it to disconnect.' }),
   Object.freeze({ id: 'screwdriver', label: 'Screwdriver', description: 'Choose a screw head to tighten it or remove it into the tray.' }),
   Object.freeze({ id: 'paste', label: 'Thermal paste', description: 'Apply one pea-sized dot to the exposed processor.' }),
   Object.freeze({ id: 'clean', label: 'Clean surfaces', description: 'Clean the processor and cooler thermal surfaces with the cooler removed.' })
@@ -49,7 +50,8 @@ export function assembledPartFitted(part, hardware, assembly) {
 
 /** Map a gesture to an authored attempt; the mechanical model checks acceptance. */
 export function assemblyToolAction(hardware, assembly, tool, target, operation = 'fit') {
-  if (!ASSEMBLY_TOOLS.some(item => item.id === tool)) return reject('Choose Inspect, Move parts, Screwdriver, Thermal paste, or Clean surfaces.');
+  if (!ASSEMBLY_TOOLS.some(item => item.id === tool)) return reject('Choose a tool from the workbench toolbar.');
+  if (tool === 'cables') return reject('Choose a cable and its matching socket using Connect cables.');
   const part = validId(PARTS, target) ? PARTS[target] : null;
   const screw = fastenerFor(target);
   if (tool === 'inspect') {

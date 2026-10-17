@@ -13,7 +13,7 @@ const hardware = fitted => ({
 const machine = fitted => { const h = hardware(fitted); return { h, a: initialAssemblyState(h) }; };
 
 test('tool catalogue has fixed, unique IDs and cannot be changed by a view', () => {
-  assert.deepEqual(ASSEMBLY_TOOLS.map(item => item.id), ['inspect', 'move', 'screwdriver', 'paste', 'clean']);
+  assert.deepEqual(ASSEMBLY_TOOLS.map(item => item.id), ['inspect', 'move', 'cables', 'screwdriver', 'paste', 'clean']);
   assert.equal(Object.isFrozen(ASSEMBLY_TOOLS), true);
   for (const tool of ASSEMBLY_TOOLS) { assert.equal(Object.isFrozen(tool), true); assert.ok(tool.label); assert.ok(tool.description); }
 });

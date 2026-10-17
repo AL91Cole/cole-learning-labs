@@ -1,19 +1,19 @@
-import {SCENARIOS} from './scenarios.js?release=20261017-tools13';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261017-tools13';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261017-tools13';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261017-tools13';
-import {normalizeLabRecord} from './records.js?release=20261017-tools13';
-import {privacyPage} from './privacy.js?release=20261017-tools13';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261017-tools13';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261017-tools13';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261017-tools13';
+import {SCENARIOS} from './scenarios.js?release=20261017-cables14';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261017-cables14';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261017-cables14';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261017-cables14';
+import {normalizeLabRecord} from './records.js?release=20261017-cables14';
+import {privacyPage} from './privacy.js?release=20261017-cables14';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261017-cables14';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261017-cables14';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261017-cables14';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261017-tools13';
-import {learningRoute,mountLabLearning} from './learning-tools.js?release=20261017-tools13';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261017-tools13';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261017-tools13';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261017-tools13';
-import {renderVirtualLabHubMarkup,mountVirtualLabRoom,mountLabStation3D} from './virtual-lab-scene.js?release=20261017-tools13';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261017-cables14';
+import {learningRoute,mountLabLearning} from './learning-tools.js?release=20261017-cables14';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261017-cables14';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261017-cables14';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261017-cables14';
+import {renderVirtualLabHubMarkup,mountVirtualLabRoom,mountLabStation3D} from './virtual-lab-scene.js?release=20261017-cables14';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -204,7 +204,13 @@ function bindLab(s){
   return {runHypothesisTest,currentTaskResult};
 }
 
-function reportText(s,r){return `COLE LEARNING LABS — INVESTIGATION REPORT\n${s.id} · ${s.title}\nGrades ${s.grade} · ${tracks[s.track].name}\nStatus: ${r.closed?'DELIVERED':r.verified?'TECHNICALLY VERIFIED — TICKET OPEN':'IN PROGRESS'}\n\nORIGINAL TASK\n${s.goal}\n\nEVIDENCE\n${r.evidence.map(id=>'- '+(s.clues.find(c=>c.id===id)?.text||id)).join('\n')||'No evidence recorded.'}\n\nQUESTIONS I ASKED\n${readQuestionEvents(r.events).map(pair=>'Q: '+pair.question+'\nRequester: '+pair.answer).join('\n\n')||'No interview questions recorded.'}\n\nWORKING HYPOTHESIS\n${r.plan||'Not recorded.'}\n\nTEST NOTES\n${r.notes||'Not recorded.'}${s.track==='coding'?'\n\nSAVED PRACTICE CODE\n'+(r.state.code||'Not recorded.')+'\n\nPRACTICE OUTPUT\n'+(Array.isArray(r.state.output)?r.state.output.join('\n'):r.state.output||'No output recorded.'):''}\n\nEXPERIMENT RECORD\n${experimentReport(r)}${s.track==='hardware'&&r.state.assemblyEnabled?'\n\nDETAILED ASSEMBLY STATUS\n'+['panel','psu','board','cooler','gpu','ssd'].map(group=>{const values=r.state.assembly[group+'Screws'];return group+': '+values.filter(Boolean).length+'/'+values.length+' screws secured';}).join('\n')+'\nThermal interface: '+r.state.assembly.paste+'\nCPU fan lead: '+(r.state.assembly.cpuFanConnected?'connected':'disconnected')+'\nCPU retention: '+(r.state.assembly.retentionOpen?'open':'closed')+'\nMemory clips: '+(r.state.assembly.ramClipsOpen?'open':'closed')+'\nPCIe latch: '+(r.state.assembly.pcieLatchOpen?'open':'closed'):''}\n\nACTION LOG\n${r.events.filter(e=>!readQuestionEvents([e]).length).map(e=>'- '+eventMessage(e)).join('\n')||'No actions recorded.'}\n\nREFLECTION\n${r.reflection||'Not recorded.'}\n\nThis is a simulated learning activity. Private-session work stays on this page unless exported or explicitly saved on this device. If you explicitly join an enabled classroom, assigned lab drafts and submitted snapshots may be shared with that teacher. Technical progress is student-reported; teachers review and grade submissions.\n`;}
+function hardwareCableSummary(h){return [
+  ['AC power',h.acConnected],['HDMI PC end',h.pcVideoConnected!==false],['HDMI monitor end',h.signalConnected],
+  ['ATX 24-pin',h.atxConnected],['CPU 8-pin',h.cpuPowerConnected],['GPU power',h.gpuPowerConnected],
+  ['SATA data',h.sataDataConnected],['SATA power',h.sataPowerConnected],['Front panel',h.frontPanelConnected],
+  ...(h.assemblyEnabled?[['CPU fan',h.assembly.cpuFanConnected]]:[])
+].map(([label,connected])=>label+': '+(connected?'connected':'disconnected')).join('\n')+'\nPC video output: '+h.videoPort+'\nMonitor source: '+h.monitorInput;}
+function reportText(s,r){return `COLE LEARNING LABS — INVESTIGATION REPORT\n${s.id} · ${s.title}\nGrades ${s.grade} · ${tracks[s.track].name}\nStatus: ${r.closed?'DELIVERED':r.verified?'TECHNICALLY VERIFIED — TICKET OPEN':'IN PROGRESS'}\n\nORIGINAL TASK\n${s.goal}\n\nEVIDENCE\n${r.evidence.map(id=>'- '+(s.clues.find(c=>c.id===id)?.text||id)).join('\n')||'No evidence recorded.'}\n\nQUESTIONS I ASKED\n${readQuestionEvents(r.events).map(pair=>'Q: '+pair.question+'\nRequester: '+pair.answer).join('\n\n')||'No interview questions recorded.'}\n\nWORKING HYPOTHESIS\n${r.plan||'Not recorded.'}\n\nTEST NOTES\n${r.notes||'Not recorded.'}${s.track==='coding'?'\n\nSAVED PRACTICE CODE\n'+(r.state.code||'Not recorded.')+'\n\nPRACTICE OUTPUT\n'+(Array.isArray(r.state.output)?r.state.output.join('\n'):r.state.output||'No output recorded.'):''}\n\nEXPERIMENT RECORD\n${experimentReport(r)}${s.track==='hardware'?'\n\nCABLE CONNECTIONS\n'+hardwareCableSummary(r.state):''}${s.track==='hardware'&&r.state.assemblyEnabled?'\n\nDETAILED ASSEMBLY STATUS\n'+['panel','psu','board','cooler','gpu','ssd'].map(group=>{const values=r.state.assembly[group+'Screws'];return group+': '+values.filter(Boolean).length+'/'+values.length+' screws secured';}).join('\n')+'\nThermal interface: '+r.state.assembly.paste+'\nCPU fan lead: '+(r.state.assembly.cpuFanConnected?'connected':'disconnected')+'\nCPU retention: '+(r.state.assembly.retentionOpen?'open':'closed')+'\nMemory clips: '+(r.state.assembly.ramClipsOpen?'open':'closed')+'\nPCIe latch: '+(r.state.assembly.pcieLatchOpen?'open':'closed'):''}\n\nACTION LOG\n${r.events.filter(e=>!readQuestionEvents([e]).length).map(e=>'- '+eventMessage(e)).join('\n')||'No actions recorded.'}\n\nREFLECTION\n${r.reflection||'Not recorded.'}\n\nThis is a simulated learning activity. Private-session work stays on this page unless exported or explicitly saved on this device. If you explicitly join an enabled classroom, assigned lab drafts and submitted snapshots may be shared with that teacher. Technical progress is student-reported; teachers review and grade submissions.\n`;}
 function openReport(s,r,customContent){
   cancelHardwareInteraction($('#workspace'));
   reportCleanup?.();
@@ -238,7 +244,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261017-tools13');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261017-cables14');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -250,7 +256,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261017-tools13');
+      const cryptoModule=await import('./report-crypto.js?release=20261017-cables14');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;

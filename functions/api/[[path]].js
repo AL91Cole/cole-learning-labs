@@ -137,14 +137,14 @@ const assemblyActionIds = [
 const hardwareParts = ['monitor', 'rear', 'power', 'board', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'sata', 'atx', 'eps', 'gpu-power', 'sata-power', 'front'];
 const hardwareActions = [
   'enable-assembly', ...assemblyActionIds,
-  'power-off', 'unplug', 'plug-in', 'boot', 'video-gpu', 'video-board', 'input-hdmi', 'input-displayport', 'connect-signal', 'disconnect-signal', 'open-document', 'close-document',
+  'power-off', 'unplug', 'plug-in', 'boot', 'video-gpu', 'video-board', 'disconnect-video', 'input-hdmi', 'input-displayport', 'connect-signal', 'disconnect-signal', 'open-document', 'close-document',
   'seat-ram', 'unseat-ram', 'disconnect-sata', 'install-original', 'choose-nvme',
   'install-board', 'install-cpu', 'install-cooler', 'install-ram', 'install-gpu', 'install-drive',
   'connect-atx', 'connect-cpu-power', 'connect-gpu-power', 'connect-sata', 'connect-sata-power', 'connect-front-panel',
   ...hardwareParts.map(part => `inspect-${part}`)
 ];
 const hardwareStateFields = {
-  ...Object.fromEntries(['pcOn', 'acConnected', 'boardInstalled', 'cpuInstalled', 'coolerInstalled', 'ramSeated', 'gpuInstalled', 'atxConnected', 'cpuPowerConnected', 'gpuPowerConnected', 'frontPanelConnected', 'originalDriveInstalled', 'sataDataConnected', 'sataPowerConnected', 'booted', 'documentOpened', 'signalConnected', 'assemblyEnabled'].map(key => [key, workBoolean])),
+  ...Object.fromEntries(['pcOn', 'acConnected', 'boardInstalled', 'cpuInstalled', 'coolerInstalled', 'ramSeated', 'gpuInstalled', 'atxConnected', 'cpuPowerConnected', 'gpuPowerConnected', 'frontPanelConnected', 'originalDriveInstalled', 'sataDataConnected', 'sataPowerConnected', 'booted', 'documentOpened', 'signalConnected', 'pcVideoConnected', 'assemblyEnabled'].map(key => [key, workBoolean])),
   assembly: assemblyState,
   monitorInput: workEnum(['hdmi','displayport']), videoPort: workEnum(['board', 'gpu']), selectedDrive: workEnum(['sata', 'nvme']),
   view: workEnum(['bench', 'internals', 'rear', 'display']), selectedPart: workEnum(hardwareParts),

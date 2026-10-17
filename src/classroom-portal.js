@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261017-tools13';
+import { SCENARIOS } from './scenarios.js?release=20261017-cables14';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';

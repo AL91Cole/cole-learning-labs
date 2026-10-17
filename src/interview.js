@@ -1,4 +1,4 @@
-import { resolveQuestion } from './conversation.js?release=20261017-tools13';
+import { resolveQuestion } from './conversation.js?release=20261017-cables14';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
@@ -96,7 +96,8 @@ function caseReply(scenario, question, state) {
     if (/monitor|screen|display|picture|video|signal|hdmi|cable|port|socket/iu.test(question)) {
       const on = flag(state, 'pcOn'); const port = read(state, 'videoPort', ['board','gpu']); const boot = flag(state, 'booted');
       const source = read(state,'monitorInput',['hdmi','displayport']); const signal = flag(state,'signalConnected');
-      if (on !== undefined && port && boot !== undefined) return response('Current bench: the desktop is ' + (on ? 'on' : 'off') + '; cable at ' + (port === 'gpu' ? 'dedicated graphics-card output' : 'motherboard output') + '. Source: ' + (source === 'displayport' ? 'DisplayPort' : 'HDMI') + '; monitor end ' + (signal === false ? 'disconnected' : 'fitted') + '. ' + (on && boot && port === 'gpu' && source !== 'displayport' && signal !== false && flag(state,'gpuInstalled') !== false && flag(state,'gpuPowerConnected') !== false ? 'The virtual display can show the desktop.' : 'The display is not ready to show the classroom desktop.'), 'current-state');
+      const pcCable = flag(state,'pcVideoConnected') !== false;
+      if (on !== undefined && port && boot !== undefined) return response('Current bench: PC ' + (on ? 'on' : 'off') + '; PC HDMI ' + (pcCable ? 'fitted at ' : 'disconnected from ') + (port === 'gpu' ? 'dedicated graphics-card output' : 'motherboard output') + '; monitor end ' + (signal === false ? 'disconnected' : 'fitted') + '; source ' + (source === 'displayport' ? 'DisplayPort' : 'HDMI') + '. ' + (on && boot && port === 'gpu' && source !== 'displayport' && signal !== false && pcCable && flag(state,'gpuInstalled') !== false && flag(state,'gpuPowerConnected') !== false ? 'The virtual display can show the desktop.' : 'The display is not ready to show the classroom desktop.'), 'current-state');
       return fact(scenario, /cable|port|socket|hdmi/iu.test(question) ? 'video' : 'screen');
     }
     if (/power|lights?|fans?|running|turn.*on/iu.test(question)) return currentOr(scenario, state, 'pcOn', 'The virtual tower is on. Its power light and fans are running.', 'The virtual tower is currently off. No running fans or power light are shown.', 'power');
@@ -134,9 +135,10 @@ function caseReply(scenario, question, state) {
     if (/monitor|screen|display|picture|video|signal|hdmi|displayport|cable|port|socket|input|source/iu.test(question)) {
       const on = flag(state,'pcOn'); const boot = flag(state,'booted'); const signal = flag(state,'signalConnected');
       const port = read(state,'videoPort',['board','gpu']); const source = read(state,'monitorInput',['hdmi','displayport']);
+      const pcCable = flag(state,'pcVideoConnected') !== false;
       if (source && signal !== undefined && port && on !== undefined && boot !== undefined) {
-        const ready = on && boot && signal && source === 'hdmi' && port === 'gpu' && flag(state,'gpuInstalled') !== false && flag(state,'gpuPowerConnected') !== false;
-        return response('Current bench: monitor source ' + (source === 'hdmi'?'HDMI':'DisplayPort') + '; HDMI at monitor ' + (signal?'fitted':'disconnected') + '; PC cable at ' + (port==='gpu'?'graphics card':'inactive motherboard output') + '. ' + (ready?'The desktop is visible. Open the lesson file to check the original task.':!on?'The PC is off, so no picture is sent.':!boot?'Startup has not completed; inspect the POST result.':'The monitor has no usable signal on its selected source.'),'current-state');
+        const ready = on && boot && signal && pcCable && source === 'hdmi' && port === 'gpu' && flag(state,'gpuInstalled') !== false && flag(state,'gpuPowerConnected') !== false;
+        return response('Current bench: monitor source ' + (source === 'hdmi'?'HDMI':'DisplayPort') + '; HDMI at monitor ' + (signal?'fitted':'disconnected') + '; PC HDMI ' + (pcCable?'fitted at ':'disconnected from ') + (port==='gpu'?'graphics card':'inactive motherboard output') + '. ' + (ready?'The desktop is visible. Open the lesson file to check the original task.':!on?'The PC is off, so no picture is sent.':!boot?'Startup has not completed; inspect the POST result.':'The monitor has no usable signal on its selected source.'),'current-state');
       }
       return fact(scenario,/cable|port|socket|hdmi/iu.test(question)?'video':'screen');
     }

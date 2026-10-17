@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from '../src/assembly-model.js';
 import { ASSEMBLY_TOOLS, assemblyToolAction } from '../src/assembly-tools.js';
 import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js';
 
 const source = readFileSync(new URL('../src/assembly-workbench.js', import.meta.url), 'utf8');
 const lazyImport = /import\('\.\/assembly-scene\.js\?release=[^']+'\)/g;
@@ -44,7 +45,7 @@ function fixture({ hidden = false, loader } = {}) {
   const scene = { update() { calls.updates++; }, select() {}, pause() { calls.pauses++; }, resume() { calls.resumes++; }, dispose() { calls.disposals++; } };
   const sceneModule = { mountAssemblyScene(host) { assert.equal(host, fields.get('[data-asm-scene]')); calls.mounts++; return scene; } };
   const mount = vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm, '').replace('export function mountAssemblyWorkbench', 'function mountAssemblyWorkbench').replace(lazyImport, 'sceneLoader()')}; mountAssemblyWorkbench`, {
-    assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS, ASSEMBLY_TOOLS, assemblyToolAction, sceneLoader() { calls.loads++; return loader ? loader(sceneModule) : Promise.resolve(sceneModule); }
+    assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS, ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_CABLES, cableConnection, assemblyCableAction, sceneLoader() { calls.loads++; return loader ? loader(sceneModule) : Promise.resolve(sceneModule); }
   });
   let state = applyHardwareAction('INC-106', initialHardwareState('INC-106'), 'enable-assembly').state;
   let controller;

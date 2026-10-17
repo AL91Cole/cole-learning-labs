@@ -45,6 +45,20 @@ test('server drafts accept normalized hardware records with and without detailed
   }
 });
 
+test('prepared drafts retain the explicit PC HDMI connection as a boolean and only its authored disconnect action', () => {
+  for(const connected of [false,true]) {
+    const value=work('INC-101');value.state.pcVideoConnected=connected;
+    value.state.actions.push('disconnect-video');
+    const saved=JSON.parse(validate(value,'INC-101'));
+    assert.equal(saved.state.pcVideoConnected,connected);
+    assert.ok(saved.state.actions.includes('disconnect-video'));
+  }
+  for(const malformed of ['false',0,null,{email:'private@example.test'}]) {
+    const value=work('INC-101');value.state.pcVideoConnected=malformed;rejects(value);
+  }
+  const unknown=work('INC-101');unknown.state.actions.push('disconnect-student');rejects(unknown);
+});
+
 test('enabled detailed mode cannot use a null or omitted mechanical record to forge a completed build', () => {
   for (const id of ['INC-101', 'INC-106']) {
     const forged = work(id);

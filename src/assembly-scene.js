@@ -1,5 +1,6 @@
-import * as THREE from './three.module.js?release=20261017-tools13';
-import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-tools13';
+import * as THREE from './three.module.js?release=20261017-cables14';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from './assembly-tools.js?release=20261017-cables14';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261017-cables14';
 
 /**
  * Original, procedural 3D hardware lab & workstation artwork.
@@ -64,6 +65,9 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   let tool = 'inspect';
   let pasteAmount = 'pea';
   let drag = null;
+  let cableDrag = null;
+  let selectedCable = 'ac';
+  let armedCable = '';
   let dispatchVersion = 0;
 
   function material(color, options = {}) {
@@ -129,7 +133,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     const loosePoints = [start, [start[0] + 0.5, 0.55, 0.7], [start[0] + 0.55, 0.22, 1.15]];
     loose.add(new THREE.Mesh(cableGeometry(loosePoints, width), material(color, { roughness: 0.85, metalness: 0.08 })));
     box(loose, width * 4, width * 3, width * 3, ...loosePoints.at(-1), 0x38495b, { roughness: 0.5, metalness: 0.2 });
-    cables.push({ node, loose, key, requirePart, assemblyKey: key === 'cpuFanConnected' });
+    cables.push({ node, loose, key, requirePart, start: points[0], assemblyKey: key === 'cpuFanConnected' });
     return node;
   }
   function movable(id, fitted, loose, partKey, rotation = null) {
@@ -162,7 +166,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   box(labBench, 19.2, 0.24, 10.2, -0.4, -0.48, 0.1, 0x1e2f3d, { roughness: 0.72, metalness: 0.12 });
   box(labBench, 19.24, 0.09, 0.18, -0.4, -0.39, 5.18, 0x8b6b4a, { roughness: 0.65, metalness: 0.08 });
   // Subtle lab backboard wall and overhead LED task light bar
-  box(labBench, 19.2, 8.6, 0.16, -0.4, 3.7, -4.85, 0x0f1e2c, { roughness: 0.88, metalness: 0.1 });
+  const backboard = box(labBench, 19.2, 8.6, 0.16, -0.4, 3.7, -4.85, 0x0f1e2c, { roughness: 0.88, metalness: 0.1 });
   box(labBench, 11.5, 0.14, 0.45, -0.4, 7.65, -4.4, 0x2c4255, { roughness: 0.4, metalness: 0.6 });
   box(labBench, 10.8, 0.05, 0.22, -0.4, 7.57, -4.4, 0xdff9ff, { emissive: 0x8be9ff, emissiveIntensity: 0.85, roughness: 0.2 });
   // Grounded anti-static ESD mat with snap button & parts staging mat
@@ -244,7 +248,11 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   box(chassis, 0.16, 6.2, 2.52, -2.7, 3.1, 0.22, 0x283644, { metalness: 0.52, roughness: 0.48 });
   box(chassis, 0.2, 6.2, 2.52, 2.7, 3.1, 0.22, 0x223544, { metalness: 0.52, roughness: 0.45 });
   // PSU shroud divider bar with cable pass-through
-  box(chassis, 5.25, 0.08, 2.38, 0, 1.18, 0.18, 0x1d2b36, { metalness: 0.48, roughness: 0.52 });
+  box(chassis, 3.62, 0.08, 2.38, -0.8, 1.18, 0.18, 0x1d2b36, { metalness: 0.48, roughness: 0.52 });
+  // The SSD cable opening stays physically open rather than hiding the sockets
+  // beneath a solid shroud. It is a fixed teaching-case cutout.
+  box(chassis, 1.65, 0.08, 0.15, 1.8, 1.18, -0.94, 0x1d2b36, { metalness: 0.48, roughness: 0.52 });
+  box(chassis, 1.65, 0.08, 0.15, 1.8, 1.18, 1.3, 0x1d2b36, { metalness: 0.48, roughness: 0.52 });
   // Front airflow grille and rear exhaust cut-outs
   instanceBoxes(chassis, [0.21, 0.07, 1.85], Array.from({ length: 18 }, (_, i) => [2.805, 1.7 + i * 0.2, 0.2]), 0x0b1620, { roughness: 0.7 });
   instanceBoxes(chassis, [0.16, 0.07, 1.9], Array.from({ length: 8 }, (_, i) => [-2.8, 1.5 + i * 0.18, 0.2]), 0x0b1620, { roughness: 0.7 });
@@ -467,6 +475,130 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   const ghostMaterial = new THREE.MeshStandardMaterial({ color: 0xf2b14e, emissive: 0x5d3510, transparent: true, opacity: 0.48, depthWrite: false, roughness: 0.8, metalness: 0 });
   disposals.push(ghostMaterial);
 
+  const portSpecs = {
+    'ac-inlet': { at: [0.38, 0.58, -1.12], normal: [0, 0, -1], size: [0.46, 0.28, 0.1], owner: 'psuInstalled' },
+    'hdmi-gpu': { at: [-1.9, 2.68, -1.15], normal: [0, 0, -1], size: [0.34, 0.14, 0.1], owner: 'gpuInstalled' },
+    'hdmi-board': { at: [-1.65, 5.02, -1.15], normal: [0, 0, -1], size: [0.34, 0.14, 0.1], owner: 'boardInstalled' },
+    'monitor-hdmi': { at: [-4.87, 1.52, -0.65], normal: [-0.28, 0, -0.96], size: [0.34, 0.14, 0.1] },
+    'atx-header': { at: [1.75, 4.1, -0.43], normal: [0, 0, 1], size: [0.24, 0.78, 0.17], owner: 'boardInstalled', internal: true },
+    'eps-header': { at: [-1.53, 5.64, -0.43], normal: [0, 0, 1], size: [0.4, 0.23, 0.17], owner: 'boardInstalled', internal: true },
+    'gpu-power-header': { at: [0.84, 3.02, 0.55], normal: [0, 0, 1], size: [0.35, 0.28, 0.15], owner: 'gpuInstalled', internal: true },
+    'ssd-data': { at: [1.72, 1.08, -0.12], normal: [0, 0, 1], size: [0.27, 0.13, 0.17], owner: 'originalDriveInstalled', internal: true },
+    'ssd-power': { at: [2.15, 1.08, -0.12], normal: [0, 0, 1], size: [0.4, 0.13, 0.17], owner: 'originalDriveInstalled', internal: true },
+    'front-panel-header': { at: [1.51, 2.3, -0.43], normal: [0, 0, 1], size: [0.3, 0.17, 0.16], owner: 'boardInstalled', internal: true },
+    'cpu-fan-header': { at: [-0.1, 5.66, -0.43], normal: [0, 0, 1], size: [0.28, 0.15, 0.15], owner: 'boardInstalled', internal: true }
+  };
+  const portNodes = new Map();
+  const cableEnds = new Map();
+  const cableColors = [0xe6c87a, 0x69b8ff, 0x69b8ff, 0x8bdac0, 0xe8cc69, 0x9caaff, 0xf6ad50, 0xcf94dc, 0x70d8de, 0xc5d8db];
+  let overlay = null;
+  const labels = new Map();
+  if (typeof doc.createElement === 'function') {
+    overlay = doc.createElement('div');
+    overlay.setAttribute('aria-hidden', 'true');
+    Object.assign(overlay.style, { position: 'absolute', inset: '0', pointerEvents: 'none', overflow: 'hidden' });
+    if (host.style && !host.style.position) host.style.position = 'relative';
+    host.appendChild(overlay);
+  }
+  function label(id, text) {
+    if (!overlay) return;
+    const element = doc.createElement('span');
+    element.textContent = text;
+    Object.assign(element.style, { position: 'absolute', padding: '4px 7px', border: '1px solid #6ee7cf', borderRadius: '6px', background: '#102332ee', color: '#edf9f6', font: '600 11px/1.25 system-ui,sans-serif', whiteSpace: 'nowrap', transform: 'translate(-50%,-100%)', display: 'none' });
+    overlay.appendChild(element); labels.set(id, element);
+  }
+  for (const [id, spec] of Object.entries(portSpecs)) {
+    const node = group(); node.position.fromArray(spec.at); node.userData.cablePortId = id;
+    box(node, ...spec.size, 0, 0, 0, 0x46bda9, { emissive: 0x123d36, emissiveIntensity: 0.5, roughness: 0.5 });
+    node.children[0].material = node.children[0].material.clone(); disposals.push(node.children[0].material);
+    portNodes.set(id, node);
+    label(id, ASSEMBLY_CABLES.flatMap(item => item.sockets).find(item => item.id === id)?.label || id);
+  }
+  ASSEMBLY_CABLES.forEach((item, index) => {
+    const node = group(); node.userData.cableEndpointId = item.id;
+    const shape = item.id === 'atx' ? [0.2, 0.46, 0.19] : item.id.includes('hdmi') ? [0.31, 0.15, 0.2] : [0.26, 0.2, 0.2];
+    box(node, ...shape, 0, 0, 0, cableColors[index], { emissive: 0x123d36, emissiveIntensity: 0.6, roughness: 0.65 });
+    const home = item.internal ? [3.6 + (index - 3) * 0.58, -0.14, 2.72] : item.id === 'hdmi-monitor' ? [-6.4, -0.14, -2.45] : [-0.15 - index * 0.65, -0.14, -2.6];
+    cableEnds.set(item.id, { node, home, spec: item });
+    label(`cable-${item.id}`, `${item.label} · plug`);
+  });
+  const cableRest = group(); cableRest.position.set(7.6, -0.2, 3.7); cableRest.userData.cablePortId = 'cable-rest';
+  box(cableRest, 1.85, 0.08, 1.1, 0, 0, 0, 0x245c58, { roughness: 0.9 });
+  label('cable-rest', '↩ Cable rest · unplug here');
+  const cableGhost = group(); cableGhost.visible = false; cableGhost.userData.assemblyCableGhost = true;
+  box(cableGhost, 0.3, 0.22, 0.23, 0, 0, 0, 0x67eccb, { transparent: true, opacity: 0.65, depthWrite: false });
+  const cableLineGeo = geometry('cable-drag-line', () => new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(Array(9).fill(0), 3)));
+  const cableLineMat = new THREE.LineBasicMaterial({ color: 0x67eccb, transparent: true, opacity: 0.9 }); disposals.push(cableLineMat);
+  const cableLine = new THREE.Line(cableLineGeo, cableLineMat); cableLine.visible = false; scene.add(cableLine);
+  const acConnectedMesh = new THREE.Mesh(cableGeometry([[-7.9, 1.4, -4.6], [-7, 0, -3.8], [-1.5, -0.1, -2.3], [0.38, 0.58, -1.12]], 0.06), material(0x28323c)); scene.add(acConnectedMesh);
+  const acLooseMesh = new THREE.Mesh(cableGeometry([[-7.9, 1.4, -4.6], [-7, 0, -3.8], [-2, -0.1, -2.9], cableEnds.get('ac').home], 0.06), material(0x28323c)); scene.add(acLooseMesh);
+  box(scene, 0.7, 0.8, 0.12, -7.9, 1.4, -4.7, 0xc3d1cf);
+  box(scene, 0.25, 0.33, 0.14, -7.9, 1.4, -4.6, 0x202e36);
+
+  function portAvailable(id) {
+    const spec = portSpecs[id];
+    if (!spec || (spec.internal && modelAssembly.panelInstalled)) return false;
+    return !spec.owner || (spec.owner === 'psuInstalled' ? modelAssembly.psuInstalled !== false : !!modelHardware[spec.owner]);
+  }
+  function cableVisible(item) { return !item.internal || !modelAssembly.panelInstalled; }
+  function updateCableViews() {
+    for (const [id, node] of portNodes) {
+      node.visible = tool === 'cables' && portAvailable(id);
+      const compatible = ASSEMBLY_CABLES.find(item => item.id === selectedCable)?.sockets.some(socket => socket.id === id);
+      node.children[0].material.emissiveIntensity = compatible ? 1 : 0.12;
+    }
+    for (const [id, item] of cableEnds) {
+      const socket = cableConnection(modelHardware, modelAssembly, id);
+      const spec = portSpecs[socket];
+      item.node.position.fromArray(spec ? spec.at.map((value, i) => value + spec.normal[i] * 0.18) : item.home);
+      item.node.visible = tool === 'cables' && cableVisible(item.spec) && !(cableDrag?.id === id);
+      item.node.scale.setScalar(selectedCable === id ? 1.3 : 1);
+    }
+    for (const lead of cables) {
+      const item = cableEnds.get(lead.node.userData.selectId);
+      if (!item) continue;
+      const home = item.home;
+      lead.loose.children[0].geometry = cableGeometry([lead.start, [lead.start[0] + 0.45, 0.35, 1.4], [home[0] - 0.4, -0.06, home[2] - 0.35], home], 0.04);
+      lead.loose.children[1].position.fromArray(home);
+    }
+    cableRest.visible = tool === 'cables';
+    acConnectedMesh.visible = !!modelHardware.acConnected;
+    acLooseMesh.visible = !modelHardware.acConnected;
+  }
+  function screenPoint(node) {
+    const point = node.getWorldPosition(new THREE.Vector3()).project(camera);
+    const bounds = canvas.getBoundingClientRect();
+    const x = (point.x + 1) * lastWidth / 2; const y = (1 - point.y) * lastHeight / 2;
+    return { clientX: bounds.left + x, clientY: bounds.top + y, x, y, depth: point.z };
+  }
+  function unobscured(node) {
+    const position = screenPoint(node);
+    if (position.depth < -1 || position.depth > 1 || !rayAt(position)) return false;
+    const distanceToNode = node.getWorldPosition(new THREE.Vector3()).distanceTo(raycaster.ray.origin);
+    // Thin flexible leads crossing the center ray do not erase a port's tap
+    // area. Solid housings still occlude; closed-panel guards are explicit.
+    const obstacle = raycaster.intersectObjects(scene.children, true).find(hit => hit.object.isMesh && hit.object.geometry?.type !== 'TubeGeometry' && isVisible(hit.object) && !hit.object.material?.wireframe && !(hit.object.material?.transparent && hit.object.material.opacity < 0.2) && !hit.object.parent?.userData.assemblyCableGhost);
+    return !obstacle || obstacle.distance + 0.18 >= distanceToNode;
+  }
+  function updateCableLabels() {
+    if (!overlay) return;
+    for (const element of labels.values()) element.style.display = 'none';
+    if (tool !== 'cables') return;
+    const chosen = cableEnds.get(selectedCable);
+    const show = (id, node) => {
+      const element = labels.get(id); if (!element || !node.visible || !unobscured(node)) return;
+      const point = screenPoint(node);
+      if (point.x < 0 || point.y < 0 || point.x > lastWidth || point.y > lastHeight) return;
+      element.style.left = `${point.x}px`; element.style.top = `${point.y + (id.startsWith('cable-') ? -14 : 26)}px`; element.style.display = 'block';
+    };
+    if (chosen) {
+      show(`cable-${selectedCable}`, chosen.node);
+      for (const socket of chosen.spec.sockets) show(socket.id, portNodes.get(socket.id));
+    }
+    const rest = labels.get('cable-rest');
+    if (rest) { rest.style.display = 'block'; rest.style.left = `${lastWidth - 82}px`; rest.style.top = `${lastHeight - 12}px`; rest.style.padding = '11px 9px'; }
+  }
+
   function isVisible(object) {
     for (let parent = object; parent; parent = parent.parent) if (!parent.visible) return false;
     return true;
@@ -508,16 +640,20 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     powerLed.material.emissiveIntensity = modelHardware.pcOn ? 0.95 : 0.08;
 
     // Update 3D Monitor screen & external HDMI display cable routing
-    const desktopVisible = !!modelHardware.pcOn && !!modelHardware.booted && !!modelHardware.gpuInstalled && !!modelHardware.gpuPowerConnected && modelHardware.videoPort === 'gpu' && !!modelHardware.signalConnected && (modelHardware.monitorInput || 'hdmi') === 'hdmi';
+    const desktopVisible = !!modelHardware.pcOn && !!modelHardware.booted && !!modelHardware.gpuInstalled && !!modelHardware.gpuPowerConnected && modelHardware.videoPort === 'gpu' && modelHardware.pcVideoConnected !== false && !!modelHardware.signalConnected && (modelHardware.monitorInput || 'hdmi') === 'hdmi';
     screenDesktop.visible = desktopVisible;
     screenDoc.visible = desktopVisible && !!modelHardware.documentOpened;
     screenNoSignal.visible = !desktopVisible && !!modelHardware.pcOn;
     monitorLed.material.emissiveIntensity = desktopVisible ? 0.95 : modelHardware.pcOn ? 0.45 : 0.12;
     const signalConnected = modelHardware.signalConnected !== false;
     const onGpuPort = (modelHardware.videoPort || 'gpu') === 'gpu';
-    hdmiGpuToMonitor.visible = signalConnected && onGpuPort;
-    hdmiBoardToMonitor.visible = signalConnected && !onGpuPort;
-    hdmiLooseMonitor.visible = !signalConnected;
+    const pcEnd = modelHardware.pcVideoConnected !== false;
+    const hdmiStart = pcEnd ? portSpecs[onGpuPort ? 'hdmi-gpu' : 'hdmi-board'].at : cableEnds.get('hdmi-pc').home;
+    const hdmiEnd = signalConnected ? portSpecs['monitor-hdmi'].at : cableEnds.get('hdmi-monitor').home;
+    const route = pcEnd && signalConnected ? [hdmiStart, [-3.2, 0.8, -1.5], [-4.1, 0.45, -1.2], hdmiEnd] : !pcEnd && !signalConnected ? [hdmiStart, [-0.3, -0.11, 3.65], [-1.8, -0.11, 3.65], hdmiEnd] : [hdmiStart, [-3.2, 0.35, 1.2], [-3.9, 0.1, 2.6], hdmiEnd];
+    hdmiGpuToMonitor.geometry = cableGeometry(route, 0.052);
+    hdmiGpuToMonitor.visible = true;
+    hdmiBoardToMonitor.visible = hdmiLooseMonitor.visible = false;
 
     scene.updateMatrixWorld(true);
     for (const fastener of screws) {
@@ -542,9 +678,11 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
       if (lead.assemblyKey && !available) lead.loose.visible = false;
     }
     highlight(selectedId);
+    updateCableViews();
     requestRender();
   }
   function updateCamera() {
+    backboard.visible = Math.cos(yaw) > -0.1;
     camera.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * distance, target.y + Math.sin(pitch) * distance, target.z + Math.cos(yaw) * Math.cos(pitch) * distance);
     camera.lookAt(target);
     camera.updateMatrixWorld();
@@ -553,6 +691,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     frame = 0;
     if (stopped || paused || doc.hidden || contextLost || !lastWidth || !lastHeight) return;
     updateCamera();
+    updateCableLabels();
     renderer.render(scene, camera);
   }
   function requestRender() {
@@ -597,6 +736,12 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   function selectedAt(event) {
     if (!rayAt(event)) return '';
+    if (tool === 'cables') {
+      const endpoint = cableHit(event, true);
+      if (endpoint) return `cable-${endpoint}`;
+      const port = cableHit(event, false);
+      return port ? `port-${port}` : '';
+    }
     if (tool === 'screwdriver') {
       const rect = canvas.getBoundingClientRect();
       const candidates = screws.map(({ screw }) => {
@@ -635,7 +780,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     if (!stopped) onInteraction({ kind, message, ...extra });
   }
   function cancelInteraction(message = '') {
-    const hadDrag = !!drag;
+    const hadDrag = !!drag || !!cableDrag;
     releaseGesture();
     if (drag) {
       drag.source.visible = drag.sourceVisible;
@@ -643,6 +788,10 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
       drag.ghost.removeFromParent();
       drag = null;
     }
+    cableDrag = null;
+    armedCable = '';
+    cableGhost.visible = cableLine.visible = false;
+    updateCableViews();
     dropMarker.visible = false;
     highlight(selectedId);
     if (message || hadDrag) notify('idle', message || 'Movement canceled. Your assembly is unchanged.');
@@ -724,6 +873,46 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     if (gesture.lastMessage !== message) { gesture.lastMessage = message; notify(drag.valid ? 'valid' : 'dragging', message, { partId: drag.partId, targetId: destination }); }
     requestRender();
   }
+  function cableHit(event, endpoint) {
+    if (!rayAt(event)) return '';
+    const bounds = canvas.getBoundingClientRect();
+    if (!endpoint && event.clientX >= bounds.left + lastWidth - 155 && event.clientX <= bounds.left + lastWidth - 8 && event.clientY >= bounds.top + lastHeight - 55 && event.clientY <= bounds.top + lastHeight - 8) return 'cable-rest';
+    const items = endpoint ? [...cableEnds].map(([id, item]) => [id, item.node]) : [...portNodes, ['cable-rest', cableRest]];
+    const candidates = items.map(([id, node]) => { const p = screenPoint(node); return { id, node, p, distance: Math.hypot(p.clientX - event.clientX, p.clientY - event.clientY) }; }).filter(item => item.node.visible && item.p.depth >= -1 && item.p.depth <= 1 && item.distance <= (endpoint ? 22 : 24)).sort((a, b) => a.distance - b.distance);
+    return candidates.find(item => unobscured(item.node))?.id || '';
+  }
+  function beginCable(event) {
+    const id = gesture.partId.startsWith('cable-') ? gesture.partId.slice(6) : '';
+    const item = cableEnds.get(id);
+    if (!item || !cableVisible(item.spec)) return false;
+    selectedCable = id;
+    updateCableViews();
+    const normal = camera.getWorldDirection(new THREE.Vector3());
+    cableDrag = { id, origin: item.node.position.clone(), plane: new THREE.Plane().setFromNormalAndCoplanarPoint(normal, item.node.position), destination: '' };
+    item.node.visible = false;
+    cableGhost.position.copy(item.node.position); cableGhost.visible = cableLine.visible = true;
+    canvas.setPointerCapture?.(event.pointerId);
+    canvas.style.cursor = 'grabbing';
+    return true;
+  }
+  function moveCable(event) {
+    const ray = rayAt(event);
+    const point = ray?.intersectPlane(cableDrag.plane, new THREE.Vector3());
+    if (point) cableGhost.position.copy(point).clamp(new THREE.Vector3(-8.5, -0.2, -4.5), new THREE.Vector3(8.7, 6.3, 4.8));
+    const destination = cableHit(event, false);
+    const mapped = assemblyCableAction(modelHardware, modelAssembly, cableDrag.id, destination);
+    cableDrag.destination = destination;
+    cableDrag.valid = !!mapped.action;
+    if (mapped.action && portNodes.has(destination)) cableGhost.position.copy(portNodes.get(destination).position);
+    if (mapped.action && destination === 'cable-rest') cableGhost.position.fromArray(cableEnds.get(cableDrag.id).home);
+    const positions = cableLineGeo.attributes.position;
+    const mid = cableDrag.origin.clone().lerp(cableGhost.position, 0.5); mid.y -= 0.35;
+    [cableDrag.origin, mid, cableGhost.position].forEach((p, i) => positions.setXYZ(i, p.x, p.y, p.z)); positions.needsUpdate = true; cableLineGeo.computeBoundingSphere();
+    cableLineMat.color.set(mapped.action ? 0x67eccb : 0xf2b14e);
+    const message = mapped.action ? `✓ Release: ${mapped.message}` : destination ? `Not a match: ${mapped.message}` : 'Move the plug to a labeled matching port, or Cable rest to unplug. Release elsewhere to cancel.';
+    if (gesture.lastMessage !== message) { gesture.lastMessage = message; notify(mapped.action ? 'valid' : 'dragging', message, { cableId: cableDrag.id, targetId: destination }); }
+    requestRender();
+  }
   function down(event) {
     if (stopped || paused || doc.hidden || contextLost || event.button !== 0) return;
     if (gesture && event.pointerId !== gesture.id) { cancelInteraction('Movement canceled: use one pointer at a time.'); return; }
@@ -739,8 +928,10 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
       if (Math.hypot(dx, dy) > 7) {
         gesture.moved = true;
         if (tool === 'move' && !drag && !beginMove(event)) return;
+        if (tool === 'cables' && !cableDrag && !beginCable(event)) return;
       }
       if (drag) movePart(event);
+      if (cableDrag) moveCable(event);
       return;
     }
     if (!gesture.orbit && Math.hypot(dx, dy) > 7) {
@@ -757,6 +948,12 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   }
   function up(event) {
     if (!gesture || event.pointerId !== gesture.id) return;
+    if (cableDrag) {
+      moveCable(event);
+      const mapped = cableDrag.valid ? assemblyCableAction(modelHardware, modelAssembly, cableDrag.id, cableDrag.destination) : { action: null, message: 'Connection canceled. Choose the matching labeled port; your cables are unchanged.' };
+      action(mapped);
+      return;
+    }
     if (drag) {
       movePart(event);
       const mapped = drag.valid ? assemblyDropAction(modelHardware, modelAssembly, drag.partId, drag.destination) : { action: null, message: 'Movement canceled. Drop the part on its matching outline or the parts tray.' };
@@ -767,6 +964,18 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     releaseGesture();
     if (tap) {
       const id = selectedAt(event);
+      if (tool === 'cables') {
+        if (id.startsWith('cable-')) {
+          selectedCable = armedCable = id.slice(6);
+          updateCableViews(); requestRender();
+          onSelect(id);
+          notify('info', `${cableEnds.get(selectedCable)?.spec.label || 'Cable'} selected. Tap its matching port, or drag this plug to connect it.`, { cableId: selectedCable });
+        } else if (id.startsWith('port-')) {
+          if (armedCable) action(assemblyCableAction(modelHardware, modelAssembly, armedCable, id.slice(5)));
+          else notify('info', 'Select a plug or choose a cable in the toolbar first.');
+        }
+        return;
+      }
       if (id) {
         highlight(id);
         requestRender();
@@ -785,7 +994,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     if (gesture && event.pointerId === gesture.id && event.target !== canvas) cancelInteraction();
   }
   function leave() {
-    if (gesture && !gesture.orbit && !drag) cancelInteraction();
+    if (gesture && !gesture.orbit && !drag && !cableDrag) cancelInteraction();
   }
   function loss(event) {
     event.preventDefault();
@@ -849,9 +1058,12 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   doc.addEventListener('visibilitychange', visibility);
 
   function setView(name) {
-    const presets = { iso: [0.52, 0.33], monitor: [-0.36, 0.18], side: [0, 0.02], front: [1.29, 0.15], top: [0.24, 1.31], rear: [Math.PI, 0.08] };
+    const presets = { iso: [0.52, 0.33], monitor: [-0.36, 0.18], side: [0, 0.02], front: [1.29, 0.15], top: [0.24, 1.31], rear: [Math.PI, 0.08], 'rear-io': [Math.PI, 0.18], 'monitor-ports': [-2.86, 0.17] };
     if (!Object.hasOwn(presets, name)) return;
     [yaw, pitch] = presets[name];
+    target.set(-0.45, 2.65, 0);
+    if (name === 'monitor-ports') { target.set(-5.1, 1.7, -0.3); distance = Math.max(8, 9 / camera.aspect); }
+    else if (name === 'rear-io') distance = fittedDistance;
     cancelInteraction();
     requestRender();
   }
@@ -866,14 +1078,28 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     requestRender();
   }
   function setTool(next) {
-    if (stopped || !['inspect', 'move', 'screwdriver', 'paste', 'clean'].includes(next)) return;
+    if (stopped || !['inspect', 'move', 'cables', 'screwdriver', 'paste', 'clean'].includes(next)) return;
     cancelInteraction();
     tool = next;
     // Move is an explicit manipulation mode. Its canvas captures touch drags;
     // Inspect restores normal vertical scrolling. The page outside is unchanged.
-    canvas.style.touchAction = tool === 'move' ? 'none' : 'pan-y';
+    canvas.style.touchAction = ['move', 'cables'].includes(tool) ? 'none' : 'pan-y';
     canvas.style.cursor = tool === 'inspect' ? 'grab' : tool === 'move' ? 'move' : 'crosshair';
-    notify('info', tool === 'move' ? 'Move tool: drag a component to its matching outline, or a fitted part to the right-hand parts tray. Release to attempt the change.' : tool === 'screwdriver' ? 'Screwdriver: tap a screw once to turn it. Its current fitting decides tighten or remove; the safety rules still apply.' : tool === 'paste' ? 'Paste tool: tap the exposed CPU to apply thermal paste. Clean old paste first.' : tool === 'clean' ? 'Cleaning tool: tap the exposed CPU to clean its thermal paste.' : 'Inspect: tap a part to select it, or drag sideways to rotate. Vertical touch swipes scroll the page.');
+    if (tool === 'cables') armedCable = selectedCable;
+    updateCableViews(); requestRender();
+    notify('info', tool === 'cables' ? 'Cables: drag a plug to its labeled matching port, or tap the plug then the port. Cable rest unplugs it. Open the panel before internal cable work.' : tool === 'move' ? 'Move tool: drag a component to its matching outline, or a fitted part to the right-hand parts tray. Release to attempt the change.' : tool === 'screwdriver' ? 'Screwdriver: tap a screw once to turn it. Its current fitting decides tighten or remove; the safety rules still apply.' : tool === 'paste' ? 'Paste tool: tap the exposed CPU to apply thermal paste. Clean old paste first.' : tool === 'clean' ? 'Cleaning tool: tap the exposed CPU to clean its thermal paste.' : 'Inspect: tap a part to select it, or drag sideways to rotate. Vertical touch swipes scroll the page.');
+  }
+  function setCable(id) {
+    if (stopped || !cableEnds.has(id)) return;
+    cancelInteraction();
+    selectedCable = id;
+    const item = cableEnds.get(id);
+    if (tool === 'cables') {
+      if (!item.spec.internal) setView(id === 'hdmi-monitor' ? 'monitor-ports' : 'rear-io');
+      else setView('side');
+    }
+    armedCable = id;
+    updateCableViews(); requestRender();
   }
   function setPasteAmount(amount) {
     if (!['pea', 'excess'].includes(amount)) return;
@@ -908,6 +1134,7 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
     dropMarker.material.dispose();
     renderer.dispose();
     canvas.remove();
+    overlay?.remove();
     scene.clear();
     geometries.clear();
     materials.clear();
@@ -917,5 +1144,5 @@ export function mountAssemblyScene(host, { hardware = {}, assembly = {}, onSelec
   updateModel(hardware, assembly);
   resize();
   onStatus({ kind: 'ready', message: '3D Tech Lab bench ready. Tap any PC component or the 3D monitor to select it, or drag sideways to orbit.' });
-  return { update: updateModel, select: id => { highlight(id); requestRender(); }, resetView, setView, zoom, setTool, setPasteAmount, cancelInteraction, pause, resume, dispose };
+  return { update: updateModel, select: id => { highlight(id); requestRender(); }, resetView, setView, zoom, setTool, setCable, setPasteAmount, cancelInteraction, pause, resume, dispose };
 }

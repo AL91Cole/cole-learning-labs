@@ -1,6 +1,6 @@
-import {normalizeHardwareState, verifyHardware} from './hardware.js?release=20261017-tools13';
-import {normalizeWorkspaceState, verifyWorkspace, getWorkspaceMission} from './workspaces.js?release=20261017-tools13';
-import {inquiryProtectedEvents} from './interview.js?release=20261017-tools13';
+import {normalizeHardwareState, verifyHardware} from './hardware.js?release=20261017-cables14';
+import {normalizeWorkspaceState, verifyWorkspace, getWorkspaceMission} from './workspaces.js?release=20261017-cables14';
+import {inquiryProtectedEvents} from './interview.js?release=20261017-cables14';
 
 // Experiment writing shares the existing local-work, clear, and manual-export
 // lifecycle. It is not a grade, an identity record, or proof of authorship.
@@ -132,7 +132,7 @@ export function observationSnapshot(scenario,savedState) {
       ['P/PSU/B/C/G/S screws (1=secured)',['panel','psu','board','cooler','gpu','ssd'].map(group=>a[group+'Screws'].map(value=>value?'1':'0').join('')).join('/')+' '+state.selectedDrive.toUpperCase()],
       ['CPU/RAM/PCIe clips; panel',[a.retentionOpen,a.ramClipsOpen,a.pcieLatchOpen].map(open=>open?'open':'closed').join('/')+'; panel '+(a.panelInstalled?'on':'off')],
       ['Paste / CPU fan',a.paste+' / '+(a.cpuFanConnected?'connected':'disconnected')],
-      ['ATX/EPS/GPU/F/data/SATA (1=yes)',[state.atxConnected,state.cpuPowerConnected,state.gpuPowerConnected,state.frontPanelConnected,state.sataDataConnected,state.sataPowerConnected].map(value=>value?'1':'0').join('')+' / '+(state.videoPort==='gpu'?'GPU':'board')+' '+(state.monitorInput==='hdmi'?'HDMI':'DP')+' '+(state.signalConnected?'fitted':'loose')]
+      ['ATX/EPS/GPU/F/data/SATA (1=yes)',[state.atxConnected,state.cpuPowerConnected,state.gpuPowerConnected,state.frontPanelConnected,state.sataDataConnected,state.sataPowerConnected].map(value=>value?'1':'0').join('')+' / '+(state.videoPort==='gpu'?'GPU':'board')+' '+(state.monitorInput==='hdmi'?'HDMI':'DP')+' '+(state.pcVideoConnected!==false?'PCin':'PCout')+' '+(state.signalConnected?'MONin':'MONout')]
     ].map(([label,value])=>[text(label,32),text(value,40)]);
   }
   if (scenario.track==='hardware') return [
@@ -140,8 +140,8 @@ export function observationSnapshot(scenario,savedState) {
     ['Installed components',[['Board',state.boardInstalled],['CPU',state.cpuInstalled],['Cooler',state.coolerInstalled],['RAM',state.ramSeated],['GPU',state.gpuInstalled]].filter(([,ready])=>ready).map(([label])=>label).join(', ') || 'None'],
     ['Connected power leads',[['ATX',state.atxConnected],['CPU',state.cpuPowerConnected],['GPU',state.gpuPowerConnected],['Front panel',state.frontPanelConnected]].filter(([,ready])=>ready).map(([label])=>label).join(', ') || 'None'],
     ['Storage','SSD '+(state.originalDriveInstalled?'fitted':'absent')+'; data '+(state.sataDataConnected?'yes':'no')+'; power '+(state.sataPowerConnected?'yes':'no')+'; '+(state.selectedDrive==='sata'?'SATA':'NVMe')],
-    ['Display signal path',(state.videoPort==='gpu'?'GPU':'Board')+' / HDMI '+(state.signalConnected===false?'loose':'fitted')+' / source '+(state.monitorInput==='displayport'?'DP':'HDMI')],
-    ['Startup and document',(state.booted?'Booted':'Not booted')+' / document '+(state.documentOpened && state.pcOn && state.booted && state.videoPort==='gpu' && state.signalConnected!==false && state.monitorInput!=='displayport'?'open':'closed')]
+    ['Display signal path',(state.videoPort==='gpu'?'GPU':'Board')+' / PC '+(state.pcVideoConnected===false?'out':'in')+' / MON '+(state.signalConnected===false?'out':'in')+' / '+(state.monitorInput==='displayport'?'DP':'HDMI')],
+    ['Startup and document',(state.booted?'Booted':'Not booted')+' / document '+(state.documentOpened && state.pcOn && state.booted && state.videoPort==='gpu' && state.pcVideoConnected!==false && state.signalConnected!==false && state.monitorInput!=='displayport'?'open':'closed')]
   ].map(([label,value])=>[label,text(value,40)]);
   const rows=(FIELD_ROWS[id] || []).map(([key,label]) => {
     const value=state[key];

@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import * as THREE from '../src/three.module.js?release=20261017-tools13';
-import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-tools13';
+import * as THREE from '../src/three.module.js?release=20261017-cables14';
+import { assemblyToolAction, assemblyDropAction, assembledPartFitted } from '../src/assembly-tools.js?release=20261017-cables14';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js?release=20261017-cables14';
 import { initialHardwareState } from '../src/hardware.js';
 import { initialAssemblyState } from '../src/assembly-model.js';
 
@@ -28,7 +29,7 @@ class Surface extends EventTarget {
   }
 }
 
-function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, caseId = 'INC-106', onAction } = {}) {
+function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, caseId = 'INC-106', onAction, left = 0, top = 0 } = {}) {
   const page = new Surface(); page.hidden = false;
   const view = new Surface(); page.defaultView = view; view.devicePixelRatio = dpr;
   let nextFrame = 1;
@@ -42,9 +43,11 @@ function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, cas
     disconnect() { this.disconnected = true; }
   };
   const dimensions = { width, height };
+  const element = () => ({ style: {}, children: [], attributes: new Map(), setAttribute(key, value) { this.attributes.set(key, value); }, appendChild(child) { this.children.push(child); child.parent = this; }, remove() { if (this.parent) this.parent.children = this.parent.children.filter(child => child !== this); } });
+  page.createElement = element;
   const host = {
     ownerDocument: page, children: [],
-    getBoundingClientRect: () => ({ ...dimensions, left: 0, top: 0 }),
+    getBoundingClientRect: () => ({ ...dimensions, left, top }),
     appendChild(canvas) { this.children.push(canvas); canvas.parent = this; }
   };
   const canvas = new Surface();
@@ -68,7 +71,7 @@ function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, cas
     render(scene, camera) { this.renders.push({ scene, camera }); }
     dispose() { this.disposed = true; }
   }
-  const context = vm.createContext({ THREE: { ...THREE, WebGLRenderer: MockRenderer }, assemblyToolAction, assemblyDropAction, assembledPartFitted });
+  const context = vm.createContext({ THREE: { ...THREE, WebGLRenderer: MockRenderer }, assemblyToolAction, assemblyDropAction, assembledPartFitted, ASSEMBLY_CABLES, cableConnection, assemblyCableAction });
   const code = source.replace(/^import[^\n]*\n/gm, '').replace('export function mountAssemblyScene', 'function mountAssemblyScene');
   const mount = vm.runInContext(`${code}\nmountAssemblyScene;`, context);
   const hardware = initialHardwareState(caseId);
@@ -86,16 +89,17 @@ function harness({ width = 1366, height = 600, dpr = 3, unavailable = false, cas
   const project = point => {
     const camera = renderer.renders.at(-1).camera;
     const projected = new THREE.Vector3(...point).project(camera);
-    return { clientX: (projected.x + 1) * dimensions.width / 2, clientY: (1 - projected.y) * dimensions.height / 2 };
+    return { clientX: left + (projected.x + 1) * dimensions.width / 2, clientY: top + (1 - projected.y) * dimensions.height / 2 };
   };
   const component = id => renderer.renders.at(-1).scene.children.find(node => node.userData.selectId === id && node.userData.partKey);
+  const cableNode = (id, port = false) => renderer.renders.at(-1).scene.children.find(node => port ? node.userData.cablePortId === id : node.userData.cableEndpointId === id);
   const pointFor = id => {
-    const node = component(id) || renderer.renders.at(-1).scene.children.find(node => node.userData.selectId === id);
+    const node = component(id) || cableNode(id) || cableNode(id, true) || renderer.renders.at(-1).scene.children.find(node => node.userData.selectId === id);
     const point = new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3());
     return project(point.toArray());
   };
   const pointer = (type, position, extra = {}) => canvas.fire(type, { button: 0, pointerId: 1, pointerType: 'mouse', ...position, ...extra });
-  return { api, host, page, view, canvas, dimensions, renderer, queue, observer, hardware, assembly, events, selections, actions, interactions, flush, project, pointFor, pointer, component };
+  return { api, host, page, view, canvas, dimensions, renderer, queue, observer, hardware, assembly, events, selections, actions, interactions, flush, project, pointFor, pointer, component, cableNode };
 }
 
 test('3D is an on-demand, bounded-resolution adapter using real procedural Three geometry', () => {
@@ -123,7 +127,7 @@ test('3D is an on-demand, bounded-resolution adapter using real procedural Three
   for (const [group, count] of Object.entries({ panel: 2, psu: 4, board: 4, cooler: 4, gpu: 2, ssd: 2 })) {
     for (let i = 0; i < count; i += 1) assert.ok(ids.has(`${group}-${i}`), `${group}-${i}`);
   }
-  assert.ok(meshes < 250, `Bounded original equipment scene: ${meshes} mesh objects`);
+  assert.ok(meshes < 280, `Bounded equipment and connector catalog: ${meshes} mesh objects (including hidden endpoint/port views)`);
   assert.ok(triangles < 15000, `Bounded procedural geometry: ${triangles} triangles (not a device performance measurement)`);
   h.api.dispose();
 });
@@ -236,7 +240,7 @@ test('unsupported WebGL2 uses labeled-workbench fallback without creating listen
 });
 
 test('3D assets remain same-origin with no network or student-work storage in the view adapter', () => {
-  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-tools13';/);
+  assert.match(source, /^import \* as THREE from '\.\/three\.module\.js\?release=20261017-cables14';/);
   assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage|indexedDB)\b|https?:\/\//);
 });
 
@@ -369,4 +373,131 @@ test('fitted parts release toward the bounded parts tray and leave model checks 
   assert.equal(h.component('panel').visible, true);
   assert.equal(h.interactions.at(-1).kind, 'warning');
   h.api.dispose();
+});
+
+test('HDMI PC-end drag fits the authored GPU output only on release', () => {
+  const h = harness({ caseId: 'INC-101', left: 180, top: 90 }); h.flush();
+  h.api.setTool('cables'); h.api.setCable('hdmi-pc'); h.flush();
+  const from = h.pointFor('hdmi-pc'); const to = h.pointFor('hdmi-gpu');
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
+  assert.deepEqual(h.actions, []);
+  assert.equal(h.interactions.at(-1).kind, 'valid');
+  assert.equal(h.renderer.renders.at(-1).scene.children.find(node => node.userData.assemblyCableGhost).visible, true);
+  h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['video-gpu']);
+  assert.equal(h.canvas.captures.size, 0);
+  assert.equal(h.cableNode('hdmi-pc').visible, true);
+  assert.equal(h.renderer.renders.at(-1).scene.children.find(node => node.userData.assemblyCableGhost).visible, false);
+  assert.equal(h.hardware.videoPort, 'board', 'Only the authoritative callback may change the model');
+  h.api.dispose();
+});
+
+test('wrong cable type and off-canvas releases never dispatch a connection', () => {
+  for (const outside of [false, true]) {
+    const h = harness({ caseId: 'INC-101' }); h.flush(); h.api.setTool('cables'); h.api.setCable('hdmi-pc'); h.flush();
+    const from = h.pointFor('hdmi-pc'); const to = outside ? { clientX: -30, clientY: 200 } : h.pointFor('ac-inlet');
+    h.pointer('pointerdown', from); h.pointer('pointermove', to); h.pointer('pointerup', to); h.flush();
+    assert.deepEqual(h.actions, []); assert.equal(h.interactions.at(-1).kind, 'warning');
+    assert.equal(h.cableNode('hdmi-pc').visible, true); assert.equal(h.canvas.captures.size, 0);
+    h.api.dispose();
+  }
+});
+
+test('cable rest explicitly disconnects the selected PC end without altering the monitor end', () => {
+  const h = harness({ caseId: 'INC-101' }); h.flush(); h.api.setTool('cables'); h.api.setCable('hdmi-pc'); h.flush();
+  const from = h.pointFor('hdmi-pc'); const rest = { clientX: h.dimensions.width - 80, clientY: h.dimensions.height - 28 };
+  h.pointer('pointerdown', from); h.pointer('pointermove', rest); h.pointer('pointerup', rest); h.flush();
+  assert.deepEqual(h.actions, ['disconnect-video']);
+  assert.equal(h.hardware.signalConnected, true);
+  h.api.dispose();
+});
+
+test('tap plug then tap matching port works as an alternative to dragging', () => {
+  const h = harness({ caseId: 'INC-101' }); h.flush(); h.api.setTool('cables'); h.api.setCable('hdmi-pc'); h.flush();
+  const from = h.pointFor('hdmi-pc'); h.pointer('pointerdown', from); h.pointer('pointerup', from); h.flush();
+  assert.equal(h.selections.at(-1), 'cable-hdmi-pc');
+  const to = h.pointFor('hdmi-gpu'); h.pointer('pointerdown', to); h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['video-gpu']);
+  h.api.dispose();
+});
+
+test('internal plugs and ports are hidden behind a closed panel, then SATA fits its narrow data socket', () => {
+  const h = harness({ caseId: 'INC-104' }); h.flush(); h.api.setTool('cables'); h.api.setCable('sata-data'); h.flush();
+  assert.equal(h.cableNode('sata-data').visible, false);
+  assert.equal(h.cableNode('ssd-data', true).visible, false);
+  h.api.update(h.hardware, { ...h.assembly, panelInstalled: false }); h.api.setCable('sata-data'); h.flush();
+  assert.equal(h.cableNode('sata-data').visible, true); assert.equal(h.cableNode('ssd-data', true).visible, true);
+  const from = h.pointFor('sata-data'); const to = h.pointFor('ssd-data');
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['asm-connect-sata-data'], JSON.stringify(h.interactions));
+  h.api.dispose();
+});
+
+test('cable ghost and captured pointer are discarded by modal, escape, state change, or a second pointer', () => {
+  const cancelers = [h => h.api.cancelInteraction(), h => h.page.fire('keydown', { key: 'Escape' }), h => h.view.fire('blur'), h => h.api.update(h.hardware, h.assembly), h => h.pointer('pointerdown', {}, { pointerId: 2 }), h => h.api.pause(), h => h.canvas.fire('webglcontextlost')];
+  for (const cancel of cancelers) {
+    const h = harness({ caseId: 'INC-101' }); h.flush(); h.api.setTool('cables'); h.api.setCable('hdmi-pc'); h.flush();
+    const from = h.pointFor('hdmi-pc'); const to = h.pointFor('hdmi-gpu');
+    h.pointer('pointerdown', from); h.pointer('pointermove', to); h.flush();
+    cancel(h); h.pointer('pointerup', to); h.flush();
+    assert.deepEqual(h.actions, []); assert.equal(h.canvas.captures.size, 0); assert.equal(h.cableNode('hdmi-pc').visible, true);
+    assert.equal(h.renderer.renders.at(-1).scene.children.find(node => node.userData.assemblyCableGhost).visible, false);
+    h.api.dispose();
+  }
+});
+
+test('the loose AC plug can be dragged onto the visible PSU inlet in rear I/O view', () => {
+  const h = harness({ caseId: 'INC-102' }); h.flush(); h.api.setTool('cables'); h.api.setCable('ac'); h.flush();
+  const from = h.pointFor('ac'); const to = h.pointFor('ac-inlet');
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['plug-in'], JSON.stringify(h.interactions));
+  assert.equal(h.hardware.acConnected, false, 'The view submits an attempt, not a direct model mutation');
+  h.api.dispose();
+});
+
+test('the loose monitor-end plug fits its own HDMI input without changing the PC-end routing', () => {
+  const h = harness({ caseId: 'INC-108' }); h.flush(); h.api.setTool('cables'); h.api.setCable('hdmi-monitor'); h.flush();
+  const from = h.pointFor('hdmi-monitor'); const to = h.pointFor('monitor-hdmi');
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['connect-signal'], JSON.stringify(h.interactions));
+  assert.equal(h.hardware.videoPort, 'gpu');
+  h.api.dispose();
+});
+
+test('the disconnected PC-end plug remains reachable from the rear camera', () => {
+  const h = harness({ caseId: 'INC-101' }); h.flush();
+  h.api.update({ ...h.hardware, pcVideoConnected: false }, h.assembly);
+  h.api.setTool('cables'); h.api.setCable('hdmi-pc'); h.flush();
+  const from = h.pointFor('hdmi-pc'); const to = h.pointFor('hdmi-gpu');
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['video-gpu'], JSON.stringify(h.interactions));
+  h.api.dispose();
+});
+
+test('a rejected cable attempt restores visual state before a reentrant authoritative update', () => {
+  let h;
+  h = harness({ caseId: 'INC-101', onAction: () => {
+    assert.equal(h.cableNode('hdmi-pc').visible, true);
+    assert.equal(h.renderer.renders.at(-1).scene.children.find(node => node.userData.assemblyCableGhost).visible, false);
+    h.api.update(h.hardware, h.assembly);
+    return { kind: 'warning', message: 'The existing display lead is still attached.' };
+  } });
+  h.flush(); h.api.setTool('cables'); h.api.setCable('hdmi-pc'); h.flush();
+  const from = h.pointFor('hdmi-pc'); const to = h.pointFor('hdmi-gpu');
+  h.pointer('pointerdown', from); h.pointer('pointermove', to); h.pointer('pointerup', to); h.flush();
+  assert.deepEqual(h.actions, ['video-gpu']);
+  assert.equal(h.interactions.at(-1).message, 'The existing display lead is still attached.');
+  h.api.dispose();
+});
+
+test('connector tap areas are forgiving and the overlay is removed on disposal', () => {
+  const h = harness({ caseId: 'INC-101' }); h.flush(); h.api.setTool('cables'); h.api.setCable('hdmi-pc'); h.flush();
+  const from = h.pointFor('hdmi-pc'); const near = { clientX: from.clientX + 16, clientY: from.clientY };
+  h.pointer('pointerdown', near); h.pointer('pointerup', near); h.flush();
+  assert.equal(h.selections.at(-1), 'cable-hdmi-pc');
+  const overlay = h.host.children.find(node => node !== h.canvas);
+  assert.equal(overlay.attributes.get('aria-hidden'), 'true');
+  assert.ok(overlay.children.some(node => node.textContent?.includes('Cable rest') && node.style.display === 'block'));
+  h.api.dispose();
+  assert.equal(h.host.children.length, 0);
 });

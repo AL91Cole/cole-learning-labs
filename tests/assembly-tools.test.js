@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { ASSEMBLY_TOOLS, assemblyToolAction, assemblyDropAction } from '../src/assembly-tools.js';
 import { ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure } from '../src/assembly-model.js';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js';
 import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
 
 const detailed = id => applyHardwareAction(id, initialHardwareState(id), 'enable-assembly').state;
@@ -79,7 +80,7 @@ function workbench(id = 'INC-106') {
   Object.defineProperty(root, 'innerHTML', { set(html) { writes++; buttons = parse(html); } });
   const scene = { update() {}, select() {}, setTool(tool) { calls.tools.push(tool); }, cancelInteraction() { calls.canceled++; }, pause() { calls.pauses++; }, resume() {}, dispose() { calls.disposed++; } };
   const mount = vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm, '').replace('export function mountAssemblyWorkbench', 'function mountAssemblyWorkbench').replace(/import\('\.\/assembly-scene\.js\?release=[^']+'\)/, 'sceneLoader()')}; mountAssemblyWorkbench`, {
-    ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure,
+    ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure, ASSEMBLY_CABLES, cableConnection, assemblyCableAction,
     sceneLoader: async () => ({ mountAssemblyScene(_host, options) { calls.mounts++; sceneOptions = options; return scene; } })
   });
   let state = detailed(id), controller;
