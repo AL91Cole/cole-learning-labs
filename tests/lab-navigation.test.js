@@ -398,7 +398,7 @@ test('incomplete requests reveal history only after a relevant question and keep
     assert.equal(button.getAttribute('aria-disabled'),'false',id);
     assert.match(h.elements.get('#intake-progress').textContent,/clarif|detail|found|record/i,id);
     button.fire('click');assert.equal(h.record.evidence.includes(clue.id),true,id);
-    assert.match(h.report(),new RegExp(clue.text.replace(/[.*+?^$()|[]\]/g,'\$&')),id);
+    assert.ok(h.report().includes(clue.text),id);
   }
 });
 
