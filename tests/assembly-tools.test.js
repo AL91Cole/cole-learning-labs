@@ -7,6 +7,8 @@ import { ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure } from '../src/ass
 import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js';
 import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
 
+import { workbenchGuidance } from '../src/workbench-guidance.js';
+import { pcActivity } from '../src/pc-activity.js';
 const detailed = id => applyHardwareAction(id, initialHardwareState(id), 'enable-assembly').state;
 function attempt(state, action) {
   const before = structuredClone(state);
@@ -69,7 +71,7 @@ function workbench(id = 'INC-106') {
   function parse(html) {
     return [...html.matchAll(/<button\b([^>]*)>/g)].map(([, attrs]) => element(Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([, name, value]) => [name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), value]))));
   }
-  for (const name of ['scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer', 'view-drawer', 'loading-title', 'loading-text', 'fastener']) fields.set(`[data-asm-${name}]`, element());
+  for (const name of ['build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer', 'view-drawer', 'loading-title', 'loading-text', 'fastener']) fields.set(`[data-asm-${name}]`, element());
   for (const name of ['actions', 'tool-controls']) Object.defineProperty(fields.get(`[data-asm-${name}]`), 'innerHTML', { set(html) { dynamic.set(name, parse(html)); }, get() { return ''; } });
   const allButtons = () => [...buttons, ...[...dynamic.values()].flat()];
   const root = { ownerDocument: doc, closest: () => null, contains: target => allButtons().includes(target) || [...fields.values()].includes(target),
@@ -79,15 +81,16 @@ function workbench(id = 'INC-106') {
   Object.defineProperty(root, 'innerHTML', { set(html) { writes++; buttons = parse(html); } });
   const scene = { update() {}, select() {}, setTool(tool) { calls.tools.push(tool); }, cancelInteraction() { calls.canceled++; }, pause() { calls.pauses++; }, resume() {}, dispose() { calls.disposed++; } };
   const mount = vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm, '').replace('export function mountAssemblyWorkbench', 'function mountAssemblyWorkbench').replace(/import\('\.\/assembly-scene\.js\?release=[^']+'\)/, 'sceneLoader()')}; mountAssemblyWorkbench`, {
-    ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure, ASSEMBLY_CABLES, cableConnection, assemblyCableAction,
+    ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure, ASSEMBLY_CABLES, cableConnection, assemblyCableAction, workbenchGuidance, pcActivity,
     sceneLoader: async () => ({ mountAssemblyScene(_host, options) { calls.mounts++; sceneOptions = options; return scene; } })
   });
   let state = detailed(id), controller;
   const committed = [];
   controller = mount(root, { state, onAction(action) { committed.push(action); const response = attempt(state, action); state = response.state; controller.update(state); return response; } });
   function click(field, value) { const target = allButtons().find(item => item.dataset[field] === value); assert.ok(target, `missing ${field}=${value}`); target.focus(); listeners.get('click')({ target }); }
+  function complete(value=true) { const target=fields.get('[data-asm-all]'); target.checked=value; target.focus(); listeners.get('change')({target}); }
   function choose(selector, value) { const target = fields.get(selector); target.value = value; target.focus(); listeners.get('change')({ target }); }
-  return { controller, fields, calls, committed, listeners, click, choose, toolButtons: () => buttons.filter(item => item.dataset.asmTool), get state() { return state; }, get sceneOptions() { return sceneOptions; }, get writes() { return writes; } };
+  return { controller, fields, calls, committed, listeners, click, choose, complete, toolButtons: () => buttons.filter(item => item.dataset.asmTool), get state() { return state; }, get sceneOptions() { return sceneOptions; }, get writes() { return writes; } };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
@@ -109,7 +112,7 @@ test('accessible tool choices are ephemeral and fit, screw and paste buttons use
 });
 
 test('native tool controls keep power guards and report or section cancellation commits nothing',()=>{
-  const bench=workbench('INC-101'),before=structuredClone(bench.state);
+  const bench=workbench('INC-101'),before=structuredClone(bench.state);bench.complete();
   bench.click('asmTool','screwdriver');bench.choose('[data-asm-fastener]','panel-0');bench.click('asmUseTool','turn');
   assert.deepEqual(bench.state,before);assert.equal(bench.committed.at(-1),'asm-loosen-panel-0');
   const count=bench.committed.length;bench.controller.cancel();bench.controller.setVisible(false);

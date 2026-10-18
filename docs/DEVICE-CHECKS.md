@@ -28,6 +28,16 @@ On October 17, 2026, a real report downloaded in connected desktop Chrome was co
 
 Physical Microsoft Edge, Chromebook, Android and iPad sessions were not connected for this verification. Treat those as required school-device acceptance checks before classroom use. Responsive layout and synthetic pointer-type tests are useful evidence but do not replace those checks. No independent accessibility or universal-device certification is claimed.
 
+## Ticket controls and powered components — October 18, 2026
+
+The context21 local browser preview showed two tools for external display/power tickets, four for memory/storage work and the complete six-tool set for full assembly. All eight profiles kept complete controls closed and unchecked initially. Explicitly enabling complete controls preserved the action count and equipment. Native selector and action-row tests check the same ticket boundaries, with the full set available for saved repairs when explicitly chosen.
+
+Actual pointer drags repaired INC-101's PC HDMI end, removed INC-103's safely loosened panel and fitted its DDR4 memory. The memory repair completed clips, panel screws, startup and the original lesson-file check. Fan CSS was active on CPU, GPU and PSU while the original memory fault blocked startup; Power off changed all three to stopped with no animation. Only blade groups rotate; frames, hubs and PSU grilles remain fixed. The original SSD is not animated as a moving disk. Detailed diagnostic causes stay in a closed readout; the initial activity banner remains neutral.
+
+At the actual 768 × 1024 viewport, all eight ticket layouts had equal document/client widths (753 CSS pixels including the scrollbar layout) and no visible workbench buttons, selectors or summaries shorter than 44 CSS pixels. The HW-100 beginner lab completed all inspections, three questions and nine actions. Its powered fan blades animated after startup; switching to Check paused all three animations and left a truthful completed task. The connected browser reported no console warnings or errors.
+
+These are desktop-browser and responsive-viewport observations. Physical managed Chromebook, tablet, Edge, assistive-technology and school-filter acceptance checks remain necessary. Automated checks additionally cover reduced motion, visibility/disposal, missing leads, contradictory saved power/boot flags, preserved written work, local reports and the locked classroom/privacy boundaries.
+
 ## Classic equipment diagrams — October 17, 2026
 
 The `20261017-classic20` local browser preview restored the PR #6 equipment artwork without a canvas or graphics engine. INC-101 was repaired through the native cable controls and opened the original lesson file. HW-100 completed all nine component inspections, three role questions and nine guarded mini-job actions. INC-106 completed a full detailed build through the current native controls: PSU, motherboard, processor, fresh paste, cooler fasteners/fan, memory clips, graphics latch/bracket, original SSD, internal leads, case screws, display and startup. The original lesson file opened, and the report retained the mechanical state and action log. A wrong cooler-screw order was refused with the correct next position.

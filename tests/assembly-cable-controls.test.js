@@ -6,6 +6,8 @@ import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/as
 import { ASSEMBLY_TOOLS, assemblyToolAction } from '../src/assembly-tools.js';
 import { ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure } from '../src/assembly-model.js';
 import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
+import { workbenchGuidance } from '../src/workbench-guidance.js';
+import { pcActivity } from '../src/pc-activity.js';
 const detailed=id=>applyHardwareAction(id,initialHardwareState(id),'enable-assembly').state;
 function attempt(state,action){const before=structuredClone(state);const result=applyHardwareAction(state.caseId,state,action);assert.deepEqual(state,before);return result;}
 // Exercise native cable controls with the real equipment model.
@@ -21,7 +23,7 @@ function cableBench(id = 'INC-106') {
   function parse(html) {
     return [...html.matchAll(/<button\b([^>]*)>/g)].map(([, attrs]) => element(Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([, name, value]) => [name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), value]))));
   }
-  for (const name of ['scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer', 'view-drawer', 'loading-title', 'loading-text', 'fastener', 'cable', 'cable-target', 'cable-state']) fields.set(`[data-asm-${name}]`, element());
+  for (const name of ['build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer', 'view-drawer', 'loading-title', 'loading-text', 'fastener', 'cable', 'cable-target', 'cable-state']) fields.set(`[data-asm-${name}]`, element());
   for (const name of ['actions', 'tool-controls']) Object.defineProperty(fields.get(`[data-asm-${name}]`), 'innerHTML', { set(html) { this.markup=html;dynamic.set(name, parse(html)); }, get() { return this.markup || ''; } });
   const allButtons = () => [...buttons, ...[...dynamic.values()].flat()];
   const root = { ownerDocument: doc, closest: () => null, contains: target => allButtons().includes(target) || [...fields.values()].includes(target),
@@ -31,20 +33,21 @@ function cableBench(id = 'INC-106') {
   Object.defineProperty(root, 'innerHTML', { set(html) { writes++; buttons = parse(html); } });
   const scene = { update() {}, select() {}, setTool(tool) { calls.tools.push(tool); }, setCable(id) { calls.cable=id; }, cancelInteraction() { calls.canceled++; }, pause() { calls.pauses++; }, resume() {}, dispose() { calls.disposed++; } };
   const mount = vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm, '').replace('export function mountAssemblyWorkbench', 'function mountAssemblyWorkbench').replace(/import\('\.\/assembly-scene\.js\?release=[^']+'\)/, 'sceneLoader()')}; mountAssemblyWorkbench`, {
-    ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure, ASSEMBLY_CABLES, cableConnection, assemblyCableAction,
+    ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure, ASSEMBLY_CABLES, cableConnection, assemblyCableAction, workbenchGuidance, pcActivity,
     sceneLoader: async () => ({ mountAssemblyScene(_host, options) { calls.mounts++; sceneOptions = options; return scene; } })
   });
   let state = detailed(id), controller;
   const committed = [];
   controller = mount(root, { state, onAction(action) { committed.push(action); const response = attempt(state, action); state = response.state; controller.update(state); return response; } });
   function click(field, value) { const target = allButtons().find(item => item.dataset[field] === value); assert.ok(target, `missing ${field}=${value}`); target.focus(); listeners.get('click')({ target }); }
+  function complete(value=true) { const target=fields.get('[data-asm-all]'); target.checked=value; target.focus(); listeners.get('change')({target}); }
   function choose(selector, value) { const target = fields.get(selector); target.value = value; target.focus(); listeners.get('change')({ target }); }
-  return { controller, fields, calls, committed, listeners, click, choose, toolButtons: () => buttons.filter(item => item.dataset.asmTool), button: (field,value) => allButtons().find(item=>item.dataset[field]===value), get state() { return state; }, get sceneOptions() { return sceneOptions; }, get writes() { return writes; } };
+  return { controller, fields, calls, committed, listeners, click, choose, complete, toolButtons: () => buttons.filter(item => item.dataset.asmTool), button: (field,value) => allButtons().find(item=>item.dataset[field]===value), get state() { return state; }, get sceneOptions() { return sceneOptions; }, get writes() { return writes; } };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
 test('all ten cables have native selection and connection controls without changing equipment on selection',()=>{
-  const bench=cableBench('INC-101'),before=structuredClone(bench.state);
+  const bench=cableBench('INC-101'),before=structuredClone(bench.state);bench.complete();
   bench.click('asmTool','cables');
   assert.equal(ASSEMBLY_CABLES.length,10);
   for(const cable of ASSEMBLY_CABLES){
@@ -78,7 +81,7 @@ test('large HDMI controls preserve independent PC and monitor ends and leave the
 });
 
 test('internal cable controls cannot bypass PC, AC or case-panel safety checks',()=>{
-  const bench=cableBench('INC-101');bench.click('asmTool','cables');bench.choose('[data-asm-cable]','atx');
+  const bench=cableBench('INC-101');bench.complete();bench.click('asmTool','cables');bench.choose('[data-asm-cable]','atx');
   const before=structuredClone(bench.state);bench.click('asmCableAction','disconnect');assert.deepEqual(bench.state,before);
   bench.click('assemblyAction','power-off');bench.click('asmCableAction','disconnect');assert.equal(bench.state.atxConnected,true);
   bench.click('assemblyAction','unplug');bench.click('asmCableAction','disconnect');assert.equal(bench.state.atxConnected,true);

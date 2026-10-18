@@ -1,7 +1,7 @@
-import { normalizeHardwareState } from './hardware.js?release=20261017-classic20';
-import { normalizeWorkspaceState } from './workspaces.js?release=20261017-classic20';
-import { inquiryProgress } from './interview.js?release=20261017-classic20';
-import { retainExperimentEvents } from './experiments.js?release=20261017-classic20';
+import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261018-context21';
+import { normalizeWorkspaceState } from './workspaces.js?release=20261018-context21';
+import { inquiryProgress } from './interview.js?release=20261018-context21';
+import { retainExperimentEvents } from './experiments.js?release=20261018-context21';
 
 // Local storage and uploaded drafts are data, never trusted HTML or object shapes.
 export function normalizeLabRecord(scenario, value) {
@@ -15,6 +15,11 @@ export function normalizeLabRecord(scenario, value) {
     notes: text(r.notes, 4000), plan: text(r.plan, 2000), reflection: text(r.reflection, 2000),
     verified: r.verified === true, closed: r.closed === true
   };
+  // Technical completion follows the current equipment, not a stale saved flag.
+  // Written work remains available for correction and the next startup test.
+  if (scenario.track === 'hardware' && !verifyHardware(scenario.id, record.state).ok) {
+    record.verified = false; record.closed = false;
+  }
   // Earlier v2 records can predate the requester-clarification step. Keep their
   // technical result and written work, but reopen an incomplete investigation.
   if (record.closed && !inquiryProgress(scenario, record.events).complete) record.closed = false;

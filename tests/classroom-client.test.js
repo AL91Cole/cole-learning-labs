@@ -5,6 +5,19 @@ import {normalizeLabRecord} from '../src/records.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {answerQuestion,inquiryProgress,questionEvent} from '../src/interview.js';
 import {setImmediate as nextTurn} from 'node:timers/promises';
+import {initialHardwareState,applyHardwareAction,verifyHardware} from '../src/hardware.js';
+
+// Upload/race fixtures need genuinely delivered equipment; saved success flags
+// alone do not establish hardware completion after restoring a record.
+function deliveredHardware(){
+  let state=initialHardwareState('INC-101');
+  for(const action of ['video-gpu','open-document']){
+    const result=applyHardwareAction('INC-101',state,action);
+    assert.notEqual(result.kind,'warning',`${action}: ${result.message}`);state=result.state;
+  }
+  assert.equal(verifyHardware('INC-101',state).ok,true);
+  return state;
+}
 
 function storage(value, check) {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -50,7 +63,7 @@ test('large classroom snapshots retain earned requester facts and restore a comp
   const other = questionEvent(longQuestion,answerQuestion(scenario,longQuestion));
   assert.ok(other && other.message.length <= 600);
   const events = [earned,...Array.from({length:99},(_,index) => ({...other,time:new Date(1000 + index).toISOString()}))];
-  const record = normalizeLabRecord(scenario,{events,plan:'🧰'.repeat(1000),notes:'🧰'.repeat(2000),reflection:'🧰'.repeat(1000),closed:true});
+  const record = normalizeLabRecord(scenario,{state:deliveredHardware(),events,plan:'🧰'.repeat(1000),notes:'🧰'.repeat(2000),reflection:'🧰'.repeat(1000),closed:true});
   const before = JSON.stringify(record);
   assert.equal(inquiryProgress(scenario,record.events).complete,true);
   assert.ok(new TextEncoder().encode(before).byteLength > 60000,'The fixture must exercise size trimming, not only the event count.');
@@ -109,7 +122,7 @@ async function connectedFixture(t,options={}) {
   let timerId=0,connection,restored=0;
   const fixture={
     requests,host,window:windowTarget,onPut:null,
-    record:normalizeLabRecord(SCENARIOS[0],{notes:'This belongs to learner A.',closed:true,events:[questionEvent('What changed?',answerQuestion(SCENARIOS[0],'What changed?'))]}),
+    record:normalizeLabRecord(SCENARIOS[0],{state:deliveredHardware(),notes:'This belongs to learner A.',closed:true,events:[questionEvent('What changed?',answerQuestion(SCENARIOS[0],'What changed?'))]}),
     setSelection(studentId=STUDENT_B,classId=CLASS_A) { values.set(CLASSROOM_ACTIVE_KEY,JSON.stringify({studentId,classId})); },
     removeSelection() { values.delete(CLASSROOM_ACTIVE_KEY); },
     button(label) { const found=host.find(node=>node.tagName==='button' && node.textContent===label);assert.ok(found,`Missing button: ${label}`);return found; },
