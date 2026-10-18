@@ -1,6 +1,6 @@
-import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261017-classic20';
-import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261017-classic20';
-import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261017-classic20';
+import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261018-context21';
+import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261018-context21';
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261018-context21';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },
@@ -32,7 +32,7 @@ const clampCase = id => typeof id === 'string' && Object.hasOwn(CASES, id) ? id 
 const safetyReady = s => !s.pcOn && !s.acConnected;
 const hardwareReady = s => (!s.assemblyEnabled || !assemblyFailure(s,s.assembly)) && s.boardInstalled && s.cpuInstalled && s.coolerInstalled && s.ramSeated && s.gpuInstalled && s.atxConnected && s.cpuPowerConnected && s.gpuPowerConnected && s.frontPanelConnected && s.originalDriveInstalled && s.sataDataConnected && s.sataPowerConnected;
 const displayPathReady = s => s.gpuInstalled && s.gpuPowerConnected && s.videoPort === 'gpu' && s.pcVideoConnected && s.signalConnected && s.monitorInput === 'hdmi';
-const displayReady = s => (!s.assemblyEnabled || !assemblyFailure(s,s.assembly)) && s.pcOn && s.booted && displayPathReady(s);
+const displayReady = s => s.acConnected && s.pcOn && s.booted && hardwareReady(s) && displayPathReady(s);
 const result = (state, message, kind = 'info') => ({ state, message, kind });
 // A held cable and selected diagnostic tool belong to the picture, not student work.
 const benchInteractions = new WeakMap();
@@ -97,6 +97,9 @@ export function normalizeHardwareState(caseId, savedState) {
     const allowed=new Set(assemblyActions(state,state.assembly).map(item=>item.id));
     if(Array.isArray(savedState.actions)) state.actions=savedState.actions.filter(action=>typeof action==='string'&&(actions.has(action)||allowed.has(action))).slice(-250);
   }
+  // A stale success flag cannot keep an unpowered or incomplete PC booted.
+  // Display-only faults leave the healthy original operating system loaded.
+  if (!state.pcOn || !state.acConnected || !hardwareReady(state)) state.booted = false;
   // An old or edited browser save cannot display a delivered file through a broken signal path.
   if (!displayReady(state) || !hardwareReady(state)) state.documentOpened = false;
   return state;
