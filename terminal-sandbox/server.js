@@ -347,7 +347,10 @@ export function buildDockerRunArgs(
 ) {
   if (
     !/^cll-sandbox-[a-f0-9]{32}$/.test(name) ||
-    !/^[a-z0-9][a-z0-9._/@:-]{1,200}$/.test(image)
+    !/^[a-z0-9][a-z0-9._/@:-]{1,200}$/.test(image) ||
+    (cfg.reviewInstanceId !== undefined &&
+      (typeof cfg.reviewInstanceId !== "string" ||
+        !/^[a-f0-9]{32}$/.test(cfg.reviewInstanceId)))
   )
     throw failure("invalid_container_configuration");
   return [
@@ -361,6 +364,9 @@ export function buildDockerRunArgs(
     "cole-lab",
     "--label",
     "io.colelearninglabs.terminal=1",
+    ...(cfg.reviewInstanceId
+      ? ["--label", `io.colelearninglabs.review=${cfg.reviewInstanceId}`]
+      : []),
     "--user",
     "1000:1000",
     "--memory=512m",

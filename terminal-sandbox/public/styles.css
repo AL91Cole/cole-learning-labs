@@ -56,6 +56,22 @@ summary:focus-visible {
   outline: 3px solid #ba780b;
   outline-offset: 3px;
 }
+[role="separator"]:focus-visible,
+[role="tabpanel"]:focus-visible {
+  outline: 3px solid #ba780b;
+  outline-offset: -3px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 [hidden] {
   display: none !important;
 }
@@ -165,12 +181,89 @@ summary {
 }
 .split-layout {
   display: grid;
-  grid-template-columns: minmax(270px, 0.8fr) minmax(0, 1.55fr);
-  min-height: 65vh;
+  grid-template-columns: minmax(0, var(--learning-width, 38%)) 44px minmax(0, 1fr);
+  min-height: 500px;
+  height: clamp(500px, calc(100dvh - 250px), 900px);
   align-items: stretch;
+}
+.objective-strip {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  padding: 0.6rem 1.2rem;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.objective-strip > .eyebrow {
+  color: var(--teal);
+  flex: none;
+}
+.objective-strip h2 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+.objective-strip p {
+  color: var(--muted);
+  font-size: 0.83rem;
+  margin: 0.2rem 0 0;
+}
+.split-divider {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: col-resize;
+  touch-action: none;
+  background: #e5edf1;
+  border-inline: 1px solid #c6d3dc;
+  user-select: none;
+}
+.split-divider span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 64px;
+  border: 1px solid #9bb2c0;
+  border-radius: 12px;
+  background: #fff;
+  color: #365e75;
+  font-size: 1.5rem;
+}
+.split-divider:hover { background: #d4e5ea; }
+.learning-tabs,
+.pane-controls {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  background: #eaf0f4;
+  border-radius: 7px;
+  margin-bottom: 0.8rem;
+}
+.learning-tabs button,
+.pane-controls button {
+  flex: 1;
+  min-width: 0;
+  color: var(--navy);
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+.learning-tabs button[aria-selected="true"],
+.pane-controls button[aria-pressed="true"] {
+  background: #fff;
+  border-color: #91aab9;
+  box-shadow: 0 1px 2px #102c4615;
+}
+.workflow-note {
+  font-size: 0.82rem;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 0.7rem;
 }
 .instructions-sidebar {
   min-width: 0;
+  overflow-y: auto;
   background: #fff;
   border-right: 1px solid var(--line);
   padding: 1rem;
@@ -270,7 +363,7 @@ summary {
   color: #e6f0f6;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .workspace-statusbar {
   display: flex;
@@ -302,8 +395,8 @@ summary {
   background: #ea9a9a;
 }
 .terminal-container {
-  min-height: 350px;
-  height: 48vh;
+  min-height: 260px;
+  flex: 1 0 260px;
   padding: 0.65rem;
   overflow: hidden;
 }
@@ -438,35 +531,47 @@ summary {
   color: #b4cbd9;
   margin-top: 0.35rem;
 }
-@media (min-width: 1050px) {
-  .instructions-sidebar {
-    max-height: 75vh;
-    overflow-y: auto;
-  }
-  .workspace-panel {
-    min-height: 65vh;
-  }
-  .terminal-container {
-    height: 52vh;
-  }
-}
 @media (max-width: 800px) {
   .split-layout {
     grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  .pane-controls {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    margin: 0;
+    padding: 0.4rem 0.65rem;
+    background: #e7eff3;
+  }
+  .objective-strip {
+    display: block;
+    padding: 0.65rem;
+  }
+  .objective-strip > .eyebrow {
+    display: block;
+    margin-bottom: 0.25rem;
   }
   .instructions-sidebar {
     border-right: 0;
     border-bottom: 1px solid var(--line);
-    max-height: 42vh;
-    overflow-y: auto;
+    overflow: visible;
+    padding: 0.8rem;
+  }
+  .workspace-panel {
+    min-height: 60vh;
   }
   .teacher-signin {
     margin-left: 0;
     width: 100%;
   }
   .terminal-container {
-    height: 50vh;
+    height: 58vh;
     min-height: 320px;
+    flex: none;
   }
   .sandbox-header,
   .connection-panel {

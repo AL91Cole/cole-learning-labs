@@ -99,8 +99,17 @@
         </details>
       </div>
     </section>
-    <main class="split-layout">
+    <section class="objective-strip" aria-labelledby="objective-title">
+      <span id="objective-label" class="eyebrow">GET READY</span>
+      <div><h2 id="objective-title">Choose a lab, then start a server session.</h2><p id="objective-detail">Read the instructions, work in the terminal, then check your results.</p></div>
+    </section>
+    <div id="pane-controls" class="pane-controls" role="group" aria-label="Small screen view" hidden>
+      <button id="show-instructions" type="button" aria-controls="learning-panel" aria-pressed="true">Instructions</button>
+      <button id="show-workspace" type="button" aria-controls="terminal-workspace" aria-pressed="false">Workspace</button>
+    </div>
+    <main id="lab-layout" class="split-layout">
       <aside
+        id="learning-panel"
         class="instructions-sidebar"
         aria-label="Lab instructions and milestones"
       >
@@ -114,7 +123,11 @@
             <option value="INC-104">Classroom storage investigation</option>
           </select></label
         >
-        <section class="milestone-card" aria-labelledby="milestone-heading">
+        <div class="learning-tabs" role="tablist" aria-label="Learning guide">
+          <button id="instructions-tab" type="button" role="tab" aria-controls="instructions-panel" aria-selected="true" tabindex="0">Instructions</button>
+          <button id="checks-tab" type="button" role="tab" aria-controls="checks-panel" aria-selected="false" tabindex="-1">Your checks</button>
+        </div>
+        <section id="checks-panel" class="milestone-card" role="tabpanel" aria-labelledby="checks-tab" tabindex="0" hidden>
           <div class="milestone-header">
             <h2 id="milestone-heading">Your checks</h2>
             <button
@@ -135,6 +148,7 @@
           ><span id="milestone-count-text">No session started</span>
           <ul id="milestone-list" class="milestone-list"></ul>
         </section>
+        <section id="instructions-panel" role="tabpanel" aria-labelledby="instructions-tab" tabindex="0">
         <p id="lab-track-badge" class="eyebrow">INSTRUCTIONS</p>
         <article
           id="markdown-instructions"
@@ -148,7 +162,11 @@
             server is unavailable.
           </p>
         </article>
+        <p class="workflow-note">1. Read the task. 2. Try it in the terminal. 3. Open Your checks and select Check work. Only the server verifies completion.</p>
+        </section>
       </aside>
+      <div id="split-divider" class="split-divider" role="separator" tabindex="0" aria-label="Resize instructions and workspace" aria-orientation="vertical" aria-controls="learning-panel terminal-workspace" aria-valuemin="28" aria-valuemax="55" aria-valuenow="38" aria-valuetext="Instructions 38%, workspace 62%" aria-describedby="split-help"><span aria-hidden="true">⋮</span></div>
+      <p id="split-help" class="visually-hidden">Drag the divider, or use Left and Right arrow keys. Hold Shift for a larger change. Home and End set the limits. Double-click to reset.</p>
       <section
         id="terminal-workspace"
         class="workspace-panel"

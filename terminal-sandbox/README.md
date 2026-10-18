@@ -1,6 +1,10 @@
 # Optional remote terminal service
 
-This is an **unmerged, disabled-by-default Docker service scaffold**. It is separate from the browser-only labs hosted on Cloudflare Pages. A Pages preview demonstrates the PC monitor changes; it does not run this Docker service. No production DNS, hosting, classroom gate, teacher account or Google integration is changed by this pull request.
+This is an **unmerged, disabled-by-default Docker service scaffold**, with a separate opt-in private review profile for this computer. It is separate from the browser-only labs hosted on Cloudflare Pages. A Pages preview demonstrates the PC monitor changes; it does not run this Docker service. No production DNS, hosting, classroom gate, teacher account or Google integration is changed by this pull request.
+
+For the local backend, use the [local setup](LOCAL-TESTING.md) and [student/teacher test walkthrough](TEST-PLAN.md). Run `npm --prefix terminal-sandbox run review:start` after the prerequisites below. The helper leaves a private, loopback-only backend running and prints its URL plus a protected teacher-key file path. Use `review:status` and `review:stop` through the same npm command. The default server and production compose file remain disabled.
+
+The terminal has a resizable guide/workspace split, Instructions and Your checks tabs, and server-derived next-step guidance. Narrow screens switch between the guide and the workspace; resizing or returning to the terminal refits xterm. The interface uses Cole Learning Labs branding and original instructions, with no CompTIA content or affiliation.
 
 See [the PR #22 architecture audit](../docs/PR22-ARCHITECTURE-AUDIT.md) for the original shortcomings, verification evidence and remaining deployment work.
 

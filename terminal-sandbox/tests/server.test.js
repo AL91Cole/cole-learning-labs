@@ -245,6 +245,40 @@ test("Docker arguments have fixed isolation, quotas, TTL, no host mounts/network
   );
 });
 
+test("private review containers receive only a validated instance label and keep their isolation", () => {
+  const name = "cll-sandbox-" + "a".repeat(32),
+    image = "cole-learning-labs/sandbox:alpine";
+  const args = buildDockerRunArgs(name, image, {
+    ...configuration({}),
+    reviewInstanceId: "b".repeat(32),
+  });
+  assert.ok(args.includes("io.colelearninglabs.review=" + "b".repeat(32)));
+  assert.ok(args.includes("--memory=512m"));
+  assert.ok(args.includes("--read-only"));
+  assert.equal(
+    buildDockerRunArgs(name).some((value) =>
+      value.startsWith("io.colelearninglabs.review="),
+    ),
+    false,
+  );
+  for (const reviewInstanceId of [
+    "",
+    "../other",
+    "b".repeat(32) + " --privileged",
+    {},
+    null,
+  ]) {
+    assert.throws(
+      () =>
+        buildDockerRunArgs(name, image, {
+          ...configuration({}),
+          reviewInstanceId,
+        }),
+      /invalid_container_configuration/,
+    );
+  }
+});
+
 test("actual PTY adapter executes only docker, strips host credentials and cleans a failed PTY start without fallback", async () => {
   const calls = [],
     run = async (command, args) => {

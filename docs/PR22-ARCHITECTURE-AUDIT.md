@@ -33,7 +33,15 @@ Local review on October 18, 2026 passed 784 public-site tests with two Windows s
 
 Browser review completed the real NET-201 terminal lab (4/4 checks), teacher creation/student joining, default-off snapshots, explicit consent and revocation, and teacher pause/resume using fictional data. The terminal viewport at 768×1024 had no horizontal overflow or visible buttons/selectors/disclosures shorter than 44px. Its instructions scroll separately so the terminal remains reachable. Hardware review checked the actual INC-104 no-boot-device screen and accessible transcript. No physical Chromebook/tablet or Microsoft Edge was connected for this review.
 
+## Private local review follow-up
+
+The opt-in `review:start` helper now runs the backend on this computer at `http://127.0.0.1:8080`, with four learner sessions, twelve connections, two classes and four learners per class. It generates a reusable teacher key under the private, Git/Docker-excluded `.review/` directory. Start/status/stop use authenticated local IPC and exact-instance Docker labels; they do not kill unrelated PIDs or prune other containers. Windows permissions preserve existing current-user ownership and replace only access rules, so inherited project Modify access does not require a take-ownership privilege. The default public/deployment server configuration remains disabled.
+
+The terminal workbench has a bounded keyboard/pointer-resizable split, guide tabs and server-derived objectives. Tablet views switch panes and refit xterm while preserving the session. Local verification passed all 55 terminal/helper/UI tests with real Docker, including thirteen private-helper tests. Browser verification completed a self-paced lab, private teacher sign-in, class joining, pause/resume, a teacher command, preview consent/revocation, and divider/tablet interactions. No hosted backend or production domain was configured. See the [local test walkthrough](../terminal-sandbox/TEST-PLAN.md).
+
 ## Still required before an actual school service
+
+The following deployment prerequisites still apply to an internet-accessible school service:
 
 - Provision and administer a dedicated Docker host, trusted HTTPS ingress, terminal hostname, resource budget, secret delivery and maintenance/incident process. This PR does not purchase infrastructure or change DNS.
 - Test the actual managed Chromebooks, tablets, Microsoft Edge and school filtering/WebSocket policy. Responsive browser checks do not certify those devices or networks.

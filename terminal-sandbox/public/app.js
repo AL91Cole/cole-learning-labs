@@ -157,6 +157,20 @@ export function createTerminalSandboxClient({
     "teacher-resume-all",
     "teacher-override-form",
     "teacher-override-input",
+    "lab-layout",
+    "learning-panel",
+    "terminal-workspace",
+    "pane-controls",
+    "show-instructions",
+    "show-workspace",
+    "split-divider",
+    "instructions-tab",
+    "checks-tab",
+    "instructions-panel",
+    "checks-panel",
+    "objective-label",
+    "objective-title",
+    "objective-detail",
   ];
   const el = Object.fromEntries(ids.map((id) => [id, doc.getElementById(id)])),
     disposers = [],
@@ -186,6 +200,14 @@ export function createTerminalSandboxClient({
     fit = null,
     resizeObserver = null,
     resizeFrame = 0;
+  const narrowViewport = win.matchMedia?.("(max-width: 800px)");
+  const layout = {
+    compact: narrowViewport?.matches === true,
+    pane: "instructions",
+    tab: "instructions",
+    width: 38,
+    drag: null,
+  };
   function listen(target, name, fn) {
     target?.addEventListener(name, fn);
     disposers.push(() => target?.removeEventListener(name, fn));
@@ -225,6 +247,54 @@ export function createTerminalSandboxClient({
       data.length <= 4096 &&
       send({ type: "terminal:input", data })
     );
+  }
+  function renderLayout() {
+    el["learning-panel"].hidden = layout.compact && layout.pane !== "instructions";
+    el["terminal-workspace"].hidden = layout.compact && layout.pane !== "workspace";
+    el["split-divider"].hidden = layout.compact;
+    el["pane-controls"].hidden = !layout.compact;
+    for (const name of ["instructions", "workspace"])
+      el[`show-${name}`].setAttribute("aria-pressed", String(layout.pane === name));
+    for (const name of ["instructions", "checks"]) {
+      const selected = layout.tab === name;
+      el[`${name}-tab`].setAttribute("aria-selected", String(selected));
+      el[`${name}-tab`].tabIndex = selected ? 0 : -1;
+      el[`${name}-panel`].hidden = !selected;
+    }
+    queueFit();
+  }
+  function choosePane(name) {
+    if (!["instructions", "workspace"].includes(name)) return;
+    layout.pane = name;
+    renderLayout();
+  }
+  function chooseTab(name, focus = false) {
+    if (!["instructions", "checks"].includes(name)) return;
+    layout.tab = name;
+    renderLayout();
+    if (focus) el[`${name}-tab`].focus();
+  }
+  function setSplitWidth(value) {
+    if (!Number.isFinite(value)) return;
+    layout.width = Math.max(28, Math.min(55, Math.round(value)));
+    el["lab-layout"].style.setProperty("--learning-width", `${layout.width}%`);
+    el["split-divider"].setAttribute("aria-valuenow", String(layout.width));
+    el["split-divider"].setAttribute("aria-valuetext", `Instructions ${layout.width}%, workspace ${100 - layout.width}%`);
+    queueFit();
+  }
+  function endSplitDrag(restore = false) {
+    const drag = layout.drag;
+    layout.drag = null;
+    if (!drag) return;
+    if (restore) setSplitWidth(drag.initialWidth);
+    try {
+      if (el["split-divider"].hasPointerCapture?.(drag.id))
+        el["split-divider"].releasePointerCapture(drag.id);
+    } catch { /* The browser may already have cancelled this pointer. */ }
+  }
+  function resizeFromPointer(event) {
+    const bounds = el["lab-layout"].getBoundingClientRect();
+    if (bounds.width > 0) setSplitWidth((event.clientX - bounds.left) / bounds.width * 100);
   }
   function syncControls() {
     const busy = !!state.ws && state.ws.readyState < Socket.CLOSING,
@@ -326,6 +396,10 @@ export function createTerminalSandboxClient({
     el["milestone-count-text"].textContent = "No session started";
     el["milestone-progress"].value = 0;
     terminal?.reset?.();
+    el["objective-label"].textContent = "GET READY";
+    el["objective-title"].textContent = "Choose a lab, then start a server session.";
+    el["objective-detail"].textContent = "Read the instructions, work in the terminal, then check your results.";
+    el["checks-tab"].textContent = "Your checks";
     syncControls();
   }
   function disconnect() {
@@ -344,6 +418,7 @@ export function createTerminalSandboxClient({
     if (
       state.disposed ||
       doc.hidden ||
+      el["terminal-workspace"].hidden ||
       el["terminal-container"].hidden ||
       !terminal
     )
@@ -361,7 +436,7 @@ export function createTerminalSandboxClient({
       });
   }
   function queueFit() {
-    if (!resizeFrame)
+    if (!state.disposed && !resizeFrame)
       resizeFrame = win.requestAnimationFrame(() => {
         resizeFrame = 0;
         fitTerminal();
@@ -370,6 +445,11 @@ export function createTerminalSandboxClient({
   function milestones(value) {
     const rows = Array.isArray(value) ? value.slice(0, 32) : [],
       count = rows.filter((row) => row?.completed === true).length;
+    const nextIndex = rows.findIndex((row) => row?.completed !== true);
+    el["checks-tab"].textContent = rows.length ? `Your checks (${count}/${rows.length})` : "Your checks";
+    el["objective-label"].textContent = nextIndex >= 0 ? `STEP ${nextIndex + 1} OF ${rows.length}` : rows.length ? "ALL CHECKS VERIFIED" : "YOUR TASK";
+    el["objective-title"].textContent = nextIndex >= 0 ? text(rows[nextIndex]?.title, 200) || "Continue the next task." : rows.length ? "Your server checks are complete." : "Read the instructions, then try the commands.";
+    el["objective-detail"].textContent = nextIndex >= 0 ? text(rows[nextIndex]?.description, 600) || "Work in the terminal, then use Check work to verify this step." : rows.length ? "Review your results and explain what you learned before ending the session." : "Use Your checks to verify your results. Reading or running a command does not mark a step complete.";
     el["milestone-progress"].max = rows.length || 1;
     el["milestone-progress"].value = count;
     el["milestone-count-text"].textContent =
@@ -472,8 +552,12 @@ export function createTerminalSandboxClient({
         });
       else {
         status("connected", "Teacher authenticated");
+        choosePane("workspace");
         el["teacher-meta-status"].textContent =
           "Create a class to receive its student join code.";
+        el["objective-label"].textContent = "TEACHER WORKSPACE";
+        el["objective-title"].textContent = "Create a class, then share its student join code.";
+        el["objective-detail"].textContent = "Guide joined learners with the class controls. Sharing terminal snapshots remains optional for each student.";
       }
       syncControls();
       return;
@@ -518,6 +602,7 @@ export function createTerminalSandboxClient({
         milestones(message.milestones);
         status("connected", "Connected to server Linux sandbox");
         syncControls();
+        choosePane("workspace");
         queueFit();
         break;
       }
@@ -587,6 +672,8 @@ export function createTerminalSandboxClient({
             el["teacher-class-code"].value = code;
             el["teacher-meta-status"].textContent =
               "Share this student join code through your approved classroom channel.";
+            el["objective-title"].textContent = "Your class is ready for learners.";
+            el["objective-detail"].textContent = "Share the student join code through your approved classroom channel, then review joined learners’ server-verified checks.";
             send({ type: "classroom:subscribe", classroomCode: code });
             syncControls();
           }
@@ -812,6 +899,58 @@ export function createTerminalSandboxClient({
     el["terminal-container"].replaceChildren(notice);
   }
   listen(el["connect-btn"], "click", () => connect("student"));
+  for (const name of ["instructions", "workspace"])
+    listen(el[`show-${name}`], "click", () => choosePane(name));
+  for (const name of ["instructions", "checks"]) {
+    listen(el[`${name}-tab`], "click", () => chooseTab(name));
+    listen(el[`${name}-tab`], "keydown", (event) => {
+      const next = event.key === "Home" ? "instructions" : event.key === "End" ? "checks" : ["ArrowLeft", "ArrowRight"].includes(event.key) ? name === "instructions" ? "checks" : "instructions" : null;
+      if (!next) return;
+      event.preventDefault();
+      chooseTab(next, true);
+    });
+  }
+  listen(el["split-divider"], "keydown", (event) => {
+    if (layout.compact) return;
+    if (event.key === "Escape" && layout.drag) {
+      event.preventDefault();
+      endSplitDrag(true);
+      return;
+    }
+    const amount = event.shiftKey ? 10 : 2;
+    const width = event.key === "Home" ? 28 : event.key === "End" ? 55 : event.key === "ArrowLeft" ? layout.width - amount : event.key === "ArrowRight" ? layout.width + amount : null;
+    if (width === null) return;
+    event.preventDefault();
+    endSplitDrag();
+    setSplitWidth(width);
+  });
+  listen(el["split-divider"], "dblclick", () => setSplitWidth(38));
+  listen(el["split-divider"], "pointerdown", (event) => {
+    if (layout.compact || state.disposed || event.button !== 0 || event.isPrimary === false) return;
+    if (layout.drag) { endSplitDrag(); return; }
+    layout.drag = { id: event.pointerId, initialWidth: layout.width };
+    el["split-divider"].focus();
+    try { el["split-divider"].setPointerCapture?.(event.pointerId); } catch { /* Window listeners also handle pointer release. */ }
+    event.preventDefault();
+    resizeFromPointer(event);
+  });
+  listen(win, "pointermove", (event) => {
+    if (layout.drag?.id === event.pointerId) resizeFromPointer(event);
+  });
+  listen(win, "pointerup", (event) => {
+    if (layout.drag?.id === event.pointerId) endSplitDrag();
+  });
+  listen(win, "pointercancel", (event) => {
+    if (layout.drag?.id === event.pointerId) endSplitDrag(true);
+  });
+  listen(el["split-divider"], "lostpointercapture", () => endSplitDrag());
+  listen(win, "blur", () => endSplitDrag());
+  listen(win, "resize", () => { endSplitDrag(); queueFit(); });
+  listen(narrowViewport, "change", (event) => {
+    endSplitDrag();
+    layout.compact = event.matches === true;
+    renderLayout();
+  });
   listen(el["disconnect-btn"], "click", disconnect);
   listen(el["mode-self-paced"], "click", () => chooseMode("self-paced"));
   listen(el["mode-instructor"], "click", () => chooseMode("instructor-led"));
@@ -863,8 +1002,10 @@ export function createTerminalSandboxClient({
         typeof command === "string" &&
         command.length <= 2000 &&
         input(command.replace(/\r?\n/g, "\r") + "\r")
-      )
+      ) {
+        choosePane("workspace");
         terminal?.focus();
+      }
     }
   });
   listen(el["terminal-keyboard-controls"], "click", (event) => {
@@ -911,10 +1052,11 @@ export function createTerminalSandboxClient({
       el["teacher-override-input"].value = "";
   });
   listen(doc, "visibilitychange", () => {
-    if (doc.hidden) revokeConsent();
+    if (doc.hidden) { endSplitDrag(); revokeConsent(); }
     else queueFit();
   });
   syncControls();
+  renderLayout();
   status(
     "disconnected",
     terminal
@@ -923,6 +1065,7 @@ export function createTerminalSandboxClient({
   );
   function dispose() {
     if (state.disposed) return;
+    endSplitDrag();
     disconnect();
     state.disposed = true;
     for (const item of disposers)

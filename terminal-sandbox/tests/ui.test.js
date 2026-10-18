@@ -45,6 +45,7 @@ function fixture({
   terminalAvailable = true,
   protocol = "https:",
   hostname = "terminal.school.test",
+  compact = false,
 } = {}) {
   const fields = new Map(),
     intervals = new Map(),
@@ -53,7 +54,8 @@ function fixture({
     sockets = [],
     terminals = [],
     images = [],
-    uploads = [];
+    uploads = [],
+    observers = [];
   let timer = 0,
     time = 0;
   function node(tagName = "DIV") {
@@ -69,6 +71,12 @@ function fixture({
       checked: false,
       children: [],
       className: "",
+      style: { values: {}, setProperty(name, value) { this.values[name] = value; } },
+      pointers: new Set(),
+      getBoundingClientRect() { return { left: 100, width: 1000 }; },
+      setPointerCapture(id) { this.pointers.add(id); },
+      hasPointerCapture(id) { return this.pointers.has(id); },
+      releasePointerCapture(id) { this.pointers.delete(id); },
       classList: { toggle() {}, add() {}, remove() {} },
       setAttribute(name, value) {
         this.attrs[name] = value;
@@ -248,9 +256,11 @@ function fixture({
       this.fits = (this.fits || 0) + 1;
     }
   }
+  const media = { ...eventTarget(), matches: compact };
   const win = {
     ...eventTarget(),
     location: { protocol, hostname, host: hostname },
+    matchMedia: () => media,
     setInterval(fn, ms) {
       const id = ++timer;
       intervals.set(id, { fn, ms });
@@ -270,6 +280,7 @@ function fixture({
     },
     cancelAnimationFrame: (id) => frames.delete(id),
     ResizeObserver: class {
+      constructor(callback) { this.callback = callback; observers.push(this); }
       observe() {}
       disconnect() {
         this.disconnected = true;
@@ -310,6 +321,8 @@ function fixture({
     frames,
     images,
     uploads,
+    observers,
+    media,
     click,
     submit,
     optIn,
@@ -866,4 +879,156 @@ test("all terminal/control/teacher data uses one native socket with no polling, 
   );
   assert.match(app, /screen:consent/);
   assert.match(app, /toDataURL\(\s*['"]image\/jpeg['"]\s*,\s*0\.1\s*\)/);
+});
+
+test("the learning guide has keyboard tabs without starting a session or awarding checks", () => {
+  const f = fixture();
+  assert.equal(f.fields.get("instructions-tab").getAttribute("aria-selected"), "true");
+  assert.equal(f.fields.get("checks-panel").hidden, true);
+  let prevented = false;
+  f.fields.get("instructions-tab").emit("keydown", { key: "ArrowRight", preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(f.fields.get("checks-tab").tabIndex, 0);
+  assert.equal(f.fields.get("instructions-tab").tabIndex, -1);
+  assert.equal(f.fields.get("checks-panel").hidden, false);
+  assert.equal(f.fields.get("instructions-panel").hidden, true);
+  assert.equal(f.doc.activeElement, f.fields.get("checks-tab"));
+  f.fields.get("checks-tab").emit("keydown", { key: "Home", preventDefault() {} });
+  assert.equal(f.fields.get("instructions-panel").hidden, false);
+  assert.equal(f.sockets.length, 0);
+  assert.equal(f.fields.get("milestone-progress").value, "");
+  f.dispose();
+});
+
+test("keyboard resizing stays bounded, announces the split and coalesces xterm fits", () => {
+  const f = fixture(), divider = f.fields.get("split-divider");
+  f.flush();
+  const fits = f.term.addon.fits;
+  divider.emit("keydown", { key: "ArrowRight", preventDefault() {} });
+  divider.emit("keydown", { key: "ArrowRight", shiftKey: true, preventDefault() {} });
+  assert.equal(divider.getAttribute("aria-valuenow"), "50");
+  assert.equal(divider.getAttribute("aria-valuetext"), "Instructions 50%, workspace 50%");
+  assert.equal(f.fields.get("lab-layout").style.values["--learning-width"], "50%");
+  assert.equal(f.frames.size, 1);
+  f.flush();
+  assert.equal(f.term.addon.fits, fits + 1);
+  divider.emit("keydown", { key: "End", preventDefault() {} });
+  divider.emit("keydown", { key: "ArrowRight", preventDefault() {} });
+  assert.equal(divider.getAttribute("aria-valuenow"), "55");
+  divider.emit("keydown", { key: "Home", preventDefault() {} });
+  divider.emit("keydown", { key: "ArrowLeft", preventDefault() {} });
+  assert.equal(divider.getAttribute("aria-valuenow"), "28");
+  divider.emit("dblclick");
+  assert.equal(divider.getAttribute("aria-valuenow"), "38");
+  assert.equal(f.sockets.length, 0);
+  f.dispose();
+});
+
+test("pointer resizing cancels safely without a stuck capture or late layout writes", () => {
+  const f = fixture(), divider = f.fields.get("split-divider");
+  const down = (id, clientX) => divider.emit("pointerdown", { pointerId: id, clientX, button: 0, preventDefault() {} });
+  down(7, 550);
+  assert.equal(divider.hasPointerCapture(7), true);
+  assert.equal(divider.getAttribute("aria-valuenow"), "45");
+  f.win.emit("pointermove", { pointerId: 9, clientX: 1000 });
+  assert.equal(divider.getAttribute("aria-valuenow"), "45");
+  f.win.emit("pointermove", { pointerId: 7, clientX: 1000 });
+  assert.equal(divider.getAttribute("aria-valuenow"), "55");
+  f.win.emit("pointercancel", { pointerId: 7 });
+  assert.equal(divider.getAttribute("aria-valuenow"), "38");
+  assert.equal(divider.hasPointerCapture(7), false);
+  down(8, 420);
+  divider.emit("keydown", { key: "Escape", preventDefault() {} });
+  assert.equal(divider.getAttribute("aria-valuenow"), "38");
+  assert.equal(divider.hasPointerCapture(8), false);
+  down(10, 500);
+  f.win.emit("blur");
+  assert.equal(divider.hasPointerCapture(10), false);
+  f.win.emit("pointermove", { pointerId: 10, clientX: 1000 });
+  assert.equal(divider.getAttribute("aria-valuenow"), "40");
+  down(11, 600);
+  f.dispose();
+  assert.equal(divider.hasPointerCapture(11), false);
+  assert.equal(f.media.listeners.size, 0);
+  f.win.emit("pointermove", { pointerId: 11, clientX: 1000 });
+  assert.equal(divider.getAttribute("aria-valuenow"), "50");
+  assert.equal(f.frames.size, 0);
+});
+
+test("small screens show one pane, refit when the workspace returns and preserve guide tab choice", () => {
+  const f = fixture({ compact: true });
+  assert.equal(f.fields.get("pane-controls").hidden, false);
+  assert.equal(f.fields.get("learning-panel").hidden, false);
+  assert.equal(f.fields.get("terminal-workspace").hidden, true);
+  assert.equal(f.fields.get("split-divider").hidden, true);
+  f.flush();
+  assert.equal(f.term.addon.fits || 0, 0);
+  f.click("checks-tab");
+  f.click("show-workspace");
+  f.flush();
+  assert.equal(f.term.addon.fits, 1);
+  assert.equal(f.fields.get("learning-panel").hidden, true);
+  assert.equal(f.fields.get("show-workspace").getAttribute("aria-pressed"), "true");
+  f.click("show-instructions");
+  f.observers[0].callback();
+  f.flush();
+  assert.equal(f.term.addon.fits, 1, "a hidden terminal is never fit to zero dimensions");
+  assert.equal(f.fields.get("checks-panel").hidden, false);
+  f.media.matches = false;
+  f.media.emit("change", { matches: false });
+  f.flush();
+  assert.equal(f.fields.get("learning-panel").hidden, false);
+  assert.equal(f.fields.get("terminal-workspace").hidden, false);
+  assert.equal(f.fields.get("split-divider").hidden, false);
+  assert.equal(f.fields.get("pane-controls").hidden, true);
+  assert.equal(f.term.addon.fits, 2);
+  f.observers[0].callback();
+  f.observers[0].callback();
+  assert.equal(f.frames.size, 1);
+  f.flush();
+  assert.equal(f.term.addon.fits, 3);
+  assert.equal(f.sockets.length, 0);
+  f.dispose();
+});
+
+test("the current objective advances only after server verification and does not reset guide tabs", () => {
+  const f = fixture();
+  f.student();
+  const first = { title: "Inspect <fictional> configuration", description: "Read the supplied lab fixture.", completed: false };
+  const second = { title: "Verify the result", description: "Record your evidence.", completed: false };
+  f.ws.message({ type: "milestone:status", milestones: [first, second] });
+  assert.equal(f.fields.get("objective-label").textContent, "STEP 1 OF 2");
+  assert.equal(f.fields.get("objective-title").textContent, first.title);
+  assert.equal(f.fields.get("checks-tab").textContent, "Your checks (0/2)");
+  f.click("checks-tab");
+  f.click("verify-milestones-btn");
+  assert.equal(f.ws.messages.at(-1).type, "milestone:verify");
+  assert.equal(f.fields.get("objective-label").textContent, "STEP 1 OF 2");
+  f.ws.message({ type: "milestone:status", milestones: [{ ...first, completed: true }, second] });
+  assert.equal(f.fields.get("objective-label").textContent, "STEP 2 OF 2");
+  assert.equal(f.fields.get("objective-title").textContent, second.title);
+  assert.equal(f.fields.get("checks-panel").hidden, false);
+  f.ws.message({ type: "milestone:status", milestones: [{ ...first, completed: true }, { ...second, completed: true }] });
+  assert.equal(f.fields.get("objective-label").textContent, "ALL CHECKS VERIFIED");
+  f.click("disconnect-btn");
+  assert.equal(f.fields.get("objective-label").textContent, "GET READY");
+  f.dispose();
+});
+
+test("authenticated teacher controls open in the workspace on small screens without a Linux session", () => {
+  const f = fixture({ compact: true });
+  f.teacher();
+  assert.equal(f.fields.get("learning-panel").hidden, true);
+  assert.equal(f.fields.get("terminal-workspace").hidden, false);
+  assert.equal(f.fields.get("teacher-dashboard").hidden, false);
+  assert.equal(f.fields.get("terminal-container").hidden, true);
+  assert.equal(f.fields.get("container-badge").textContent, "");
+  assert.equal(f.fields.get("objective-label").textContent, "TEACHER WORKSPACE");
+  assert.equal(f.fields.get("objective-title").textContent, "Create a class, then share its student join code.");
+  f.ws.message({ type: "classroom:created", classroomCode: "CLL-REAL-123" });
+  assert.equal(f.fields.get("objective-title").textContent, "Your class is ready for learners.");
+  assert.ok(!f.ws.messages.some((message) => message.type === "session:start"));
+  f.flush();
+  assert.equal(f.term.addon.fits || 0, 0);
+  f.dispose();
 });
