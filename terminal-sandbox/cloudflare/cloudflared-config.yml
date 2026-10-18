@@ -1,0 +1,16 @@
+# Cloudflare Zero Trust Tunnel Configuration (Alternative to inbound port 443 firewall rules)
+# Connects the Docker Orchestrator outbound to Cloudflare Edge over HTTPS/QUIC.
+# Chromebooks connect exclusively to wss://terminal.colelearninglabs.com/ws on Port 443.
+
+tunnel: cole-learning-labs-sandbox
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: terminal.colelearninglabs.com
+    service: http://orchestrator:8080
+    originRequest:
+      noTLSVerify: false
+      connectTimeout: 10s
+      keepAliveTimeout: 90s
+      httpHostHeader: terminal.colelearninglabs.com
+  - service: http_status:404

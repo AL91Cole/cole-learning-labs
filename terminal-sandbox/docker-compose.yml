@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  sandbox-image-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox
+    image: cole-learning-labs/sandbox:alpine
+    command: ["/bin/true"]
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cll-terminal-orchestrator
+    restart: unless-stopped
+    depends_on:
+      - sandbox-image-builder
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - SANDBOX_IMAGE=cole-learning-labs/sandbox:alpine
+      - SANDBOX_MEMORY=512m
+      - SANDBOX_CPUS=0.5
+      - INACTIVITY_TIMEOUT_MS=300000
+      - ENFORCE_CLOUDFLARE_HTTPS=true
+      - ALLOWED_ORIGINS=https://www.colelearninglabs.com,https://colelearninglabs.com,https://terminal.colelearninglabs.com
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # Optional Cloudflare Tunnel (cloudflared) so outbound-only Port 443 connects directly to Cloudflare Edge
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cll-cloudflared-tunnel
+    restart: unless-stopped
+    depends_on:
+      - orchestrator
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflare/cloudflared-config.yml:/etc/cloudflared/config.yml:ro
+    profiles:
+      - cloudflare-tunnel

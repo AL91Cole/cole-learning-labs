@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102c46">
+  <meta name="description" content="Cole Learning Labs Chromebook-compatible virtual Linux sandbox using xterm.js and isolated Docker micro-environments over Cloudflare Port 443 WebSockets.">
+  <title>Virtual Terminal Sandbox · Cole Learning Labs</title>
+  <!-- xterm.js Stylesheet (with local/offline fallback styling in styles.css) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#terminal-workspace">Skip to interactive terminal</a>
+
+  <!-- Top Navigation Header matching Cole Learning Labs brand -->
+  <header class="sandbox-header">
+    <div class="brand-group">
+      <span class="brand-badge" aria-hidden="true">⌘</span>
+      <div>
+        <span class="eyebrow">COLE LEARNING LABS · CHROMEBOOK SANDBOX</span>
+        <h1>Interactive Linux &amp; Security Workbench</h1>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="mode-pill-group" role="group" aria-label="Lab operating mode">
+        <button type="button" id="mode-self-paced" class="mode-pill active" aria-pressed="true">Self-Paced Mode</button>
+        <button type="button" id="mode-instructor" class="mode-pill" aria-pressed="false">Instructor-Led</button>
+      </div>
+
+      <form id="classroom-join-form" class="classroom-form" hidden>
+        <label for="classroom-code-input" class="sr-only">Classroom Code</label>
+        <input id="classroom-code-input" type="text" value="CLL-CLASS-712" maxlength="24" placeholder="Class code (e.g. CLL-CLASS-712)">
+        <button type="submit" class="btn btn-small">Join Class</button>
+      </form>
+
+      <button type="button" id="toggle-teacher-dashboard" class="btn btn-outline btn-small" aria-expanded="false">
+        Teacher Dashboard (5s JPEG)
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Two-Panel Split-Screen Layout -->
+  <main class="split-layout">
+    <!-- LEFT PANEL: Self-Paced Mode Sidebar (Markdown Instructions & Milestones) -->
+    <aside class="instructions-sidebar" aria-label="Self-paced lab instructions and milestones">
+      <div class="sidebar-toolbar">
+        <label for="lab-selector">
+          <span class="eyebrow">SELECT INVESTIGATION</span>
+          <select id="lab-selector">
+            <option value="NET-201">NET-201 · Workstation Network &amp; DNS Diagnostics</option>
+            <option value="SEC-402">SEC-402 · Log Correlation &amp; Telnet Port Containment</option>
+            <option value="INC-104">INC-104 · Storage Mount &amp; Classroom File Recovery</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- Milestone Progress Tracker -->
+      <section class="milestone-card" aria-labelledby="milestone-heading">
+        <div class="milestone-header">
+          <div>
+            <span class="eyebrow" id="lab-track-badge">NETWORKING &amp; OS · GRADES 7–12</span>
+            <h2 id="milestone-heading">Self-Paced Milestones</h2>
+          </div>
+          <button type="button" id="verify-milestones-btn" class="btn btn-small">Verify Now</button>
+        </div>
+
+        <div class="progress-row">
+          <progress id="milestone-progress" value="0" max="4" aria-label="Milestone completion progress"></progress>
+          <span id="milestone-count-text">0 / 4 verified</span>
+        </div>
+
+        <ul id="milestone-list" class="milestone-list" aria-live="polite"></ul>
+      </section>
+
+      <!-- Rendered Markdown Instructions -->
+      <article id="markdown-instructions" class="markdown-body" aria-label="Step-by-step instructions"></article>
+    </aside>
+
+    <!-- RIGHT PANEL: Interactive Workspace (xterm.js + Low-Bandwidth Teacher View) -->
+    <section id="terminal-workspace" class="workspace-panel" aria-label="Interactive terminal workspace">
+      <!-- Connection & Container Telemetry Bar -->
+      <div class="workspace-statusbar">
+        <div class="status-group">
+          <span id="ws-status-dot" class="status-dot connecting" aria-hidden="true"></span>
+          <strong id="ws-status-text">Connecting WSS (Port 443)…</strong>
+          <span class="status-divider">·</span>
+          <span id="container-badge" class="mono-badge">Alpine 3.20 · 512MB / 0.5 vCPU</span>
+        </div>
+        <div class="status-group">
+          <span id="learner-alias-badge" class="mono-badge">Learner-…</span>
+          <span id="inactivity-timer-badge" class="mono-badge" title="Containers auto-destroy after 5 minutes of inactivity">Idle limit: 5:00</span>
+          <button type="button" id="reconnect-btn" class="btn btn-small btn-ghost">Reconnect</button>
+        </div>
+      </div>
+
+      <!-- Instructor Pause Banner (Shown when teacher pauses inputs) -->
+      <div id="instructor-pause-banner" class="pause-banner" role="alert" hidden>
+        <strong>Instructor Mode:</strong> Terminal input is temporarily paused by your teacher for a class demonstration.
+      </div>
+
+      <!-- xterm.js Mount Container -->
+      <div id="terminal-container" class="terminal-container" tabindex="0" aria-label="Linux sandbox terminal"></div>
+
+      <!-- Hidden/Offscreen Canvas used to generate 10%-compressed JPEG snapshots every 5s for Low-Bandwidth Teacher View -->
+      <canvas id="snapshot-canvas" width="640" height="360" hidden></canvas>
+
+      <!-- Low-Bandwidth Teacher Dashboard Drawer (10%-compressed JPEG snapshots every 5s) -->
+      <section id="teacher-dashboard" class="teacher-dashboard" aria-labelledby="teacher-dashboard-title" hidden>
+        <div class="teacher-dashboard-header">
+          <div>
+            <span class="eyebrow">LOW-BANDWIDTH CLASSROOM MONITOR · WI-FI SAFE</span>
+            <h2 id="teacher-dashboard-title">Teacher Dashboard · 10% JPEG Snapshots (5s Interval)</h2>
+          </div>
+          <div class="teacher-actions">
+            <button type="button" id="teacher-pause-all" class="btn btn-small btn-warning">Pause All Inputs</button>
+            <button type="button" id="teacher-resume-all" class="btn btn-small btn-outline">Resume All Inputs</button>
+            <form id="teacher-override-form" class="override-form">
+              <input id="teacher-override-input" type="text" placeholder="Push command override (e.g. cat ~/lab/network-sheet.txt)" maxlength="200">
+              <button type="submit" class="btn btn-small">Push to Class</button>
+            </form>
+          </div>
+        </div>
+        <p class="teacher-meta" id="teacher-meta-status">
+          Polling static 10%-compressed JPEG snapshots once every 5 seconds over Port 443 WSS/HTTPS.
+        </p>
+        <div id="teacher-student-grid" class="teacher-student-grid"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- Optional CDN xterm.js & xterm-addon-fit; app.js automatically falls back to built-in terminal if offline -->
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js" crossorigin="anonymous"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
