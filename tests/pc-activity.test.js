@@ -21,7 +21,7 @@ const assertStopped = activity => {for(const key of ['powered','cpuFan','psuFan'
 test('all eight current hardware faults have distinct honest power/startup/display activity',()=>{
   const expected={
     'INC-101':[true,true,'no-signal'], 'INC-102':[false,false,'off'],
-    'INC-103':[true,false,'post-stopped'], 'INC-104':[true,false,'post-stopped'],
+    'INC-103':[true,false,'no-signal'], 'INC-104':[true,false,'post-stopped'],
     'INC-105':[true,false,'post-stopped'], 'INC-106':[false,false,'off'],
     'INC-107':[true,true,'no-signal'], 'INC-108':[true,true,'no-signal']
   };
@@ -33,10 +33,10 @@ test('all eight current hardware faults have distinct honest power/startup/displ
     for(const fan of ['cpuFan','psuFan','gpuFan'])assert.equal(activity[fan],powered,`${id}: ${fan}`);
     assert.equal(activity.documentOpened,false,id);assert.deepEqual(state,before,id);
   }
-  assert.equal(pcActivity(detailed('INC-103')).display.label,'MEMORY NOT DETECTED');
+  assert.equal(pcActivity(detailed('INC-103')).display.label,'NO SIGNAL');
   assert.equal(pcActivity(detailed('INC-104')).display.label,'NO BOOT DEVICE');
   assert.equal(pcActivity(detailed('INC-107')).display.label,'NO SIGNAL · DISPLAYPORT');
-  assert.match(pcActivity(detailed('INC-108')).display.detail,/monitor end/i);
+  assert.match(pcActivity(detailed('INC-108')).display.detail,/No active video/i);
 });
 
 test('AC alone supplies standby without spinning fans; shutdown and unplug stop activity immediately',()=>{
@@ -78,7 +78,7 @@ test('disconnecting the CPU fan through the existing guarded model is reflected 
 
 test('both HDMI ends, the selected output and monitor source determine the visible desktop independently of fan motion',()=>{
   const base=steps('INC-101',fixed(),['open-document']);
-  for(const [change,detail]of [[{pcVideoConnected:false},/PC end/],[{signalConnected:false},/monitor end/],[{videoPort:'board'},/motherboard/],[{monitorInput:'displayport'},/Select HDMI/],[{monitorInput:'unexpected'},/Select HDMI/]]) {
+  for(const [change,detail]of [[{pcVideoConnected:false},/No active video/],[{signalConnected:false},/No active video/],[{videoPort:'board'},/No active video/],[{monitorInput:'displayport'},/No active video/],[{monitorInput:'unexpected'},/No active video/]]) {
     const state={...base,...change},before=structuredClone(state),activity=pcActivity(state);
     assert.equal(activity.cpuFan,true);assert.equal(activity.psuFan,true);assert.equal(activity.gpuFan,true);assert.equal(activity.booted,true);
     assert.equal(activity.display.state,'no-signal');assert.equal(activity.display.signal,false);assert.equal(activity.display.desktop,false);assert.equal(activity.documentOpened,false);assert.match(activity.display.detail,detail);assert.deepEqual(state,before);
@@ -117,4 +117,75 @@ test('indicator calculation is deterministic, accepts deeply frozen work, and ha
   const source=readFileSync(new URL('../src/pc-activity.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\b(?:setTimeout|setInterval|requestAnimationFrame|fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage|indexedDB|window|document)\s*[.(]/);
   assert.doesNotMatch(source,/https?:\/\//);
+});
+
+test('monitor clues distinguish power standby, pre-video POST, firmware storage and display-transfer faults across every ticket',()=>{
+  const expected={
+    'INC-101':['INPUT_NO_SIGNAL','desktop','HDMI'], 'INC-102':['MONITOR_STANDBY','power','HDMI'],
+    'INC-103':['PRE_VIDEO_POST','memory-init','HDMI'], 'INC-104':['BOOT_DEVICE_UNAVAILABLE','boot-device','HDMI'],
+    'INC-105':['BOOT_DEVICE_UNAVAILABLE','boot-device','HDMI'], 'INC-106':['MONITOR_STANDBY','power','HDMI'],
+    'INC-107':['INPUT_NO_SIGNAL','desktop','DISPLAYPORT'], 'INC-108':['INPUT_NO_SIGNAL','desktop','HDMI']
+  };
+  for(const [id,[code,phase,input]]of Object.entries(expected))for(const enabled of [false,true]){
+    const state=enabled?detailed(id):initialHardwareState(id),before=structuredClone(state),activity=pcActivity(state);
+    assert.equal(activity.display.screen.code,code,id);assert.equal(activity.startup.phase,phase,id);assert.equal(activity.display.screen.source,input,id);
+    assert.deepEqual(state,before);assert.equal(activity.display.documentOpened,false);
+  }
+});
+
+test('processor or memory initialization faults leave fans running without claiming a firmware picture or a missing-RAM screen',()=>{
+  const base=fixed();
+  for(const change of [{ramSeated:false},{cpuPowerConnected:false},{cpuInstalled:false},{assembly:{...base.assembly,ramClipsOpen:true}},{assembly:{...base.assembly,retentionOpen:true}}]){
+    const activity=pcActivity({...base,...change,booted:true,documentOpened:true});
+    assert.equal(activity.powered,true);assert.equal(activity.psuFan,true);assert.equal(activity.display.signal,false);assert.equal(activity.display.state,'no-signal');
+    assert.equal(activity.startup.videoInitialized,false);assert.equal(activity.display.screen.brand,'CLASSROOM DISPLAY');
+    assert.doesNotMatch(activity.display.readout,/MEMORY NOT DETECTED|UEFI|boot device|reseat|DIMM|EPS|retention/i);
+    assert.equal(activity.display.desktop,false);assert.equal(activity.documentOpened,false);
+  }
+});
+
+test('a missing or undetected original drive produces firmware evidence but a loose NVMe choice does not invent bootloader corruption',()=>{
+  const lostCable=pcActivity(detailed('INC-104')),spareChosen=pcActivity(detailed('INC-105'));
+  for(const activity of [lostCable,spareChosen]){
+    assert.equal(activity.display.signal,true);assert.equal(activity.display.screen.stage,'firmware');assert.equal(activity.display.screen.brand,'CLASSROOM UEFI');
+    assert.ok(activity.display.screen.lines.includes('SATA devices detected: 0'));assert.equal(activity.startup.bootManager,'not-reached');
+    assert.doesNotMatch(activity.display.readout,/reconnect|install|SATA cable|NVMe|bootloader.*(?:damaged|missing|corrupt)|Windows|GRUB/i);
+    assert.equal(activity.booted,false);assert.equal(activity.documentOpened,false);
+  }
+  assert.deepEqual(lostCable.display.screen.lines,spareChosen.display.screen.lines,'The firmware cannot observe a loose, incompatible spare outside its connectors');
+  const healthy=fixed();assert.equal(pcActivity({...healthy,selectedDrive:'nvme'}).display.state,'desktop','A bench selection alone does not replace or erase the connected OS drive');
+  const hidden=pcActivity({...detailed('INC-104'),signalConnected:false});assert.equal(hidden.display.screen.brand,'CLASSROOM DISPLAY');assert.equal(hidden.display.signal,false,'A firmware fault is not visible through a broken display path');
+});
+
+test('a boot-manager checkpoint and desktop confirmation come from the actual startup result, with no automatic action or time progression',()=>{
+  let state={...fixed(),booted:false,documentOpened:true},before=structuredClone(state);
+  const pending=pcActivity(state);assert.equal(pending.display.screen.stage,'boot-manager');assert.equal(pending.display.screen.code,'BOOT_MANAGER_READY');
+  assert.equal(pending.startup.bootManager,'ready');assert.equal(pending.booted,false);assert.equal(pending.documentOpened,false);assert.deepEqual(state,before);
+  assert.deepEqual(pcActivity(state),pending,'Reading twice must not advance a screen or award a test');
+  const unseen=pcActivity({...state,signalConnected:false});assert.equal(unseen.startup.bootManager,'ready');assert.equal(unseen.display.screen.code,'INPUT_NO_SIGNAL','A disconnected display does not remove the boot manager or invent a bootloader fault');
+  state=steps('INC-101',state,['boot']);const desktop=pcActivity(state);assert.equal(desktop.display.screen.code,'DESKTOP_READY');assert.equal(desktop.startup.bootManager,'completed');assert.equal(desktop.documentOpened,false);
+  state=steps('INC-101',state,['open-document']);assert.equal(pcActivity(state).display.screen.code,'LESSON_OPEN');
+  state=steps('INC-101',state,['power-off']);const standby=pcActivity(state);assert.equal(standby.display.screen.code,'MONITOR_STANDBY');assert.match(standby.display.readout,/Monitor power is available separately/);
+});
+
+test('teaching mount and cooling interlocks are labeled as workbench checks instead of invented firmware screw or paste detectors',()=>{
+  const base=fixed();
+  for(const assembly of [{...base.assembly,panelInstalled:false,panelScrews:[false,false]},{...base.assembly,cpuFanConnected:false},{...base.assembly,paste:'dry'}]){
+    const activity=pcActivity({...base,assembly});
+    assert.equal(activity.display.screen.stage,'interlock');assert.equal(activity.display.screen.brand,'TEACHING WORKBENCH');
+    assert.match(activity.display.readout,/teaching safety check/i);assert.doesNotMatch(activity.display.readout,/screw|paste|CPU_FAN|temperature|UEFI|reseat|connect/i);
+    assert.equal(activity.booted,false);assert.equal(activity.documentOpened,false);
+  }
+});
+
+test('monitor facts are fixed bounded symptoms rather than arbitrary saved text or endpoint repair instructions',()=>{
+  const states=SCENARIOS.filter(item=>item.track==='hardware').map(item=>detailed(item.id));
+  states.push({...fixed(),monitorInput:'<img src=x onerror=payload()>'},{...fixed(),booted:false},steps('INC-101',fixed(),['open-document']));
+  for(const state of states){
+    const {screen}=pcActivity(state).display;
+    assert.ok(screen.lines.length>=2&&screen.lines.length<=4);for(const line of screen.lines)assert.ok(line.length<=48,line);
+    assert.ok(screen.code.length<=32);assert.ok(['HDMI','DISPLAYPORT','UNSET'].includes(screen.source));
+    assert.doesNotMatch(pcActivity(state).display.readout,/<img|payload|upper motherboard|graphics.card output|PC end.*disconnected|monitor end.*disconnected|Select HDMI/i);
+    assert.ok(pcActivity(state).display.readout.length<=320);
+  }
 });

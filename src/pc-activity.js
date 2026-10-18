@@ -1,4 +1,4 @@
-import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261018-context21';
+import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261018-monitor22';
 
 /** Read-only teaching indicators. They never start a device or change saved work. */
 const plain = value => {
@@ -75,25 +75,50 @@ export function pcActivity(hardware) {
   if (h.pcOn && !powered) reason = !psuInstalled ? 'Fit the power supply before requesting main power.' : !h.acConnected ? 'AC is disconnected. The virtual PC has no main power.' : !h.boardInstalled ? 'Fit the motherboard before requesting main power.' : !h.atxConnected ? 'Connect 24-pin ATX power before requesting main power.' : 'Connect the case power-switch lead before requesting main power.';
   const booted = powered && !reason && h.booted;
   const startupState = !h.pcOn ? 'off' : !powered || reason ? 'blocked' : booted ? 'booted' : 'pending';
-  const signal = powered && gpuPowered && h.pcVideoConnected && h.signalConnected && h.videoPort === 'gpu' && h.monitorInput === 'hdmi';
-  const desktop = signal && booted;
-  const documentOpened = desktop && h.documentOpened;
-  const display = {state:'off',label:'PC POWER OFF',detail:'The PC is not supplying a display signal. Monitor power is separate in this simulation.',signal,desktop,documentOpened};
-  if (powered && !signal) {
-    display.state = 'no-signal'; display.label = 'NO SIGNAL';
-    display.detail = !h.pcVideoConnected ? 'The PC end of HDMI is disconnected.' : !h.signalConnected ? 'The monitor end of HDMI is disconnected.' : h.monitorInput !== 'hdmi' ? 'Select HDMI on the monitor to match the fitted teaching cable.' : h.videoPort !== 'gpu' ? 'The upper motherboard video output is inactive on this workstation. Use the graphics-card output.' : 'The graphics card needs to be fitted and powered before it can supply a signal.';
-    if (h.monitorInput === 'displayport') display.label = 'NO SIGNAL · DISPLAYPORT';
-  } else if (signal && !booted) {
-    display.state = 'post-stopped';
-    display.label = !h.ramSeated ? 'MEMORY NOT DETECTED' : !h.originalDriveInstalled || !h.sataDataConnected || !h.sataPowerConnected ? 'NO BOOT DEVICE' : 'STARTUP STOPPED';
-    display.detail = reason || 'Main power is active. Run Test PC to confirm startup; spinning fans alone do not prove POST or boot.';
-  } else if (desktop) {
-    display.state = documentOpened ? 'document' : 'desktop';
-    display.label = documentOpened ? 'LESSON FILE OPEN' : 'CLASSROOM DESKTOP';
-    display.detail = documentOpened ? 'The original lesson file is open from the original classroom SSD.' : 'The original OS is loaded. Open the original lesson file to test the requested task.';
+  // Power and a connected cable are not enough for firmware video. In this
+  // authored machine, processor and memory initialization precede video output.
+  // A RAM fault can therefore leave spinning fans with no firmware picture.
+  const processorReady=cpuPowered&&(!detailed||!a.retentionOpen);
+  const memoryReady=ramPowered&&(!detailed||!a.ramClipsOpen);
+  const videoInitialized=processorReady&&memoryReady&&gpuPowered;
+  const linkReady=h.pcVideoConnected&&h.signalConnected&&h.videoPort==='gpu'&&h.monitorInput==='hdmi';
+  const signal=powered&&videoInitialized&&linkReady;
+  const desktop=signal&&booted;
+  const documentOpened=desktop&&h.documentOpened;
+  const detectedStorage=powered&&h.originalDriveInstalled&&h.sataPowerConnected&&h.sataDataConnected;
+  const source=h.monitorInput==='hdmi'?'HDMI':h.monitorInput==='displayport'?'DISPLAYPORT':'UNSET';
+  const phase=!powered?'power':!processorReady?'processor-init':!memoryReady?'memory-init':!gpuPowered?'graphics-init':!detectedStorage?'boot-device':reason?'workbench-check':booted?'desktop':'boot-manager';
+  const display={state:'off',label:'MONITOR STANDBY',detail:'',signal,desktop,documentOpened};
+  let stage='monitor',code='MONITOR_STANDBY',brand='CLASSROOM DISPLAY';
+  let lines=['Selected input has no active video.','Monitor power is available separately.','The PC is not supplying a picture.'];
+  if(powered&&!signal){
+    display.state='no-signal';display.label=source==='DISPLAYPORT'?'NO SIGNAL · DISPLAYPORT':'NO SIGNAL';
+    code=videoInitialized?'INPUT_NO_SIGNAL':'PRE_VIDEO_POST';
+    // Monitor messages cannot diagnose the unseen cable end, socket or RAM.
+    // Those remain evidence to investigate in the ticket and workbench.
+    lines=['No active video on the selected input.','The display remains in standby.'];
+  }else if(signal&&!booted){
+    display.state='post-stopped';
+    if(!detectedStorage){
+      stage='firmware';code='BOOT_DEVICE_UNAVAILABLE';brand='CLASSROOM UEFI';display.label='NO BOOT DEVICE';
+      lines=['Firmware reached storage selection.','SATA devices detected: 0','No startable boot entry was found.','The operating system has not loaded.'];
+    }else if(reason){
+      stage='interlock';code='WORKBENCH_INTERLOCK';brand='TEACHING WORKBENCH';display.label='STARTUP CHECK PAUSED';
+      lines=['A teaching safety check paused startup.','The operating system has not loaded.','Read the workbench test result.'];
+    }else{
+      stage='boot-manager';code='BOOT_MANAGER_READY';brand='CLASSROOM UEFI';display.label='STARTUP READY';
+      lines=['SATA device: detected','Boot manager: ready for startup test','Desktop: not yet confirmed'];
+    }
+  }else if(desktop){
+    display.state=documentOpened?'document':'desktop';display.label=documentOpened?'LESSON FILE OPEN':'CLASSROOM DESKTOP';
+    stage=display.state;code=documentOpened?'LESSON_OPEN':'DESKTOP_READY';brand='CLASSROOM OS';
+    lines=documentOpened?['Original lesson file: open','UEFI and boot manager: completed','Original classroom storage: in use']:['UEFI and boot manager: completed','Original classroom OS: loaded','Original lesson file: not yet opened'];
   }
+  display.screen={stage,code,brand,source,lines};
+  display.detail=lines.join(' ');
+  display.readout=`${display.label}. Selected input: ${source}. ${display.detail}`;
   const power = {state:powered?'running':standby?'standby':'off',label:powered?'Main power active':standby?'AC connected · standby only':psuInstalled?'AC disconnected':'Power supply not fitted'};
-  const startup = {state:startupState,label:startupState==='booted'?'Original OS loaded':startupState==='pending'?'Powered · test startup':startupState==='blocked'?'Startup blocked':'Startup not requested',reason};
+  const startup = {state:startupState,label:startupState==='booted'?'Original OS loaded':startupState==='pending'?'Powered · test startup':startupState==='blocked'?'Startup blocked':'Startup not requested',reason,phase,videoInitialized,bootManager:booted?'completed':videoInitialized&&detectedStorage&&!reason?'ready':'not-reached'};
   const status = documentOpened ? {tone:'success',label:'Original lesson file open',detail:'Explain and verify the original task in Check & explain.'}
     : booted ? {tone:desktop?'running':'warning',label:desktop?'Original OS loaded · desktop visible':'Original OS loaded · display needs attention',detail:display.detail}
     : powered ? {tone:'warning',label:reason?'Powered · startup blocked':'Powered · startup not yet confirmed',detail:reason||'Run Test PC. Fans moving and power being available do not prove a successful startup.'}

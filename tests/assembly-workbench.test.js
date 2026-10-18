@@ -26,7 +26,7 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
     Object.defineProperty(element,'hidden',{get:()=>hidden,set(value){hidden=!!value;if(hidden&&doc.activeElement===element)doc.activeElement=null;}});return element;
   }
   function parse(html){return [...html.matchAll(/<(button|g)\b([^>]*)>/g)].map(([,tag,attrs])=>{const data=Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([,key,value])=>[key.replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));return node(data,tag);});}
-  for(const key of ['build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-title','part-state','actions','feedback','power','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','fastener','cable','cable-target','cable-state'])fields.set(`[data-asm-${key}]`,node({},'div'));
+  for(const key of ['monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-title','part-state','actions','feedback','power','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','fastener','cable','cable-target','cable-state'])fields.set(`[data-asm-${key}]`,node({},'div'));
   fields.get('[data-asm-select]').drawer=fields.get('[data-asm-component-drawer]');
   Object.defineProperty(fields.get('[data-asm-actions]'),'innerHTML',{set(html){actions=parse(html);actions.forEach(button=>button.drawer=fields.get('[data-asm-component-drawer]'));},get(){return'';}});
   Object.defineProperty(fields.get('[data-asm-tool-controls]'),'innerHTML',{set(html){tools=parse(html);this.markup=html;},get(){return this.markup||'';}});
@@ -301,4 +301,28 @@ test('visual fan activity pauses for hidden workbenches, background pages and di
   assert.ok(css.includes('.asm-schematic[data-asm-active=true] .asm-fan[data-running=true]'));
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)[\s\S]*?\.asm-fan\{animation:none!important\}/);
   assert.doesNotMatch(source,/requestAnimationFrame|setInterval|setTimeout|fetch\(/);
+});
+
+test('monitor SVG and accessible transcript show actual ticket-specific startup evidence without granting work',()=>{
+  const expected={'INC-101':'INPUT_NO_SIGNAL','INC-102':'MONITOR_STANDBY','INC-103':'PRE_VIDEO_POST','INC-104':'BOOT_DEVICE_UNAVAILABLE','INC-105':'BOOT_DEVICE_UNAVAILABLE','INC-106':'MONITOR_STANDBY','INC-107':'INPUT_NO_SIGNAL','INC-108':'INPUT_NO_SIGNAL'};
+  for(const [caseId,code]of Object.entries(expected)){
+    const bench=fixture({caseId}),before=structuredClone(bench.state);bench.click('asmPictureView','monitor');
+    assert.ok(bench.picture.includes(`data-asm-monitor-screen="${code}"`),caseId);
+    assert.equal(bench.fields.get('[data-asm-monitor-readout]').textContent,pcActivity(bench.state).display.readout);
+    if(caseId==='INC-103')assert.doesNotMatch(bench.picture,/MEMORY NOT DETECTED|CLASSROOM UEFI/);
+    if(['INC-104','INC-105'].includes(caseId))assert.match(bench.picture,/CLASSROOM UEFI[\s\S]*NO BOOT DEVICE[\s\S]*SATA devices detected: 0/);
+    assert.match(bench.markup,/<details class="asm-monitor-readout">/);assert.match(bench.markup,/data-asm-monitor-readout role="status" aria-live="polite"/);
+    assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);assert.equal(bench.writes,1);bench.controller.dispose();
+  }
+});
+
+test('explicit power and original-file actions update the monitor snapshot without timers or premature success',()=>{
+  const bench=fixture({caseId:'INC-102'});bench.click('asmPictureView','monitor');
+  assert.match(bench.picture,/MONITOR STANDBY/);bench.click('assemblyAction','plug-in');assert.match(bench.picture,/MONITOR STANDBY/);
+  assert.equal(bench.state.booted,false);bench.click('assemblyAction','boot');assert.match(bench.picture,/Classroom Desktop/);
+  assert.equal(bench.state.documentOpened,false);assert.match(bench.fields.get('[data-asm-monitor-readout]').textContent,/UEFI and boot manager: completed/);
+  bench.click('assemblyAction','open-document');assert.match(bench.picture,/Original file opened/);
+  bench.click('assemblyAction','power-off');assert.match(bench.picture,/MONITOR STANDBY/);assert.doesNotMatch(bench.picture,/Original file opened|Classroom Desktop/);
+  assert.deepEqual(bench.committed,['plug-in','boot','open-document','power-off']);
+  assert.doesNotMatch(source,/requestAnimationFrame|setInterval|setTimeout/);bench.controller.dispose();
 });

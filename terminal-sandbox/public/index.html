@@ -1,138 +1,296 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#102c46">
-  <meta name="description" content="Cole Learning Labs Chromebook-compatible virtual Linux sandbox using xterm.js and isolated Docker micro-environments over Cloudflare Port 443 WebSockets.">
-  <title>Virtual Terminal Sandbox · Cole Learning Labs</title>
-  <!-- xterm.js Stylesheet (with local/offline fallback styling in styles.css) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css" crossorigin="anonymous">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <a class="skip-link" href="#terminal-workspace">Skip to interactive terminal</a>
-
-  <!-- Top Navigation Header matching Cole Learning Labs brand -->
-  <header class="sandbox-header">
-    <div class="brand-group">
-      <span class="brand-badge" aria-hidden="true">⌘</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#102c46" />
+    <meta
+      name="description"
+      content="Optional Cole Learning Labs server terminal. Use fictional data in an instructor-configured Linux practice container."
+    />
+    <title>Server Terminal Lab · Cole Learning Labs</title>
+    <link rel="stylesheet" href="/vendor/xterm/xterm.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#terminal-workspace"
+      >Skip to terminal workspace</a
+    >
+    <header class="sandbox-header">
       <div>
-        <span class="eyebrow">COLE LEARNING LABS · CHROMEBOOK SANDBOX</span>
-        <h1>Interactive Linux &amp; Security Workbench</h1>
+        <span class="eyebrow">COLE LEARNING LABS · OPTIONAL SERVER LAB</span>
+        <h1>Linux terminal practice</h1>
       </div>
-    </div>
-
-    <div class="header-controls">
-      <div class="mode-pill-group" role="group" aria-label="Lab operating mode">
-        <button type="button" id="mode-self-paced" class="mode-pill active" aria-pressed="true">Self-Paced Mode</button>
-        <button type="button" id="mode-instructor" class="mode-pill" aria-pressed="false">Instructor-Led</button>
-      </div>
-
-      <form id="classroom-join-form" class="classroom-form" hidden>
-        <label for="classroom-code-input" class="sr-only">Classroom Code</label>
-        <input id="classroom-code-input" type="text" value="CLL-CLASS-712" maxlength="24" placeholder="Class code (e.g. CLL-CLASS-712)">
-        <button type="submit" class="btn btn-small">Join Class</button>
-      </form>
-
-      <button type="button" id="toggle-teacher-dashboard" class="btn btn-outline btn-small" aria-expanded="false">
-        Teacher Dashboard (5s JPEG)
+      <button
+        type="button"
+        id="disconnect-btn"
+        class="btn btn-outline"
+        disabled
+      >
+        End session
       </button>
-    </div>
-  </header>
-
-  <!-- Main Two-Panel Split-Screen Layout -->
-  <main class="split-layout">
-    <!-- LEFT PANEL: Self-Paced Mode Sidebar (Markdown Instructions & Milestones) -->
-    <aside class="instructions-sidebar" aria-label="Self-paced lab instructions and milestones">
-      <div class="sidebar-toolbar">
-        <label for="lab-selector">
-          <span class="eyebrow">SELECT INVESTIGATION</span>
-          <select id="lab-selector">
-            <option value="NET-201">NET-201 · Workstation Network &amp; DNS Diagnostics</option>
-            <option value="SEC-402">SEC-402 · Log Correlation &amp; Telnet Port Containment</option>
-            <option value="INC-104">INC-104 · Storage Mount &amp; Classroom File Recovery</option>
-          </select>
-        </label>
+    </header>
+    <section
+      class="connection-panel"
+      aria-label="Start an optional terminal session"
+    >
+      <p id="privacy-notice">
+        Starting sends this lab’s terminal commands and output to the configured
+        server. Use fictional data, never real names, emails, student IDs or
+        passwords. The public browser-only labs remain separate.
+      </p>
+      <div class="connection-controls">
+        <div
+          class="mode-pill-group"
+          role="group"
+          aria-label="Student session type"
+        >
+          <button
+            type="button"
+            id="mode-self-paced"
+            class="mode-pill active"
+            aria-pressed="true"
+          >
+            Self-paced
+          </button>
+          <button
+            type="button"
+            id="mode-instructor"
+            class="mode-pill"
+            aria-pressed="false"
+          >
+            Join a class
+          </button>
+        </div>
+        <form id="classroom-join-form" class="classroom-form" hidden>
+          <label for="classroom-code-input">Student class code</label
+          ><input
+            id="classroom-code-input"
+            type="text"
+            maxlength="48"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="Code from your teacher"
+          />
+          <button type="submit" class="btn">Connect to class</button>
+        </form>
+        <button type="button" id="connect-btn" class="btn">
+          Start server lab
+        </button>
+        <details class="teacher-signin">
+          <summary>Teacher sign-in</summary>
+          <form id="teacher-signin-form">
+            <label for="teacher-key-input">Teacher access key</label
+            ><input
+              id="teacher-key-input"
+              type="password"
+              maxlength="512"
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="teacher-key-help"
+            /><button type="submit" class="btn">Sign in as teacher</button>
+          </form>
+          <p id="teacher-key-help">
+            Use the key provisioned by this service’s administrator. A student
+            class code cannot unlock teacher controls. End any current student
+            session first.
+          </p>
+        </details>
       </div>
-
-      <!-- Milestone Progress Tracker -->
-      <section class="milestone-card" aria-labelledby="milestone-heading">
-        <div class="milestone-header">
-          <div>
-            <span class="eyebrow" id="lab-track-badge">NETWORKING &amp; OS · GRADES 7–12</span>
-            <h2 id="milestone-heading">Self-Paced Milestones</h2>
-          </div>
-          <button type="button" id="verify-milestones-btn" class="btn btn-small">Verify Now</button>
-        </div>
-
-        <div class="progress-row">
-          <progress id="milestone-progress" value="0" max="4" aria-label="Milestone completion progress"></progress>
-          <span id="milestone-count-text">0 / 4 verified</span>
-        </div>
-
-        <ul id="milestone-list" class="milestone-list" aria-live="polite"></ul>
-      </section>
-
-      <!-- Rendered Markdown Instructions -->
-      <article id="markdown-instructions" class="markdown-body" aria-label="Step-by-step instructions"></article>
-    </aside>
-
-    <!-- RIGHT PANEL: Interactive Workspace (xterm.js + Low-Bandwidth Teacher View) -->
-    <section id="terminal-workspace" class="workspace-panel" aria-label="Interactive terminal workspace">
-      <!-- Connection & Container Telemetry Bar -->
-      <div class="workspace-statusbar">
-        <div class="status-group">
-          <span id="ws-status-dot" class="status-dot connecting" aria-hidden="true"></span>
-          <strong id="ws-status-text">Connecting WSS (Port 443)…</strong>
-          <span class="status-divider">·</span>
-          <span id="container-badge" class="mono-badge">Alpine 3.20 · 512MB / 0.5 vCPU</span>
-        </div>
-        <div class="status-group">
-          <span id="learner-alias-badge" class="mono-badge">Learner-…</span>
-          <span id="inactivity-timer-badge" class="mono-badge" title="Containers auto-destroy after 5 minutes of inactivity">Idle limit: 5:00</span>
-          <button type="button" id="reconnect-btn" class="btn btn-small btn-ghost">Reconnect</button>
-        </div>
-      </div>
-
-      <!-- Instructor Pause Banner (Shown when teacher pauses inputs) -->
-      <div id="instructor-pause-banner" class="pause-banner" role="alert" hidden>
-        <strong>Instructor Mode:</strong> Terminal input is temporarily paused by your teacher for a class demonstration.
-      </div>
-
-      <!-- xterm.js Mount Container -->
-      <div id="terminal-container" class="terminal-container" tabindex="0" aria-label="Linux sandbox terminal"></div>
-
-      <!-- Hidden/Offscreen Canvas used to generate 10%-compressed JPEG snapshots every 5s for Low-Bandwidth Teacher View -->
-      <canvas id="snapshot-canvas" width="640" height="360" hidden></canvas>
-
-      <!-- Low-Bandwidth Teacher Dashboard Drawer (10%-compressed JPEG snapshots every 5s) -->
-      <section id="teacher-dashboard" class="teacher-dashboard" aria-labelledby="teacher-dashboard-title" hidden>
-        <div class="teacher-dashboard-header">
-          <div>
-            <span class="eyebrow">LOW-BANDWIDTH CLASSROOM MONITOR · WI-FI SAFE</span>
-            <h2 id="teacher-dashboard-title">Teacher Dashboard · 10% JPEG Snapshots (5s Interval)</h2>
-          </div>
-          <div class="teacher-actions">
-            <button type="button" id="teacher-pause-all" class="btn btn-small btn-warning">Pause All Inputs</button>
-            <button type="button" id="teacher-resume-all" class="btn btn-small btn-outline">Resume All Inputs</button>
-            <form id="teacher-override-form" class="override-form">
-              <input id="teacher-override-input" type="text" placeholder="Push command override (e.g. cat ~/lab/network-sheet.txt)" maxlength="200">
-              <button type="submit" class="btn btn-small">Push to Class</button>
-            </form>
-          </div>
-        </div>
-        <p class="teacher-meta" id="teacher-meta-status">
-          Polling static 10%-compressed JPEG snapshots once every 5 seconds over Port 443 WSS/HTTPS.
-        </p>
-        <div id="teacher-student-grid" class="teacher-student-grid"></div>
-      </section>
     </section>
-  </main>
-
-  <!-- Optional CDN xterm.js & xterm-addon-fit; app.js automatically falls back to built-in terminal if offline -->
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js" crossorigin="anonymous"></script>
-  <script type="module" src="app.js"></script>
-</body>
+    <main class="split-layout">
+      <aside
+        class="instructions-sidebar"
+        aria-label="Lab instructions and milestones"
+      >
+        <label for="lab-selector"
+          ><span class="eyebrow">PRACTICE LAB</span
+          ><select id="lab-selector">
+            <option value="NET-201">Network &amp; DNS diagnostics</option>
+            <option value="SEC-402">
+              Fictional security log investigation
+            </option>
+            <option value="INC-104">Classroom storage investigation</option>
+          </select></label
+        >
+        <section class="milestone-card" aria-labelledby="milestone-heading">
+          <div class="milestone-header">
+            <h2 id="milestone-heading">Your checks</h2>
+            <button
+              type="button"
+              id="verify-milestones-btn"
+              class="btn"
+              disabled
+            >
+              Check work
+            </button>
+          </div>
+          <progress
+            id="milestone-progress"
+            value="0"
+            max="1"
+            aria-label="Server-verified milestones"
+          ></progress
+          ><span id="milestone-count-text">No session started</span>
+          <ul id="milestone-list" class="milestone-list"></ul>
+        </section>
+        <p id="lab-track-badge" class="eyebrow">INSTRUCTIONS</p>
+        <article
+          id="markdown-instructions"
+          class="markdown-body"
+          aria-label="Lab instructions"
+        >
+          <h2>Start when your instructor has configured the service.</h2>
+          <p>
+            The terminal connects to a real Linux practice container on the
+            server. There is no local Linux emulator or command runner if the
+            server is unavailable.
+          </p>
+        </article>
+      </aside>
+      <section
+        id="terminal-workspace"
+        class="workspace-panel"
+        tabindex="-1"
+        aria-label="Terminal and teacher workspace"
+      >
+        <div class="workspace-statusbar">
+          <div class="status-group">
+            <span
+              id="ws-status-dot"
+              class="status-dot disconnected"
+              aria-hidden="true"
+            ></span
+            ><strong id="ws-status-text" role="status" aria-live="polite"
+              >Not connected</strong
+            >
+          </div>
+          <div class="status-group">
+            <span id="container-badge">No Linux session</span
+            ><span id="learner-alias-badge">Alias assigned on connection</span
+            ><span id="inactivity-timer-badge"></span>
+          </div>
+        </div>
+        <p
+          id="instructor-pause-banner"
+          class="pause-banner"
+          role="status"
+          hidden
+        >
+          Your teacher has paused terminal input.
+        </p>
+        <div
+          id="terminal-container"
+          class="terminal-container"
+          aria-label="Linux practice terminal"
+        ></div>
+        <div
+          id="terminal-keyboard-controls"
+          class="terminal-keys"
+          role="group"
+          aria-label="Terminal keyboard shortcuts"
+        >
+          <button type="button" data-terminal-key="focus">Keyboard</button
+          ><button type="button" data-terminal-key="escape">Esc</button
+          ><button type="button" data-terminal-key="tab">Tab</button
+          ><button type="button" data-terminal-key="interrupt">Ctrl+C</button
+          ><button
+            type="button"
+            data-terminal-key="up"
+            aria-label="Previous command"
+          >
+            ↑</button
+          ><button
+            type="button"
+            data-terminal-key="down"
+            aria-label="Next command"
+          >
+            ↓
+          </button>
+        </div>
+        <div id="snapshot-controls" class="snapshot-controls" hidden>
+          <label
+            ><input id="snapshot-opt-in" type="checkbox" /> Share this lab’s
+            terminal text with my class teacher</label
+          >
+          <p id="snapshot-sharing-status" role="status">
+            Off. Optional low-quality JPEG snapshots cover only this terminal,
+            including anything typed or displayed here. No desktop, camera,
+            microphone or other tabs are captured.
+          </p>
+        </div>
+        <canvas
+          id="snapshot-canvas"
+          width="640"
+          height="360"
+          hidden
+          aria-hidden="true"
+        ></canvas>
+        <section
+          id="teacher-dashboard"
+          class="teacher-dashboard"
+          aria-labelledby="teacher-dashboard-title"
+          hidden
+        >
+          <div class="teacher-dashboard-header">
+            <h2 id="teacher-dashboard-title">Teacher workspace</h2>
+            <button type="button" id="teacher-create-class" class="btn">
+              Create class
+            </button>
+          </div>
+          <p id="teacher-meta-status" role="status">
+            Create a class to receive its student join code.
+          </p>
+          <label for="teacher-class-code">Student join code</label
+          ><input
+            id="teacher-class-code"
+            type="text"
+            readonly
+            autocomplete="off"
+          />
+          <div class="teacher-actions">
+            <button type="button" id="teacher-pause-all" class="btn" disabled>
+              Pause class input</button
+            ><button
+              type="button"
+              id="teacher-resume-all"
+              class="btn btn-outline"
+              disabled
+            >
+              Resume class input
+            </button>
+          </div>
+          <details>
+            <summary>Send a command to the practice terminals</summary>
+            <form id="teacher-override-form">
+              <label for="teacher-override-input">Classroom command</label
+              ><input
+                id="teacher-override-input"
+                type="text"
+                maxlength="200"
+                autocomplete="off"
+                spellcheck="false"
+              /><button type="submit" class="btn" disabled>
+                Send to class
+              </button>
+            </form>
+            <p>
+              Runs only in joined practice terminals. Review the command before
+              sending.
+            </p>
+          </details>
+          <p class="teacher-meta">
+            Students use server-assigned aliases. Terminal snapshots appear only
+            for students who opt in; JPEG quality 0.1, at most once every five
+            seconds. This is not a view of a student’s device.
+          </p>
+          <div id="teacher-student-grid" class="teacher-student-grid"></div>
+        </section>
+      </section>
+    </main>
+    <script src="/vendor/xterm/xterm.js" defer></script>
+    <script src="/vendor/xterm/addon-fit.js" defer></script>
+    <script type="module" src="app.js"></script>
+  </body>
 </html>

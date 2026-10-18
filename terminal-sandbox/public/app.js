@@ -1,600 +1,941 @@
-/**
- * Cole Learning Labs · Frontend Split-Screen xterm.js & Cloudflare WSS Client
- *
- * Capabilities:
- * - Connects over a single Port 443 WebSocket (wss:// in HTTPS deployments, ws:// locally)
- * - Renders Markdown lab instructions and self-paced milestones in the left sidebar
- * - Instantiates xterm.js (with FitAddon and an offline DOM/Canvas fallback) in the right panel
- * - Emits 10%-compressed JPEG snapshots (canvas.toDataURL('image/jpeg', 0.1)) once every 5s
- *   for the Low-Bandwidth Teacher Dashboard to protect school Wi-Fi
- */
+/** Optional server terminal. No Linux emulation, identity storage or device capture. */
+const LABS = new Set(["NET-201", "SEC-402", "INC-104"]);
+const escapeHtml = (value) =>
+  String(value ?? "").replace(
+    /[&<>"']/g,
+    (ch) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        ch
+      ],
+  );
+const text = (value, max = 200) =>
+  typeof value === "string" ? value.slice(0, max) : "";
+const classCode = (value) =>
+  typeof value === "string" && /^[A-Za-z0-9-]{4,48}$/.test(value) ? value : "";
+const jpeg = (value) =>
+  typeof value === "string" &&
+  value.length <= 150000 &&
+  /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(value)
+    ? value
+    : null;
 
-const state = {
-  ws: null,
-  token: null,
-  sessionId: null,
-  alias: 'Learner-Init',
-  labId: 'NET-201',
-  mode: 'self-paced',
-  classroomCode: 'CLL-CLASS-712',
-  paused: false,
-  milestones: [],
-  terminalLines: [],
-  lastActivityTs: Date.now(),
-  inactivityLimitSec: 300,
-  teacherViewOpen: false,
-  snapshotIntervalId: null,
-  teacherPollIntervalId: null
-};
-
-const byId = id => (typeof document !== 'undefined' ? document.getElementById(id) : null);
-
-const els = {
-  labSelector: byId('lab-selector'),
-  labTrackBadge: byId('lab-track-badge'),
-  milestoneProgress: byId('milestone-progress'),
-  milestoneCountText: byId('milestone-count-text'),
-  milestoneList: byId('milestone-list'),
-  verifyMilestonesBtn: byId('verify-milestones-btn'),
-  markdownInstructions: byId('markdown-instructions'),
-  wsStatusDot: byId('ws-status-dot'),
-  wsStatusText: byId('ws-status-text'),
-  containerBadge: byId('container-badge'),
-  learnerAliasBadge: byId('learner-alias-badge'),
-  inactivityTimerBadge: byId('inactivity-timer-badge'),
-  reconnectBtn: byId('reconnect-btn'),
-  pauseBanner: byId('instructor-pause-banner'),
-  terminalContainer: byId('terminal-container'),
-  snapshotCanvas: byId('snapshot-canvas'),
-  modeSelfPacedBtn: byId('mode-self-paced'),
-  modeInstructorBtn: byId('mode-instructor'),
-  classroomJoinForm: byId('classroom-join-form'),
-  classroomCodeInput: byId('classroom-code-input'),
-  toggleTeacherDashboardBtn: byId('toggle-teacher-dashboard'),
-  teacherDashboard: byId('teacher-dashboard'),
-  teacherStudentGrid: byId('teacher-student-grid'),
-  teacherMetaStatus: byId('teacher-meta-status'),
-  teacherPauseAllBtn: byId('teacher-pause-all'),
-  teacherResumeAllBtn: byId('teacher-resume-all'),
-  teacherOverrideForm: byId('teacher-override-form'),
-  teacherOverrideInput: byId('teacher-override-input')
-};
-
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[ch]));
-}
-
-// ============================================================================
-// 1. SAFE MARKDOWN INSTRUCTION RENDERER (LEFT PANEL)
-// ============================================================================
+/** Intentionally small Markdown subset: authored text is always escaped first. */
 export function renderMarkdown(markdownText) {
-  const lines = String(markdownText || '').split(/\r?\n/);
-  const html = [];
-  let inCodeBlock = false;
-  let codeLines = [];
-
-  const formatInline = text =>
-    escapeHtml(text)
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>');
-
+  const html = [],
+    lines = String(markdownText || "")
+      .slice(0, 60000)
+      .split(/\r?\n/);
+  let code = null;
+  const inline = (value) =>
+    escapeHtml(value)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>");
+  const block = () => {
+    const command = code.join("\n");
+    html.push(
+      `<div class="code-block-wrapper"><pre><code>${escapeHtml(command)}</code></pre>${command.length <= 2000 ? `<button type="button" class="btn" data-run-command="${escapeHtml(command)}" disabled>Run in terminal</button>` : ""}</div>`,
+    );
+  };
   for (const line of lines) {
-    if (line.startsWith('```')) {
-      if (!inCodeBlock) {
-        inCodeBlock = true;
-        codeLines = [];
-      } else {
-        inCodeBlock = false;
-        const cmdText = codeLines.join('\n');
-        html.push(
-          `<div class="code-block-wrapper">` +
-            `<pre><code>${escapeHtml(cmdText)}</code></pre>` +
-            `<div class="code-block-Wrapper-actions">` +
-              `<button type="button" class="btn btn-small" data-run-command="${escapeHtml(cmdText)}">Run in Terminal ↵</button>` +
-            `</div>` +
-          `</div>`
-        );
-      }
+    if (line.startsWith("```")) {
+      if (code) {
+        block();
+        code = null;
+      } else code = [];
       continue;
     }
-
-    if (inCodeBlock) {
-      codeLines.push(line);
+    if (code) {
+      code.push(line);
       continue;
     }
-
     if (!line.trim()) continue;
-    if (line.startsWith('# ')) {
-      html.push(`<h1>${formatInline(line.slice(2))}</h1>`);
-    } else if (line.startsWith('## ')) {
-      html.push(`<h2>${formatInline(line.slice(3))}</h2>`);
-    } else if (line.startsWith('### ')) {
-      html.push(`<h3>${formatInline(line.slice(4))}</h3>`);
-    } else if (line.startsWith('> ')) {
-      html.push(`<blockquote>${formatInline(line.slice(2))}</blockquote>`);
-    } else {
-      html.push(`<p>${formatInline(line)}</p>`);
-    }
+    const heading = /^(#{1,3}) (.*)$/.exec(line);
+    html.push(
+      heading
+        ? `<h${heading[1].length}>${inline(heading[2])}</h${heading[1].length}>`
+        : line.startsWith("> ")
+          ? `<blockquote>${inline(line.slice(2))}</blockquote>`
+          : `<p>${inline(line)}</p>`,
+    );
   }
-
-  return html.join('\n');
+  if (code) block();
+  return html.join("\n");
 }
 
-function renderMilestones(milestones) {
-  state.milestones = Array.isArray(milestones) ? milestones : [];
-  const total = state.milestones.length || 1;
-  const completedCount = state.milestones.filter(m => m.completed).length;
-
-  els.milestoneProgress.max = total;
-  els.milestoneProgress.value = completedCount;
-  els.milestoneCountText.textContent = `${completedCount} / ${state.milestones.length} verified`;
-
-  els.milestoneList.innerHTML = state.milestones
-    .map(
-      (m, idx) => `
-      <li class="milestone-item ${m.completed ? 'completed' : ''}" data-milestone-id="${escapeHtml(m.id)}">
-        <div class="milestone-title-row">
-          <span>${idx + 1}. ${escapeHtml(m.title)}</span>
-          <span class="milestone-badge">${m.completed ? '✓ Verified' : 'Pending'}</span>
-        </div>
-        <p class="milestone-desc">${escapeHtml(m.description)}</p>
-        ${
-          m.hint
-            ? `<details class="milestone-hint"><summary>Need a hint?</summary><p>${escapeHtml(m.hint)}</p></details>`
-            : ''
-        }
-      </li>`
-    )
-    .join('');
+/** Same-origin endpoint, without credentials, class codes or session IDs in URLs. */
+export function resolveWebSocketUrl(location = globalThis.location) {
+  if (!location)
+    throw new Error("Open the terminal through its configured HTTPS service.");
+  const secure = location.protocol === "https:",
+    local = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+  if (!secure && !(location.protocol === "http:" && local))
+    throw new Error("HTTPS is required outside local development.");
+  return `${secure ? "wss:" : "ws:"}//${location.host}/ws`;
 }
 
-// ============================================================================
-// 2. XTERM.JS INSTANCE (RIGHT PANEL) + OFFLINE FALLBACK
-// ============================================================================
-let term = null;
-let fitAddon = null;
-
-function stripAnsi(str) {
-  return String(str || '').replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
+/** Render text already in this lab's xterm viewport; never another app or tab. */
+export function captureCompressedTerminalSnapshot({
+  canvas,
+  terminal,
+  alias,
+  labId,
+}) {
+  const buffer = terminal?.buffer?.active,
+    ctx = canvas?.getContext?.("2d");
+  if (!buffer?.getLine || !ctx) return null;
+  canvas.width = 640;
+  canvas.height = 360;
+  ctx.fillStyle = "#09131f";
+  ctx.fillRect(0, 0, 640, 360);
+  ctx.fillStyle = "#65e1ca";
+  ctx.font = "bold 12px monospace";
+  ctx.fillText(
+    `${text(alias, 40)} · ${text(labId, 12)} · LAB TERMINAL ONLY`,
+    10,
+    20,
+  );
+  ctx.fillStyle = "#e2e8f0";
+  ctx.font = "12px monospace";
+  const start = Math.max(0, Number(buffer.viewportY) || 0),
+    count = Math.min(18, Number(terminal.rows) || 18);
+  for (let i = 0; i < count; i++)
+    ctx.fillText(
+      String(buffer.getLine(start + i)?.translateToString(true) || "").slice(
+        0,
+        78,
+      ),
+      10,
+      48 + i * 16,
+    );
+  return jpeg(canvas.toDataURL("image/jpeg", 0.1));
 }
 
-function recordTerminalPlainText(chunk) {
-  const clean = stripAnsi(chunk);
-  const parts = clean.split(/\r?\n/);
-  for (let i = 0; i < parts.length; i++) {
-    if (i === 0 && state.terminalLines.length > 0) {
-      state.terminalLines[state.terminalLines.length - 1] += parts[0];
-    } else {
-      state.terminalLines.push(parts[i]);
-    }
+export function createTerminalSandboxClient({
+  document: doc = globalThis.document,
+  window: win = globalThis.window,
+  WebSocket: Socket = win?.WebSocket,
+  Terminal: TerminalClass = win?.Terminal,
+  FitAddon: FitClass = win?.FitAddon?.FitAddon,
+  now = () => Date.now(),
+} = {}) {
+  if (!doc || !win || !doc.getElementById("terminal-container")) return null;
+  const ids = [
+    "lab-selector",
+    "lab-track-badge",
+    "milestone-progress",
+    "milestone-count-text",
+    "milestone-list",
+    "verify-milestones-btn",
+    "markdown-instructions",
+    "ws-status-dot",
+    "ws-status-text",
+    "container-badge",
+    "learner-alias-badge",
+    "inactivity-timer-badge",
+    "pause-banner",
+    "instructor-pause-banner",
+    "terminal-container",
+    "terminal-keyboard-controls",
+    "snapshot-canvas",
+    "snapshot-controls",
+    "snapshot-opt-in",
+    "snapshot-sharing-status",
+    "mode-self-paced",
+    "mode-instructor",
+    "classroom-join-form",
+    "classroom-code-input",
+    "connect-btn",
+    "disconnect-btn",
+    "teacher-signin-form",
+    "teacher-key-input",
+    "teacher-dashboard",
+    "teacher-student-grid",
+    "teacher-meta-status",
+    "teacher-create-class",
+    "teacher-class-code",
+    "teacher-pause-all",
+    "teacher-resume-all",
+    "teacher-override-form",
+    "teacher-override-input",
+  ];
+  const el = Object.fromEntries(ids.map((id) => [id, doc.getElementById(id)])),
+    disposers = [],
+    students = new Map();
+  const state = {
+    ws: null,
+    socketCleanup: null,
+    role: null,
+    requestedRole: null,
+    sessionReady: false,
+    runtimeVerified: false,
+    mode: "self-paced",
+    selectionMode: "self-paced",
+    classroomCode: "",
+    joined: false,
+    paused: false,
+    alias: "",
+    labId: "NET-201",
+    consent: false,
+    consentRequested: false,
+    snapshotTimer: null,
+    lastSnapshotAt: -Infinity,
+    authTimer: null,
+    disposed: false,
+  };
+  let terminal = null,
+    fit = null,
+    resizeObserver = null,
+    resizeFrame = 0;
+  function listen(target, name, fn) {
+    target?.addEventListener(name, fn);
+    disposers.push(() => target?.removeEventListener(name, fn));
   }
-  if (state.terminalLines.length > 22) {
-    state.terminalLines = state.terminalLines.slice(-22);
+  function status(kind, message) {
+    el["ws-status-dot"].className = `status-dot ${kind}`;
+    el["ws-status-text"].textContent = message;
   }
-}
-
-function initTerminal() {
-  els.terminalContainer.innerHTML = '';
-
-  if (globalThis.Terminal) {
-    term = new globalThis.Terminal({
-      cursorBlink: true,
-      fontSize: 15,
-      fontFamily: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
-      theme: {
-        background: '#09131f',
-        foreground: '#e2e8f0',
-        cursor: '#24c9b5',
-        selectionBackground: 'rgba(36, 201, 181, 0.28)'
-      }
-    });
-
-    if (globalThis.FitAddon?.FitAddon) {
-      fitAddon = new globalThis.FitAddon.FitAddon();
-      term.loadAddon(fitAddon);
-    }
-
-    term.open(els.terminalContainer);
-    fitAddon?.fit();
-
-    term.onData(data => {
-      sendWsMessage({ type: 'terminal:input', data });
-    });
-
-    window.addEventListener('resize', () => {
-      if (fitAddon && term) {
-        fitAddon.fit();
-        sendWsMessage({ type: 'terminal:resize', cols: term.cols, rows: term.rows });
-      }
-    });
-  } else {
-    // Offline fallback terminal element if CDN scripts are blocked
-    const fallbackEl = document.createElement('div');
-    fallbackEl.className = 'fallback-terminal';
-    fallbackEl.tabIndex = 0;
-    els.terminalContainer.appendChild(fallbackEl);
-
-    fallbackEl.addEventListener('keydown', event => {
-      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault();
-        sendWsMessage({ type: 'terminal:input', data: event.key });
-      } else if (event.key === 'Enter') {
-        event.preventDefault();
-        sendWsMessage({ type: 'terminal:input', data: '\r' });
-      } else if (event.key === 'Backspace') {
-        event.preventDefault();
-        sendWsMessage({ type: 'terminal:input', data: '\u007f' });
-      }
-    });
-
-    term = {
-      write(data) {
-        fallbackEl.textContent += stripAnsi(data);
-        fallbackEl.scrollTop = fallbackEl.scrollHeight;
-      },
-      clear() {
-        fallbackEl.textContent = '';
-      },
-      focus() {
-        fallbackEl.focus();
-      },
-      cols: 80,
-      rows: 24
-    };
+  function open() {
+    return !!state.ws && state.ws.readyState === Socket.OPEN;
   }
-}
-
-// ============================================================================
-// 3. LOW-BANDWIDTH 10%-COMPRESSED JPEG SNAPSHOT GENERATOR (EVERY 5 SECONDS)
-// ============================================================================
-export function captureCompressedTerminalSnapshot() {
-  const canvas = els.snapshotCanvas;
-  if (!canvas || !canvas.getContext) return null;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-
-  // Render current terminal buffer onto 640x360 snapshot canvas
-  ctx.fillStyle = '#09131f';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Header bar in snapshot
-  ctx.fillStyle = '#102c46';
-  ctx.fillRect(0, 0, canvas.width, 28);
-  ctx.fillStyle = '#24c9b5';
-  ctx.font = 'bold 12px monospace';
-  ctx.fillText(`${state.alias} · ${state.labId} · ${state.classroomCode || 'Self-Paced'}`, 10, 18);
-
-  // Terminal lines
-  ctx.fillStyle = '#e2e8f0';
-  ctx.font = '12px monospace';
-  const lines = state.terminalLines.slice(-18);
-  lines.forEach((line, idx) => {
-    ctx.fillText(String(line).slice(0, 78), 10, 48 + idx * 16);
-  });
-
-  // Return static 10%-compressed JPEG (quality = 0.1) to protect school Wi-Fi
-  return canvas.toDataURL('image/jpeg', 0.1);
-}
-
-function sendTerminalSnapshotIfNeeded() {
-  if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return;
-  const dataUrl = captureCompressedTerminalSnapshot();
-  if (dataUrl) {
-    sendWsMessage({ type: 'screen:snapshot', dataUrl, quality: 0.1 });
-  }
-}
-
-// ============================================================================
-// 4. CLOUDFLARE WEBSOCKET CONNECTION (WSS OVER PORT 443)
-// ============================================================================
-export function resolveWebSocketUrl() {
-  const isSecure = window.location.protocol === 'https:';
-  const protocol = isSecure ? 'wss:' : 'ws:';
-  const host = window.location.host || 'localhost:8080';
-  const params = new URLSearchParams({
-    lab: state.labId,
-    mode: state.mode
-  });
-  if (state.token) params.set('token', state.token);
-  if (state.mode === 'instructor' && state.classroomCode) {
-    params.set('classroom', state.classroomCode);
-  }
-  return `${protocol}//${host}/ws?${params.toString()}`;
-}
-
-function setConnectionUi(status, message) {
-  els.wsStatusDot.className = `status-dot ${status}`;
-  els.wsStatusText.textContent = message;
-}
-
-function sendWsMessage(payload) {
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+  function send(payload) {
+    if (state.disposed || !open()) return false;
     state.ws.send(JSON.stringify(payload));
-    if (payload.type === 'terminal:input') {
-      state.lastActivityTs = Date.now();
-    }
+    return true;
   }
-}
-
-async function ensureSessionToken() {
-  if (state.token) return;
-  try {
-    const res = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'student' })
+  function eligible() {
+    return (
+      state.role === "student" &&
+      state.sessionReady &&
+      state.runtimeVerified &&
+      state.mode === "instructor-led" &&
+      state.joined &&
+      !!state.classroomCode
+    );
+  }
+  function input(data) {
+    if (
+      state.role !== "student" ||
+      !state.sessionReady ||
+      state.paused ||
+      !state.runtimeVerified
+    )
+      return false;
+    return (
+      typeof data === "string" &&
+      data.length <= 4096 &&
+      send({ type: "terminal:input", data })
+    );
+  }
+  function syncControls() {
+    const busy = !!state.ws && state.ws.readyState < Socket.CLOSING,
+      teacher = state.role === "teacher",
+      ready = state.role === "student" && state.sessionReady;
+    el["connect-btn"].disabled = !terminal || busy;
+    el["connect-btn"].hidden = state.selectionMode === "instructor-led";
+    el["disconnect-btn"].disabled = !busy;
+    el["teacher-signin-form"].querySelector("button").disabled =
+      !terminal || busy;
+    el["classroom-join-form"].querySelector("button").disabled =
+      !terminal || busy;
+    el["mode-self-paced"].disabled = busy;
+    el["mode-instructor"].disabled = busy;
+    el["lab-selector"].disabled = teacher || (busy && !ready);
+    el["verify-milestones-btn"].disabled = !ready || state.paused;
+    el["markdown-instructions"]
+      .querySelectorAll("[data-run-command]")
+      .forEach((button) => {
+        button.disabled = !ready || state.paused;
+      });
+    el["teacher-dashboard"].hidden = !teacher;
+    el["terminal-container"].hidden = teacher;
+    el["terminal-keyboard-controls"].hidden = teacher;
+    el["terminal-keyboard-controls"]
+      .querySelectorAll("button")
+      .forEach((button) => {
+        button.disabled = !ready || state.paused;
+      });
+    el["snapshot-controls"].hidden = !eligible();
+    el["snapshot-opt-in"].disabled = !eligible();
+    el["instructor-pause-banner"].hidden = !state.paused;
+    for (const id of ["teacher-pause-all", "teacher-resume-all"])
+      el[id].disabled = !teacher || !state.classroomCode;
+    el["teacher-override-form"].querySelector("button").disabled =
+      !teacher || !state.classroomCode;
+    if (terminal?.options)
+      terminal.options.disableStdin = !ready || state.paused;
+  }
+  function stopSnapshotTimer() {
+    if (state.snapshotTimer !== null) win.clearInterval(state.snapshotTimer);
+    state.snapshotTimer = null;
+  }
+  function revokeConsent(notify = true) {
+    stopSnapshotTimer();
+    state.consent = false;
+    state.consentRequested = false;
+    state.lastSnapshotAt = -Infinity;
+    el["snapshot-opt-in"].checked = false;
+    el["snapshot-sharing-status"].textContent =
+      "Off. No terminal snapshots are being shared.";
+    if (notify && open() && state.role === "student")
+      send({ type: "screen:consent", enabled: false });
+  }
+  function snapshot() {
+    if (
+      !eligible() ||
+      !state.consent ||
+      !state.consentRequested ||
+      !el["snapshot-opt-in"].checked ||
+      doc.hidden ||
+      !open() ||
+      state.ws.bufferedAmount > 65536 ||
+      now() - state.lastSnapshotAt < 5000
+    )
+      return;
+    const dataUrl = captureCompressedTerminalSnapshot({
+      canvas: el["snapshot-canvas"],
+      terminal,
+      alias: state.alias,
+      labId: state.labId,
     });
-    if (res.ok) {
-      const data = await res.json();
-      state.token = data.token;
-      state.sessionId = data.sessionId;
-      state.alias = data.alias;
+    if (dataUrl && send({ type: "screen:snapshot", dataUrl })) {
+      state.lastSnapshotAt = now();
     }
-  } catch {}
-}
-
-async function connectWebSocket() {
-  if (state.ws) {
-    try { state.ws.close(); } catch {}
   }
-
-  await ensureSessionToken();
-  const wsUrl = resolveWebSocketUrl();
-  setConnectionUi('connecting', 'Connecting WSS (Port 443)…');
-
-  const ws = new WebSocket(wsUrl);
-  state.ws = ws;
-
-  ws.addEventListener('open', () => {
-    state.lastActivityTs = Date.now();
-    const protoLabel = wsUrl.startsWith('wss:') ? 'WSS Port 443 · Cloudflare Tunnel' : 'WS Local Dev Tunnel';
-    setConnectionUi('connected', `${protoLabel} Connected`);
-    if (term?.cols && term?.rows) {
-      sendWsMessage({ type: 'terminal:resize', cols: term.cols, rows: term.rows });
-    }
-    // Emit initial 10%-compressed JPEG snapshot and schedule every 5 seconds
-    sendTerminalSnapshotIfNeeded();
-  });
-
-  ws.addEventListener('message', event => {
-    let msg;
+  function startSnapshotTimer() {
+    stopSnapshotTimer();
+    snapshot();
+    state.snapshotTimer = win.setInterval(() => snapshot(), 5000);
+  }
+  function clearSession() {
+    revokeConsent(false);
+    state.role = null;
+    state.requestedRole = null;
+    state.sessionReady = false;
+    state.runtimeVerified = false;
+    state.joined = false;
+    state.classroomCode = "";
+    state.paused = false;
+    state.alias = "";
+    students.clear();
+    el["teacher-student-grid"].replaceChildren();
+    el["teacher-class-code"].value = "";
+    el["container-badge"].textContent = "No Linux session";
+    el["learner-alias-badge"].textContent = "Alias assigned on connection";
+    el["inactivity-timer-badge"].textContent = "";
+    el["milestone-list"].replaceChildren();
+    el["milestone-count-text"].textContent = "No session started";
+    el["milestone-progress"].value = 0;
+    terminal?.reset?.();
+    syncControls();
+  }
+  function disconnect() {
+    revokeConsent();
+    const ws = state.ws;
+    state.ws = null;
+    state.socketCleanup?.();
+    state.socketCleanup = null;
+    if (state.authTimer !== null) win.clearTimeout(state.authTimer);
+    state.authTimer = null;
+    ws?.close();
+    clearSession();
+    status("disconnected", "Not connected · no Linux session");
+  }
+  function fitTerminal() {
+    if (
+      state.disposed ||
+      doc.hidden ||
+      el["terminal-container"].hidden ||
+      !terminal
+    )
+      return;
     try {
-      msg = JSON.parse(event.data);
+      fit?.fit();
     } catch {
       return;
     }
-
-    switch (msg.type) {
-      case 'ping':
-        sendWsMessage({ type: 'pong', timestamp: Date.now() });
-        break;
-
-      case 'session:ready':
-        state.sessionId = msg.sessionId;
-        state.alias = msg.alias;
-        state.inactivityLimitSec = msg.limits?.inactivityTimeoutSeconds || 300;
-        els.learnerAliasBadge.textContent = msg.alias;
-        els.containerBadge.textContent = `${msg.runtimeMode === 'docker-pty' ? 'Docker Alpine PTY' : 'Alpine Sandbox'} (${msg.containerId}) · ${msg.limits?.memory || '512m'} RAM`;
-        if (msg.lab) {
-          els.labTrackBadge.textContent = `${msg.lab.track.toUpperCase()} · ${msg.lab.grade.toUpperCase()}`;
-          els.markdownInstructions.innerHTML = renderMarkdown(msg.lab.markdown);
-        }
-        if (msg.milestones) {
-          renderMilestones(msg.milestones);
-        }
-        sendTerminalSnapshotIfNeeded();
-        break;
-
-      case 'terminal:output':
-        if (typeof msg.data === 'string') {
-          recordTerminalPlainText(msg.data);
-          term?.write(msg.data);
-        }
-        break;
-
-      case 'milestone:status':
-        renderMilestones(msg.milestones);
-        break;
-
-      case 'lab:switched':
-        if (msg.lab) {
-          els.labTrackBadge.textContent = `${msg.lab.track.toUpperCase()} · ${msg.lab.grade.toUpperCase()}`;
-          els.markdownInstructions.innerHTML = renderMarkdown(msg.lab.markdown);
-        }
-        renderMilestones(msg.milestones || []);
-        break;
-
-      case 'teacher:pause-state':
-        state.paused = Boolean(msg.paused);
-        els.pauseBanner.hidden = !state.paused;
-        break;
-
-      case 'teacher:override-executed':
-        term?.write(`\r\n\x1b[1;33m[Instructor Override]: ${msg.command}\x1b[0m\r\n`);
-        break;
-
-      case 'teacher:request-snapshot':
-        sendTerminalSnapshotIfNeeded();
-        break;
-
-      case 'session:terminated':
-        setConnectionUi('disconnected', `Session Ended (${msg.reason})`);
-        term?.write(`\r\n\x1b[1;31m[Sandbox Terminated: ${msg.reason}]\x1b[0m\r\n`);
-        break;
-    }
-  });
-
-  ws.addEventListener('close', () => {
-    setConnectionUi('disconnected', 'Disconnected · Click Reconnect');
-  });
-}
-
-// ============================================================================
-// 5. TEACHER DASHBOARD VIEW (5-SECOND 10% JPEG POLLING & INSTRUCTOR CONTROLS)
-// ============================================================================
-async function pollTeacherDashboardSnapshots() {
-  if (!state.teacherViewOpen) return;
-  const code = encodeURIComponent(state.classroomCode || 'CLL-CLASS-712');
-  try {
-    const res = await fetch(`/api/classrooms/${code}/snapshots`);
-    if (!res.ok) return;
-    const data = await res.json();
-    els.teacherMetaStatus.textContent =
-      `Classroom ${data.classroomCode} · ${data.studentCount} active container(s) · ` +
-      `10% JPEG snapshots refreshed at ${new Date().toLocaleTimeString()}`;
-
-    if (!data.students.length) {
-      els.teacherStudentGrid.innerHTML =
-        `<p class="teacher-meta">No students currently joined to <strong>${escapeHtml(data.classroomCode)}</strong>. Switch to Instructor-Led mode and click Join Class.</p>`;
+    if (state.role === "student" && state.sessionReady)
+      send({
+        type: "terminal:resize",
+        cols: terminal.cols,
+        rows: terminal.rows,
+      });
+  }
+  function queueFit() {
+    if (!resizeFrame)
+      resizeFrame = win.requestAnimationFrame(() => {
+        resizeFrame = 0;
+        fitTerminal();
+      });
+  }
+  function milestones(value) {
+    const rows = Array.isArray(value) ? value.slice(0, 32) : [],
+      count = rows.filter((row) => row?.completed === true).length;
+    el["milestone-progress"].max = rows.length || 1;
+    el["milestone-progress"].value = count;
+    el["milestone-count-text"].textContent =
+      `${count} / ${rows.length} server-verified`;
+    el["milestone-list"].innerHTML = rows
+      .map(
+        (row, index) =>
+          `<li class="milestone-item"><strong>${index + 1}. ${escapeHtml(text(row?.title, 200))} · ${row?.completed === true ? "Verified" : "Pending"}</strong><p>${escapeHtml(text(row?.description, 600))}</p>${typeof row?.hint === "string" ? `<details class="milestone-hint"><summary>Hint</summary><p>${escapeHtml(text(row.hint, 600))}</p></details>` : ""}</li>`,
+      )
+      .join("");
+  }
+  function lab(value) {
+    if (!value || typeof value !== "object") return;
+    el["lab-track-badge"].textContent =
+      `${text(value.track, 30)} · ${text(value.grade, 30)}`;
+    el["markdown-instructions"].innerHTML = renderMarkdown(value.markdown);
+  }
+  function renderStudents() {
+    el["teacher-student-grid"].replaceChildren();
+    if (!students.size) {
+      const p = doc.createElement("p");
+      p.textContent = "No students have joined this class.";
+      el["teacher-student-grid"].appendChild(p);
       return;
     }
-
-    els.teacherStudentGrid.innerHTML = data.students
-      .map(
-        s => `
-        <article class="student-snapshot-card">
-          <div class="student-card-meta">
-            <strong>${escapeHtml(s.alias)}</strong>
-            <span>${escapeHtml(s.labId)} · ${s.completedMilestones}/${s.totalMilestones} ✓</span>
-          </div>
-          ${
-            s.snapshotDataUrl
-              ? `<img src="${escapeHtml(s.snapshotDataUrl)}" alt="10% JPEG snapshot of ${escapeHtml(s.alias)} terminal">`
-              : `<div class="teacher-meta">Awaiting next 5s snapshot…</div>`
-          }
-          <div class="student-card-meta">
-            <span>Container: <code>${escapeHtml(s.containerId || 'n/a')}</code></span>
-            <span>${s.paused ? '⏸ Paused' : '▶ Active'}</span>
-          </div>
-        </article>`
-      )
-      .join('');
-  } catch {}
-}
-
-async function sendTeacherClassroomControl(action, extra = {}) {
-  const code = encodeURIComponent(state.classroomCode || 'CLL-CLASS-712');
-  await fetch(`/api/classrooms/${code}/control`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, ...extra })
-  });
-  await pollTeacherDashboardSnapshots();
-}
-
-// ============================================================================
-// 6. UI EVENT BINDINGS & TIMERS
-// ============================================================================
-function bindEvents() {
-  // Switch Self-Paced Labs
-  els.labSelector.addEventListener('change', event => {
-    state.labId = event.target.value;
-    sendWsMessage({ type: 'lab:switch', labId: state.labId });
-  });
-
-  // Verify Milestones on demand
-  els.verifyMilestonesBtn.addEventListener('click', () => {
-    sendWsMessage({ type: 'milestone:verify' });
-  });
-
-  // Run command snippet directly from Markdown instructions
-  els.markdownInstructions.addEventListener('click', event => {
-    const runBtn = event.target.closest('[data-run-command]');
-    if (!runBtn) return;
-    const cmd = runBtn.getAttribute('data-run-command');
-    if (cmd) {
-      sendWsMessage({ type: 'terminal:input', data: cmd + '\r' });
-      term?.focus();
-    }
-  });
-
-  // Mode Switch: Self-Paced vs Instructor-Led
-  els.modeSelfPacedBtn.addEventListener('click', () => {
-    state.mode = 'self-paced';
-    els.modeSelfPacedBtn.classList.add('active');
-    els.modeSelfPacedBtn.setAttribute('aria-pressed', 'true');
-    els.modeInstructorBtn.classList.remove('active');
-    els.modeInstructorBtn.setAttribute('aria-pressed', 'false');
-    els.classroomJoinForm.hidden = true;
-    sendWsMessage({ type: 'classroom:join', classroomCode: '' });
-  });
-
-  els.modeInstructorBtn.addEventListener('click', () => {
-    state.mode = 'instructor';
-    els.modeInstructorBtn.classList.add('active');
-    els.modeInstructorBtn.setAttribute('aria-pressed', 'true');
-    els.modeSelfPacedBtn.classList.remove('active');
-    els.modeSelfPacedBtn.setAttribute('aria-pressed', 'false');
-    els.classroomJoinForm.hidden = false;
-    state.classroomCode = els.classroomCodeInput.value.trim() || 'CLL-CLASS-712';
-    sendWsMessage({ type: 'classroom:join', classroomCode: state.classroomCode });
-  });
-
-  els.classroomJoinForm.addEventListener('submit', event => {
-    event.preventDefault();
-    state.classroomCode = els.classroomCodeInput.value.trim() || 'CLL-CLASS-712';
-    sendWsMessage({ type: 'classroom:join', classroomCode: state.classroomCode });
-    if (state.teacherViewOpen) pollTeacherDashboardSnapshots();
-  });
-
-  // Toggle Low-Bandwidth Teacher Dashboard
-  els.toggleTeacherDashboardBtn.addEventListener('click', () => {
-    state.teacherViewOpen = !state.teacherViewOpen;
-    els.teacherDashboard.hidden = !state.teacherViewOpen;
-    els.toggleTeacherDashboardBtn.setAttribute('aria-expanded', String(state.teacherViewOpen));
-    if (state.teacherViewOpen) {
-      // Ensure current session is also visible in classroom demo if not joined yet
-      if (state.mode !== 'instructor') {
-        els.modeInstructorBtn.click();
+    for (const student of students.values()) {
+      const card = doc.createElement("article");
+      card.className = "student-snapshot-card";
+      const title = doc.createElement("h3");
+      title.textContent = text(student.alias, 64) || "Learner";
+      card.appendChild(title);
+      const info = doc.createElement("p"),
+        checks = Array.isArray(student.milestones) ? student.milestones : [];
+      info.textContent = `${text(student.labId, 20)} · ${checks.filter((item) => item?.completed === true).length}/${checks.length} checks`;
+      card.appendChild(info);
+      const image =
+        student.snapshotConsented === true
+          ? jpeg(student.snapshotDataUrl)
+          : null;
+      if (image) {
+        const img = doc.createElement("img");
+        img.src = image;
+        img.alt = `Shared text snapshot of ${text(student.alias, 64) || "learner"}’s lab terminal`;
+        card.appendChild(img);
+      } else {
+        const p = doc.createElement("p");
+        p.className = "snapshot-placeholder";
+        p.textContent = "No shared terminal snapshot.";
+        card.appendChild(p);
       }
-      sendTerminalSnapshotIfNeeded();
-      setTimeout(() => pollTeacherDashboardSnapshots(), 200);
+      el["teacher-student-grid"].appendChild(card);
     }
-  });
-
-  els.teacherPauseAllBtn.addEventListener('click', () => sendTeacherClassroomControl('pause'));
-  els.teacherResumeAllBtn.addEventListener('click', () => sendTeacherClassroomControl('resume'));
-
-  els.teacherOverrideForm.addEventListener('submit', async event => {
+  }
+  function rememberStudent(student) {
+    if (
+      !student ||
+      typeof student.sessionId !== "string" ||
+      student.sessionId.length > 128 ||
+      (students.size >= 100 && !students.has(student.sessionId))
+    )
+      return;
+    students.set(student.sessionId, student);
+  }
+  function control(action, extra = {}) {
+    if (state.role !== "teacher" || !state.classroomCode) return false;
+    return send({
+      type: "classroom:control",
+      classroomCode: state.classroomCode,
+      action,
+      ...extra,
+    });
+  }
+  function receive(message) {
+    if (!message || typeof message.type !== "string") return;
+    if (message.type === "ping") {
+      send({ type: "pong" });
+      return;
+    }
+    if (message.type === "auth:ok") {
+      if (
+        !["student", "teacher"].includes(message.role) ||
+        message.role !== state.requestedRole
+      ) {
+        disconnect();
+        return;
+      }
+      if (state.authTimer !== null) win.clearTimeout(state.authTimer);
+      state.authTimer = null;
+      state.role = message.role;
+      state.alias = text(message.alias, 64);
+      el["learner-alias-badge"].textContent = state.alias || "Teacher";
+      if (state.role === "student")
+        send({
+          type: "session:start",
+          labId: state.labId,
+          mode: state.selectionMode,
+          ...(state.selectionMode === "instructor-led"
+            ? { classroomCode: state.classroomCode }
+            : {}),
+        });
+      else {
+        status("connected", "Teacher authenticated");
+        el["teacher-meta-status"].textContent =
+          "Create a class to receive its student join code.";
+      }
+      syncControls();
+      return;
+    }
+    if (message.type === "error" || message.type === "auth:error") {
+      const denial =
+        text(message.message) || "The server rejected this request.";
+      if (message.type === "auth:error" || !state.role) disconnect();
+      status("disconnected", denial);
+      return;
+    }
+    if (!state.role) return;
+    switch (message.type) {
+      case "session:ready":
+      case "lab:switched": {
+        if (state.role !== "student") return;
+        if (message.runtimeMode !== "docker-pty") {
+          disconnect();
+          status(
+            "disconnected",
+            "No real Linux runtime was confirmed. Ask the instructor to configure the service.",
+          );
+          return;
+        }
+        state.runtimeVerified = true;
+        state.sessionReady = true;
+        state.labId = LABS.has(message.labId) ? message.labId : state.labId;
+        state.alias = text(message.alias, 64) || state.alias;
+        state.mode =
+          message.mode === "instructor-led"
+            ? "instructor-led"
+            : state.selectionMode;
+        if (typeof message.paused === "boolean") state.paused = message.paused;
+        el["learner-alias-badge"].textContent = state.alias;
+        el["container-badge"].textContent =
+          "Server Linux container · isolated practice";
+        const idle = message.limits?.inactivityTimeoutSeconds;
+        el["inactivity-timer-badge"].textContent = Number.isFinite(idle)
+          ? `Idle cleanup: ${Math.round(idle / 60)} min`
+          : "";
+        lab(message.lab);
+        milestones(message.milestones);
+        status("connected", "Connected to server Linux sandbox");
+        syncControls();
+        queueFit();
+        break;
+      }
+      case "terminal:output":
+        if (
+          state.role === "student" &&
+          state.runtimeVerified &&
+          typeof message.data === "string"
+        ) {
+          terminal?.write(message.data.slice(0, 65536));
+        }
+        break;
+      case "milestone:status":
+        if (state.role === "student") milestones(message.milestones);
+        break;
+      case "classroom:joined":
+        if (state.role === "student") {
+          revokeConsent(false);
+          state.classroomCode = classCode(message.classroomCode);
+          state.joined =
+            !!state.classroomCode && message.mode === "instructor-led";
+          state.mode = state.joined ? "instructor-led" : "self-paced";
+          syncControls();
+        }
+        break;
+      case "screen:consent-state": {
+        if (state.role !== "student") return;
+        state.consent =
+          message.enabled === true &&
+          state.consentRequested &&
+          el["snapshot-opt-in"].checked &&
+          eligible();
+        if (state.consent) {
+          el["snapshot-sharing-status"].textContent =
+            "On. Sharing this lab terminal’s text with the authenticated class teacher, at most every five seconds.";
+          startSnapshotTimer();
+        } else {
+          stopSnapshotTimer();
+          el["snapshot-opt-in"].checked = false;
+          state.consentRequested = false;
+          el["snapshot-sharing-status"].textContent =
+            "Off. No terminal snapshots are being shared.";
+          if (message.enabled === true)
+            send({ type: "screen:consent", enabled: false });
+        }
+        break;
+      }
+      case "teacher:request-snapshot":
+        snapshot();
+        break;
+      case "teacher:pause-state":
+        if (state.role === "student") {
+          state.paused = message.paused === true;
+          syncControls();
+        }
+        break;
+      case "teacher:override-executed":
+        if (state.role === "student" && state.runtimeVerified) {
+          terminal?.write("\r\n[Teacher sent a practice command]\r\n");
+        }
+        break;
+      case "classroom:created":
+        if (state.role === "teacher") {
+          const code = classCode(message.classroomCode);
+          if (code) {
+            state.classroomCode = code;
+            el["teacher-class-code"].value = code;
+            el["teacher-meta-status"].textContent =
+              "Share this student join code through your approved classroom channel.";
+            send({ type: "classroom:subscribe", classroomCode: code });
+            syncControls();
+          }
+        }
+        break;
+      case "classroom:status":
+        if (
+          state.role === "teacher" &&
+          message.classroomCode === state.classroomCode
+        ) {
+          students.clear();
+          (Array.isArray(message.students) ? message.students : [])
+            .slice(0, 100)
+            .forEach(rememberStudent);
+          renderStudents();
+        }
+        break;
+      case "classroom:snapshot":
+        if (
+          state.role === "teacher" &&
+          message.classroomCode === state.classroomCode
+        ) {
+          rememberStudent(message.student);
+          renderStudents();
+        }
+        break;
+      case "classroom:student-left":
+        if (
+          state.role === "teacher" &&
+          message.classroomCode === state.classroomCode
+        ) {
+          students.delete(message.sessionId);
+          renderStudents();
+        }
+        break;
+      case "session:terminated":
+        if (message.reason === "lab_changed" && state.role === "student") {
+          revokeConsent(false);
+          state.sessionReady = false;
+          state.runtimeVerified = false;
+          terminal?.reset?.();
+          status("connecting", "Starting a clean practice container…");
+          syncControls();
+        } else {
+          disconnect();
+          status(
+            "disconnected",
+            `Session ended: ${text(message.reason, 100) || "server cleanup"}`,
+          );
+        }
+        break;
+    }
+  }
+  function connect(role, teacherKey = "") {
+    if (
+      state.disposed ||
+      !terminal ||
+      (state.ws && state.ws.readyState < Socket.CLOSING)
+    )
+      return false;
+    if (
+      role === "student" &&
+      state.selectionMode === "instructor-led" &&
+      !classCode(el["classroom-code-input"].value.trim())
+    ) {
+      status(
+        "disconnected",
+        "Enter the student class code supplied by your teacher.",
+      );
+      return false;
+    }
+    let endpoint;
+    try {
+      endpoint = resolveWebSocketUrl(win.location);
+    } catch (error) {
+      status("disconnected", error.message);
+      return false;
+    }
+    state.requestedRole = role;
+    state.classroomCode =
+      role === "student" && state.selectionMode === "instructor-led"
+        ? classCode(el["classroom-code-input"].value.trim())
+        : "";
+    state.labId = LABS.has(el["lab-selector"].value)
+      ? el["lab-selector"].value
+      : "NET-201";
+    const pending = { teacherKey };
+    let ws;
+    try {
+      ws = new Socket(endpoint);
+    } catch {
+      status(
+        "disconnected",
+        "Connection unavailable. No Linux session is running here.",
+      );
+      return false;
+    }
+    state.ws = ws;
+    status("connecting", "Connecting to the configured server…");
+    syncControls();
+    const active = () => !state.disposed && state.ws === ws,
+      owned = [];
+    let failureMessage = "";
+    const on = (name, handler) => {
+      ws.addEventListener(name, handler);
+      owned.push(() => ws.removeEventListener(name, handler));
+    };
+    state.socketCleanup = () => {
+      pending.teacherKey = "";
+      for (const remove of owned) remove();
+    };
+    on("open", () => {
+      if (!active()) return;
+      const auth = { type: "auth", role };
+      if (role === "teacher") auth.teacherKey = pending.teacherKey;
+      pending.teacherKey = "";
+      send(auth);
+      status("connecting", "Authenticating with the server…");
+    });
+    on("message", (event) => {
+      if (
+        !active() ||
+        typeof event.data !== "string" ||
+        event.data.length > 300000
+      )
+        return;
+      try {
+        receive(JSON.parse(event.data));
+      } catch {
+        status("disconnected", "The server sent an unreadable response.");
+      }
+    });
+    on("error", () => {
+      pending.teacherKey = "";
+      failureMessage =
+        "Connection unavailable. No Linux session is running here.";
+      if (active()) status("disconnected", failureMessage);
+    });
+    on("close", () => {
+      pending.teacherKey = "";
+      if (!active()) return;
+      state.ws = null;
+      state.socketCleanup?.();
+      state.socketCleanup = null;
+      if (state.authTimer !== null) win.clearTimeout(state.authTimer);
+      state.authTimer = null;
+      clearSession();
+      status(
+        "disconnected",
+        failureMessage || "Disconnected · no Linux session",
+      );
+    });
+    state.authTimer = win.setTimeout(() => {
+      if (active() && !state.role) {
+        disconnect();
+        status(
+          "disconnected",
+          "Server authentication timed out. No Linux session was started.",
+        );
+      }
+    }, 11000);
+    return true;
+  }
+  function chooseMode(mode) {
+    if (state.ws && state.ws.readyState < Socket.CLOSING) return;
+    state.selectionMode = mode;
+    el["classroom-join-form"].hidden = mode !== "instructor-led";
+    el["mode-self-paced"].setAttribute(
+      "aria-pressed",
+      String(mode === "self-paced"),
+    );
+    el["mode-instructor"].setAttribute(
+      "aria-pressed",
+      String(mode === "instructor-led"),
+    );
+    el["mode-self-paced"].classList.toggle("active", mode === "self-paced");
+    el["mode-instructor"].classList.toggle("active", mode === "instructor-led");
+    syncControls();
+  }
+  try {
+    if (typeof TerminalClass !== "function")
+      throw new Error("missing terminal");
+    terminal = new TerminalClass({
+      cursorBlink: false,
+      fontSize: 15,
+      fontFamily: 'Consolas,"Cascadia Code",monospace',
+      scrollback: 500,
+      screenReaderMode: true,
+      minimumContrastRatio: 4.5,
+      disableStdin: true,
+      allowProposedApi: false,
+      linkHandler: { activate() {} },
+      theme: {
+        background: "#09131f",
+        foreground: "#e2e8f0",
+        cursor: "#65e1ca",
+      },
+    });
+    if (typeof FitClass === "function") {
+      fit = new FitClass();
+      terminal.loadAddon(fit);
+    }
+    terminal.open(el["terminal-container"]);
+    disposers.push(terminal.onData(input));
+    disposers.push(
+      terminal.onResize((size) => {
+        if (state.role === "student" && state.sessionReady)
+          send({ type: "terminal:resize", cols: size.cols, rows: size.rows });
+      }),
+    );
+    if (typeof win.ResizeObserver === "function") {
+      resizeObserver = new win.ResizeObserver(queueFit);
+      resizeObserver.observe(el["terminal-container"]);
+    } else listen(win, "resize", queueFit);
+    queueFit();
+  } catch {
+    terminal?.dispose?.();
+    terminal = null;
+    const notice = doc.createElement("p");
+    notice.className = "terminal-unavailable";
+    notice.textContent =
+      "The terminal component could not load. Ask the lab administrator to restore the local terminal assets. No Linux session is running here.";
+    el["terminal-container"].replaceChildren(notice);
+  }
+  listen(el["connect-btn"], "click", () => connect("student"));
+  listen(el["disconnect-btn"], "click", disconnect);
+  listen(el["mode-self-paced"], "click", () => chooseMode("self-paced"));
+  listen(el["mode-instructor"], "click", () => chooseMode("instructor-led"));
+  listen(el["classroom-join-form"], "submit", (event) => {
     event.preventDefault();
-    const cmd = els.teacherOverrideInput.value.trim();
-    if (!cmd) return;
-    await sendTeacherClassroomControl('override-command', { command: cmd });
-    els.teacherOverrideInput.value = '';
+    connect("student");
   });
-
-  els.reconnectBtn.addEventListener('click', () => {
-    connectWebSocket();
-  });
-
-  // 5-second Low-Bandwidth 10% JPEG snapshot interval
-  state.snapshotIntervalId = setInterval(() => {
-    sendTerminalSnapshotIfNeeded();
-    if (state.teacherViewOpen) {
-      pollTeacherDashboardSnapshots();
+  listen(el["teacher-signin-form"], "submit", (event) => {
+    event.preventDefault();
+    const key = el["teacher-key-input"].value;
+    el["teacher-key-input"].value = "";
+    if (!key) {
+      status(
+        "disconnected",
+        "Enter the administrator-provisioned teacher access key.",
+      );
+      return;
     }
-  }, 5000);
-
-  // 1-second countdown display for the 5-minute container inactivity reaper
-  setInterval(() => {
-    const elapsedSec = Math.floor((Date.now() - state.lastActivityTs) / 1000);
-    const remaining = Math.max(0, state.inactivityLimitSec - elapsedSec);
-    const mins = Math.floor(remaining / 60);
-    const secs = String(remaining % 60).padStart(2, '0');
-    els.inactivityTimerBadge.textContent = `Idle limit: ${mins}:${secs}`;
-  }, 1000);
+    connect("teacher", key);
+  });
+  listen(el["lab-selector"], "change", () => {
+    if (
+      state.role !== "student" ||
+      !state.sessionReady ||
+      !LABS.has(el["lab-selector"].value)
+    )
+      return;
+    revokeConsent();
+    state.sessionReady = false;
+    state.runtimeVerified = false;
+    terminal?.reset?.();
+    send({ type: "lab:switch", labId: el["lab-selector"].value });
+    status("connecting", "Starting a clean practice container…");
+    syncControls();
+  });
+  listen(el["verify-milestones-btn"], "click", () => {
+    if (state.role === "student" && state.sessionReady && !state.paused)
+      send({ type: "milestone:verify" });
+  });
+  listen(el["markdown-instructions"], "click", (event) => {
+    const button = event.target.closest?.("[data-run-command]");
+    if (
+      button &&
+      !button.disabled &&
+      el["markdown-instructions"].contains(button)
+    ) {
+      const command = button.getAttribute("data-run-command");
+      if (
+        typeof command === "string" &&
+        command.length <= 2000 &&
+        input(command.replace(/\r?\n/g, "\r") + "\r")
+      )
+        terminal?.focus();
+    }
+  });
+  listen(el["terminal-keyboard-controls"], "click", (event) => {
+    const button = event.target.closest?.("[data-terminal-key]");
+    if (!button || button.disabled) return;
+    const key = button.dataset.terminalKey;
+    if (key === "focus") {
+      terminal?.focus();
+      return;
+    }
+    const data = {
+      escape: "\x1b",
+      tab: "\t",
+      interrupt: "\x03",
+      up: "\x1b[A",
+      down: "\x1b[B",
+    }[key];
+    if (data && input(data)) terminal?.focus();
+  });
+  listen(el["snapshot-opt-in"], "change", () => {
+    if (!eligible() || !el["snapshot-opt-in"].checked) {
+      revokeConsent();
+      return;
+    }
+    state.consentRequested = true;
+    state.consent = false;
+    el["snapshot-sharing-status"].textContent =
+      "Requesting permission to share this lab terminal only…";
+    send({ type: "screen:consent", enabled: true });
+  });
+  listen(el["teacher-create-class"], "click", () => {
+    if (state.role === "teacher") send({ type: "classroom:create" });
+  });
+  listen(el["teacher-pause-all"], "click", () => control("pause"));
+  listen(el["teacher-resume-all"], "click", () => control("resume"));
+  listen(el["teacher-override-form"], "submit", (event) => {
+    event.preventDefault();
+    const command = el["teacher-override-input"].value.trim();
+    if (
+      command &&
+      command.length <= 200 &&
+      control("override-command", { command })
+    )
+      el["teacher-override-input"].value = "";
+  });
+  listen(doc, "visibilitychange", () => {
+    if (doc.hidden) revokeConsent();
+    else queueFit();
+  });
+  syncControls();
+  status(
+    "disconnected",
+    terminal
+      ? "Not connected · choose Start server lab when ready"
+      : "Terminal unavailable · no Linux session",
+  );
+  function dispose() {
+    if (state.disposed) return;
+    disconnect();
+    state.disposed = true;
+    for (const item of disposers)
+      typeof item === "function" ? item() : item?.dispose?.();
+    resizeObserver?.disconnect();
+    if (resizeFrame) win.cancelAnimationFrame(resizeFrame);
+    resizeFrame = 0;
+    terminal?.dispose();
+    terminal = null;
+  }
+  listen(win, "pagehide", dispose);
+  return { dispose };
 }
 
-// Initialize when loaded in browser
-if (typeof window !== 'undefined' && els.terminalContainer) {
-  initTerminal();
-  bindEvents();
-  connectWebSocket();
-}
+if (typeof window !== "undefined" && typeof document !== "undefined")
+  createTerminalSandboxClient();

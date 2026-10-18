@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   sandbox-image-builder:
     build:
@@ -7,38 +5,33 @@ services:
       dockerfile: Dockerfile.sandbox
     image: cole-learning-labs/sandbox:alpine
     command: ["/bin/true"]
-
+    network_mode: none
   orchestrator:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cll-terminal-orchestrator
-    restart: unless-stopped
     depends_on:
-      - sandbox-image-builder
+      sandbox-image-builder:
+        condition: service_completed_successfully
+    restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"
     environment:
-      - NODE_ENV=production
-      - PORT=8080
-      - SANDBOX_IMAGE=cole-learning-labs/sandbox:alpine
-      - SANDBOX_MEMORY=512m
-      - SANDBOX_CPUS=0.5
-      - INACTIVITY_TIMEOUT_MS=300000
-      - ENFORCE_CLOUDFLARE_HTTPS=true
-      - ALLOWED_ORIGINS=https://www.colelearninglabs.com,https://colelearninglabs.com,https://terminal.colelearninglabs.com
+      SANDBOX_ENABLED: "false"
+      SANDBOX_IMAGE: cole-learning-labs/sandbox:alpine
+      TEACHER_ACCESS_KEY: ${TEACHER_ACCESS_KEY:?set a random secret of at least 32 characters}
+      ALLOWED_ORIGINS: https://terminal.colelearninglabs.com
+      # Set the exact private reverse-proxy peer address after inspecting deployment networking.
+      TRUSTED_PROXY_ADDRESSES: ${TRUSTED_PROXY_ADDRESSES:-}
+    group_add:
+      - ${DOCKER_SOCKET_GID:?set the host Docker socket group ID}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-
-  # Optional Cloudflare Tunnel (cloudflared) so outbound-only Port 443 connects directly to Cloudflare Edge
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cll-cloudflared-tunnel
-    restart: unless-stopped
-    depends_on:
-      - orchestrator
-    command: tunnel --config /etc/cloudflared/config.yml run
-    volumes:
-      - ./cloudflare/cloudflared-config.yml:/etc/cloudflared/config.yml:ro
-    profiles:
-      - cloudflare-tunnel
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 1

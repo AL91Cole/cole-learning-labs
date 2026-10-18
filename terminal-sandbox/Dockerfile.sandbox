@@ -1,49 +1,18 @@
-# Unprivileged Alpine Linux Sandbox Image for Cole Learning Labs (Grades 7-12)
-FROM alpine:3.20
-
-# Install safe diagnostic and CLI utilities for Networking, Cybersecurity, and Systems labs
-RUN apk add --no-cache \
-    bash \
-    coreutils \
-    grep \
-    sed \
-    gawk \
-    iproute2 \
-    iputils \
-    bind-tools \
-    curl \
-    jq \
-    tree \
-    nano \
-    less \
-    procps
-
-# Create unprivileged student user (UID 1000 / GID 1000)
-RUN addgroup -g 1000 learner && \
-    adduser -D -u 1000 -G learner -h /home/learner -s /bin/sh learner
-
-# Seed default Cole Learning Labs workspace fixtures in /opt/cll-seed
-# (Copied into tmpfs /home/learner on container startup so --read-only rootfs works cleanly)
+FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
+RUN apk add --no-cache coreutils grep sed gawk iproute2 iputils bind-tools jq tree nano less procps \
+    && addgroup -g 1000 learner && adduser -D -u 1000 -G learner -h /home/learner -s /bin/sh learner
 RUN mkdir -p /opt/cll-seed/lab/backups /opt/cll-seed/lab/delivered && \
-    printf "WORKSTATION CONFIGURATION SHEET (VLAN 8)\nAssigned IPv4: 10.24.8.25/24\nDefault Gateway: 10.24.8.1\nSchool DNS Resolver: 10.24.8.53\nTarget Portal: learn.school.test\n" > /opt/cll-seed/lab/network-sheet.txt && \
-    printf "# Simulated Workstation DNS Resolver\nnameserver 192.168.1.53\nsearch school.test\n" > /opt/cll-seed/lab/resolv.conf && \
-    printf "2026-10-18T08:11:02Z INFO  sshd[210]: Accepted publickey for teacher01 from 10.24.8.14 port 51204\n2026-10-18T08:14:19Z WARN  telnetd[304]: FAILED login for root from 198.51.100.24 port 23\n2026-10-18T08:14:22Z WARN  telnetd[305]: FAILED login for admin from 198.51.100.24 port 23\n2026-10-18T08:14:25Z ALERT telnetd[306]: Session opened for guest from 198.51.100.24 port 23\n2026-10-18T08:15:00Z INFO  httpd[410]: GET /classroom/portal 200 from 10.24.8.25 port 443\n" > /opt/cll-seed/lab/auth-sim.log && \
-    printf "# Classroom Firewall Policy\nPORT_23=OPEN\nPORT_443=OPEN\n" > /opt/cll-seed/lab/firewall.conf && \
-    printf "# Contained Source IPs\n" > /opt/cll-seed/lab/blocklist.conf && \
-    printf "COLE LEARNING LABS - LESSON PLAN v2 (VERIFIED)\nPathway: Hardware & ServiceDesk\nTopic: Safe Power & ESD Procedure\n" > /opt/cll-seed/lab/backups/lesson-plan-v2.txt && \
-    printf "CORRUPTED_DRAFT_DO_NOT_USE\n" > /opt/cll-seed/lab/backups/lesson-plan-v1.bak && \
-    chown -R learner:learner /opt/cll-seed
-
-# Entrypoint script that populates /home/learner tmpfs on startup
-RUN printf '#!/bin/sh\nif [ ! -d /home/learner/lab ]; then\n  cp -r /opt/cll-seed/lab /home/learner/lab\nfi\nexport HISTFILE=/home/learner/.sh_history\nexport PS1="learner@cole-lab:\\w\\$ "\nexec "$@"\n' > /usr/local/bin/cll-entrypoint.sh && \
-    chmod +x /usr/local/bin/cll-entrypoint.sh
-
+    printf 'WORKSTATION CONFIGURATION SHEET (VLAN 8)\nAssigned IPv4: 10.24.8.25/24\nDefault Gateway: 10.24.8.1\nSchool DNS Resolver: 10.24.8.53\nTarget Portal: learn.school.test\n' > /opt/cll-seed/lab/network-sheet.txt && \
+    printf '# Fictional resolver exercise; the container has no network\nnameserver 192.168.1.53\nsearch school.test\n' > /opt/cll-seed/lab/resolv.conf && \
+    printf '2026-10-18T08:11:02Z INFO sshd: accepted fictional teacher account from 10.24.8.14\n2026-10-18T08:14:19Z WARN telnetd: FAILED from 198.51.100.24 port 23\n2026-10-18T08:14:22Z WARN telnetd: FAILED from 198.51.100.24 port 23\n2026-10-18T08:14:25Z ALERT telnetd: session from 198.51.100.24 port 23\n2026-10-18T08:15:00Z INFO httpd: fictional classroom portal port 443\n' > /opt/cll-seed/lab/auth-sim.log && \
+    printf 'PORT_23=OPEN\nPORT_443=OPEN\n' > /opt/cll-seed/lab/firewall.conf && \
+    printf '# Fictional contained sources\n' > /opt/cll-seed/lab/blocklist.conf && \
+    printf 'COLE LEARNING LABS - LESSON PLAN v2 (VERIFIED)\nPathway: Hardware & ServiceDesk\nTopic: Safe Power & ESD Procedure\n' > /opt/cll-seed/lab/backups/lesson-plan-v2.txt && \
+    printf 'CORRUPTED_DRAFT_DO_NOT_USE\n' > /opt/cll-seed/lab/backups/lesson-plan-v1.bak && chown -R learner:learner /opt/cll-seed
+RUN printf '#!/bin/sh\nset -eu\ncp -r /opt/cll-seed/lab /home/learner/lab\nexec "$@"\n' > /usr/local/bin/cll-entrypoint \
+    && chmod 755 /usr/local/bin/cll-entrypoint
 USER 1000:1000
 WORKDIR /home/learner
-ENV HOME=/home/learner \
-    USER=learner \
-    TERM=xterm-256color \
-    HISTFILE=/home/learner/.sh_history
-
-ENTRYPOINT ["/usr/local/bin/cll-entrypoint.sh"]
-CMD ["/bin/sh", "-c", "trap 'exit 0' TERM INT; while true; do sleep 60; done"]
+ENV HOME=/home/learner USER=learner TERM=xterm-256color HISTFILE=/home/learner/.sh_history
+ENTRYPOINT ["/usr/local/bin/cll-entrypoint"]
+CMD ["/bin/sh", "-i"]

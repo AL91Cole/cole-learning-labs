@@ -1,5 +1,7 @@
 # Deploying Cole Learning Labs with Cloudflare Pages
 
+PR #22's optional remote terminal is a separate Docker service, not a Pages Function or static asset. Its [setup guide](../terminal-sandbox/README.md) and [architecture audit](PR22-ARCHITECTURE-AUDIT.md) describe the trusted HTTPS ingress and host work still required. The PR preview can demonstrate new monitor clues without deploying that backend or changing the production domain.
+
 Cole Learning Labs uses static HTML, CSS, and browser ES modules served by Cloudflare Pages. GitHub remains the source repository. Independent labs begin in page memory; explicit optional device saving is unencrypted and does not need a database. The fictional classroom demo and optional local encrypted-report tool also need no application database or live AI API. The report tool processes selected files and keys in the browser for a manual school-approved submission workflow; it is not Google Classroom OAuth integration.
 
 Source release `20261018-context21` (version `2.19.0`) contains 29 investigations: eight hardware, six network/OS, six AI, six cybersecurity and three coding labs. The new models in `src/expanded-labs.js` and bounded interpreter in `src/coding-lab.js` remain local browser modules. `src/interview.js` uses authored facts and recent question context. The optional live AI mode is a disabled interface option, with no provider integration, API key, question upload or inference endpoint; routine deployment must not activate one.
