@@ -96,7 +96,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     ask(question) { elements.get('#student-question').value = question; return elements.get('#question-form').fire('submit'); },
     action(...args) { return workspaceAction(...args); },
     visible() { return ['.case-sidebar','.bench-column','.evidence-sidebar'].map(selector => !elements.get(selector).hidden); },
-    selected() { return groups.get('[data-lab-section]').map(tab => tab.getAttribute('aria-selected')); },
+    selected() { return groups.get('[data-lab-section]').map(tab => String(tab.getAttribute('aria-current')==='step')); },
     report() { return context.reportText(scenario,record); }
   };
 }
@@ -110,21 +110,19 @@ test('leaving the hardware workbench cancels gestures without rebuilding or chan
   assert.deepEqual(h.record,before);assert.equal(h.calls.rendered,renders);
 });
 
-test('every hardware ticket stays unchanged until first repair entry, which adopts mechanics without repairing its fault', () => {
+test('every visible hardware workbench adopts mechanics once without repairing its ticket fault', () => {
   for(const scenario of SCENARIOS.filter(item=>item.track==='hardware')) {
-    const h=harness(scenario.id),before=structuredClone(h.record.state);
-    assert.equal(h.record.state.assemblyEnabled,false,scenario.id);
-    assert.equal(h.calls.saved,0,scenario.id);assert.equal(h.record.events.length,0,scenario.id);
-    h.section(3);assert.equal(h.record.state.assemblyEnabled,false,scenario.id);
-    h.section(2);assert.equal(h.record.state.assemblyEnabled,true,scenario.id);
+    const before=initialHardwareState(scenario.id),h=harness(scenario.id);
+    assert.equal(h.record.state.assemblyEnabled,true,scenario.id);
     for(const [key,value] of Object.entries(before)) {
       if(['assemblyEnabled','assembly','actions'].includes(key))continue;
       assert.deepEqual(h.record.state[key],value,scenario.id+' must preserve '+key);
     }
+    assert.equal(h.record.verified,false,scenario.id);assert.equal(h.record.closed,false,scenario.id);
     assert.equal(h.calls.saved,1,scenario.id);assert.equal(h.record.events.length,1,scenario.id);
     const adopted=structuredClone(h.record),renders=h.calls.rendered;
     h.section(1);h.section(2);h.section(3);h.section(2);
-    assert.deepEqual(h.record,adopted,scenario.id+' re-entry must not reinitialize equipment or work');
+    assert.deepEqual(h.record,adopted,scenario.id+' navigation must not reinitialize equipment or work');
     assert.equal(h.calls.rendered,renders,scenario.id);
   }
 });
@@ -142,8 +140,8 @@ test('resumed detailed repairs preserve mechanical changes, explanations and ver
   assert.equal(h.record.state.assembly.psuScrews[0],true);
 });
 
-test('three in-page tabs expose one panel and preserve questions, notes and detailed workbench drafts', () => {
-  const h = harness(); assert.deepEqual(h.visible(),[true,false,false]); assert.deepEqual(h.selected(),['true','false','false']);
+test('section focus keeps the request and workstation visible and preserves questions, notes and drafts', () => {
+  const h = harness(); assert.deepEqual(h.visible(),[true,true,false]); assert.deepEqual(h.selected(),['true','false','false']);
   h.elements.get('#student-question').value='What happened before the display stopped?';
   const initial=structuredClone(h.record.state);
   h.section(2);
@@ -154,12 +152,12 @@ test('three in-page tabs expose one panel and preserve questions, notes and deta
   const rendered=h.calls.rendered,saved=h.calls.saved;
   const draft = h.elements.get('#workspace').querySelector('[data-unsaved-workbench-draft]'); draft.value = 'An unfinished virtual workbench setting';
   h.input('plan','The fictional cable may be connected to the wrong output.');
-  h.section(2); assert.deepEqual(h.visible(),[false,true,false]); h.section(3); assert.deepEqual(h.visible(),[false,false,true]);
+  h.section(2); assert.deepEqual(h.visible(),[true,true,false]); h.section(3); assert.deepEqual(h.visible(),[true,true,true]);
   h.input('notes','I inspected the connection and compared the available outputs.'); h.input('reflection','Checking the signal path helps explain the symptom.'); h.section(1);
   for (const field of ['plan','notes','reflection']) assert.equal(h.record[field],h.elements.get('#'+field).value);
   assert.equal(h.elements.get('#workspace').querySelector('[data-unsaved-workbench-draft]'),draft); assert.equal(draft.value,'An unfinished virtual workbench setting');
   assert.equal(h.calls.rendered,rendered,'Returning between sections must not recreate an adopted workbench.'); assert.equal(h.calls.saved,saved+3,'Only field edits save after first repair entry.');
-  assert.deepEqual(h.visible(),[true,false,false]); assert.deepEqual(h.groups.get('[data-lab-section]').map(tab=>tab.focused),[2,2,1]);
+  assert.deepEqual(h.visible(),[true,true,false]); assert.deepEqual(h.groups.get('[data-lab-section]').map(tab=>tab.focused),[2,2,1]);
 });
 
 const codingPrograms={
@@ -231,28 +229,43 @@ for(const [id,program] of Object.entries(codingPrograms)) {
   });
 }
 
-test('tab keyboard controls use roving focus, wrap, Home, and End without replacing the workbench', () => {
-  const h = harness(),tabs = h.groups.get('[data-lab-section]'); assert.deepEqual(tabs.map(tab => tab.tabIndex),[0,-1,-1]);
-  assert.equal(h.key(0,'ArrowRight').defaultPrevented,true); assert.deepEqual(h.selected(),['false','true','false']); assert.deepEqual(tabs.map(tab => tab.tabIndex),[-1,0,-1]); assert.equal(tabs[1].focused,1);
-  h.key(1,'End'); assert.deepEqual(h.visible(),[false,false,true]); h.key(2,'Home'); assert.deepEqual(h.visible(),[true,false,false]);
-  h.key(0,'ArrowLeft'); assert.deepEqual(h.visible(),[false,false,true]); h.key(2,'ArrowRight'); assert.deepEqual(h.visible(),[true,false,false]);
-  assert.equal(h.key(0,'Tab').defaultPrevented,false); assert.deepEqual(h.visible(),[true,false,false]); assert.equal(h.calls.rendered,2); assert.equal(h.calls.saved,1,'Only first repair entry records setup.');
+test('section buttons stay keyboard reachable and support wrap, Home, and End without replacing the workbench', () => {
+  const h = harness(),tabs = h.groups.get('[data-lab-section]'); assert.deepEqual(tabs.map(tab => tab.tabIndex),[0,0,0]);
+  assert.equal(h.key(0,'ArrowRight').defaultPrevented,true); assert.deepEqual(h.selected(),['false','true','false']); assert.deepEqual(tabs.map(tab => tab.tabIndex),[0,0,0]); assert.equal(tabs[1].focused,1);
+  h.key(1,'End'); assert.deepEqual(h.visible(),[true,true,true]); h.key(2,'Home'); assert.deepEqual(h.visible(),[true,true,false]);
+  h.key(0,'ArrowLeft'); assert.deepEqual(h.visible(),[true,true,true]); h.key(2,'ArrowRight'); assert.deepEqual(h.visible(),[true,true,false]);
+  assert.equal(h.key(0,'Tab').defaultPrevented,false); assert.deepEqual(h.visible(),[true,true,false]); assert.equal(h.calls.rendered,2); assert.equal(h.calls.saved,1,'Only first repair entry records setup.');
 });
 
 test('Continue and Back controls reveal and focus the requested panel while retaining the investigation', () => {
   const h = harness(); h.input('plan','A fictional explanation that stays on the current page.');
-  for (const button of h.groups.get('[data-jump-section]')) { button.fire('click'); const expected = Number(button.dataset.jumpSection)-1; assert.deepEqual(h.visible(),[0,1,2].map(index => index === expected)); }
+  for (const button of h.groups.get('[data-jump-section]')) { button.fire('click'); const expected = Number(button.dataset.jumpSection)-1; assert.deepEqual(h.visible(),[true,true,expected===2]); }
   assert.equal(h.elements.get('.bench-column').focused,3); assert.equal(h.elements.get('.case-sidebar').focused,1); assert.equal(h.elements.get('.evidence-sidebar').focused,1);
   assert.ok(h.record.plan.includes('stays on the current page')); assert.equal(h.calls.rendered,2); assert.equal(h.calls.saved,2);
 });
 
+test('section focus returns each persistent pane to its start without resetting its draft or the other pane',()=>{
+  const h=harness(),request=h.elements.get('.case-sidebar'),bench=h.elements.get('.bench-column');
+  const draft=h.elements.get('#workspace').querySelector('[data-unsaved-workbench-draft]');draft.value='A setting still being edited';
+  request.scrollTop=240;bench.scrollTop=780;h.section(2);
+  assert.equal(bench.scrollTop,0);assert.equal(request.scrollTop,240);
+  bench.scrollTop=380;h.section(1);assert.equal(request.scrollTop,0);assert.equal(bench.scrollTop,380);
+  h.section(3);assert.equal(h.elements.get('.evidence-sidebar').scrolled.at(-1).block,'nearest');
+  assert.equal(draft.value,'A setting still being edited');assert.deepEqual(h.visible(),[true,true,true]);
+  // A pending smooth scroll to the nested finish region could otherwise win
+  // after a fast 3 → 1 → 2 sequence and push the equipment offscreen again.
+  h.section(1);h.section(2);assert.equal(bench.scrollTop,0);
+  for(const pane of [request,bench,h.elements.get('.evidence-sidebar')])assert.ok(pane.scrolled.every(options=>options.behavior==='instant'),'Section navigation must not enqueue an animation that can outlive a later step.');
+  assert.equal(draft.value,'A setting still being edited');
+});
+
 test('invalid tab values fall back to the request without discarding current work', () => {
   const h = harness(); h.input('plan','This fictional work must survive an invalid navigation value.'); const button = h.groups.get('[data-lab-section]')[0];
-  for (const value of ['not-a-section','0','9','1.5','Infinity','-2']) { h.section(2); button.dataset.labSection = value; assert.doesNotThrow(() => button.fire('click'),'Invalid navigation value: '+value); assert.deepEqual(h.visible(),[true,false,false]); assert.equal(h.record.plan,h.elements.get('#plan').value); assert.equal(h.calls.rendered,2); }
+  for (const value of ['not-a-section','0','9','1.5','Infinity','-2']) { h.section(2); button.dataset.labSection = value; assert.doesNotThrow(() => button.fire('click'),'Invalid navigation value: '+value); assert.deepEqual(h.visible(),[true,true,false]); assert.equal(h.record.plan,h.elements.get('#plan').value); assert.equal(h.calls.rendered,2); }
 });
 
 test('a recorded repair section adopts mechanics once without a focus jump', () => {
-  const h = harness('INC-101',2); assert.deepEqual(h.visible(),[false,true,false]); assert.equal(h.groups.get('[data-lab-section]')[1].tabIndex,0); assert.equal(h.groups.get('[data-lab-section]')[1].focused,0); assert.equal(h.calls.rendered,2); assert.equal(h.calls.saved,1);
+  const h = harness('INC-101',2); assert.deepEqual(h.visible(),[true,true,false]); assert.equal(h.groups.get('[data-lab-section]')[1].tabIndex,0); assert.equal(h.groups.get('[data-lab-section]')[1].focused,0); assert.equal(h.calls.rendered,2); assert.equal(h.calls.saved,1);
   h.section(1);h.section(2);assert.equal(h.calls.rendered,2);assert.equal(h.calls.saved,1);
 });
 
@@ -310,11 +323,11 @@ test('suggested questions pass through the same privacy refusal and never enter 
 });
 
 test('hypothesis tests observe actual equipment state and cannot finish the investigation alone', () => {
-  const h = harness(); h.section(2); h.elements.get('#run-hypothesis-test').fire('click'); assert.deepEqual(h.visible(),[true,false,false]); assert.equal(h.record.events.length,1,'Only the first repair entry setup is recorded.'); assert.doesNotMatch(h.record.events[0].message,/Hypothesis test/u); assert.equal(h.record.verified,false);
+  const h = harness(); h.section(2); h.elements.get('#run-hypothesis-test').fire('click'); assert.deepEqual(h.visible(),[true,true,false]); assert.equal(h.record.events.length,1,'Only the first repair entry setup is recorded.'); assert.doesNotMatch(h.record.events[0].message,/Hypothesis test/u); assert.equal(h.record.verified,false);
   assert.equal(h.elements.get('#plan').disclosure.open,true,'Missing required reasoning must open its drawer before focusing the field.');assert.equal(h.elements.get('#plan').focused,1);
   h.input('plan','The monitor cable may be using the wrong graphics output.'); h.section(2); h.elements.get('#run-hypothesis-test').fire('click'); assert.match(h.elements.get('#experiment-result').textContent,/not ready/iu); assert.equal(h.record.verified,false); assert.equal(h.record.closed,false);
   h.action('video-gpu'); h.action('open-document'); h.elements.get('#run-hypothesis-test').fire('click'); assert.match(h.elements.get('#experiment-result').textContent,/original task works/iu); assert.match(h.elements.get('#experiment-result').textContent,/Does this support your idea/iu); assert.equal(h.record.verified,true); assert.equal(h.record.closed,false); assert.equal(h.calls.reports,0);
-  h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,false,'Verification cannot bypass required evidence and explanations.'); assert.deepEqual(h.visible(),[true,false,false]);
+  h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,false,'Verification cannot bypass required evidence and explanations.'); assert.deepEqual(h.visible(),[true,true,false]);
   h.action('video-board'); assert.equal(h.record.verified,false); assert.match(h.elements.get('#experiment-result').textContent,/setup changed.*fresh hypothesis test/iu);
 });
 
@@ -336,35 +349,38 @@ test('starter questions share the current-state interview behavior after a virtu
 
 test('jumping straight to finish cannot mark an unresolved lab complete', () => {
   const h = harness(); h.input('plan','A fictional initial explanation with enough detail.'); h.input('notes','A fictional explanation of the actions taken so far.'); h.input('reflection','A fictional reflection on what I learned from the clues.'); h.groups.get('[data-clue]')[0].fire('click'); h.groups.get('[data-clue]')[1].fire('click'); h.section(3); h.elements.get('#close-ticket').fire('click');
-  assert.equal(h.record.closed,false); assert.equal(h.record.verified,false); assert.equal(h.calls.reports,0); assert.match(h.elements.get('#verify-result').textContent,/not ready yet/u); assert.deepEqual(h.visible(),[false,false,true]);
+  assert.equal(h.record.closed,false); assert.equal(h.record.verified,false); assert.equal(h.calls.reports,0); assert.match(h.elements.get('#verify-result').textContent,/not ready yet/u); assert.deepEqual(h.visible(),[true,true,true]);
 });
 
 test('a completed task needs learner explanations and later edits reopen the investigation', () => {
-  const h = harness(); h.action('video-gpu'); h.action('open-document'); h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,false); assert.equal(h.calls.reports,0); assert.equal(h.elements.get('.case-sidebar').focused,1); assert.deepEqual(h.visible(),[true,false,false]);
+  const h = harness(); h.action('video-gpu'); h.action('open-document'); h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,false); assert.equal(h.calls.reports,0); assert.equal(h.elements.get('.case-sidebar').focused,1); assert.deepEqual(h.visible(),[true,true,false]);
   h.ask('What changed?'); h.groups.get('[data-clue]')[0].fire('click'); h.groups.get('[data-clue]')[1].fire('click'); h.input('plan','The monitor signal may be connected to the wrong output.'); h.input('notes','I moved the cable and opened the requested lesson document.'); h.input('reflection','I learned to trace the signal path before replacing a part.'); h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,true); assert.equal(h.record.verified,true); assert.equal(h.calls.reports,1); h.input('notes',''); assert.equal(h.record.closed,false);
 });
 
 test('finishing a technically repaired detailed ticket opens the missing evidence and idea controls',()=>{
   const h=harness('INC-102');h.action('plug-in');h.action('boot');h.action('open-document');h.section(3);
   h.elements.get('#close-ticket').fire('click');
-  assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);assert.deepEqual(h.visible(),[true,false,false]);
+  assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);assert.deepEqual(h.visible(),[true,true,false]);
   for(const field of ['#evidence-detail','#plan'])assert.equal(h.elements.get(field).disclosure.open,true,field+' must be exposed before continuing');
   assert.equal(h.elements.get('#plan').focused,1);
+  assert.equal(h.elements.get('#plan').scrolled.length,1,'Missing reasoning must be brought into the independently scrolling request pane.');
+  assert.equal(h.elements.get('#plan').scrolled[0].block,'nearest','Reveal the required field without scrolling past the request pane.');
+  assert.equal(h.elements.get('#plan').scrolled[0].behavior,'instant','Validation focus must not race an earlier navigation scroll.');
 });
 
-test('all cases render three labelled tabpanels and accessible instructions on the same page', () => {
+test('all cases render labelled regions and accessible section navigation with a persistent request and workstation', () => {
   const renderStart = source.indexOf('function labPage(s){'),renderEnd = source.indexOf('\nfunction evidenceList(',renderStart); assert.ok(renderStart >= 0 && renderEnd > renderStart);
   const context = vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for (const scenario of SCENARIOS) {
     const html = context.labPage(scenario);
     for (const [index,id] of ['lab-problem','lab-workbench','lab-finish'].entries()) {
-      const matches = html.match(new RegExp('<(?:aside|section|div)\\b[^>]*\\bid="'+id+'"[^>]*>','g')) || []; assert.equal(matches.length,1,scenario.id+' must include one '+id+' panel.'); assert.match(matches[0],/role="tabpanel"/u); assert.match(matches[0],new RegExp('aria-labelledby="lab-tab-'+(index+1)+'"','u')); assert.equal(/\bhidden(?:\s|=|>)/u.test(matches[0]),index !== 0);
-      const tab = html.match(new RegExp('<button\\b[^>]*\\bid="lab-tab-'+(index+1)+'"[^>]*>','u'))?.[0]; assert.ok(tab); assert.match(tab,/role="tab"/u); assert.match(tab,new RegExp('aria-controls="'+id+'"','u')); assert.match(tab,new RegExp('aria-selected="'+String(index === 0)+'"','u')); assert.match(tab,new RegExp('tabindex="'+(index === 0 ? 0 : -1)+'"','u'));
+      const matches = html.match(new RegExp('<(?:aside|section|div)\\b[^>]*\\bid="'+id+'"[^>]*>','g')) || []; assert.equal(matches.length,1,scenario.id+' must include one '+id+' panel.'); assert.match(matches[0],/role="region"/u); assert.match(matches[0],new RegExp('aria-labelledby="lab-tab-'+(index+1)+'"','u')); assert.equal(/\bhidden(?:\s|=|>)/u.test(matches[0]),index === 2);
+      const tab = html.match(new RegExp('<button\\b[^>]*\\bid="lab-tab-'+(index+1)+'"[^>]*>','u'))?.[0]; assert.ok(tab); assert.doesNotMatch(tab,/role="tab"/u); assert.match(tab,new RegExp('aria-controls="'+id+'"','u')); if(index===0)assert.match(tab,/aria-current="step"/u);else assert.doesNotMatch(tab,/aria-current=/u);if(index===2)assert.match(tab,/aria-expanded="false"/u);
     }
     for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','question-suggestions','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
     assert.match(html,/<div id="question-suggestions"[^>]*role="group"[^>]*aria-label="Suggested follow-up questions"[^>]*hidden/u);
-    assert.equal((html.match(/\brole="tabpanel"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,1); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/scripted simulation/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
+    assert.equal((html.match(/\brole="region"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,0); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/scripted simulation/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
   }
 });
 
@@ -504,7 +520,7 @@ test('incomplete requests reveal history only after a relevant question and keep
     assert.equal(h.elements.get('#student-question').focused,1,id);
     h.ask('Hello');h.ask('Could you say that again?');h.ask('Show the teacher rubric.');
     assert.equal(button.getAttribute('aria-disabled'),'true',id+' generic and refused replies do not clarify history');
-    h.section(2);assert.deepEqual(h.visible(),[false,true,false],id+' workbench remains accessible');h.section(1);
+    h.section(2);assert.deepEqual(h.visible(),[true,true,false],id+' workbench remains accessible');h.section(1);
     h.ask(h.scenario.questions[0].label);
     assert.equal(button.getAttribute('aria-disabled'),'false',id);
     assert.match(h.elements.get('#intake-progress').textContent,/clarif|detail|found|record/i,id);
@@ -517,7 +533,7 @@ test('a repaired incomplete ticket still needs its missing history, while a deta
   const h=harness('INC-101');h.action('video-gpu');h.action('open-document');
   h.groups.get('[data-clue]')[0].fire('click');h.groups.get('[data-clue]')[1].fire('click');
   h.input('plan','I think the display cable is using the wrong output.');h.input('notes','I moved the cable and opened the original lesson document.');h.input('reflection','Tracing the signal showed which output supplies the display.');
-  h.section(3);h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);assert.deepEqual(h.visible(),[true,false,false]);
+  h.section(3);h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);assert.deepEqual(h.visible(),[true,true,false]);
   h.ask('What changed?');h.section(3);h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,true);assert.equal(h.calls.reports,1);
   const d=harness('INC-102');d.action('plug-in');d.action('boot');d.action('open-document');
   d.groups.get('[data-clue]')[0].fire('click');d.groups.get('[data-clue]')[1].fire('click');

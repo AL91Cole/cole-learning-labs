@@ -1,0 +1,26 @@
+{
+  "name": "cole-learning-labs-terminal-sandbox",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Chromebook-compatible xterm.js + Docker Alpine sandbox backend over Cloudflare Port 443 WebSockets for Cole Learning Labs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "docker:build-sandbox": "docker build -f Dockerfile.sandbox -t cole-learning-labs/sandbox:alpine .",
+    "test": "node --test tests/*.test.js",
+    "review:start": "node scripts/review-service.mjs start",
+    "review:status": "node scripts/review-service.mjs status",
+    "review:stop": "node scripts/review-service.mjs stop"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "node-pty": "1.1.0",
+    "ws": "8.22.0"
+  },
+  "engines": {
+    "node": ">=22.16.0"
+  }
+}

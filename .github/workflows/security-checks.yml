@@ -34,13 +34,41 @@ jobs:
           node-version: '24'
           check-latest: true
           package-manager-cache: false
-      # This repository has no package dependencies; do not run install scripts.
+      # Public browser labs remain dependency-free. The optional Docker service
+      # has its own locked dependencies and separate verification below.
       - name: Check JavaScript syntax
         run: npm run check
       - name: Verify privacy lock, security boundaries, and lab behavior
         run: npm test
       - name: Build the public-only deployment artifact
         run: npm run build
+
+  terminal-sandbox:
+    name: Isolated terminal and real Docker PTY tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source without saved credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the supported Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install the locked terminal-only packages
+        run: npm ci --prefix terminal-sandbox
+      - name: Audit terminal runtime dependencies
+        run: npm audit --prefix terminal-sandbox --omit=dev --audit-level=low
+      - name: Build the unprivileged learner image
+        run: docker build -f terminal-sandbox/Dockerfile.sandbox -t cole-learning-labs/sandbox:alpine terminal-sandbox
+      - name: Verify the backend image and native PTY build
+        run: docker build -f terminal-sandbox/Dockerfile -t cole-learning-labs/terminal:ci terminal-sandbox
+      - name: Verify authorization, UI, lifecycle and actual Docker PTY
+        run: npm test --prefix terminal-sandbox
+        env:
+          RUN_DOCKER_TESTS: '1'
 
   codeql:
     name: CodeQL (${{ matrix.language }})

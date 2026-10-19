@@ -1,0 +1,37 @@
+services:
+  sandbox-image-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox
+    image: cole-learning-labs/sandbox:alpine
+    command: ["/bin/true"]
+    network_mode: none
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      sandbox-image-builder:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SANDBOX_ENABLED: "false"
+      SANDBOX_IMAGE: cole-learning-labs/sandbox:alpine
+      TEACHER_ACCESS_KEY: ${TEACHER_ACCESS_KEY:?set a random secret of at least 32 characters}
+      ALLOWED_ORIGINS: https://terminal.colelearninglabs.com
+      # Set the exact private reverse-proxy peer address after inspecting deployment networking.
+      TRUSTED_PROXY_ADDRESSES: ${TRUSTED_PROXY_ADDRESSES:-}
+    group_add:
+      - ${DOCKER_SOCKET_GID:?set the host Docker socket group ID}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 1

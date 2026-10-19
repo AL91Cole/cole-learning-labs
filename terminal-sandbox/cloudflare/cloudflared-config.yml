@@ -1,0 +1,12 @@
+# Optional operator-managed alternative. Supply your private tunnel credentials,
+# exact connector peer allowlist and trusted HTTPS scheme handling before use.
+# This example does not enable the backend or grant authentication by itself.
+tunnel: REPLACE_WITH_PRIVATE_TUNNEL_UUID
+credentials-file: /etc/cloudflared/credentials.json
+ingress:
+  - hostname: terminal.colelearninglabs.com
+    service: http://127.0.0.1:8080
+    originRequest:
+      httpHostHeader: terminal.colelearninglabs.com
+      connectTimeout: 10s
+  - service: http_status:404

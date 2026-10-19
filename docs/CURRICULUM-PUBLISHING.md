@@ -13,7 +13,7 @@ Only these revised curriculum PDFs are approved for the current public build:
 | [Student workbook](../assets/cole-learning-labs-student-workbook.pdf) | 6 pages | Solution-free prompts for reading a request, asking questions, forming a hypothesis, recording an experiment, and explaining evidence |
 | [Practice quizzes](../assets/cole-learning-labs-pop-quizzes.pdf) | 8 pages | Unmarked student questions with no answer key or completed responses |
 
-These downloads supplement the three-tab labs and HTML instructions. They do not collect responses, upload work, connect to an LMS, or create accounts. Learners submit any completed copy only through their teacher's approved process.
+These downloads supplement the on-page lab sections and HTML instructions. They do not collect responses, upload work, connect to an LMS, or create accounts. Learners submit any completed copy only through their teacher's approved process.
 
 The PDFs contain selectable text. The workbook is untagged, so selectable text alone must not be described as full accessibility. Use the on-site HTML Student Guide and in-lab instructions as the primary learning route, offer suitable alternatives, and check the intended reader, zoom, keyboard, and assistive-technology workflow. No PDF accessibility certification is claimed.
 

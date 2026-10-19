@@ -1,0 +1,11 @@
+node_modules
+.review
+.env
+.env.*
+!.env.example
+tests
+work
+*.log
+cloudflare
+.git
+README.md

@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#102c46" />
+    <meta
+      name="description"
+      content="Optional Cole Learning Labs server terminal. Use fictional data in an instructor-configured Linux practice container."
+    />
+    <title>Server Terminal Lab · Cole Learning Labs</title>
+    <link rel="stylesheet" href="/vendor/xterm/xterm.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#terminal-workspace"
+      >Skip to terminal workspace</a
+    >
+    <header class="sandbox-header">
+      <div>
+        <span class="eyebrow">COLE LEARNING LABS · OPTIONAL SERVER LAB</span>
+        <h1>Linux terminal practice</h1>
+      </div>
+      <button
+        type="button"
+        id="disconnect-btn"
+        class="btn btn-outline"
+        disabled
+      >
+        End session
+      </button>
+    </header>
+    <section
+      class="connection-panel"
+      aria-label="Start an optional terminal session"
+    >
+      <p id="privacy-notice">
+        Starting sends this lab’s terminal commands and output to the configured
+        server. Use fictional data, never real names, emails, student IDs or
+        passwords. The public browser-only labs remain separate.
+      </p>
+      <div class="connection-controls">
+        <div
+          class="mode-pill-group"
+          role="group"
+          aria-label="Student session type"
+        >
+          <button
+            type="button"
+            id="mode-self-paced"
+            class="mode-pill active"
+            aria-pressed="true"
+          >
+            Self-paced
+          </button>
+          <button
+            type="button"
+            id="mode-instructor"
+            class="mode-pill"
+            aria-pressed="false"
+          >
+            Join a class
+          </button>
+        </div>
+        <form id="classroom-join-form" class="classroom-form" hidden>
+          <label for="classroom-code-input">Student class code</label
+          ><input
+            id="classroom-code-input"
+            type="text"
+            maxlength="48"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="Code from your teacher"
+          />
+          <button type="submit" class="btn">Connect to class</button>
+        </form>
+        <button type="button" id="connect-btn" class="btn">
+          Start server lab
+        </button>
+        <details class="teacher-signin">
+          <summary>Teacher sign-in</summary>
+          <form id="teacher-signin-form">
+            <label for="teacher-key-input">Teacher access key</label
+            ><input
+              id="teacher-key-input"
+              type="password"
+              maxlength="512"
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="teacher-key-help"
+            /><button type="submit" class="btn">Sign in as teacher</button>
+          </form>
+          <p id="teacher-key-help">
+            Use the key provisioned by this service’s administrator. A student
+            class code cannot unlock teacher controls. End any current student
+            session first.
+          </p>
+        </details>
+      </div>
+    </section>
+    <section class="objective-strip" aria-labelledby="objective-title">
+      <span id="objective-label" class="eyebrow">GET READY</span>
+      <div><h2 id="objective-title">Choose a lab, then start a server session.</h2><p id="objective-detail">Read the instructions, work in the terminal, then check your results.</p></div>
+    </section>
+    <div id="pane-controls" class="pane-controls" role="group" aria-label="Jump to a section" hidden>
+      <button id="show-instructions" type="button" aria-controls="learning-panel">Jump to request</button>
+      <button id="show-workspace" type="button" aria-controls="terminal-workspace">Jump to terminal</button>
+    </div>
+    <main id="lab-layout" class="split-layout">
+      <aside
+        id="learning-panel"
+        class="instructions-sidebar"
+        aria-label="Lab instructions and milestones"
+        tabindex="-1"
+      >
+        <label for="lab-selector"
+          ><span class="eyebrow">PRACTICE LAB</span
+          ><select id="lab-selector">
+            <option value="NET-201">Network &amp; DNS diagnostics</option>
+            <option value="SEC-402">
+              Fictional security log investigation
+            </option>
+            <option value="INC-104">Classroom storage investigation</option>
+          </select></label
+        >
+        <section class="ticket-brief" aria-labelledby="ticket-brief-heading">
+          <h2 id="ticket-brief-heading">Request &amp; clues</h2>
+          <p id="ticket-brief">Choose a practice lab and start a session to see its request.</p>
+        </section>
+        <div class="learning-tabs" role="tablist" aria-label="Learning guide">
+          <button id="instructions-tab" type="button" role="tab" aria-controls="instructions-panel" aria-selected="true" tabindex="0">Instructions</button>
+          <button id="checks-tab" type="button" role="tab" aria-controls="checks-panel" aria-selected="false" tabindex="-1">Your checks</button>
+        </div>
+        <section id="checks-panel" class="milestone-card" role="tabpanel" aria-labelledby="checks-tab" tabindex="0" hidden>
+          <div class="milestone-header">
+            <h2 id="milestone-heading">Your checks</h2>
+            <button
+              type="button"
+              id="verify-milestones-btn"
+              class="btn"
+              disabled
+            >
+              Check work
+            </button>
+          </div>
+          <progress
+            id="milestone-progress"
+            value="0"
+            max="1"
+            aria-label="Server-verified milestones"
+          ></progress
+          ><span id="milestone-count-text">No session started</span>
+          <ul id="milestone-list" class="milestone-list"></ul>
+        </section>
+        <section id="instructions-panel" role="tabpanel" aria-labelledby="instructions-tab" tabindex="0">
+        <p id="lab-track-badge" class="eyebrow">INSTRUCTIONS</p>
+        <article
+          id="markdown-instructions"
+          class="markdown-body"
+          aria-label="Lab instructions"
+        >
+          <h2>Start when your instructor has configured the service.</h2>
+          <p>
+            The terminal connects to a real Linux practice container on the
+            server. There is no local Linux emulator or command runner if the
+            server is unavailable.
+          </p>
+        </article>
+        <p class="workflow-note">1. Read the task. 2. Try it in the terminal. 3. Open Your checks and select Check work. Only the server verifies completion.</p>
+        </section>
+      </aside>
+      <div id="split-divider" class="split-divider" role="separator" tabindex="0" aria-label="Resize instructions and workspace" aria-orientation="vertical" aria-controls="learning-panel terminal-workspace" aria-valuemin="28" aria-valuemax="55" aria-valuenow="38" aria-valuetext="Instructions 38%, workspace 62%" aria-describedby="split-help"><span aria-hidden="true">⋮</span></div>
+      <p id="split-help" class="visually-hidden">Drag the divider, or use Left and Right arrow keys. Hold Shift for a larger change. Home and End set the limits. Double-click to reset.</p>
+      <section
+        id="terminal-workspace"
+        class="workspace-panel"
+        tabindex="-1"
+        aria-label="Terminal and teacher workspace"
+      >
+        <div class="workspace-statusbar">
+          <div class="status-group">
+            <span
+              id="ws-status-dot"
+              class="status-dot disconnected"
+              aria-hidden="true"
+            ></span
+            ><strong id="ws-status-text" role="status" aria-live="polite"
+              >Not connected</strong
+            >
+          </div>
+          <div class="status-group">
+            <span id="container-badge">No Linux session</span
+            ><span id="learner-alias-badge">Alias assigned on connection</span
+            ><span id="inactivity-timer-badge"></span>
+          </div>
+        </div>
+        <p
+          id="instructor-pause-banner"
+          class="pause-banner"
+          role="status"
+          hidden
+        >
+          Your teacher has paused terminal input.
+        </p>
+        <div
+          id="terminal-container"
+          class="terminal-container"
+          aria-label="Linux practice terminal"
+        ></div>
+        <div
+          id="terminal-keyboard-controls"
+          class="terminal-keys"
+          role="group"
+          aria-label="Terminal keyboard shortcuts"
+        >
+          <button type="button" data-terminal-key="focus">Keyboard</button
+          ><button type="button" data-terminal-key="escape">Esc</button
+          ><button type="button" data-terminal-key="tab">Tab</button
+          ><button type="button" data-terminal-key="interrupt">Ctrl+C</button
+          ><button
+            type="button"
+            data-terminal-key="up"
+            aria-label="Previous command"
+          >
+            ↑</button
+          ><button
+            type="button"
+            data-terminal-key="down"
+            aria-label="Next command"
+          >
+            ↓
+          </button>
+        </div>
+        <div id="snapshot-controls" class="snapshot-controls" hidden>
+          <label
+            ><input id="snapshot-opt-in" type="checkbox" /> Share this lab’s
+            terminal text with my class teacher</label
+          >
+          <p id="snapshot-sharing-status" role="status">
+            Off. Optional low-quality JPEG snapshots cover only this terminal,
+            including anything typed or displayed here. No desktop, camera,
+            microphone or other tabs are captured.
+          </p>
+        </div>
+        <canvas
+          id="snapshot-canvas"
+          width="640"
+          height="360"
+          hidden
+          aria-hidden="true"
+        ></canvas>
+        <section
+          id="teacher-dashboard"
+          class="teacher-dashboard"
+          aria-labelledby="teacher-dashboard-title"
+          hidden
+        >
+          <div class="teacher-dashboard-header">
+            <h2 id="teacher-dashboard-title">Teacher workspace</h2>
+            <button type="button" id="teacher-create-class" class="btn">
+              Create class
+            </button>
+          </div>
+          <p id="teacher-meta-status" role="status">
+            Create a class to receive its student join code.
+          </p>
+          <label for="teacher-class-code">Student join code</label
+          ><input
+            id="teacher-class-code"
+            type="text"
+            readonly
+            autocomplete="off"
+          />
+          <div class="teacher-actions">
+            <button type="button" id="teacher-pause-all" class="btn" disabled>
+              Pause class input</button
+            ><button
+              type="button"
+              id="teacher-resume-all"
+              class="btn btn-outline"
+              disabled
+            >
+              Resume class input
+            </button>
+          </div>
+          <details>
+            <summary>Send a command to the practice terminals</summary>
+            <form id="teacher-override-form">
+              <label for="teacher-override-input">Classroom command</label
+              ><input
+                id="teacher-override-input"
+                type="text"
+                maxlength="200"
+                autocomplete="off"
+                spellcheck="false"
+              /><button type="submit" class="btn" disabled>
+                Send to class
+              </button>
+            </form>
+            <p>
+              Runs only in joined practice terminals. Review the command before
+              sending.
+            </p>
+          </details>
+          <p class="teacher-meta">
+            Students use server-assigned aliases. Terminal snapshots appear only
+            for students who opt in; JPEG quality 0.1, at most once every five
+            seconds. This is not a view of a student’s device.
+          </p>
+          <div id="teacher-student-grid" class="teacher-student-grid"></div>
+        </section>
+      </section>
+    </main>
+    <script src="/vendor/xterm/xterm.js" defer></script>
+    <script src="/vendor/xterm/addon-fit.js" defer></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

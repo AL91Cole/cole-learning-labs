@@ -116,7 +116,7 @@ export function buildLessonPlan(scenario, {duration=40,mode='guided',grouping='p
   const steps=[
     ['Introduce the task','Read the original request, the learning goal, safety, and scope. Define the unfamiliar words.'],
     [selected.id==='challenge'?'Predict an alternative':'Model the process',selected.id==='guided'?lesson.model:selected.id==='independent'?'Predict the first observation you will collect. Open the example if it helps.':'Name two possible explanations. Predict evidence that would distinguish them.'],
-    ['Investigate and test','Use the three tabs: ask and inspect; predict and make one change; compare the result. Keep useful unsuccessful tests.'],
+    ['Investigate and test','Use the side-by-side request and workbench: ask and inspect; predict and make one change; compare the result. Open Check & explain when ready. Keep useful unsuccessful tests.'],
     ['Check and explain','Retest the original goal. Explain which observations support your conclusion and what remains uncertain.'],
     ['Exit and handoff',lesson.exitQuestion+' Review and export through the teacher’s approved route.']
   ].map(([title,text],index)=>({title,text,minutes:durations[minutes][index]}));

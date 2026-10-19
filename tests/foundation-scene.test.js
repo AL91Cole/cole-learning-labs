@@ -88,7 +88,8 @@ test('beginner fan blades use current main power, stop on shutdown and never tur
   assert.match(f.host.innerHTML,/data-pc-fan="cpu" data-running="false"/);
   f.record={...f.record,hardware:{...f.record.hardware,pcOn:true,acConnected:true,videoPort:'gpu',pcVideoConnected:true,signalConnected:true,monitorInput:'hdmi'}};
   for(const fan of ['cpu','gpu','psu'])assert.ok(f.host.innerHTML.includes('data-pc-fan="'+fan+'" data-running="true"'));
-  assert.match(f.host.innerHTML,/MEMORY NOT DETECTED/);
+  assert.match(f.host.innerHTML,/NO SIGNAL/);
+  assert.doesNotMatch(f.host.innerHTML,/MEMORY NOT DETECTED|CLASSROOM UEFI/);
   assert.doesNotMatch(f.host.innerHTML,/CLASSROOM DESKTOP|LESSON FILE OPEN/);
   assert.match(f.host.innerHTML,/solid-state storage/);
   f.record={...f.record,hardware:{...f.record.hardware,pcOn:false}};
@@ -108,8 +109,8 @@ test('beginner fan motion pauses while hidden, backgrounded or disposed and hono
 
 test('beginner monitor captions stay short and an explicitly opened activity explanation stays open',()=>{
   const f=fixture();
-  const subtitles=[...f.host.innerHTML.matchAll(/<text x="195" y="191"[^>]*>([^<]*)<\/text>/g)].map(match=>match[1]);
-  assert.equal(subtitles.length,1);assert.ok(subtitles[0].length<=48);
+  const subtitles=[...f.host.innerHTML.matchAll(/<text x="195" y="(?:190|207)"[^>]*>([^<]*)<\/text>/g)].map(match=>match[1]);
+  assert.equal(subtitles.length,2);assert.ok(subtitles.every(line=>line.length<=48));
   f.statusDetails.open=true;f.record={...f.record};assert.equal(f.statusDetails.open,true);
-  assert.match(f.host.innerHTML,/Monitor power is separate/);f.controller.dispose();
+  assert.match(f.host.innerHTML,/Monitor power is available separately/);f.controller.dispose();
 });

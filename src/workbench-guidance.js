@@ -1,25 +1,23 @@
-import { pcActivity } from './pc-activity.js?release=20261018-context21';
+import { pcActivity } from './pc-activity.js?release=20261018-xray22';
 
-/** View recommendations only. The equipment model still decides every repair. */
+/** Control recommendations only. The equipment model still decides every repair. */
 const freezeList=values=>Object.freeze(values);
 const ALL_TOOLS=freezeList(['inspect','move','cables','screwdriver','paste','clean']);
 const ALL_GROUPS=freezeList(['panel','psu','board','cpu','paste','cooler','ram','gpu','ssd','cables','display']);
 const ALL_CABLES=freezeList(['ac','hdmi-pc','hdmi-monitor','atx','eps','gpu-power','sata-data','sata-power','front-panel','cpu-fan']);
 const ALL_SCREWS=freezeList(['panel','psu','board','cooler','gpu','ssd']);
-const ALL_VIEWS=freezeList(['bench','inside','rear','monitor']);
+const FULL_XRAY=freezeList(['bench']);
 const EXTERNAL_TOOLS=freezeList(['inspect','cables']);
 const REPAIR_TOOLS=freezeList(['inspect','move','cables','screwdriver']);
-const EXTERNAL_VIEWS=freezeList(['bench','rear','monitor']);
-
-const profile=(title,kind,groups,cables,screws,initialPart,initialCable,initialView,tools=REPAIR_TOOLS,views=ALL_VIEWS)=>Object.freeze({title,kind,tools,groups:freezeList(groups),cables:freezeList(cables),screws:freezeList(screws),views,initialPart,initialCable,initialView});
+const profile=(title,kind,groups,cables,screws,initialPart,initialCable,tools=REPAIR_TOOLS)=>Object.freeze({title,kind,tools,groups:freezeList(groups),cables:freezeList(cables),screws:freezeList(screws),views:FULL_XRAY,initialPart,initialCable,initialView:'bench'});
 // Transfer tickets deliberately share a profile: it cannot identify the bad end
 // of a cable or the selected source before the student gathers evidence.
-const DISPLAY=profile('Display checks','display',['display','cables'],['hdmi-pc','hdmi-monitor'],[],'display','hdmi-pc','monitor',EXTERNAL_TOOLS,EXTERNAL_VIEWS);
-const POWER=profile('Power checks','power',['psu','cables','display'],['ac'],[],'psu','ac','rear',EXTERNAL_TOOLS,EXTERNAL_VIEWS);
-const MEMORY=profile('Startup and memory checks','memory',['panel','ram','cables','display'],['ac'],['panel'],'ram','ac','inside');
-const STORAGE=profile('Startup and storage checks','storage',['panel','ssd','cables','display'],['ac','sata-data','sata-power'],['panel','ssd'],'ssd','sata-data','inside');
-const BUILD=profile('Complete PC build','build',ALL_GROUPS,ALL_CABLES,ALL_SCREWS,'board','atx','bench',ALL_TOOLS);
-const FALLBACK=profile('Workstation checks','general',['psu','display','cables'],['ac','hdmi-pc','hdmi-monitor'],[],'display','hdmi-pc','bench',EXTERNAL_TOOLS,EXTERNAL_VIEWS);
+const DISPLAY=profile('Display checks','display',['display','cables'],['hdmi-pc','hdmi-monitor'],[],'display','hdmi-pc',EXTERNAL_TOOLS);
+const POWER=profile('Power checks','power',['psu','cables','display'],['ac'],[],'psu','ac',EXTERNAL_TOOLS);
+const MEMORY=profile('Startup and memory checks','memory',['panel','ram','cables','display'],['ac'],['panel'],'ram','ac');
+const STORAGE=profile('Startup and storage checks','storage',['panel','ssd','cables','display'],['ac','sata-data','sata-power'],['panel','ssd'],'ssd','sata-data');
+const BUILD=profile('Complete PC build','build',ALL_GROUPS,ALL_CABLES,ALL_SCREWS,'board','atx',ALL_TOOLS);
+const FALLBACK=profile('Workstation checks','general',['psu','display','cables'],['ac','hdmi-pc','hdmi-monitor'],[],'display','hdmi-pc',EXTERNAL_TOOLS);
 const PROFILES=Object.freeze({'INC-101':DISPLAY,'INC-102':POWER,'INC-103':MEMORY,'INC-104':STORAGE,'INC-105':STORAGE,'INC-106':BUILD,'INC-107':DISPLAY,'INC-108':DISPLAY});
 
 // Saved state is data, not executable accessors or inherited instructions.

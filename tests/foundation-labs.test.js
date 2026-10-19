@@ -111,7 +111,7 @@ test('every non-coding mini-job follows the actual model one step at a time and 
       view.click('foundationJob');assert.equal(view.record.practice.length,index+1,lab.id);
     }
     assert.equal(foundationSummary(lab.id,view.record).complete,true,lab.id);view.tab('check');assert.match(view.prompt('check'),/beginner lab is complete/);
-    assert.equal(view.fields.get('[data-foundation-stage]').hidden,true);assert.equal(view.calls.visible.at(-1),false);
+    assert.equal(view.fields.get('[data-foundation-stage]').hidden,false);assert.equal(view.calls.visible.at(-1),true);
     if(lab.track==='hardware'){assert.equal(view.record.hardware.ramSeated,true);assert.equal(view.record.hardware.assembly.ramClipsOpen,false);assert.deepEqual(view.record.hardware.assembly.panelScrews,[true,true]);assert.equal(view.record.hardware.documentOpened,true);}
     view.controller.dispose();
   }
