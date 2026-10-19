@@ -163,5 +163,7 @@ test('the illustrated fallback labels a loose PC connector and does not draw a c
   assert.match(root.innerHTML, /data-hw-action="disconnect-video"/);
   assert.doesNotMatch(root.innerHTML, /Cable currently at graphics card/);
   renderHardware(root, state.caseId, { ...state, view: 'rear' }, () => {});
-  assert.match(root.innerHTML, /PC END UNPLUGGED/);
+  assert.match(root.innerHTML, /data-hw-view="full-xray"/);
+  assert.match(root.innerHTML, /PC cable end is disconnected/);
+  assert.doesNotMatch(root.innerHTML, /data-hw-action="view-/);
 });

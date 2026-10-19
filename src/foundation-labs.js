@@ -1,5 +1,5 @@
-import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261018-split22';
-import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261018-split22';
+import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261018-xray22';
+import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261018-xray22';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sections=['explore','practice','check'];

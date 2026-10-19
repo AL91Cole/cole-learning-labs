@@ -9,7 +9,7 @@ import {initialHardwareState,applyHardwareAction} from '../src/hardware.js';
 
 const ids=Array.from({length:8},(_,index)=>`INC-10${index+1}`);
 const groups=['panel','psu','board','cpu','paste','cooler','ram','gpu','ssd','cables','display'];
-const views=['bench','inside','rear','monitor'];
+const views=['bench'];
 const base=caseId=>initialHardwareState(caseId);
 const clone=value=>structuredClone(value);
 
@@ -24,7 +24,7 @@ test('all eight profiles return only current authored control IDs and valid init
 
 test('display transfer tickets share the same small control set and do not identify a particular fault',()=>{
   const guides=['INC-101','INC-107','INC-108'].map(id=>workbenchGuidance(base(id)));
-  for(const guide of guides){assert.deepEqual(guide.tools,['inspect','cables']);assert.deepEqual(guide.groups,['display','cables']);assert.deepEqual(guide.cables,['hdmi-pc','hdmi-monitor']);assert.deepEqual(guide.screws,[]);assert.deepEqual(guide.views,['bench','rear','monitor']);assert.equal(guide.initialCable,'hdmi-pc');assert.equal(guide.initialView,'monitor');}
+  for(const guide of guides){assert.deepEqual(guide.tools,['inspect','cables']);assert.deepEqual(guide.groups,['display','cables']);assert.deepEqual(guide.cables,['hdmi-pc','hdmi-monitor']);assert.deepEqual(guide.screws,[]);assert.deepEqual(guide.views,['bench']);assert.equal(guide.initialCable,'hdmi-pc');assert.equal(guide.initialView,'bench');}
   assert.deepEqual(guides[0],guides[1]);assert.deepEqual(guides[1],guides[2]);
   assert.doesNotMatch(guides[0].instruction,/wrong|loose|disconnected|graphics.card|motherboard|change.*HDMI|DisplayPort/i);
 });

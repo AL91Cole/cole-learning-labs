@@ -47,6 +47,12 @@ Browser acceptance checked all 29 investigation routes at 1366×768, 768×1024 a
 
 The terminal has a persistent server-authored Request & clues brief outside the Instructions/Your checks tabs. Browser testing verified real typed Linux output, simultaneous panes at tablet width, stacked access on a phone-sized viewport, class joining, teacher pause/resume and commands, and preview opt-in/revocation. The final terminal suite passed 55/55 with real Docker enabled. The public suite passed 817 tests locally with two Windows symlink-capability skips; the updated navigation and coding regressions also passed. Linux CI results are recorded in the PR. These are browser viewport checks, not tests on a physical managed Chromebook, tablet, Edge installation or school filtering network.
 
+## Full PC X-ray and Microsoft Edge follow-up
+
+Release `20261018-xray22` (2.22.0) fixes all PC investigations to the complete X-ray picture. Tool/cable choices no longer change views, old saved views normalize to the full bench, and legacy view actions cannot crop it. Both HDMI ends, mains wiring, internal components and monitor clues remain in the same picture. The existing five beginner labs already use one persistent equipment picture.
+
+Actual Windows Microsoft Edge 155.0.4283.62 testing passed representative labs in all five pathways, the full-picture HDMI repair and original-file delivery, a native `.txt` report download, real Linux keyboard input and split resizing, teacher authentication/create/join, pause/resume, scoped commands, preview consent/revocation and teacher-disconnect cleanup. The full results and remaining device/network limits are recorded in [Edge acceptance](PR22-EDGE-TESTING.md). Earlier notes about Edge not being connected describe the preceding review, not this follow-up.
+
 ## Still required before an actual school service
 
 The following deployment prerequisites still apply to an internet-accessible school service:

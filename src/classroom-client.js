@@ -1,7 +1,7 @@
 /* Optional sharing only after an explicit classroom join. No live AI or device surveillance. */
-import { SCENARIOS } from './scenarios.js?release=20261018-split22';
-import { inquiryProtectedEvents } from './interview.js?release=20261018-split22';
-import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261018-split22';
+import { SCENARIOS } from './scenarios.js?release=20261018-xray22';
+import { inquiryProtectedEvents } from './interview.js?release=20261018-xray22';
+import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261018-xray22';
 export const CLASSROOM_ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 

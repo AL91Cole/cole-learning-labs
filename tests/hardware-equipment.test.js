@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialHardwareState, applyHardwareAction, getHardwareReadouts, renderHardware, verifyHardware } from '../src/hardware.js';
+import { initialHardwareState, normalizeHardwareState, applyHardwareAction, getHardwareReadouts, renderHardware, verifyHardware } from '../src/hardware.js';
 
 // Exercise the delegated controls and the actual equipment model together.
 // Browser QA still verifies native button activation, layout, and focus.
@@ -39,6 +39,28 @@ test('all six hardware benches expose physical socket controls and read-only mod
     assert.deepEqual(current.state,initialHardwareState(caseId));
     assert.deepEqual(current.actions,[]);
   }
+});
+
+test('saved and legacy picture-view actions cannot crop any of the eight PC workbenches',()=>{
+  for(const caseId of Array.from({length:8},(_,index)=>`INC-10${index+1}`))for(const view of ['bench','inside','internals','rear','monitor','display']){
+    const original=initialHardwareState(caseId),saved={...original,view};
+    assert.equal(normalizeHardwareState(caseId,saved).view,'bench');
+    const response=applyHardwareAction(caseId,saved,`view-${view}`);
+    assert.deepEqual(response.state,original);assert.match(response.message,/Full PC X-ray/);
+    const root={ownerDocument:{activeElement:null},contains:()=>false,querySelector:()=>null,querySelectorAll:()=>[],innerHTML:''};
+    renderHardware(root,caseId,saved,()=>assert.fail('Rendering must not change equipment'));
+    assert.match(root.innerHTML,/viewBox="0 0 900 620" data-hw-view="full-xray"/);
+    assert.doesNotMatch(root.innerHTML,/data-hw-action="view-|role="tablist" aria-label="Workbench view"/);
+    assert.equal(saved.view,view);
+  }
+});
+
+test('picking up the display cable keeps the monitor and internal equipment together',()=>{
+  const current=bench('INC-101'),before=structuredClone(current.state);current.click({hwCable:'pickup'});
+  assert.match(current.root.innerHTML,/data-hw-view="full-xray"/);
+  assert.match(current.root.innerHTML,/Full PC X-ray workbench with monitor/);
+  assert.match(current.root.innerHTML,/DDR4/);assert.match(current.root.innerHTML,/REAR HDMI OUTPUTS/);
+  assert.deepEqual(current.state,before);assert.deepEqual(current.actions,[]);
 });
 
 test('picking up and putting down a display cable makes no equipment or saved-work change',()=>{

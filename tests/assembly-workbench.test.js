@@ -59,6 +59,31 @@ test('the workbench uses PR #6 native schematic artwork immediately without any 
   assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);assert.equal(bench.fields.get('[data-asm-tool-drawer]').hidden,true);bench.controller.dispose();
 });
 
+test('all eight ticket workbenches always show the complete X-ray with the monitor, including old saved views',()=>{
+  for(const caseId of Array.from({length:8},(_,index)=>`INC-10${index+1}`))for(const savedView of ['bench','inside','internals','rear','monitor','display']){
+    const bench=fixture({caseId,stateOverride:state=>({...state,view:savedView})}),before=structuredClone(bench.state);
+    assert.match(bench.picture,/<svg[^>]+viewBox="0 0 900 620" data-asm-view="full-xray"/);
+    assert.match(bench.picture,/Full PC X-ray workbench with monitor/);
+    assert.match(bench.picture,/data-asm-monitor-screen=/);
+    assert.doesNotMatch(bench.markup,/data-asm-picture-view|Inside PC|Rear connections/);
+    bench.controller.update({...bench.state,view:'rear'});
+    assert.match(bench.picture,/data-asm-view="full-xray"/);
+    assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
+  }
+});
+
+test('every tool, cable choice and complete-controls toggle keeps the full X-ray without changing equipment',()=>{
+  for(const caseId of Array.from({length:8},(_,index)=>`INC-10${index+1}`)){
+    const bench=fixture({caseId}),before=structuredClone(bench.state);bench.complete();
+    for(const tool of ASSEMBLY_TOOLS){bench.click('asmTool',tool.id);assert.match(bench.picture,/data-asm-view="full-xray"/);assert.match(bench.picture,/data-asm-monitor-screen=/);}
+    bench.click('asmTool','cables');
+    for(const cable of ASSEMBLY_CABLES){bench.choose('[data-asm-cable]',cable.id);for(const socket of cable.sockets){bench.choose('[data-asm-cable-target]',socket.id);assert.match(bench.picture,/viewBox="0 0 900 620" data-asm-view="full-xray"/);}}
+    bench.complete(false);bench.controller.update(bench.state);
+    assert.match(bench.picture,/data-asm-view="full-xray"/);
+    assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
+  }
+});
+
 test('native controls keep every mechanical action available and preserve the stable equipment host',()=>{
   const bench=fixture(),host=bench.fields.get('[data-asm-scene]');bench.click('asmPart','psu');bench.click('assemblyAction','asm-fit-psu');
   assert.equal(bench.state.assembly.psuInstalled,true);assert.equal(bench.writes,1);assert.equal(bench.fields.get('[data-asm-scene]'),host);
@@ -66,16 +91,17 @@ test('native controls keep every mechanical action available and preserve the st
   bench.controller.dispose();assert.equal(bench.listeners.size,0);assert.equal(bench.docListeners.size,0);assert.equal(bench.viewListeners.size,0);
 });
 
-test('picture views and inspection are ephemeral and retain explicit focus and closed disclosures',()=>{
+test('full PC X-ray and inspection are ephemeral and retain explicit focus and closed disclosures',()=>{
   const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);bench.complete();
-  for(const view of ['inside','rear','monitor','bench']){const target=bench.click('asmPictureView',view);assert.equal(bench.doc.activeElement,target);}
+  assert.doesNotMatch(bench.markup,/data-asm-picture-view|Equipment picture views/);
+  assert.match(bench.picture,/data-asm-view="full-xray"/);
   assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);
   bench.click('asmPicture','ram');assert.equal(bench.fields.get('[data-asm-select]').value,'ram');assert.equal(bench.fields.get('[data-asm-component-drawer]').open,true);
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
 test('native Enter and Space activate labeled schematic equipment without repairing during inspect',()=>{
-  const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);bench.complete();bench.click('asmPictureView','bench');
+  const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);bench.complete();
   for(const [id,key]of [['ram','Enter'],['gpu',' ']]){const target=bench.pictures().find(item=>item.dataset.asmPicture===id);let prevented=false;bench.listeners.get('keydown')({target,key,preventDefault(){prevented=true;}});assert.equal(prevented,true);assert.equal(bench.fields.get('[data-asm-select]').value,id);}
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
@@ -108,24 +134,24 @@ test('optional native part dragging proposes only a matching mount or tray actio
 });
 
 test('native cable dragging preserves independent HDMI ends and uses the same guarded action mapper',()=>{
-  const bench=fixture({caseId:'INC-101'});bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-pc');bench.click('asmPictureView','rear');
+  const bench=fixture({caseId:'INC-101'});bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-pc');
   bench.begin('cable-hdmi-pc');const count=bench.committed.length;bench.release('port-hdmi-gpu');assert.equal(bench.committed.length,count+1);assert.equal(bench.state.videoPort,'gpu');
   bench.begin('cable-hdmi-pc');bench.release('tray');assert.equal(bench.state.pcVideoConnected,false);assert.equal(bench.state.signalConnected,true);
   bench.choose('[data-asm-cable]','hdmi-monitor');bench.begin('cable-hdmi-monitor');bench.release('tray');assert.equal(bench.state.signalConnected,false);assert.equal(bench.state.booted,true);bench.controller.dispose();
 });
 
-test('a missing PSU is an empty bay in both views and never advertises a live AC socket',()=>{
+test('a missing PSU remains an empty bay while selecting cables and never advertises a live AC socket',()=>{
   const bench=fixture();assert.match(bench.picture,/EMPTY PSU BAY/);assert.doesNotMatch(bench.picture,/>POWER SUPPLY</);
   bench.click('asmTool','cables');bench.choose('[data-asm-cable]','ac');assert.doesNotMatch(bench.picture,/data-asm-picture="port-ac-inlet"/);
-  bench.click('asmPictureView','rear');assert.match(bench.picture,/EMPTY PSU BAY/);assert.doesNotMatch(bench.picture,/data-asm-picture="port-ac-inlet"/);
+  assert.match(bench.picture,/EMPTY PSU BAY/);assert.doesNotMatch(bench.picture,/data-asm-picture="port-ac-inlet"/);
   assert.doesNotMatch(bench.picture,/M544 463C464/);bench.click('asmCableAction','connect');assert.equal(bench.state.acConnected,false);
   bench.controller.dispose();
 });
 
-test('AC socket markers follow the PSU in the full schematic and its inlet in the rear view',()=>{
-  const bench=fixture({caseId:'INC-101'});bench.complete();bench.click('asmTool','cables');bench.choose('[data-asm-cable]','ac');bench.click('asmPictureView','bench');
+test('AC socket markers remain on the PSU in the full schematic',()=>{
+  const bench=fixture({caseId:'INC-101'});bench.complete();bench.click('asmTool','cables');bench.choose('[data-asm-cable]','ac');
   assert.match(bench.picture,/data-asm-picture="port-ac-inlet"[^>]*>[\s\S]*?<rect x="749" y="225"/);
-  bench.click('asmPictureView','rear');assert.match(bench.picture,/data-asm-picture="port-ac-inlet"[^>]*>[\s\S]*?<rect x="555" y="446"/);
+  assert.match(bench.picture,/data-asm-view="full-xray"/);
   assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
@@ -137,7 +163,7 @@ test('report cancellation, hide, Escape, pointer cancellation, backgrounding and
 });
 
 test('both HDMI ends and monitor input affect the schematic display; a picture never opens the lesson by itself',()=>{
-  const bench=fixture({caseId:'INC-101'});bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-pc');bench.choose('[data-asm-cable-target]','hdmi-gpu');bench.click('asmCableAction','connect');bench.click('asmPictureView','monitor');
+  const bench=fixture({caseId:'INC-101'});bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-pc');bench.choose('[data-asm-cable-target]','hdmi-gpu');bench.click('asmCableAction','connect');
   assert.match(bench.picture,/Classroom Desktop/);assert.equal(bench.state.documentOpened,false);
   bench.choose('[data-asm-cable]','hdmi-monitor');bench.click('asmCableAction','disconnect');assert.match(bench.picture,/NO SIGNAL/);assert.doesNotMatch(bench.picture,/Classroom Desktop/);
   bench.click('asmCableAction','connect');bench.click('asmPicture','open-document');assert.equal(bench.state.documentOpened,true);assert.match(bench.picture,/Original file opened/);bench.controller.dispose();
@@ -153,7 +179,7 @@ test('display tickets show only their needed controls until the complete set is 
   const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);
   assert.equal(bench.fields.get('[data-asm-ticket-title]').textContent,'Display checks');
   assert.equal(bench.fields.get('[data-asm-select]').value,'display');
-  assert.match(bench.picture,/Classroom monitor and original lesson document/);
+  assert.match(bench.picture,/Full PC X-ray workbench with monitor/);
   const buttons=bench.root.querySelectorAll('[data-asm-tool]');
   assert.deepEqual(buttons.filter(button=>!button.hidden).map(button=>button.dataset.asmTool),['inspect','cables']);
   assert.doesNotMatch(bench.fields.get('[data-asm-select]').innerHTML,/value="(?:psu|cpu|ram|paste)"/);
@@ -237,14 +263,14 @@ test('the optional complete set changes no equipment, never opens itself, and ca
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
-test('ticket guidance refresh keeps selected cable, view, disclosure and native focus without recording inspection as work',()=>{
+test('ticket guidance refresh keeps selected cable, full view, disclosure and native focus without recording inspection as work',()=>{
   const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);
-  bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-monitor');bench.click('asmPictureView','monitor');
+  bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-monitor');
   bench.fields.get('[data-asm-tool-drawer]').open=false;bench.choose('[data-asm-cable]','hdmi-monitor');
-  bench.click('asmPictureView','monitor');const focused=bench.doc.activeElement;bench.controller.update(bench.state);
+  const focused=bench.doc.activeElement;bench.controller.update(bench.state);
   assert.equal(bench.doc.activeElement,focused);assert.equal(bench.fields.get('[data-asm-tool-drawer]').open,false);
   assert.match(bench.fields.get('[data-asm-tool-controls]').innerHTML,/value="hdmi-monitor" selected/);
-  assert.match(bench.picture,/Classroom monitor and original lesson document/);
+  assert.match(bench.picture,/Full PC X-ray workbench with monitor/);
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
@@ -286,7 +312,7 @@ test('only curved fan blades rotate while PSU grilles, hubs and GPU housings rem
     assert.match(rotor[1],/C/);assert.doesNotMatch(rotor[1],/<rect|<circle|asm-fixed-grille/);
   }
   assert.match(bench.picture,/<\/g><path class="asm-fixed-grille" d="M338 99/);
-  bench.click('asmPictureView','rear');assert.match(bench.picture,/<\/g><path class="asm-fixed-grille" d="M183 406/);
+  assert.match(bench.picture,/data-asm-view="full-xray"/);
   assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
@@ -306,7 +332,7 @@ test('visual fan activity pauses for hidden workbenches, background pages and di
 test('monitor SVG and accessible transcript show actual ticket-specific startup evidence without granting work',()=>{
   const expected={'INC-101':'INPUT_NO_SIGNAL','INC-102':'MONITOR_STANDBY','INC-103':'PRE_VIDEO_POST','INC-104':'BOOT_DEVICE_UNAVAILABLE','INC-105':'BOOT_DEVICE_UNAVAILABLE','INC-106':'MONITOR_STANDBY','INC-107':'INPUT_NO_SIGNAL','INC-108':'INPUT_NO_SIGNAL'};
   for(const [caseId,code]of Object.entries(expected)){
-    const bench=fixture({caseId}),before=structuredClone(bench.state);bench.click('asmPictureView','monitor');
+    const bench=fixture({caseId}),before=structuredClone(bench.state);
     assert.ok(bench.picture.includes(`data-asm-monitor-screen="${code}"`),caseId);
     assert.equal(bench.fields.get('[data-asm-monitor-readout]').textContent,pcActivity(bench.state).display.readout);
     if(caseId==='INC-103')assert.doesNotMatch(bench.picture,/MEMORY NOT DETECTED|CLASSROOM UEFI/);
@@ -317,7 +343,7 @@ test('monitor SVG and accessible transcript show actual ticket-specific startup 
 });
 
 test('explicit power and original-file actions update the monitor snapshot without timers or premature success',()=>{
-  const bench=fixture({caseId:'INC-102'});bench.click('asmPictureView','monitor');
+  const bench=fixture({caseId:'INC-102'});
   assert.match(bench.picture,/MONITOR STANDBY/);bench.click('assemblyAction','plug-in');assert.match(bench.picture,/MONITOR STANDBY/);
   assert.equal(bench.state.booted,false);bench.click('assemblyAction','boot');assert.match(bench.picture,/Classroom Desktop/);
   assert.equal(bench.state.documentOpened,false);assert.match(bench.fields.get('[data-asm-monitor-readout]').textContent,/UEFI and boot manager: completed/);

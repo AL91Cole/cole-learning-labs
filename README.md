@@ -6,6 +6,10 @@ A professional portfolio and browser-based technology learning platform created 
 
 Coding drafts also survive normal site navigation and browser back/forward within this page. Leaving the editor preserves its current program as untested lab work; device persistence still requires the learner’s saving choice. Explicit resume, reset, and clear actions do not revive the previous editor draft.
 
+PC investigations keep the full PC X-ray visible throughout the repair, including when selecting tools, cables, or saved work. The monitor remains part of the same picture; its startup transcript is available below the equipment. There are no cropped monitor/rear/inside views.
+
+PR #22 has also been checked in the actual Windows Microsoft Edge application, including its private Linux terminal and teacher controls. See [Edge acceptance results](docs/PR22-EDGE-TESTING.md) for the verified workflows and remaining school-device/network testing.
+
 The site combines a light professional portfolio with dark teal and navy learning workspaces and the simpler PR #6-style equipment diagrams inside hardware investigations. Learners read a ticket, repair the simulated equipment or settings, test the result, and explain whether the original task works. The home page and lab catalog use direct links and filters without a 3D classroom hub.
 
 Each investigation stays on one page with **Request & clues** beside **Workbench & test**. At widths of 720 CSS pixels and above, each pane scrolls independently; smaller screens stack both sections without hiding either. The three numbered buttons focus the request or workstation, or open **Check & explain** below the workstation. Navigation preserves questions, notes, equipment, and unfinished workspace drafts. Help, practice options, vocabulary, experiment notes and activity history start closed in named disclosures. The five beginner labs also keep their equipment visible beside their learning steps, including Check.
@@ -198,7 +202,7 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-The `20261018-split22` source release (version `2.21.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Source changes and automated checks do not establish that this release has reached production or passed testing on physical school devices. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
+The `20261018-xray22` source release (version `2.22.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Source changes and automated checks do not establish that this release has reached production or passed testing on physical school devices. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 

@@ -147,7 +147,9 @@ test('source and cable controls render as labeled native buttons without changin
     if(id==='INC-108') {
       const rear={...state,view:'rear'};
       renderHardware(root,id,rear,()=>{dispatched++;});
-      assert.match(root.innerHTML,/MONITOR END UNPLUGGED/);
+      assert.match(root.innerHTML,/data-hw-view="full-xray"/);
+      assert.match(root.innerHTML,/HDMI socket empty/);
+      assert.doesNotMatch(root.innerHTML,/data-hw-action="view-/);
     }
   }
 });

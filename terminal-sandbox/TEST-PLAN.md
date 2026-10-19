@@ -2,6 +2,8 @@
 
 This private review uses the PR code and real Linux Docker containers. It does not change `www.colelearninglabs.com`, Cloudflare DNS, or the public-site classroom gate. Use fictional classroom examples only.
 
+The completed Windows Microsoft Edge review is recorded in [PR #22 Edge acceptance](../docs/PR22-EDGE-TESTING.md).
+
 ## Start and open
 
 Keep Docker Desktop running with Linux containers. From the repository folder:
@@ -44,7 +46,7 @@ Open **http://127.0.0.1:4173/#labs**. These browser simulations do not connect t
 
 - Open a ticket in each of the five pathways. The Request & clues pane should remain beside the workstation at Chromebook and tablet widths. Scroll each pane independently.
 - Type an unfinished question and change a software field or code draft without applying it. Choose **Check & explain**, **Request & clues**, then **Workbench & test**. Confirm the drafts survive and the workstation returns to its top controls.
-- Complete a repair with the normal virtual controls. Try a cable drag and its large-button alternative. Opening Check & explain must keep the request available and must not award completion by itself.
+- Complete a repair with the normal virtual controls. Every PC investigation must stay in Full PC X-ray, including when selecting tools/cables or resuming an older saved view. Try a cable drag and its large-button alternative. Opening Check & explain must keep the request available and must not award completion by itself.
 - Try finishing with a missing repair idea. The idea drawer should open and its required field should be visible.
 - Open each beginner lab. Its equipment should remain visible during Explore, Practice and Check, including the coding editor in the coding pathway.
 - Below 720 CSS pixels, both sections should remain on the same page in a readable stack. Check text zoom and keyboard focus. Test the actual managed device and school network separately before classroom rollout.
