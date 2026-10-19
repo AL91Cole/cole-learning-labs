@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261018-monitor22';
+import { pcActivity } from './pc-activity.js?release=20261018-split22';
 /** Beginner equipment views. The model owns every answer and practice result. */
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tracks=new Set(['hardware','network','ai','security','coding']);

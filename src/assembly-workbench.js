@@ -1,8 +1,8 @@
-import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261018-monitor22';
-import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261018-monitor22';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261018-monitor22';
-import { workbenchGuidance } from './workbench-guidance.js?release=20261018-monitor22';
-import { pcActivity } from './pc-activity.js?release=20261018-monitor22';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261018-split22';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261018-split22';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261018-split22';
+import { workbenchGuidance } from './workbench-guidance.js?release=20261018-split22';
+import { pcActivity } from './pc-activity.js?release=20261018-split22';
 
 const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
 const NAMES = Object.fromEntries(GROUPS);
@@ -30,10 +30,10 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
   root.innerHTML=`<section class="asm-bench asm-repair" aria-label="Schematic repair workbench">
     <header class="asm-ticket-guide"><h3 data-asm-ticket-title></h3><p data-asm-instruction></p></header>
     <div class="asm-power" role="group" aria-label="Virtual PC power controls"><div class="asm-machine-status"><strong data-asm-power></strong><span data-asm-next></span></div>${button('power-off','Power off')}${button('unplug','Unplug AC')}${button('plug-in','Connect AC')}${button('boot','Test PC')}${button('open-document','Open lesson')}</div>
-    <p class="asm-activity" role="status"><strong data-asm-activity-label></strong><span data-asm-activity-detail></span></p>
-    <section class="asm-toolbox" aria-label="Workbench tools"><div class="asm-tool-buttons" role="group" aria-label="Choose a workbench tool">${ASSEMBLY_TOOLS.map(tool=>`<button type="button" data-asm-tool="${tool.id}" aria-pressed="${tool.id==='inspect'}">${escape(tool.label)}</button>`).join('')}</div></section>
-    <div class="asm-picture-tabs" role="group" aria-label="Equipment picture views"><button type="button" data-asm-picture-view="bench" aria-pressed="true">Full PC X-ray</button><button type="button" data-asm-picture-view="inside">Inside PC</button><button type="button" data-asm-picture-view="rear">Rear connections</button><button type="button" data-asm-picture-view="monitor">Monitor</button></div>
+    <div class="asm-top-controls"><section class="asm-toolbox" aria-label="Workbench tools"><div class="asm-tool-buttons" role="group" aria-label="Choose a workbench tool">${ASSEMBLY_TOOLS.map(tool=>`<button type="button" data-asm-tool="${tool.id}" aria-pressed="${tool.id==='inspect'}">${escape(tool.label)}</button>`).join('')}</div></section>
+    <div class="asm-picture-tabs" role="group" aria-label="Equipment picture views"><button type="button" data-asm-picture-view="bench" aria-pressed="true">Full PC X-ray</button><button type="button" data-asm-picture-view="inside">Inside PC</button><button type="button" data-asm-picture-view="rear">Rear connections</button><button type="button" data-asm-picture-view="monitor">Monitor</button></div></div>
     <div class="asm-layout"><div class="asm-visual"><div class="asm-schematic" data-asm-scene aria-label="Labeled virtual PC schematic"></div></div></div>
+    <p class="asm-activity" role="status"><strong data-asm-activity-label></strong><span data-asm-activity-detail></span></p>
     <details class="asm-monitor-readout"><summary>Read monitor text & startup clues</summary><p data-asm-monitor-readout role="status" aria-live="polite"></p><p class="asm-monitor-note">Messages belong to this authored workstation. Other PCs can use different startup indicators.</p></details>
     <p class="asm-feedback" data-asm-feedback role="status" aria-live="polite">Tap a labeled part to inspect it. Choose a tool to make a change, then test the PC.</p>
     <div class="asm-current"><h4 data-asm-part-title></h4><p data-asm-part-state></p><button type="button" data-asm-reveal="part">Make a change</button></div>

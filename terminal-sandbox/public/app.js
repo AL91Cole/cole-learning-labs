@@ -122,6 +122,7 @@ export function createTerminalSandboxClient({
   const ids = [
     "lab-selector",
     "lab-track-badge",
+    "ticket-brief",
     "milestone-progress",
     "milestone-count-text",
     "milestone-list",
@@ -200,10 +201,9 @@ export function createTerminalSandboxClient({
     fit = null,
     resizeObserver = null,
     resizeFrame = 0;
-  const narrowViewport = win.matchMedia?.("(max-width: 800px)");
+  const narrowViewport = win.matchMedia?.("(max-width: 719px)");
   const layout = {
     compact: narrowViewport?.matches === true,
-    pane: "instructions",
     tab: "instructions",
     width: 38,
     drag: null,
@@ -249,12 +249,10 @@ export function createTerminalSandboxClient({
     );
   }
   function renderLayout() {
-    el["learning-panel"].hidden = layout.compact && layout.pane !== "instructions";
-    el["terminal-workspace"].hidden = layout.compact && layout.pane !== "workspace";
+    el["learning-panel"].hidden = false;
+    el["terminal-workspace"].hidden = false;
     el["split-divider"].hidden = layout.compact;
     el["pane-controls"].hidden = !layout.compact;
-    for (const name of ["instructions", "workspace"])
-      el[`show-${name}`].setAttribute("aria-pressed", String(layout.pane === name));
     for (const name of ["instructions", "checks"]) {
       const selected = layout.tab === name;
       el[`${name}-tab`].setAttribute("aria-selected", String(selected));
@@ -265,8 +263,12 @@ export function createTerminalSandboxClient({
   }
   function choosePane(name) {
     if (!["instructions", "workspace"].includes(name)) return;
-    layout.pane = name;
-    renderLayout();
+    if (layout.compact) {
+      const target = el[name === "instructions" ? "learning-panel" : "terminal-workspace"];
+      target.focus({ preventScroll: true });
+      target.scrollIntoView?.({ block: "start", behavior: "instant" });
+    }
+    queueFit();
   }
   function chooseTab(name, focus = false) {
     if (!["instructions", "checks"].includes(name)) return;
@@ -466,6 +468,7 @@ export function createTerminalSandboxClient({
     el["lab-track-badge"].textContent =
       `${text(value.track, 30)} · ${text(value.grade, 30)}`;
     el["markdown-instructions"].innerHTML = renderMarkdown(value.markdown);
+    el["ticket-brief"].textContent = text(value.summary, 600) || "Read the practice instructions, investigate in the terminal, then check your work.";
   }
   function renderStudents() {
     el["teacher-student-grid"].replaceChildren();

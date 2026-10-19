@@ -75,3 +75,18 @@
 
 /* Only fan blades move; the housing and fixed grille stay still. */
 .foundation-pc-fan{transform-box:fill-box;transform-origin:center;animation:none}.foundation-pc-fan[data-running="true"]{animation:foundation-fan-turn 1.6s linear infinite}.foundation-pc-fan[data-pc-fan="gpu"]{animation-duration:2s}.foundation-pc-fan[data-pc-fan="psu"]{animation-duration:1.8s}[data-pc-motion="paused"] .foundation-pc-fan{animation-play-state:paused}.foundation-pc-status{border-top:1px solid var(--foundation-edge);padding:.4rem .75rem;background:#0c1d2a}.foundation-pc-status>summary{min-height:44px;display:list-item;align-content:center;cursor:pointer;color:var(--foundation-accent);font-size:.85rem}.foundation-pc-status>p{font-size:.85rem;line-height:1.5;color:var(--foundation-muted)}@keyframes foundation-fan-turn{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.foundation-pc-fan[data-running="true"]{animation:none}}
+
+/* Beginner prompts and equipment share the same two-pane learning layout. */
+.foundation-lab{max-width:1680px}
+.foundation-split{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(0,2fr);gap:16px;align-items:start}
+.foundation-instructions,.foundation-split>.foundation-stage{min-width:0;max-height:calc(100dvh - 108px);overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;scroll-padding:12px;border:1px solid var(--foundation-edge);border-radius:10px;padding:14px;background:#0c1d2a}
+.foundation-pane-heading{font-size:1.08rem;color:#dff9f3;line-height:1.4;letter-spacing:-.01em;margin:0 0 12px}
+.foundation-instructions .foundation-prompt{padding:12px;margin-bottom:12px}
+.foundation-instructions .foundation-prompt h2{font-size:1.2rem}
+.foundation-instructions .foundation-answer-options{grid-template-columns:minmax(0,1fr)}
+.foundation-instructions .foundation-feedback{margin:0}
+.foundation-split>.foundation-stage{margin-bottom:0}
+.foundation-split>.foundation-help,.foundation-split>.foundation-small{grid-column:1/-1;margin-block:0}
+.foundation-split .foundation-code-workspace{padding:12px;margin-top:12px}
+@media(min-width:720px) and (max-width:1000px){.foundation-split{grid-template-columns:minmax(245px,.9fr) minmax(0,1.65fr);padding:12px;gap:10px}.foundation-instructions,.foundation-split>.foundation-stage{padding:10px}.foundation-equipment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.foundation-part-portrait{grid-template-columns:85px minmax(0,1fr)}.foundation-part-portrait svg{width:85px}}
+@media(max-width:719px){.foundation-split{grid-template-columns:minmax(0,1fr);gap:14px;padding:10px}.foundation-instructions,.foundation-split>.foundation-stage{max-height:none;overflow:visible;scrollbar-gutter:auto;padding:12px}.foundation-split>.foundation-help,.foundation-split>.foundation-small{grid-column:1}.foundation-instructions .foundation-answer-options{grid-template-columns:minmax(0,1fr)}}

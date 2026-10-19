@@ -1,6 +1,6 @@
-import {learningModes,renderLabLearning} from './teaching.js?release=20261018-monitor22';
-import {renderExperiments,mountExperiments} from './experiments.js?release=20261018-monitor22';
-import {transferCaseFor} from './scenarios.js?release=20261018-monitor22';
+import {learningModes,renderLabLearning} from './teaching.js?release=20261018-split22';
+import {renderExperiments,mountExperiments} from './experiments.js?release=20261018-split22';
+import {transferCaseFor} from './scenarios.js?release=20261018-split22';
 
 export function learningRoute(hash) {
   const [path,query='']=String(hash||'').replace(/^#/,'').split('?'),params=new URLSearchParams(query);

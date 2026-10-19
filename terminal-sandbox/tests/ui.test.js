@@ -101,6 +101,7 @@ function fixture({
       focus() {
         doc.activeElement = this;
       },
+      scrollIntoView(options) { this.scrolledIntoView = options; },
       closest(selector) {
         if (selector === "button")
           return this.tagName === "BUTTON" ? this : null;
@@ -368,6 +369,7 @@ function fixture({
         lab: {
           track: "network",
           grade: "7–12",
+          summary: "Investigate the fictional resolver configuration and restore DNS.",
           markdown: "# Practice\n```sh\ncat ~/lab/network-sheet.txt\n```",
         },
         milestones: [],
@@ -407,7 +409,9 @@ test("the page uses only local terminal assets, split instructions and explicit 
     /CLL-CLASS-712|100%|super secure|COPPA compliant|Wi-Fi safe/i,
   );
   assert.match(css, /min-height:\s*44px/);
-  assert.match(css, /@media\s*\(max-width:\s*800px\)/);
+  assert.match(css, /@media\s*\(max-width:\s*719px\)/);
+  assert.match(html, /id="ticket-brief"/);
+  assert.doesNotMatch(html, /id="show-(?:instructions|workspace)"[^>]*aria-pressed/);
   assert.doesNotMatch(css, /body\s*\{[^}]*overflow:\s*hidden/);
 });
 
@@ -955,24 +959,26 @@ test("pointer resizing cancels safely without a stuck capture or late layout wri
   assert.equal(f.frames.size, 0);
 });
 
-test("small screens show one pane, refit when the workspace returns and preserve guide tab choice", () => {
+test("small screens retain both panes and section jumps preserve the guide tab and terminal", () => {
   const f = fixture({ compact: true });
   assert.equal(f.fields.get("pane-controls").hidden, false);
   assert.equal(f.fields.get("learning-panel").hidden, false);
-  assert.equal(f.fields.get("terminal-workspace").hidden, true);
+  assert.equal(f.fields.get("terminal-workspace").hidden, false);
   assert.equal(f.fields.get("split-divider").hidden, true);
   f.flush();
-  assert.equal(f.term.addon.fits || 0, 0);
+  assert.equal(f.term.addon.fits, 1);
   f.click("checks-tab");
   f.click("show-workspace");
   f.flush();
-  assert.equal(f.term.addon.fits, 1);
-  assert.equal(f.fields.get("learning-panel").hidden, true);
-  assert.equal(f.fields.get("show-workspace").getAttribute("aria-pressed"), "true");
+  assert.equal(f.term.addon.fits, 2);
+  assert.equal(f.fields.get("learning-panel").hidden, false);
+  assert.equal(f.doc.activeElement, f.fields.get("terminal-workspace"));
+  assert.equal(f.fields.get("terminal-workspace").scrolledIntoView.block, "start");
   f.click("show-instructions");
   f.observers[0].callback();
   f.flush();
-  assert.equal(f.term.addon.fits, 1, "a hidden terminal is never fit to zero dimensions");
+  assert.equal(f.term.addon.fits, 3, "the still-visible terminal refits without resetting its session");
+  assert.equal(f.doc.activeElement, f.fields.get("learning-panel"));
   assert.equal(f.fields.get("checks-panel").hidden, false);
   f.media.matches = false;
   f.media.emit("change", { matches: false });
@@ -981,12 +987,12 @@ test("small screens show one pane, refit when the workspace returns and preserve
   assert.equal(f.fields.get("terminal-workspace").hidden, false);
   assert.equal(f.fields.get("split-divider").hidden, false);
   assert.equal(f.fields.get("pane-controls").hidden, true);
-  assert.equal(f.term.addon.fits, 2);
+  assert.equal(f.term.addon.fits, 4);
   f.observers[0].callback();
   f.observers[0].callback();
   assert.equal(f.frames.size, 1);
   f.flush();
-  assert.equal(f.term.addon.fits, 3);
+  assert.equal(f.term.addon.fits, 5);
   assert.equal(f.sockets.length, 0);
   f.dispose();
 });
@@ -1001,6 +1007,8 @@ test("the current objective advances only after server verification and does not
   assert.equal(f.fields.get("objective-title").textContent, first.title);
   assert.equal(f.fields.get("checks-tab").textContent, "Your checks (0/2)");
   f.click("checks-tab");
+  assert.equal(f.fields.get("ticket-brief").textContent, "Investigate the fictional resolver configuration and restore DNS.");
+  assert.equal(f.fields.get("ticket-brief").hidden, false);
   f.click("verify-milestones-btn");
   assert.equal(f.ws.messages.at(-1).type, "milestone:verify");
   assert.equal(f.fields.get("objective-label").textContent, "STEP 1 OF 2");
@@ -1018,7 +1026,7 @@ test("the current objective advances only after server verification and does not
 test("authenticated teacher controls open in the workspace on small screens without a Linux session", () => {
   const f = fixture({ compact: true });
   f.teacher();
-  assert.equal(f.fields.get("learning-panel").hidden, true);
+  assert.equal(f.fields.get("learning-panel").hidden, false);
   assert.equal(f.fields.get("terminal-workspace").hidden, false);
   assert.equal(f.fields.get("teacher-dashboard").hidden, false);
   assert.equal(f.fields.get("terminal-container").hidden, true);

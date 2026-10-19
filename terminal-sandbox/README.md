@@ -4,7 +4,7 @@ This is an **unmerged, disabled-by-default Docker service scaffold**, with a sep
 
 For the local backend, use the [local setup](LOCAL-TESTING.md) and [student/teacher test walkthrough](TEST-PLAN.md). Run `npm --prefix terminal-sandbox run review:start` after the prerequisites below. The helper leaves a private, loopback-only backend running and prints its URL plus a protected teacher-key file path. Use `review:status` and `review:stop` through the same npm command. The default server and production compose file remain disabled.
 
-The terminal has a resizable guide/workspace split, Instructions and Your checks tabs, and server-derived next-step guidance. Narrow screens switch between the guide and the workspace; resizing or returning to the terminal refits xterm. The interface uses Cole Learning Labs branding and original instructions, with no CompTIA content or affiliation.
+The terminal has a resizable guide/workspace split, Instructions and Your checks tabs, a persistent Request & clues brief, and server-derived next-step guidance. At 720 CSS pixels and above the guide and terminal stay side by side. Narrower screens stack both without hiding either; resizing refits xterm without replacing the session. The interface uses Cole Learning Labs branding and original instructions, with no CompTIA content or affiliation.
 
 See [the PR #22 architecture audit](../docs/PR22-ARCHITECTURE-AUDIT.md) for the original shortcomings, verification evidence and remaining deployment work.
 

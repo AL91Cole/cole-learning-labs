@@ -103,15 +103,16 @@
       <span id="objective-label" class="eyebrow">GET READY</span>
       <div><h2 id="objective-title">Choose a lab, then start a server session.</h2><p id="objective-detail">Read the instructions, work in the terminal, then check your results.</p></div>
     </section>
-    <div id="pane-controls" class="pane-controls" role="group" aria-label="Small screen view" hidden>
-      <button id="show-instructions" type="button" aria-controls="learning-panel" aria-pressed="true">Instructions</button>
-      <button id="show-workspace" type="button" aria-controls="terminal-workspace" aria-pressed="false">Workspace</button>
+    <div id="pane-controls" class="pane-controls" role="group" aria-label="Jump to a section" hidden>
+      <button id="show-instructions" type="button" aria-controls="learning-panel">Jump to request</button>
+      <button id="show-workspace" type="button" aria-controls="terminal-workspace">Jump to terminal</button>
     </div>
     <main id="lab-layout" class="split-layout">
       <aside
         id="learning-panel"
         class="instructions-sidebar"
         aria-label="Lab instructions and milestones"
+        tabindex="-1"
       >
         <label for="lab-selector"
           ><span class="eyebrow">PRACTICE LAB</span
@@ -123,6 +124,10 @@
             <option value="INC-104">Classroom storage investigation</option>
           </select></label
         >
+        <section class="ticket-brief" aria-labelledby="ticket-brief-heading">
+          <h2 id="ticket-brief-heading">Request &amp; clues</h2>
+          <p id="ticket-brief">Choose a practice lab and start a session to see its request.</p>
+        </section>
         <div class="learning-tabs" role="tablist" aria-label="Learning guide">
           <button id="instructions-tab" type="button" role="tab" aria-controls="instructions-panel" aria-selected="true" tabindex="0">Instructions</button>
           <button id="checks-tab" type="button" role="tab" aria-controls="checks-panel" aria-selected="false" tabindex="-1">Your checks</button>

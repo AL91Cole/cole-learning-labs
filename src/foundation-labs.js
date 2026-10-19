@@ -1,5 +1,5 @@
-import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261018-monitor22';
-import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261018-monitor22';
+import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261018-split22';
+import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261018-split22';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sections=['explore','practice','check'];
@@ -14,18 +14,20 @@ export function renderFoundationLab(candidate,record) {
   return `<section class="foundation-lab" aria-labelledby="foundation-title">
     <header class="foundation-heading"><a href="#labs">← All labs</a><p class="foundation-eyebrow">START HERE · ${esc(lab.code||lab.id)} · GRADES ${esc(lab.grade)}</p><h1 id="foundation-title">${esc(lab.title)}</h1><p>${esc(lab.goal)}</p></header>
     <div class="foundation-tabs" role="tablist" aria-label="Beginner lab sections">${sections.map((id,i)=>`<button type="button" id="foundation-tab-${id}" data-foundation-section="${id}" role="tab" aria-controls="foundation-panel-${id}" aria-selected="${i===0}" tabindex="${i===0?0:-1}"><span>${i+1}</span> ${['Explore','Practice','Check'][i]}</button>`).join('')}</div>
-    <div class="foundation-body">
+    <div class="foundation-body foundation-split">
+      <div class="foundation-instructions" role="region" aria-label="Request and clues for this beginner lab"><h2 class="foundation-pane-heading">Request &amp; clues</h2>
       <section id="foundation-panel-explore" data-foundation-panel="explore" role="tabpanel" aria-labelledby="foundation-tab-explore" tabindex="-1"><div class="foundation-prompt" data-foundation-explore></div></section>
       <section id="foundation-panel-practice" data-foundation-panel="practice" role="tabpanel" aria-labelledby="foundation-tab-practice" tabindex="-1" hidden><div class="foundation-prompt" data-foundation-practice></div>
-        <div class="foundation-code-workspace" data-foundation-code-workspace hidden><label for="foundation-code">Your practice code</label><textarea id="foundation-code" data-foundation-code maxlength="4000" rows="6" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="foundation-code-help">${esc(current.code)}</textarea><p id="foundation-code-help">Change the operator, then run the same code with every practice input. Use fictional practice code only.</p><button type="button" class="foundation-primary" data-foundation-run>Run all practice inputs</button><div data-foundation-code-results role="status" aria-live="polite"></div></div>
       </section>
       <section id="foundation-panel-check" data-foundation-panel="check" role="tabpanel" aria-labelledby="foundation-tab-check" tabindex="-1" hidden><div class="foundation-prompt" data-foundation-check></div><div class="foundation-handoff"><button type="button" class="foundation-primary" data-foundation-report>Review my practice report</button><a href="#lab/${esc(lab.nextLab)}">Next: try ticket ${esc(lab.nextLab)} →</a></div><p class="foundation-small">A report can include unfinished practice. Review and save it before leaving; saving does not submit it to a teacher.</p></section>
-      <section class="foundation-stage" data-foundation-stage aria-label="Equipment and learning items"><div class="foundation-visual" data-foundation-visual>${renderFoundationVisual(lab,current)}</div>
+      <p class="foundation-feedback" data-foundation-feedback role="status" aria-live="polite">Everything here is virtual. Explore the picture or use the large item buttons.</p>
+      </div>
+      <section class="foundation-stage" data-foundation-stage aria-label="Equipment and learning items"><h2 class="foundation-pane-heading">Workbench</h2><div class="foundation-visual" data-foundation-visual>${renderFoundationVisual(lab,current)}</div>
         <div class="foundation-item-buttons" role="group" aria-label="Choose an item to explore"${lab.track==='hardware'?'':' hidden'}>${lab.items.map(item=>`<button type="button" data-foundation-inspect="${esc(item.id)}" aria-pressed="false">${esc(item.label)}<span data-foundation-visited="${esc(item.id)}"></span></button>`).join('')}</div>
+        <div class="foundation-code-workspace" data-foundation-code-workspace hidden><label for="foundation-code">Your practice code</label><textarea id="foundation-code" data-foundation-code maxlength="4000" rows="6" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="foundation-code-help">${esc(current.code)}</textarea><p id="foundation-code-help">Change the operator, then run the same code with every practice input. Use fictional practice code only.</p><button type="button" class="foundation-primary" data-foundation-run>Run all practice inputs</button><div data-foundation-code-results role="status" aria-live="polite"></div></div>
         <div class="foundation-caption" aria-live="polite"><h2 data-foundation-item-title>Choose an item in the picture or the buttons.</h2><p data-foundation-looks></p><p data-foundation-role></p></div>
       </section>
-      <p class="foundation-feedback" data-foundation-feedback role="status" aria-live="polite">Everything here is virtual. Explore the picture or use the large item buttons.</p>
-      <details class="foundation-help"><summary>Help with this beginner lab</summary><ol><li>Explore each item. Read what it looks like and the job it does.</li><li>In Practice, choose an answer, read the feedback, and continue. Then follow one mini-job step at a time.</li><li>In Check, review what you tried and open your report. A full ticket is available when you are ready.</li></ol><p>Use Tab to move between controls and Enter or Space to choose. The tab row also supports Left/Right Arrow, Home and End. Choose a labeled part to inspect it, then use the current practice button to make a change.</p></details>
+      <details class="foundation-help"><summary>Help with this beginner lab</summary><ol><li>Explore each item. Read what it looks like and the job it does.</li><li>In Practice, choose an answer, read the feedback, and continue. Then follow one mini-job step at a time.</li><li>The equipment stays beside these instructions. In Check, review what you tried and open your report. A full ticket is available when you are ready.</li></ol><p>Use Tab to move between controls and Enter or Space to choose. The tab row also supports Left/Right Arrow, Home and End. Choose a labeled part to inspect it, then use the current practice button to make a change.</p></details>
       <p class="foundation-small">Practice stays on this page. No sign-in is needed. Keep real names, emails, IDs and passwords out of your work.</p>
     </div></section><dialog id="lab-dialog"><div id="dialog-content"></div><button type="button" id="dialog-close" class="button button-outline">Close</button></dialog>`;
 }
@@ -85,7 +87,8 @@ export function mountFoundationLab(root,{lab:candidate,record,onChange=()=>{},on
     scene?.cancelInteraction?.();section=next;
     all('[data-foundation-panel]').forEach(panel=>{panel.hidden=panel.dataset.foundationPanel!==section;});
     all('[data-foundation-section]').forEach(tab=>{const active=tab.dataset.foundationSection===section;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;});
-    $('[data-foundation-stage]').hidden=section==='check';scene?.setMode?.(section);scene?.setVisible?.(section!=='check');
+    // The equipment stays beside every instruction tab, including Check.
+    $('[data-foundation-stage]').hidden=false;scene?.setMode?.(section);scene?.setVisible?.(true);
     if(focusTab)$(`[data-foundation-section="${section}"]`)?.focus({preventScroll:true});
   }
   function click(event) {

@@ -1,6 +1,6 @@
-import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261018-monitor22';
-import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261018-monitor22';
-import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261018-monitor22';
+import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261018-split22';
+import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261018-split22';
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261018-split22';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },
