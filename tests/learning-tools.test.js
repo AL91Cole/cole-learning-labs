@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {learningRoute,mountLabLearning} from '../src/learning-tools.js';
+import {learningRoute,labPageHash,mountLabLearning} from '../src/learning-tools.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {normalizeLabRecord} from '../src/records.js';
 
@@ -9,7 +9,7 @@ test('routes accept reviewed mode and sequence values while ignoring unrelated q
   assert.deepEqual(learningRoute('#labs'),{page:'labs',id:undefined,mode:'guided',sequence:null});
   for(const mode of ['guided','independent','challenge']) {
     const route=learningRoute(`#lab/INC-101?mode=${mode}&sequence=opening-day&email=fictional%40example.test&studentId=private-marker`);
-    assert.deepEqual(route,{page:'lab',id:'INC-101',mode,sequence:'opening-day'});
+    assert.deepEqual(route,{page:'lab',id:'INC-101',section:1,mode,sequence:'opening-day'});
     assert.doesNotMatch(JSON.stringify(route),/email|studentId|private-marker|example/);
   }
   for(const value of ['unknown','javascript:alert(1)','challenge&student=marker','<script>','CHALLENGE']) {
@@ -21,9 +21,29 @@ test('routes accept reviewed mode and sequence values while ignoring unrelated q
   assert.equal(learningRoute('#lab/INC-101?mode=challenge&mode=unknown').mode,'challenge');
 });
 
+
+test('all investigation pages deep-link with reviewed support and sequence settings',()=>{
+  for(const scenario of SCENARIOS)for(const [index,step] of ['request','workbench','explain'].entries()) {
+    const hash=`#lab/${scenario.id}/${step}?mode=independent&sequence=opening-day&student=private-marker`;
+    assert.deepEqual(learningRoute(hash),{page:'lab',id:scenario.id,section:index+1,mode:'independent',sequence:'opening-day'});
+    assert.equal(labPageHash(scenario.id,index+1,{mode:'independent',sequence:'opening-day'}),hash.replace('&student=private-marker',''));
+  }
+  for(const step of ['', '/unknown','/0','/4','/1.5','/WORKBENCH','/%3Cscript%3E','/__proto__','/constructor','/toString']) {
+    assert.equal(learningRoute('#lab/INC-101'+step+'?mode=challenge').section,1,'Legacy and invalid step routes open Request & clues: '+step);
+  }
+  assert.equal(learningRoute('#learn/hardware').section,undefined,'Beginner pathways retain their own Explore/Practice/Check navigation.');
+});
+
+test('lab page links normalize invalid steps and discard unreviewed assignment settings',()=>{
+  for(const section of [undefined,0,4,1.5,NaN,'workbench']) {
+    assert.equal(labPageHash('INC-101',section,{mode:'unknown',sequence:'private-marker'}),'#lab/INC-101/request?mode=guided');
+  }
+  assert.equal(labPageHash('INC-101',2,{mode:'challenge',sequence:'opening-day'}),'#lab/INC-101/workbench?mode=challenge&sequence=opening-day');
+});
+
 // A small view boundary: only the controls this controller owns are remountable.
 // Separate student editor/question/note elements must survive mode changes.
-function viewFixture(t) {
+function viewFixture(t,hash='#lab/CODE-503/workbench?mode=guided&sequence=opening-day') {
   const nodes=new Map(),classes=new Set(),documentListeners=new Map(),urls=[];
   function node(key) {
     if(!nodes.has(key))nodes.set(key,{value:'',innerHTML:'',textContent:'',dataset:{},hidden:false,children:[],listeners:new Map(),
@@ -35,16 +55,18 @@ function viewFixture(t) {
   const host=node('#experiment-tools');
   host.querySelector=selector=>node('host:'+selector);
   host.querySelectorAll=selector=>selector==='[data-experiment-field]'?inputs:[];
+  node('.lab-shell').dataset.section=String(learningRoute(hash).section||1);
   node('.lab-shell').classList={toggle(name,enabled){if(enabled)classes.add(name);else classes.delete(name);}};
   const root={querySelector:node};
   Object.defineProperty(root,'innerHTML',{set(){assert.fail('Switching support must not remount the student workspace.');}});
-  const globals={document:{createElement:tag=>node('created-'+tag+'-'+nodes.size),addEventListener:(event,handler)=>documentListeners.set(event,handler),removeEventListener:(event,handler)=>{if(documentListeners.get(event)===handler)documentListeners.delete(event);}},history:{replaceState:(_state,_title,url)=>urls.push(url)}};
+  const location={hash};
+  const globals={location,document:{createElement:tag=>node('created-'+tag+'-'+nodes.size),addEventListener:(event,handler)=>documentListeners.set(event,handler),removeEventListener:(event,handler)=>{if(documentListeners.get(event)===handler)documentListeners.delete(event);}},history:{replaceState(_state,_title,url){urls.push(url);location.hash=url;}}};
   for(const [key,value] of Object.entries(globals)) {
     const descriptor=Object.getOwnPropertyDescriptor(globalThis,key);
     Object.defineProperty(globalThis,key,{value,configurable:true,writable:true});
     t.after(()=>{if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];});
   }
-  return {root,node,classes,inputs,documentListeners,urls};
+  return {root,node,classes,inputs,documentListeners,urls,location};
 }
 
 test('support mode changes preserve unsaved questions, code, notes, and the experiment draft',t=>{
@@ -64,7 +86,7 @@ test('support mode changes preserve unsaved questions, code, notes, and the expe
     assert.equal(prediction.value,'I predict a different first counter will change the first line.');
     assert.deepEqual([...view.classes],['mode-'+mode]);
     assert.notEqual(view.node('.intake-questions').open,true,'Choosing a support level must not force optional starters open.');
-    assert.equal(view.urls.at(-1),`#lab/CODE-503?mode=${mode}&sequence=opening-day`);
+    assert.equal(view.urls.at(-1),`#lab/CODE-503/workbench?mode=${mode}&sequence=opening-day`);
   }
   assert.equal(saves,saved,'A mode selection must not save or submit an unsubmitted editor draft.');
   assert.equal(tests,0);
@@ -76,15 +98,28 @@ test('support mode changes preserve unsaved questions, code, notes, and the expe
 });
 
 test('invalid support values fall back to guided and transfer links contain only public assignment settings',t=>{
-  const view=viewFixture(t),scenario=SCENARIOS.find(item=>item.id==='INC-101'),record=normalizeLabRecord(scenario);
+  const view=viewFixture(t,'#lab/INC-101/explain?mode=guided'),scenario=SCENARIOS.find(item=>item.id==='INC-101'),record=normalizeLabRecord(scenario);
   const dispose=mountLabLearning(view.root,{scenario,record,mode:'unknown',onSave(){},onTest:()=>false});
   assert.equal(view.node('#learning-mode').value,'guided');
   const transfer=view.node('#learning-transfer');
   assert.equal(transfer.hidden,false);
-  assert.equal(transfer.children.find(child=>child.href)?.href,'#lab/INC-107?mode=challenge');
+  assert.equal(transfer.children.find(child=>child.href)?.href,'#lab/INC-107/request?mode=challenge');
   const select=view.node('#learning-mode');select.value='challenge&email=fictional@example.test';select.listeners.get('change')();
   assert.equal(select.value,'guided');
-  assert.equal(view.urls.at(-1),'#lab/INC-101?mode=guided');
+  assert.equal(view.urls.at(-1),'#lab/INC-101/explain?mode=guided');
   assert.doesNotMatch(view.urls.join(' '),/email|example|student|token/);
+  dispose();
+});
+
+
+test('support changes retain whichever investigation page is currently visible',t=>{
+  const view=viewFixture(t),scenario=SCENARIOS.find(item=>item.id==='CODE-503'),record=normalizeLabRecord(scenario);
+  const dispose=mountLabLearning(view.root,{scenario,record,mode:'guided',sequence:'opening-day',onSave(){},onTest:()=>false});
+  for(const [index,step] of ['request','workbench','explain'].entries()) {
+    view.node('.lab-shell').dataset.section=String(index+1);
+    view.location.hash=`#lab/${scenario.id}/${step}?mode=guided&sequence=opening-day`;
+    const select=view.node('#learning-mode');select.value='challenge';select.listeners.get('change')();
+    assert.equal(view.urls.at(-1),`#lab/${scenario.id}/${step}?mode=challenge&sequence=opening-day`);
+  }
   dispose();
 });

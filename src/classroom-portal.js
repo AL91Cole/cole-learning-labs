@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261018-xray22';
+import { SCENARIOS } from './scenarios.js?release=20261020-labpages23';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';

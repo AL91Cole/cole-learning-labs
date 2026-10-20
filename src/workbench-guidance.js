@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261018-xray22';
+import { pcActivity } from './pc-activity.js?release=20261020-labpages23';
 
 /** Control recommendations only. The equipment model still decides every repair. */
 const freezeList=values=>Object.freeze(values);

@@ -1,5 +1,5 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261018-xray22';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261018-xray22';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261020-labpages23';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261020-labpages23';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 

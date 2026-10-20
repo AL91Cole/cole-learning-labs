@@ -16,9 +16,9 @@ Created by Mx. Cole, the project supports a future goal of teaching Computer Tec
 
 Grade filters suggest a starting challenge; they do not establish readiness or prevent a teacher from selecting another activity with support.
 
-## One investigation, request beside workstation
+## One investigation, three focused pages
 
-Each lab stays on one page with Request & clues beside Workbench & test. At widths of 720 CSS pixels and above the two panes scroll independently; narrower screens stack both without hiding the request or workstation. Numbered navigation buttons focus a section without rebuilding its controls. Check & explain opens below the workstation while the request remains available. Questions, notes, equipment state, and unapplied settings remain in place. Basic instructions appear beside the controls rather than requiring a separate guide.
+Each investigation has separate Request & clues, Workbench & test, and Check & Explain pages. Exactly one step is visible at a time, on desktop and smaller screens. Numbered navigation and Back/Next controls move between step URLs without rebuilding the investigation. Browser Back and Forward work between steps. Questions, notes, equipment state, and unapplied settings remain in place during navigation within the same investigation. Hardware interactions pause while the workbench page is hidden. Basic instructions appear with the relevant controls.
 
 1. **Request & clues.** Read the original task, ask the fictional requester a question, inspect clues, and write a hypothesis. Students may type their own question or choose a starter. Answers come from authored fictional case facts and supported simulation observations on the device; no external AI is contacted. Follow-ups such as “Why?”, “Explain that more simply”, and “What should I check next?” refer to the recent supported case topic and current observations. Unsupported wording receives a fallback rather than an invented answer. Encourage learners to try a clearer question or return to the supplied evidence.
 2. **Workbench & test.** Inspect, make one change, save edited software settings, and observe what happens. Quick inspection buttons make tools available without command memorization. Use the equipment's power/startup controls where needed, then run the hypothesis test. The test checks the current simulated setup; it does not judge the wording of the hypothesis or establish its causal explanation. The learner must decide what the evidence supports.
@@ -30,7 +30,7 @@ The on-device conversation understands authored everyday paraphrases across all 
 
 Both response modes appear in the interface, but only **On-device simulation** is available. **Optional live AI** is disabled and unconnected. It is a future option requiring a reviewed service, approved provider/data terms, authenticated teacher access and applicable school/privacy approval before any question could be sent. No API key or provider integration is included in this release. The local option must remain available for learners who do not use an approved future live mode.
 
-Model the split once before independent work: ask one question, show where its reply appears, demonstrate a labeled inspection tool, and point out the hypothesis and report controls. Scroll each pane and use the numbered focus buttons to show how learners can return to the request without losing work. Teacher rubrics and answer keys remain outside the public student lab.
+Model the three pages once before independent work: ask one question on Request & clues, show where its reply appears, open Workbench & test to demonstrate a labeled inspection tool, then open Check & Explain to show the report controls. Use Back/Next, numbered navigation, and browser Back to demonstrate returning to the request without losing work. Teacher rubrics and answer keys remain outside the public student lab.
 
 ## Detailed and incomplete support requests
 
