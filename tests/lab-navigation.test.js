@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { SCENARIOS } from '../src/scenarios.js';
+import { labLanguage } from '../src/lab-language.js';
+import { requesterPersona } from '../src/requester-persona.js';
+import { mountRequesterChat } from '../src/requester-chat.js';
 import { initialHardwareState, applyHardwareAction, verifyHardware } from '../src/hardware.js';
 import { initialWorkspaceState, applyWorkspaceAction, verifyWorkspace } from '../src/workspaces.js';
 import { answerQuestion, questionEvent, readQuestionEvents, inquiryProgress, retainInquiryEvents } from '../src/interview.js';
@@ -23,7 +26,7 @@ const tracks = Object.fromEntries(SCENARIOS.map(scenario => [scenario.track, {na
 
 class Element {
   constructor(dataset = {}) {
-    this.dataset = dataset; this.hidden = false; this.value = ''; this.textContent = ''; this.innerHTML = ''; this.tabIndex = 0;
+    this.dataset = dataset; this.hidden = false; this.value = ''; this.textContent = ''; this.innerHTML = ''; this.tabIndex = 0; this.checked = false; this.disabled = false;
     this.attributes = new Map(); this.listeners = new Map(); this.children = new Map(); this.childNodes = []; this.focused = 0; this.scrolled = [];
     const classes = new Set();
     this.classList = {
@@ -49,12 +52,12 @@ class Element {
   close() {}
 }
 
-function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQuestion, prepareRecord = () => {}, routeOptions = {}) {
+function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQuestion, prepareRecord = () => {}, routeOptions = {}, requesterOptions = {}) {
   const scenario = SCENARIOS.find(item => item.id === id);
   const record = {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:scenario.track === 'hardware' ? initialHardwareState(id) : initialWorkspaceState(id)};
   prepareRecord(record);
   const elements = new Map();
-  for (const selector of ['#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
+  for (const selector of ['#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#reply-source','#requester-options','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
   elements.get('#question-suggestions').hidden=true;
   for(const selector of ['#plan','#evidence-detail']){const drawer=new Element();drawer.open=false;elements.get(selector).disclosure=drawer;}
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
@@ -75,7 +78,8 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     root.children = new Map(); root.querySelector('[data-unsaved-workbench-draft]').value = '';
   }
   const context = vm.createContext({
-    scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,
+    scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,
+    mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,...requesterOptions}),
     // Production modules share one realm. Transfer VM-created action data into
     // the model's realm so its strict plain-object boundary is tested fairly.
     applyWorkspaceAction:(caseId,previous,action,value)=>applyWorkspaceAction(caseId,previous,action,value===undefined?undefined:structuredClone(value)),
@@ -396,11 +400,48 @@ test('rejected private details are cleared without saving, logging, or echoing t
   }
 });
 
+test('casual character conversation stays in page history without entering reports, saves, or progress',()=>{
+  const h=harness('INC-101'),question='What did you have for breakfast?';
+  const before=structuredClone(h.record),saved=h.calls.saved;
+  assert.equal(answerQuestion(h.scenario,question,h.record.state).kind,'casual');
+  h.ask(question);
+  assert.match(h.elements.get('#interview-history').innerHTML,/breakfast|oatmeal|berries/iu);
+  assert.match(h.elements.get('#reply-source').textContent,/not a case clue/iu);
+  assert.deepEqual(h.record,before);assert.equal(h.calls.saved,saved);assert.equal(inquiryProgress(h.scenario,h.record.events).complete,false);
+  assert.doesNotMatch(h.report(),/What did you have for breakfast|oatmeal|berries/iu);
+  const history=h.elements.get('#interview-history').innerHTML;h.section(2);h.section(1);assert.equal(h.elements.get('#interview-history').innerHTML,history);
+  h.ask('What changed?');
+  assert.equal(readQuestionEvents(h.record.events).length,1);assert.equal(inquiryProgress(h.scenario,h.record.events).complete,true);
+  assert.match(h.report(),/What changed\?/u);assert.doesNotMatch(h.report(),/What did you have for breakfast|oatmeal|berries/iu);
+  h.context.navigation.dispose();
+});
+
+test('an opted-in AI extra reply changes only the current RAM conversation and cannot become case evidence',async()=>{
+  const requests=[],answer='<b>A fictional AI extra response.</b>';
+  const h=harness('INC-101',1,answerQuestion,()=>{},{},{fetcher:async(path,options)=>{
+    requests.push({path,options});
+    return new Response(JSON.stringify(options.method==='GET'?{enabled:true}:{kind:'ai',ungraded:true,answer}),{status:200});
+  }});
+  const options=h.elements.get('#requester-options');options.querySelector('[data-ai-check]').fire('click');
+  await new Promise(resolve=>setImmediate(resolve));
+  options.querySelector('[data-ai-consent]').checked=true;options.querySelector('[data-ai-consent]').fire('change');
+  options.querySelector('[data-ai-toggle]').checked=true;options.querySelector('[data-ai-toggle]').fire('change');
+  const before=structuredClone(h.record),saved=h.calls.saved;
+  h.ask('What did you have for breakfast?');await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(requests.map(request=>request.options.method),['GET','POST']);
+  assert.equal(h.elements.get('#question-response').textContent,answer);
+  assert.match(h.elements.get('#interview-history').innerHTML,/AI extra reply.*&lt;b&gt;A fictional AI extra response\.&lt;\/b&gt;/u);
+  assert.doesNotMatch(h.elements.get('#interview-history').innerHTML,/<b>A fictional/u,'Even generated markup must display as escaped text.');
+  assert.deepEqual(h.record,before);assert.equal(h.calls.saved,saved);assert.equal(inquiryProgress(h.scenario,h.record.events).complete,false);
+  assert.doesNotMatch(h.report(),/fictional AI extra response|What did you have for breakfast/iu);
+  h.context.navigation.dispose();
+});
+
 test('optional follow-up suggestions render bounded plain text as ordinary buttons',()=>{
   const markup='<img src=x onerror="alert(1)"> What is on the screen?';
   const h=harness('INC-101',1,(...args)=>({...answerQuestion(...args),suggestions:['  What changed?  ','What changed?',markup,null,'x'.repeat(241),'What have you tried?','One more prompt']}));
   assert.equal(h.elements.get('#question-suggestions').hidden,true);
-  h.ask('What happened?');
+  h.ask('What changed?');
   const group=h.elements.get('#question-suggestions'),buttons=group.childNodes.filter(child=>child.tagName==='BUTTON');
   assert.equal(group.hidden,false);assert.equal(buttons.length,3);assert.deepEqual(buttons.map(button=>button.textContent),['What changed?',markup,'What have you tried?']);
   for(const button of buttons){assert.equal(button.type,'button');assert.equal(button.innerHTML,'');}
@@ -438,13 +479,13 @@ test('hypothesis tests observe actual equipment state and cannot finish the inve
   h.input('plan','The monitor cable may be using the wrong graphics output.'); h.section(2); h.elements.get('#run-hypothesis-test').fire('click'); assert.match(h.elements.get('#experiment-result').textContent,/not ready/iu); assert.equal(h.record.verified,false); assert.equal(h.record.closed,false);
   h.action('video-gpu'); h.action('open-document'); h.elements.get('#run-hypothesis-test').fire('click'); assert.match(h.elements.get('#experiment-result').textContent,/original task works/iu); assert.match(h.elements.get('#experiment-result').textContent,/Does this support your idea/iu); assert.equal(h.record.verified,true); assert.equal(h.record.closed,false); assert.equal(h.calls.reports,0);
   h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,false,'Verification cannot bypass required evidence and explanations.'); assert.deepEqual(h.visible(),[true,false,false]);
-  h.action('video-board'); assert.equal(h.record.verified,false); assert.match(h.elements.get('#experiment-result').textContent,/setup changed.*fresh hypothesis test/iu);
+  h.action('video-board'); assert.equal(h.record.verified,false); assert.match(h.elements.get('#experiment-result').textContent,/setup changed.*fresh test/iu);
 });
 
 test('non-hardware hypothesis checks run the real simulated tests and recheck changed settings', () => {
   const h = harness('NET-201'); h.input('plan','The workstation needs the addresses listed on its configuration sheet.'); h.elements.get('#run-hypothesis-test').fire('click'); assert.equal(h.record.state.tested,true); assert.equal(h.record.verified,false);
   h.action('save-network',{ip:'10.24.8.25',mask:'255.255.255.0',gateway:'10.24.8.1',dns:'10.24.8.53'}); h.elements.get('#run-hypothesis-test').fire('click'); assert.equal(h.record.verified,true); assert.equal(h.record.closed,false);
-  h.action('save-network',{ip:'10.24.8.25',mask:'255.255.255.0',gateway:'10.24.8.1',dns:'192.168.1.53'}); assert.equal(h.record.verified,false); h.elements.get('#run-hypothesis-test').fire('click'); assert.equal(h.record.verified,false); assert.match(h.elements.get('#experiment-result').textContent,/not ready.*resolves/iu);
+  h.action('save-network',{ip:'10.24.8.25',mask:'255.255.255.0',gateway:'10.24.8.1',dns:'192.168.1.53'}); assert.equal(h.record.verified,false); h.elements.get('#run-hypothesis-test').fire('click'); assert.equal(h.record.verified,false); assert.match(h.elements.get('#experiment-result').textContent,/not passed.*resolves/iu);
 });
 
 test('read-only practice commands do not rerender or discard unsaved workbench fields', () => {
@@ -480,7 +521,7 @@ test('finishing a technically repaired detailed ticket opens the missing evidenc
 
 test('all cases render labelled pages and accessible navigation with only the request visible initially', () => {
   const renderStart = source.indexOf('function labPage(s){'),renderEnd = source.indexOf('\nfunction evidenceList(',renderStart); assert.ok(renderStart >= 0 && renderEnd > renderStart);
-  const context = vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
+  const context = vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for (const scenario of SCENARIOS) {
     const html = context.labPage(scenario);
@@ -490,27 +531,25 @@ test('all cases render labelled pages and accessible navigation with only the re
     }
     for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','question-suggestions','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
     assert.match(html,/<div id="question-suggestions"[^>]*role="group"[^>]*aria-label="Suggested follow-up questions"[^>]*hidden/u);
-    assert.equal((html.match(/\brole="region"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,0); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/scripted simulation/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
+    assert.equal((html.match(/\brole="region"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,0); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/local conversation library/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
   }
 });
 
-test('every lab defaults to on-device question replies and clearly disables the unconnected live AI option',()=>{
+test('every lab starts with the fast character and separates remote AI availability, consent, and opt-in',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
-  const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
+  const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for(const scenario of SCENARIOS) {
-    const html=context.labPage(scenario),selector=html.match(/<select id="interview-mode"[^>]*>(.*?)<\/select>/s)?.[1];
-    assert.ok(selector,scenario.id+' must explain the available question response mode.');
-    const options=[...selector.matchAll(/<option\b([^>]*)>(.*?)<\/option>/gs)];
-    assert.equal(options.length,2,scenario.id);
-    assert.match(options[0][1],/value="device"/u);assert.doesNotMatch(options[0][1],/\bdisabled\b/u);
-    assert.equal(options[0][2],'On-device practice chat',scenario.id);
-    assert.match(options[1][1],/value="live"/u);assert.match(options[1][1],/\bdisabled\b/u);assert.doesNotMatch(options[1][1],/\bselected\b/u);
-    assert.match(options[1][2],/awaiting school\/privacy approval/u);
-    assert.match(html,/Live AI is not connected\. It would send question text to an approved provider\./u);
-    assert.match(html,/Teacher access, provider terms, privacy review, and a separate approved deployment are required before enabling it\./u);
-    assert.match(html,/This scripted simulation uses authored facts about this fictional case and your earlier questions\./u);
-    assert.match(html,/Replies run on this device and do not contact an AI provider\./u);
+    const html=context.labPage(scenario);
+    const consent=html.match(/<input\b[^>]*\bdata-ai-consent[^>]*>/u)?.[0];
+    const toggle=html.match(/<input\b[^>]*\bdata-ai-toggle[^>]*>/u)?.[0];
+    assert.ok(consent,scenario.id+' must ask separately before sending questions.');
+    assert.ok(toggle,scenario.id+' must offer a separate optional AI control.');
+    assert.doesNotMatch(consent,/\bchecked\b/u);assert.doesNotMatch(toggle,/\bchecked\b/u);assert.match(toggle,/\bdisabled\b/u);
+    assert.match(html,/<button\b[^>]*\btype="button"[^>]*\bdata-ai-check/u);
+    assert.match(html,/questions go to Cloudflare/u);assert.match(html,/No app or AI model download is needed/u);
+    assert.match(html,/Fast character is on\./u);assert.match(html,/awaits privacy review and service setup/u);
+    assert.match(html,/extra replies.*cannot repair equipment, award progress, or add case evidence/u);
     assert.match(html,/(?:Ask in|Use) your own words\./u);assert.match(html,/Suggestions are optional\./u);
   }
 });
@@ -544,7 +583,7 @@ function routeHarness(id='CODE-501',initialPath='') {
     window:{addEventListener(name,listener){events.set(name,listener);},scrollTo(){}},
     mountWorkControls(options){mounted=options;},workStatus:()=>'',showNotice(){},
     onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
-    makeNavigation(scenario,route,{onModeChange}={}){const mountedRoute=route||learningRoute(location.hash);let mode=mountedRoute.mode;return {syncRoute(next){routeSyncs.push(next);if(next.page!=='lab'||next.id!==scenario.id||next.sequence!==mountedRoute.sequence)return false;if(next.mode!==mode){onModeChange?.(next.mode);mode=next.mode;}return true;}};},
+    makeNavigation(scenario,route,{onModeChange}={}){const mountedRoute=route||learningRoute(location.hash);let mode=mountedRoute.mode;return {syncRoute(next){routeSyncs.push(next);if(next.page!=='lab'||next.id!==scenario.id||next.sequence!==mountedRoute.sequence)return false;if(next.mode!==mode){onModeChange?.(next.mode);mode=next.mode;}return true;},dispose(){}};},
     routeLink:()=>'',labCards(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
   });
   vm.runInContext('let routeCleanup=null,store=initialStore,currentLab=null,labNavigation=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+

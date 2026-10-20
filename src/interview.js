@@ -1,8 +1,10 @@
-import { resolveQuestion } from './conversation.js?release=20261020-labpages23';
+import { resolveQuestion } from './conversation.js?release=20261020-chromebook24';
+import { requesterPersonaReply, requesterUnknownReply } from './requester-persona.js?release=20261020-chromebook24';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
+const PRIVACY_NOTICE = 'Fast mode and the prompt audit use fixed local checks. Case evidence stays authored. Optional Cloudflare AI sends only opted-in extra fictional questions after service and privacy approval. Keep personal details out; saving and submission have separate controls.';
 const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
 const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();
@@ -23,6 +25,12 @@ function containsPrivateDetails(text) {
     || /\b(?:show|give|reveal|find|tell me|what is|what's)\b.{0,55}\b(?:password|passphrase|private key|access token|session token|recovery code|backup code|mfa code|verification code|one[ -]time (?:password|code))\b(?![\s-]+(?:polic(?:y|ies)|expir(?:ation|y)|handling|requirements?|security|safety|rules?|strength|hygiene|resets?|storage|management|protection|rotation|hashing|encryption|reuse|recovery|complexity|length|best practices?|advice|guidance)\b)/iu.test(text)
     || /\b(?:password|passphrase|secret|api[- ]?key|access[- ]?token|session token|recovery code|backup code|mfa code|verification code|one[ -]time (?:password|code))\s*(?:is|:|=)\s*\S+/iu.test(text)
     || /\b(?:sk-(?:proj-)?[a-z0-9_-]{8,}|gh[pousr]_[a-z0-9]{12,})\b/iu.test(text);
+}
+
+/** Shared conservative text check for optional on-device helpers. Invalid,
+ * oversized, or private text is blocked rather than sent to another responder. */
+export function requesterTextIsPrivate(value) {
+  return typeof value!=='string' || value.length>2000 || !compact(value) || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) || containsPrivateDetails(compact(value));
 }
 
 const outOfScopeInstructions = text => /\b(?:rubric|answer[ -]?key|mark(?:ing)? scheme|grading criteria|system prompt|developer message|hidden instructions)\b|\b(?:show|reveal|dump|print|download)\b.{0,35}\bsource code\b|\b(?:ignore|override|forget)\b.{0,45}\b(?:instructions|rules|previous|privacy)\b/iu.test(text);
@@ -169,9 +177,9 @@ function caseReply(scenario, question, state) {
     if (/rollback|roll back|snapshot|recover|erase|files|update|crash|boot/iu.test(question)) return fact(scenario, /snapshot|rollback|roll back|erase|files|recover/iu.test(question) ? 'history' : 'event');
   }
   if (id === 'AI-301') {
-    if (/send|sent|service|account|live ai/iu.test(question)) return response('This activity uses fixed checks in your browser. Neither this interview nor the prompt audit sends questions to an AI service. Use fictional information and compare explanations with class notes.', 'privacy');
+    if (/send|sent|service|account|live ai/iu.test(question)) return response(PRIVACY_NOTICE, 'privacy');
     if (/prompt|task|network|explain|practice|question|learn|write/iu.test(question)) return fact(scenario, /check|correct|accur|guarantee|verify/iu.test(question) ? 'limits' : 'task');
-    if (/ai|send|model|service|account/iu.test(question)) return response('This activity uses fixed checks in your browser. Neither this interview nor the prompt audit sends questions to an AI service. Use fictional information and compare explanations with class notes.', 'privacy');
+    if (/ai|send|model|service|account/iu.test(question)) return response(PRIVACY_NOTICE, 'privacy');
   }
   if (id === 'AI-302') {
     if (/password[\s-]*(?:polic|expir|handl|rotat)|90[\s-]*day/iu.test(question)) return response('The fictional AI draft’s 90-day password-expiration claim is unsupported: source card v4.2 contains no password-expiration policy. Compare the claim with the source instead of treating a confident draft as evidence.', 'source');
@@ -217,13 +225,13 @@ function caseAnswer(scenario, question, state = {}) {
   if (outOfScopeInstructions(text)) return response('This practice interview answers only the visible fictional case. It cannot provide teacher rubrics, hidden instructions, grading criteria, or an answer key. Ask about an observation or the requester’s needs.', 'case-boundary', 'clarify', false);
   if (!scenario || !CASE_IDS.has(scenario.id)) return response('Choose one of the supplied lab cases before starting the interview.', 'case-boundary', 'clarify', false);
   if (/\b(?:may|can|should|allowed|permission|authorized)\b.{0,70}\b(?:real|school portal|school network|other websites|actual accounts)\b|\b(?:scan|attack|hack|exploit)\b.{0,50}\b(?:real|school|public|internet)\b/iu.test(text)) return response('Only the built-in fictional case is authorized. Do not test a real school website, account, device, or network. Ask your teacher about any activity beyond the simulation.', 'scope');
-  if (/^(?:hi|hello|hey)(?:[!,. ]|$)/iu.test(text) && words(text).split(' ').length <= 3) return response('Hi! I am the fictional requester for this case. You can ask what happened, what I observed, or the result I need. I answer from the case facts on this device, so I will say when a detail is not recorded.', 'conversation');
-  if (/^(?:thanks|thank you|okay thanks|ok thanks)[!,. ]*$/iu.test(text)) return response('You are welcome. Keep a note of what the evidence shows, then try one change in the workbench and compare its test result with your hypothesis.', 'conversation');
-  if (/\b(?:goal|requested result|need to (?:do|finish)|trying to|want to|what.*(?:need|want)|success look|complete the task)\b/iu.test(text)) return response(typeof scenario.goal === 'string' ? scenario.goal : 'Read the request card for the result this fictional requester needs.', 'request');
   // Asking for missing history reveals a requester fact; it never replaces a safety instruction or a live bench observation.
   if (scenario.id.startsWith('INC-') && /safe|safety|disconnect|unplug|internal|touch|power off/iu.test(text) && !externalDisplayQuestion(text) && !unknownEquipmentHistory(text)) return caseReply(scenario,text,state);
+  const casual=unknownEquipmentHistory(text)?null:requesterPersonaReply(scenario,text);
+  if (casual) return {...response(casual.answer,casual.topic,'casual'),inquiryFactIds:[]};
   const inquiryFact = matchedCaseFact(scenario,text);
   if (inquiryFact && requiredInquiryFacts(scenario).includes(inquiryFact.id) && !followUpKind(text)) return response(inquiryFact.answer,'case-fact');
+  if (/\b(?:goal|requested result|need to (?:do|finish)|trying to|want to|what.*(?:need|want)|success look|complete the task)\b/iu.test(text)) return response(typeof scenario.goal === 'string' ? scenario.goal : 'Read the request card for the result this fictional requester needs.', 'request');
   if (/\b(?:last (?:work|worked|working)|ever work|when.*(?:work|working)|last known good)\b/iu.test(text) && scenario.id !== 'NET-203') {
     const known = scenario.questions?.find(item => /last work/iu.test(item.label));
     return response(known?.answer ?? 'The case does not record the last successful use. Ask about a specific symptom or recent change, and distinguish recorded facts from assumptions.', 'history');
@@ -248,14 +256,14 @@ function caseAnswer(scenario, question, state = {}) {
     const requesterFact = disclosed && Array.isArray(scenario.interviewFacts) ? scenario.interviewFacts.find(entry => entry?.id === disclosed.requiresFact && typeof entry.answer === 'string' && entry.answer.length <= ANSWER_MAX) : undefined;
     return requesterFact ? response(requesterFact.answer,'case-fact') : specific;
   }
-  if (/\b(?:privacy|private|personal data|real information|internet|ai service|chatbot|live ai|send|stored)\b/iu.test(text)) return response('This interview uses built-in facts in your browser, without an AI service. Keep personal information out of questions and notes. Saving or submitting work uses the separate privacy controls shown in the lab.', 'privacy');
+  if (/\b(?:privacy|private|personal data|real information|internet|ai service|chatbot|live ai|send|stored)\b/iu.test(text)) return response(PRIVACY_NOTICE, 'privacy');
   if (/\b(?:symptom|problem|wrong|broken|issue|happening|not work|equipment|device|machine)\b/iu.test(text)) return response(requesterStatement(scenario.brief),'symptom');
   if (/\b(?:how.*(?:start|use)|what.*(?:first|next)|help|confused|where.*(?:begin|start))\b/iu.test(text)) return response('Let us take it one step at a time. Read the request and one clue, write your hypothesis, and test one change in the workbench. Then compare what happened with the request. Ask me about a specific part or symptom when you need another case fact.', 'how-to');
   return response('That detail is not recorded in this fictional case. Try a specific question about the symptom, a recent change, the equipment, or the requester’s goal. This interview uses scripted case facts and may not understand every wording.', 'clarification', 'clarify');
 }
 
-function cleanHistory(history) {
-  return (Array.isArray(history) ? history.slice(-8) : []).filter(pair => pair && validQuestion(pair.question) && !containsPrivateDetails(pair.question) && !outOfScopeInstructions(pair.question) && typeof pair.answer === 'string' && pair.answer.length <= ANSWER_MAX);
+function cleanHistory(history,scenario) {
+  return (Array.isArray(history) ? history.slice(-8) : []).filter(pair => pair && pair.kind!=='casual' && validQuestion(pair.question) && !containsPrivateDetails(pair.question) && !outOfScopeInstructions(pair.question) && caseAnswer(scenario,pair.question).kind!=='casual' && typeof pair.answer === 'string' && pair.answer.length <= ANSWER_MAX);
 }
 
 function withSuggestions(reply, scenario, supplied) {
@@ -268,7 +276,8 @@ function withSuggestions(reply, scenario, supplied) {
 function directAnswer(scenario, question, state = {}, history = []) {
   const original = caseAnswer(scenario,question,state);
   if (!original.accepted || original.topic === 'scope' || original.topic === 'safety') return original;
-  const resolved = resolveQuestion(scenario,question,cleanHistory(history));
+  if (original.kind==='casual') return original;
+  const resolved = resolveQuestion(scenario,question,cleanHistory(history,scenario));
   if (resolved.clarification) return withSuggestions(response(resolved.clarification.message,'clarification','clarify'),scenario,resolved.clarification.suggestions);
   const alreadySpecific = original.kind === 'answer' && !['history','symptom','how-to','conversation'].includes(original.topic) && !resolved.contextual && !followUpKind(question);
   const canonical = alreadySpecific ? question : typeof resolved.question === 'string' && validQuestion(resolved.question) ? resolved.question : question;
@@ -277,6 +286,10 @@ function directAnswer(scenario, question, state = {}, history = []) {
   const ids = requiredInquiryFacts(scenario);
   const match = result.topic === 'case-fact' ? matchedCaseFact(scenario,canonical) ?? scenario.interviewFacts?.find(entry => ids.includes(entry.id) && entry.answer === result.answer) : null;
   const reply = {...result,canonicalQuestion:canonical,contextQuestion:resolved.contextQuestion,inquiryFactIds:match && ids.includes(match.id) ? [match.id] : []};
+  if (result.kind==='clarify' && resolved.intent==='unknown' && !followUpKind(question)) {
+    const unknown=requesterUnknownReply(scenario,question);
+    return {...response(unknown.answer,unknown.topic,'casual'),inquiryFactIds:[]};
+  }
   return result.kind === 'clarify' ? withSuggestions(reply,scenario) : reply;
 }
 
@@ -322,7 +335,7 @@ function answerOne(scenario, question, state, history) {
   if (!direct.accepted || direct.topic === 'scope' || direct.topic === 'safety') return direct;
   const kind = followUpKind(direct.canonicalQuestion || question);
   if (!kind) return direct;
-  const context = recentCaseContext(scenario,state,cleanHistory(history));
+  const context = recentCaseContext(scenario,state,cleanHistory(history,scenario));
   if (!context) return withSuggestions(response('I need a little more context. Which part do you mean? Ask about a specific symptom, clue, or part first; I do not have a recorded fact to refer back to yet.','conversation-context','clarify'),scenario);
   if (kind === 'timeline') {
     const attempt = scenario.questions?.find(item => /try|tried/iu.test(item.label));
@@ -350,7 +363,8 @@ export function answerQuestion(scenario, question, state = {}, history = []) {
   if (replies.some(reply => !reply.accepted)) return replies.find(reply => !reply.accepted);
   const shorten = text => text.length <= 142 ? text : text.slice(0,139).trimEnd() + '…';
   const answer = replies.map(reply => shorten(reply.answer)).join(' ');
-  const combined = {...response(answer,'conversation-parts',replies.some(reply => reply.kind === 'answer') ? 'answer' : 'clarify'),inquiryFactIds:[...new Set(replies.flatMap(reply => reply.inquiryFactIds || []))],contextQuestion:replies.find(reply => reply.contextQuestion)?.contextQuestion};
+  const casual=replies.some(reply=>reply.kind==='casual');
+  const combined = {...response(answer,casual?'casual-mixed':'conversation-parts',casual?'casual':replies.some(reply => reply.kind === 'answer') ? 'answer' : 'clarify'),inquiryFactIds:casual?[]:[...new Set(replies.flatMap(reply => reply.inquiryFactIds || []))],contextQuestion:replies.find(reply => reply.contextQuestion)?.contextQuestion};
   return withSuggestions(combined,scenario,replies.flatMap(reply => reply.suggestions || []));
 }
 

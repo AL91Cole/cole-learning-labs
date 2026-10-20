@@ -1,5 +1,5 @@
-import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261020-labpages23';
-import { executeCoding } from './coding-lab.js?release=20261020-labpages23';
+import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261020-chromebook24';
+import { executeCoding } from './coding-lab.js?release=20261020-chromebook24';
 
 const item = (id,label,looks,role) => ({id,label,looks,role});
 const check = (id,prompt,options,answer,explanation) => ({id,prompt,options:options.map(([id,label])=>({id,label})),answer,explanation});

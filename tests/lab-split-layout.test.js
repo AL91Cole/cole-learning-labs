@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {SCENARIOS} from '../src/scenarios.js';
+import {labLanguage} from '../src/lab-language.js';
+import {requesterPersona} from '../src/requester-persona.js';
+import {mountRequesterChat} from '../src/requester-chat.js';
 import {FOUNDATION_LABS,createFoundationRecord} from '../src/foundation-model.js';
 import {renderFoundationLab} from '../src/foundation-labs.js';
 import {CAPSTONE_STAGES,renderCapstone} from '../src/capstone.js';
@@ -22,7 +25,7 @@ const tracks=Object.fromEntries(SCENARIOS.map(s=>[s.track,{name:s.track}]));
 function recordFor(s){return {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:s.track==='hardware'?initialHardwareState(s.id):initialWorkspaceState(s.id)};}
 function renderTicket(s,record=recordFor(s)){
   return vm.runInNewContext('let currentLab=null,labView=null;\n'+source.slice(renderStart,renderEnd)+'\nlabPage(s)',{
-    s,tracks,esc,recordFor:()=>record,inquiryProgress,readQuestionEvents,experimentEventText,workStorage:{},workStatus:()=> 'Private session'
+    s,tracks,esc,labLanguage,requesterPersona,recordFor:()=>record,inquiryProgress,readQuestionEvents,experimentEventText,workStorage:{},workStatus:()=> 'Private session'
   });
 }
 function openingTag(html,id){const match=new RegExp('<[a-z][^>]*\\bid="'+id+'"[^>]*>','i').exec(html);assert.ok(match,'Missing '+id);return match[0];}
@@ -62,7 +65,7 @@ function controller(s){
     ['[data-clue]',s.clues.map(clue=>new Node({clue:clue.id}))],['[data-question]',s.questions.map((_,index)=>new Node({question:String(index)}))]
   ]);
   function renderBench(){calls.renders++;node('#workspace').children=new Map();if(s.track==='coding'){const editor=new Node();editor.value=record.state.code;nodes.set('#coding-editor',editor);}}
-  const context=vm.createContext({s,record,tracks,location,history,learningRoute,labPageHash,esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
+  const context=vm.createContext({s,record,tracks,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,mountRequesterChat,esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
     applyHardwareAction,verifyHardware,applyWorkspaceAction:(id,state,action,value)=>applyWorkspaceAction(id,state,action,value===undefined?undefined:structuredClone(value)),verifyWorkspace,
     retainExperimentEvents:(scenario,events)=>retainExperimentEvents(scenario,structuredClone(events)),experimentEventText,experimentReport,
     $:node,$$:selector=>{assert.ok(groups.has(selector),'Unknown control group '+selector);return groups.get(selector);},

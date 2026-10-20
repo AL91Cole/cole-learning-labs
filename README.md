@@ -2,6 +2,8 @@
 
 A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 5 beginner labs and 29 troubleshooting investigations across five pathways for grades 7–12.
 
+The Chromebook update adds a physical-style Power button, compact small-window layouts, grade-aware wording, and 29 distinct fictional requester profiles. Fast character chat is available immediately; the optional Cloudflare AI connection is prepared but remains disabled pending privacy and account usage-budget review. A reported AI limit automatically switches the chat back to the fast character. No app or AI model installation is needed. See the [Chromebook and requester review](docs/CHROMEBOOK-REQUESTER-REVIEW.md) for verified behavior and remaining release requirements.
+
 **Start with the basics:** each pathway has a separate introductory lab with **Explore**, **Practice**, and **Check** tabs. Students identify pictured equipment or concepts, match their roles, and complete one short guided job before following a link to a troubleshooting ticket. Hardware uses a labeled 2D PC diagram and the current guarded assembly actions; the other topics use lightweight illustrated controls and local simulations. Beginner work stays only in page memory, survives ordinary site navigation, and clears when the page closes. Save a reviewed report before leaving. See [Beginner labs](docs/FOUNDATIONS.md).
 
 Coding drafts also survive normal site navigation and browser back/forward within this page. Leaving the editor preserves its current program as untested lab work; device persistence still requires the learner’s saving choice. Explicit resume, reset, and clear actions do not revive the previous editor draft.
@@ -202,7 +204,7 @@ Keep independent-site assets and hash navigation compatible with the supported s
 
 The new release’s `_headers` declares a same-origin Content Security Policy, no-referrer policy, MIME-sniffing protection, strict HTTPS policy, disabled unnecessary device permissions, and additional teacher anti-framing/no-store rules. Verify those responses after deployment. Provider security controls do not replace application authorization or district review.
 
-The `20261020-labpages23` source release (version `2.23.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Source changes and automated checks do not establish that this release has reached production or passed testing on physical school devices. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
+The `20261020-chromebook24` source release (version `2.24.0`) keeps the production classroom gate closed. Routine publishing, teacher identity selection, and environment changes cannot authorize classroom-record processing or live AI processing. Source changes and automated checks do not establish that this release has reached production or passed testing on physical school devices. Follow [Deployment guidance](docs/DEPLOYMENT.md) for response checks and [Privacy release requirements](docs/PRIVACY-RELEASE-GATE.md) for the evidence needed before any reviewed source release could change that boundary.
 
 ## Before classroom use
 
