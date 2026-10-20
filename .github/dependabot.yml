@@ -13,3 +13,13 @@ updates:
     groups:
       github-actions:
         patterns: ['*']
+  - package-ecosystem: npm
+    directory: /terminal-sandbox
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    # Optional terminal-service updates require review and passing checks.
+    # Nothing auto-merges.
