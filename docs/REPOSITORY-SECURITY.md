@@ -37,6 +37,16 @@ The active **Protect main releases** ruleset targets the default branch `main`, 
 
 Cloudflare's build command and `dist` output were saved and verified in a successful security preview. That preview passed all 125 tests, retained the closed production API entry, and excluded development file contents. Source-only URLs may return the homepage through Cloudflare's fallback. The custom-domain production deployment must be verified after merging; preview success alone is insufficient.
 
+## Reconnaissance hardening — October 19, 2026
+
+GitHub currently reports this repository as private. Public pages should not direct visitors to inaccessible internal design documents or describe this source repository as public. Browser-delivered JavaScript remains public by design and must never contain credentials or server-only controls.
+
+Cloudflare now has the active Free-plan custom rule **Block private configuration and repository probes** for `colelearninglabs.com` and `www.colelearninglabs.com`. It blocks root configuration/repository paths (`/.git`, `/.github`, `/.env` and common variants), development directories (`/docs`, `/functions`, `/migrations`, `/scripts`, `/tests`, `/terminal-sandbox`, including descendants), and `/package.json` and `/package-lock.json`. It does not match `/src`, `/assets`, the public pages, or `/api`. Existing Bot Fight Mode and the leaked-credential rule were retained. No plan upgrade was made.
+
+The rule is defense in depth for those two hostnames, not an authorization boundary or a guarantee against enumeration. Alternate deployment hostnames still depend on the public-file build manifest, closed classroom gate, and deployment access controls. Review it before publishing anything under a blocked directory. To reverse this particular edge change, disable only the named custom rule in Cloudflare Security rules; do not disable unrelated protections.
+
+A top-level scriptless `404.html` removes Pages' automatic homepage fallback for missing static paths. Existing lab URLs use hash routes (`/#lab/INC-101`) and remain homepage requests. Production release verification must confirm a missing URL returns status 404, public pages/assets load, and `/api/session` remains closed. Cloudflare documents [missing-page behavior](https://developers.cloudflare.com/pages/configuration/serving-pages/) and [custom rules](https://developers.cloudflare.com/waf/custom-rules/).
+
 ## Release procedure
 
 1. Keep credentials and real school records out of source, branches, issues, previews, build logs, and test fixtures. Use synthetic examples. Check the proposed diff for unintended files and permission changes.
