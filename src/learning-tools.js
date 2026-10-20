@@ -35,5 +35,9 @@ export function mountLabLearning(root,{scenario,record,mode='guided',sequence,on
   const experiments=mountExperiments(host,{scenario,record,getState:()=>record.state,getResult,onSave,onTest});
   const refresh=event=>{if(event.detail?.id===scenario.id)experiments?.refresh({changed:event.detail.changed===true});};
   document.addEventListener('cole:lab-state-change',refresh);
-  return ()=>{select.removeEventListener('change',change);document.removeEventListener('cole:lab-state-change',refresh);experiments?.dispose();};
+  const dispose=()=>{select.removeEventListener('change',change);document.removeEventListener('cole:lab-state-change',refresh);experiments?.dispose();};
+  // History restores support presentation without recreating learner controls
+  // or writing another URL entry during Back/Forward traversal.
+  dispose.setMode=applyMode;
+  return dispose;
 }

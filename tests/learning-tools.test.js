@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {learningRoute,labPageHash,mountLabLearning} from '../src/learning-tools.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {normalizeLabRecord} from '../src/records.js';
+import {learningModes} from '../src/teaching.js';
 
 test('routes accept reviewed mode and sequence values while ignoring unrelated query information',()=>{
   assert.deepEqual(learningRoute(''),{page:'home',id:undefined,mode:'guided',sequence:null});
@@ -53,6 +54,8 @@ function viewFixture(t,hash='#lab/CODE-503/workbench?mode=guided&sequence=openin
   }
   const inputs=['predict','changed','observed','explain'].map(part=>{const input=node('experiment-'+part);input.dataset.experimentField=part;return input;});
   const host=node('#experiment-tools');
+  let notebookMarkup='',notebookMounts=0;
+  Object.defineProperty(host,'innerHTML',{get:()=>notebookMarkup,set(value){notebookMarkup=value;notebookMounts++;}});
   host.querySelector=selector=>node('host:'+selector);
   host.querySelectorAll=selector=>selector==='[data-experiment-field]'?inputs:[];
   node('.lab-shell').dataset.section=String(learningRoute(hash).section||1);
@@ -66,7 +69,7 @@ function viewFixture(t,hash='#lab/CODE-503/workbench?mode=guided&sequence=openin
     Object.defineProperty(globalThis,key,{value,configurable:true,writable:true});
     t.after(()=>{if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];});
   }
-  return {root,node,classes,inputs,documentListeners,urls,location};
+  return {root,node,classes,inputs,documentListeners,urls,location,get notebookMounts(){return notebookMounts;}};
 }
 
 test('support mode changes preserve unsaved questions, code, notes, and the experiment draft',t=>{
@@ -95,6 +98,34 @@ test('support mode changes preserve unsaved questions, code, notes, and the expe
   assert.equal(view.node('#learning-mode').listeners.size,0);
   assert.equal(view.documentListeners.size,0);
   assert.ok(view.inputs.every(input=>input.listeners.size===0));
+});
+
+test('history can restore support presentation without rewriting its URL or remounting the notebook',t=>{
+  const view=viewFixture(t),scenario=SCENARIOS.find(item=>item.id==='CODE-503'),record=normalizeLabRecord(scenario);
+  let saves=0,tests=0;
+  const dispose=mountLabLearning(view.root,{scenario,record,mode:'guided',sequence:'opening-day',onSave:()=>saves++,onTest:()=>{tests++;return true;}});
+  const question=view.node('#student-question'),editor=view.node('#coding-editor'),prediction=view.inputs[0];
+  question.value='Could the first counter explain';editor.value='print("Unexecuted draft");';
+  prediction.value='I predict the counter changes the first line.';prediction.listeners.get('input')();
+  const before=structuredClone(record),saved=saves,notebookMounts=view.notebookMounts;
+  const listeners=view.inputs.map(input=>input.listeners.get('input'));
+  for(const mode of ['independent','guided','challenge','independent']) {
+    const hash=`#lab/${scenario.id}/workbench?mode=${mode}&sequence=opening-day`;
+    view.location.hash=hash;dispose.setMode(mode);
+    assert.equal(view.node('#learning-mode').value,mode);
+    assert.deepEqual([...view.classes],['mode-'+mode]);
+    assert.equal(view.node('#learning-mode-description').textContent,learningModes.find(item=>item.id===mode).description);
+    assert.ok(view.node('#lab-learning').innerHTML.includes('teaching-mode-'+mode),'The support content must match the historical mode.');
+    assert.equal(view.location.hash,hash);assert.equal(view.urls.length,0,'Restoring history may not replace or add a URL.');
+    assert.equal(view.notebookMounts,notebookMounts,'The notebook must stay mounted when support changes.');
+    assert.equal(view.node('#student-question'),question);assert.equal(question.value,'Could the first counter explain');
+    assert.equal(view.node('#coding-editor'),editor);assert.equal(editor.value,'print("Unexecuted draft");');
+    assert.equal(prediction.value,'I predict the counter changes the first line.');
+    view.inputs.forEach((input,index)=>assert.equal(input.listeners.get('input'),listeners[index]));
+    assert.deepEqual(record,before);assert.equal(saves,saved);assert.equal(tests,0);
+  }
+  dispose.setMode('unreviewed');assert.equal(view.node('#learning-mode').value,'guided');
+  dispose();
 });
 
 test('invalid support values fall back to guided and transfer links contain only public assignment settings',t=>{

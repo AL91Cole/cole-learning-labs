@@ -54,7 +54,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
   const record = {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:scenario.track === 'hardware' ? initialHardwareState(id) : initialWorkspaceState(id)};
   prepareRecord(record);
   const elements = new Map();
-  for (const selector of ['#workspace','#coding-editor','#learning-mode','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
+  for (const selector of ['#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
   elements.get('#question-suggestions').hidden=true;
   for(const selector of ['#plan','#evidence-detail']){const drawer=new Element();drawer.open=false;elements.get(selector).disclosure=drawer;}
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
@@ -65,7 +65,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     ['[data-question]',scenario.questions.map((_,index) => new Element({question:String(index)}))],
     ['[data-clue]',scenario.clues.map(clue => new Element({clue:clue.id}))]
   ]);
-  const calls = {saved:0,rendered:0,reports:0,benchCancelled:0,hardwareVisible:[],forcedRenders:[],notices:[]}; let workspaceAction;
+  const calls = {saved:0,rendered:0,reports:0,benchCancelled:0,hardwareVisible:[],forcedRenders:[],notices:[],modeChanges:[]}; let workspaceAction;
   const location={hash:labPageHash(id,initialSection,routeOptions)},historyEntries=[location.hash];let historyIndex=0;
   elements.get('#learning-mode').value=routeOptions.mode||'guided';
   const history={pushState(_state,_title,url){historyEntries.splice(++historyIndex);historyEntries.push(url);location.hash=url;},replaceState(_state,_title,url){historyEntries[historyIndex]=url;location.hash=url;}};
@@ -89,13 +89,15 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     setHardwareVisible(root,visible) { assert.equal(root,elements.get('#workspace')); assert.equal(typeof visible,'boolean'); calls.hardwareVisible.push(visible); },
     renderWorkspace(root,_scenario,_state,callback) { assert.notEqual(scenario.track,'hardware'); renderBench(root,callback); if(scenario.track==='coding'){const editor=new Element();editor.value=_state.code;elements.set('#coding-editor',editor);} },
     save() { calls.saved++; },showNotice(message) { calls.notices.push(message); },openReport() { calls.reports++; },renderRoute(preserveDraft) { calls.forcedRenders.push(preserveDraft); },
+    onModeChange(mode) { calls.modeChanges.push(mode);elements.get('#learning-mode').value=mode; },
     normalizeLabRecord:(_scenario,value) => value,attachClassroomLab:() => null,matchMedia:() => ({matches:true}),Date
   });
-  vm.runInContext('let workStorage={},classroomConnection=null,classroomSharingPaused=true,storageKey="test",store={labs:{[scenario.id]:record}},labNavigation=null,labView={id:scenario.id,section:initialSection};\n'+source.slice(helperStart,reportStart)+source.slice(reportStart,reportEnd)+'\nglobalThis.navigation=bindLab(scenario,learningRoute(location.hash));',context);
+  vm.runInContext('let workStorage={},classroomConnection=null,classroomSharingPaused=true,storageKey="test",store={labs:{[scenario.id]:record}},labNavigation=null,labView={id:scenario.id,section:initialSection};\n'+source.slice(helperStart,reportStart)+source.slice(reportStart,reportEnd)+'\nglobalThis.navigation=bindLab(scenario,learningRoute(location.hash),{onModeChange});',context);
   return {scenario,record,context,calls,elements,groups,location,historyEntries,
     back(){if(historyIndex===0)return false;location.hash=historyEntries[--historyIndex];return context.navigation.syncRoute(learningRoute(location.hash));},
     forward(){if(historyIndex===historyEntries.length-1)return false;location.hash=historyEntries[++historyIndex];return context.navigation.syncRoute(learningRoute(location.hash));},
     sync(hash){location.hash=hash;return context.navigation.syncRoute(learningRoute(hash));},
+    changeMode(mode){elements.get('#learning-mode').value=mode;history.replaceState(null,'',labPageHash(id,elements.get('.lab-shell').dataset.section,{mode,sequence:routeOptions.sequence}));},
     section(number) { groups.get('[data-lab-section]')[number-1].fire('click'); },
     key(index,key) { return groups.get('[data-lab-section]')[index].fire('keydown',{key}); },
     input(field,value) { const element = elements.get('#'+field); element.value = value; element.fire('input'); },
@@ -253,9 +255,40 @@ test('hardware only runs on its own page and Back/Forward retains repaired equip
   assert.equal(draft.value,'A pending equipment setting');assert.equal(h.calls.benchCancelled,2);
 });
 
+for(const id of ['INC-101','NET-201','CODE-501'])test(id+': historical support modes restore without replacing drafts or equipment',()=>{
+  const h=harness(id,1,answerQuestion,()=>{},{mode:'guided',sequence:'opening-day'});
+  const question=h.elements.get('#student-question'),notebook=h.elements.get('#experiment-predict');
+  const workbench=h.elements.get('#workspace').querySelector('[data-unsaved-workbench-draft]');
+  question.value='An unfinished follow-up for the fictional requester';
+  workbench.value='An unapplied configuration choice';notebook.value='An unfinished experiment prediction';
+  const editor=h.scenario.track==='coding'?h.elements.get('#coding-editor'):null;
+  if(editor)editor.value=codingPrograms[id];
+  const before=structuredClone(h.record),renders=h.calls.rendered,saves=h.calls.saved;
+  h.section(2);h.changeMode('independent');
+  for(const [direction,section,mode] of [['back',1,'guided'],['forward',2,'independent']]) {
+    assert.equal(h[direction](),true,'A support change in history must remain same-lab navigation.');
+    assert.equal(h.elements.get('#learning-mode').value,mode);
+    assert.equal(h.calls.modeChanges.at(-1),mode);
+    assert.deepEqual(h.visible(),[1,2,3].map(value=>value===section));
+  }
+  h.section(3);h.changeMode('challenge');
+  for(const [direction,section,mode] of [['back',2,'independent'],['back',1,'guided'],['forward',2,'independent'],['forward',3,'challenge']]) {
+    assert.equal(h[direction](),true);assert.equal(h.elements.get('#learning-mode').value,mode);
+    assert.deepEqual(h.visible(),[1,2,3].map(value=>value===section));
+    assert.equal(h.elements.get('#student-question'),question);assert.match(question.value,/unfinished follow-up/);
+    assert.equal(h.elements.get('#workspace').querySelector('[data-unsaved-workbench-draft]'),workbench);
+    assert.equal(workbench.value,'An unapplied configuration choice');
+    assert.equal(h.elements.get('#experiment-predict'),notebook);assert.equal(notebook.value,'An unfinished experiment prediction');
+    if(editor){assert.equal(h.elements.get('#coding-editor'),editor);assert.equal(editor.value,codingPrograms[id]);}
+    if(h.scenario.track==='hardware')assert.equal(h.calls.hardwareVisible.at(-1),section===2);
+  }
+  assert.equal(h.historyEntries.length,3,'Restoring support must not add or rewrite history.');
+  assert.equal(h.calls.rendered,renders);assert.equal(h.calls.saved,saves);assert.deepEqual(h.record,before);
+});
+
 test('route synchronization refuses a different ticket or assignment context',()=>{
   const h=harness('CODE-501',2,answerQuestion,()=>{},{mode:'challenge',sequence:'opening-day'});
-  for(const hash of ['#lab/CODE-502/explain?mode=challenge&sequence=opening-day','#lab/CODE-501/explain?mode=guided&sequence=opening-day','#lab/CODE-501/explain?mode=challenge','#labs']) {
+  for(const hash of ['#lab/CODE-502/explain?mode=challenge&sequence=opening-day','#lab/CODE-501/explain?mode=challenge','#labs']) {
     assert.equal(h.sync(hash),false,hash);assert.deepEqual(h.visible(),[false,true,false]);
   }
 });
@@ -490,7 +523,7 @@ function routeHarness(id='CODE-501',initialPath='') {
     const line=source.match(new RegExp('^function '+name+'\\([^\\n]*$','m'))?.[0];assert.ok(line,name);return line;
   });
   const hashListener=source.match(/^window\.addEventListener\('hashchange',[^\n]*$/m)?.[0];assert.ok(hashListener);
-  const data=new Map(),writes=[],reads=[],order=[],events=new Map(),elements=new Map(),routeSyncs=[];let editor=null,mounted;
+  const data=new Map(),writes=[],reads=[],order=[],events=new Map(),elements=new Map(),routeSyncs=[],learningCalls={mounts:0,disposals:0,modes:[]};let editor=null,mounted;
   const storage={
     get length(){return data.size;},key(index){return [...data.keys()][index]??null;},
     getItem(name){reads.push(name);return data.get(name)??null;},
@@ -501,7 +534,9 @@ function routeHarness(id='CODE-501',initialPath='') {
   const location={hash:'#lab/'+id+initialPath};
   const initialStore={version:2,labs:{}};
   const context=vm.createContext({
-    SCENARIOS,learningRoute,labPageHash,retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),mountLabLearning:()=>()=>{},mountInvestigationPreview:()=>null,mountTeachingPage:()=>()=>{},renderCapstone:()=>'capstone',mountCapstone:()=>()=>{},capstoneReport:()=>'capstone report',checkCapstoneState:()=>({ok:false}),normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,
+    SCENARIOS,learningRoute,labPageHash,retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),
+    mountLabLearning(_root,{mode}){learningCalls.mounts++;const dispose=()=>{learningCalls.disposals++;};dispose.setMode=value=>learningCalls.modes.push(value);return dispose;},
+    mountInvestigationPreview:()=>null,mountTeachingPage:()=>()=>{},renderCapstone:()=>'capstone',mountCapstone:()=>()=>{},capstoneReport:()=>'capstone report',checkCapstoneState:()=>({ok:false}),normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,
     applyWorkspaceAction:(caseId,previous,action,value)=>{order.push('save current draft');return applyWorkspaceAction(caseId,previous,action,structuredClone(value));},
     disposeHardware(){order.push('dispose hardware gestures');},
     $:selector=>{if(selector==='#coding-editor')return editor;if(selector==='#main')return main;if(!elements.has(selector))elements.set(selector,new Element());return elements.get(selector);},
@@ -509,18 +544,18 @@ function routeHarness(id='CODE-501',initialPath='') {
     window:{addEventListener(name,listener){events.set(name,listener);},scrollTo(){}},
     mountWorkControls(options){mounted=options;},workStatus:()=>'',showNotice(){},
     onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
-    makeNavigation(scenario,route){const mountedRoute=route||learningRoute(location.hash);return {syncRoute(next){routeSyncs.push(next);return next.page==='lab'&&next.id===scenario.id&&next.mode===mountedRoute.mode&&next.sequence===mountedRoute.sequence;}};},
+    makeNavigation(scenario,route,{onModeChange}={}){const mountedRoute=route||learningRoute(location.hash);let mode=mountedRoute.mode;return {syncRoute(next){routeSyncs.push(next);if(next.page!=='lab'||next.id!==scenario.id||next.sequence!==mountedRoute.sequence)return false;if(next.mode!==mode){onModeChange?.(next.mode);mode=next.mode;}return true;}};},
     routeLink:()=>'',labCards(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
   });
   vm.runInContext('let routeCleanup=null,store=initialStore,currentLab=null,labNavigation=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
     'let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});\n'+lifecycle.join('\n')+'\n'+
-    'function labPage(s){currentLab=s;recordFor(s);return "lab "+s.id;}\nfunction bindLab(s,route){onBind(s,recordFor(s));return makeNavigation(s,route);}\n'+
+    'function labPage(s){currentLab=s;recordFor(s);return "lab "+s.id;}\nfunction bindLab(s,route,options){onBind(s,recordFor(s));return makeNavigation(s,route,options);}\n'+
     source.slice(draftStart,draftEnd)+'\n'+source.slice(routeStart,routeEnd)+'\n'+hashListener+'\n'+
     'globalThis.routeState=()=>({store,currentLab,manager:workStorage});\n'+
     'globalThis.replaceRouteWork=value=>{store=value;};\n'+
     'renderRoute(false);',context);
   order.length=0;
-  return {context,storage,writes,reads,order,routeSyncs,elements,location,main,state:()=>context.routeState(),get editor(){return editor;},
+  return {context,storage,writes,reads,order,routeSyncs,learningCalls,elements,location,main,state:()=>context.routeState(),get editor(){return editor;},
     navigate(hash){location.hash=hash;events.get('hashchange')();},
     privacy(){context.bindWorkPrivacy(context.routeState().currentLab);return mounted;}
   };
@@ -538,9 +573,23 @@ test('the actual hashchange router keeps same-ticket step history ahead of draft
   assert.equal(h.routeSyncs.length,6);assert.deepEqual(h.state().store.labs['CODE-501'],before);
   assert.equal(h.writes.length,0);assert.equal(h.reads.length,0);
   assert.equal(h.main.focused,0,'Page synchronization owns focus; the router must not override it.');
-  h.navigate('#lab/CODE-501/explain?mode=challenge&sequence=opening-day');
+  h.navigate('#lab/CODE-501/explain?mode=challenge');
   assert.equal(h.state().store.labs['CODE-501'].state.code,codingPrograms['CODE-501']);
   assert.deepEqual(h.order.slice(0,3),['dispose hardware gestures','save current draft','replace DOM'],'A changed assignment context still follows normal preservation and remounting.');
+});
+
+test('the actual hashchange router applies historical modes through the mounted learning controller',()=>{
+  const h=routeHarness('CODE-501','/request?mode=guided&sequence=opening-day'),editor=h.editor;
+  editor.value='print("A draft that has not run");';
+  const before=structuredClone(h.state().store.labs['CODE-501']);
+  for(const [step,mode] of [['workbench','independent'],['request','guided'],['workbench','independent'],['explain','challenge']]) {
+    const hash=`#lab/CODE-501/${step}?mode=${mode}&sequence=opening-day`;h.navigate(hash);
+    assert.equal(h.learningCalls.modes.at(-1),mode,'The router must connect historical modes to the existing support controller.');
+    assert.equal(h.location.hash,hash);assert.equal(h.editor,editor);assert.equal(editor.value,'print("A draft that has not run");');
+    assert.equal(h.learningCalls.mounts,1);assert.equal(h.learningCalls.disposals,0);
+    assert.deepEqual(h.order,[],'Changing historical support cannot dispose hardware, save the draft, or replace the page.');
+  }
+  assert.deepEqual(h.state().store.labs['CODE-501'],before);assert.equal(h.writes.length,0);assert.equal(h.reads.length,0);
 });
 
 test('leaving a coding lab preserves its draft before DOM replacement and returns it through hash history',()=>{

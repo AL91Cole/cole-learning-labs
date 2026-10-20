@@ -76,6 +76,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # CodeQL reads workflow-run metadata when analyzing a private repository.
+      actions: read
       security-events: write
     strategy:
       fail-fast: false
