@@ -76,6 +76,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # CodeQL reads workflow-run metadata; other jobs keep read-only contents.
+      actions: read
       security-events: write
     strategy:
       fail-fast: false
@@ -95,4 +97,5 @@ jobs:
       - name: Analyze source and upload security findings
         uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
+          upload: true
           category: /language:${{ matrix.language }}

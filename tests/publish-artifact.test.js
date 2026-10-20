@@ -41,6 +41,7 @@ test('publish output includes browser resources and API routing while excluding 
   assert.equal(result.directory, path.join(root, 'dist'));
   const files = await list(result.directory);
   assert.ok(files.includes('index.html') && files.includes('teacher/index.html'));
+  assert.ok(files.includes('404.html'), 'Pages needs a top-level 404 to disable homepage fallback for missing paths');
   assert.ok(files.includes('src/app.js') && files.includes('assets/favicon.svg'));
   assert.ok(files.includes('_headers') && files.includes('_routes.json'));
   assert.equal(files.some(filename => privateFiles.includes(filename)), false);
