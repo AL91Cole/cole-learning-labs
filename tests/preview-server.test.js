@@ -78,6 +78,42 @@ test('existing private files, repository metadata, and unreviewed browser files 
   }
 });
 
+test('nested missing paths return the same reviewed 404 without reflecting the request', async t => {
+  const { root, server } = await fixture(t);
+  await put(root, 'docs/private.txt', PRIVATE_CANARY);
+  for (const pathname of ['/missing/deep/path', '/docs/private.txt', '/unavailable?detail=PRIVATE_QUERY']) {
+    const response = await request(server, pathname);
+    assert.equal(response.status, 404, pathname);
+    assert.equal(response.body, 'PUBLIC_PREVIEW_FIXTURE:404.html', pathname);
+    assert.equal(response.headers['content-type'], 'text/html; charset=utf-8');
+    assert.equal(response.headers['cache-control'], 'no-store');
+    assert.doesNotMatch(response.body, /PRIVATE_QUERY|PRIVATE_CURRICULUM_OR_SECRET/);
+  }
+  const head = await request(server, '/missing/deep/path', 'HEAD');
+  assert.equal(head.status, 404);
+  assert.equal(head.body, '');
+  assert.equal(Number(head.headers['content-length']), Buffer.byteLength('PUBLIC_PREVIEW_FIXTURE:404.html'));
+
+  // Browser hash routes still request the existing homepage, not a static path.
+  const lab = new URL('/#lab/INC-101', 'https://preview.invalid');
+  const home = await request(server, lab.pathname);
+  assert.equal(home.status, 200);
+  assert.equal(home.body, 'PUBLIC_PREVIEW_FIXTURE:index.html');
+});
+
+test('a missing error document falls back to a fixed 404 for GET and HEAD', async t => {
+  const { root, server } = await fixture(t);
+  await rm(path.join(root, '404.html'));
+  const response = await request(server, '/missing/deep/path');
+  assert.equal(response.status, 404);
+  assert.equal(response.body, 'Not found');
+  assert.equal(response.headers['content-type'], 'text/plain; charset=utf-8');
+  const head = await request(server, '/missing/deep/path', 'HEAD');
+  assert.equal(head.status, 404);
+  assert.equal(head.body, '');
+  assert.equal(Number(head.headers['content-length']), Buffer.byteLength('Not found'));
+});
+
 test('raw or encoded traversal, malformed escapes, and Windows separators cannot expose a file', async t => {
   const { root, server } = await fixture(t);
   await put(root, '.env', PRIVATE_CANARY);

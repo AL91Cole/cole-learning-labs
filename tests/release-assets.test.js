@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const ORIGIN = 'https://release-test.invalid/';
-const ENTRIES = ['index.html', 'classroom.html', 'teacher/index.html', 'school-it.html', 'secure-reports.html'];
+const ENTRIES = ['index.html', '404.html', 'classroom.html', 'teacher/index.html', 'school-it.html', 'secure-reports.html'];
 const read = filename => readFileSync(path.join(ROOT, filename), 'utf8');
 
 function attributes(tag) {
@@ -66,6 +66,23 @@ test('all public entry scripts and styles use the entry-defined asset release', 
     assert.ok(dependencies.length, `${entry}: no scripts or styles were found`);
     for (const reference of dependencies) asset(reference, entry, /\.(?:m?js|css)$/);
   }
+});
+
+test('the static 404 resolves navigation and assets from a nested missing URL', () => {
+  const source = read('404.html');
+  assert.match(source, /<meta\s+name="robots"\s+content="noindex"/i);
+  assert.doesNotMatch(source, /<script\b/i, 'the error page must not load the application or reflect request data');
+  assert.doesNotMatch(source, /<base\b/i);
+  const nested = new URL('/missing/deep/path', ORIGIN);
+  const references = [...source.matchAll(/<(?:a|img|link)\b[^>]*>/gi)].map(([tag]) => attributes(tag)).flatMap(attrs => [attrs.href || attrs.src].filter(Boolean));
+  for (const reference of references) {
+    if (reference === '#main') continue;
+    assert.ok(reference.startsWith('/') && !reference.startsWith('//'), `404 reference must be root-relative: ${reference}`);
+    const url = new URL(reference, nested);
+    assert.equal(url.origin, nested.origin);
+    assert.ok(url.pathname === '/' || existsSync(path.join(ROOT, url.pathname.slice(1))), `404 target is missing: ${reference}`);
+  }
+  for (const target of ['/#home', '/#labs']) assert.ok(references.includes(target), `404 needs a working recovery link: ${target}`);
 });
 
 test('the complete source import graph cannot combine cached module releases', () => {
