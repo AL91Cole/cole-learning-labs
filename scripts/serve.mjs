@@ -68,6 +68,17 @@ async function publicFileBytes(sourceRoot, filename) {
   } finally { await handle.close(); }
 }
 
+async function notFound(req, res, sourceRoot) {
+  // Match Pages' top-level 404 without reflecting untrusted paths or publishing
+  // private files. Keep a plain fallback if the reviewed error page is absent.
+  let body;
+  let type = 'text/html; charset=utf-8';
+  try { body = await publicFileBytes(sourceRoot, '404.html'); }
+  catch { body = Buffer.from('Not found'); type = 'text/plain; charset=utf-8'; }
+  res.writeHead(404, { ...BASE_HEADERS, 'Content-Type': type, 'Content-Length': body.length });
+  res.end(req.method === 'HEAD' ? undefined : body);
+}
+
 export function createPreviewServer({ sourceRoot = PROJECT_ROOT } = {}) {
   assertPublicCurriculumPaths(PUBLIC_FILES);
   return http.createServer(async (req, res) => {
@@ -85,7 +96,7 @@ export function createPreviewServer({ sourceRoot = PROJECT_ROOT } = {}) {
     }
     const filename = ROUTES.get(pathname) || pathname.slice(1);
     // Preview the same reviewed files as production, never the checkout root.
-    if (!FILES.has(filename)) { res.writeHead(404, BASE_HEADERS); res.end('Not found'); return; }
+    if (!FILES.has(filename)) { await notFound(req, res, sourceRoot); return; }
     try {
       const body = await publicFileBytes(sourceRoot, filename);
       const headers = { ...BASE_HEADERS, 'Content-Type': previewContentType(filename), 'Content-Length': body.length };
@@ -94,7 +105,7 @@ export function createPreviewServer({ sourceRoot = PROJECT_ROOT } = {}) {
       }
       res.writeHead(200, headers);
       res.end(req.method === 'HEAD' ? undefined : body);
-    } catch { res.writeHead(404, BASE_HEADERS); res.end('Not found'); }
+    } catch { await notFound(req, res, sourceRoot); }
   });
 }
 

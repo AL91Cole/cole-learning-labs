@@ -8,7 +8,7 @@ const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 // A new public file needs an explicit review here. Never publish the checkout root.
 export const PUBLIC_FILES = Object.freeze([
-  'index.html', 'classroom.html', 'school-it.html', 'secure-reports.html', 'teacher/index.html',
+  'index.html', '404.html', 'classroom.html', 'school-it.html', 'secure-reports.html', 'teacher/index.html',
   '_headers', '_routes.json',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
   'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
