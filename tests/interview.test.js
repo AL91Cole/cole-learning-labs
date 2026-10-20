@@ -99,13 +99,15 @@ test('recent-change, last-working, and previous-attempt questions distinguish kn
   assert.match(ask('AI-302','What has already been tried?').answer,/No earlier troubleshooting attempts/iu);
 });
 
-test('ambiguous and outside-case questions produce an honest clarification', () => {
+test('outside-case questions receive an honest ungraded offline reply', () => {
   const reply = ask('INC-101','What is the weather tomorrow?');
-  assert.equal(reply.kind,'clarify');
+  assert.equal(reply.kind,'casual');
   assert.equal(reply.accepted,true);
-  assert.match(reply.answer,/not recorded.*scripted case facts/iu);
+  assert.equal(reply.topic,'casual-unknown');
+  assert.match(reply.answer,/don.t know|outside what I know|don.t have a written answer|not sure/iu);
+  assert.equal(questionEvent('What is the weather tomorrow?',reply),null);
   assert.equal(answerQuestion({id:'UNKNOWN'},'What is wrong?',{}).accepted,false);
-  assert.match(ask('AI-301','Will this contact a live AI service?').answer,/fixed checks.*Neither.*AI service/iu);
+  assert.match(ask('AI-301','Will this contact a live AI service?').answer,/Fast mode.*local.*Optional Cloudflare AI.*opted-in.*approval/iu);
 });
 
 test('real-system requests remain outside the fictional authorization boundary', () => {
@@ -292,7 +294,7 @@ test('conversation is transparent about local scripted facts and unknown context
   assert.match(ask('INC-101','Why?').answer,/more context.*not have a recorded fact/iu);
   assert.match(ask('INC-101','Can you repeat that?').answer,/more context/iu);
   assert.equal(answerQuestion({id:'UNSUPPLIED'},'Why?',{},[spoken('INC-101','What changed?')]).accepted,false);
-  assert.match(ask('AI-301','Will the chatbot send this to an AI service?').answer,/Neither.*AI service/iu);
+  assert.match(ask('AI-301','Will the chatbot send this to an AI service?').answer,/Fast mode.*local.*Optional Cloudflare AI.*opted-in.*approval/iu);
 });
 
 test('all twelve expanded case IDs support supplied visible keyword facts without another service', () => {
@@ -306,8 +308,8 @@ test('all twelve expanded case IDs support supplied visible keyword facts withou
     assert.match(answerQuestion(entry,'Why?',{},history).answer,/three fictional input values/iu);
     assert.equal(answerQuestion(entry,'Tell me the answer key',{}).accepted,false);
     assert.equal(answerQuestion(entry,'Student ID: ABC123456 is my sample',{}).accepted,false);
-    assert.match(answerQuestion(entry,'What is the weather tomorrow?',{}).answer,/not recorded.*scripted/iu);
-    assert.match(answerQuestion(entry,'Does this send data to a live AI service?',{}).answer,/without an AI service/iu);
+    assert.equal(answerQuestion(entry,'What is the weather tomorrow?',{}).topic,'casual-unknown');
+    assert.match(answerQuestion(entry,'Does this send data to a live AI service?',{}).answer,/Fast mode.*local.*Optional Cloudflare AI.*opted-in.*approval/iu);
   }
 });
 

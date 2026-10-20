@@ -14,7 +14,7 @@ function fixture(){
   function node(){return {innerHTML:'',value:'',classList:{add(){},remove(){}},setAttribute(){},addEventListener(name,fn){this[name]=fn;},close(){},replaceChildren(){this.innerHTML='';}};}
   const $=selector=>{if(!elements.has(selector))elements.set(selector,node());return elements.get(selector);};
   const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport,learningRoute,
-    foundationRecords:Object.create(null),location:{hash:'#learn/hardware'},currentLab:null,routeCleanup:null,reportCleanup:null,classroomConnection:null,
+    foundationRecords:Object.create(null),location:{hash:'#learn/hardware'},currentLab:null,labNavigation:null,routeCleanup:null,reportCleanup:null,classroomConnection:null,
     document:{body:{classList:{add(){},remove(){}}},title:''},window:{scrollTo(){},addEventListener(name,fn){events.set(name,fn);}},
     $,$$:()=>[],disposeHardware(){},preserveCodeDraft(){},hasCodeDraft:()=>false,workStorage:{persistent:true},store:{labs:{}},
     renderFoundationLab:(lab,record)=>`<section>${lab.code} ${record.labId}</section>`,

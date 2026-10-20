@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {SCENARIOS} from '../src/scenarios.js';
+import {labLanguage} from '../src/lab-language.js';
+import {requesterPersona} from '../src/requester-persona.js';
+import {mountRequesterChat} from '../src/requester-chat.js';
 import {FOUNDATION_LABS,createFoundationRecord} from '../src/foundation-model.js';
 import {renderFoundationLab} from '../src/foundation-labs.js';
 import {CAPSTONE_STAGES,renderCapstone} from '../src/capstone.js';
@@ -10,6 +13,7 @@ import {initialHardwareState,applyHardwareAction,verifyHardware} from '../src/ha
 import {initialWorkspaceState,applyWorkspaceAction,verifyWorkspace} from '../src/workspaces.js';
 import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from '../src/interview.js';
 import {retainExperimentEvents,experimentEventText,experimentReport} from '../src/experiments.js';
+import {learningRoute,labPageHash} from '../src/learning-tools.js';
 import {createTextReport} from '../src/report-downloads.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
@@ -21,7 +25,7 @@ const tracks=Object.fromEntries(SCENARIOS.map(s=>[s.track,{name:s.track}]));
 function recordFor(s){return {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:s.track==='hardware'?initialHardwareState(s.id):initialWorkspaceState(s.id)};}
 function renderTicket(s,record=recordFor(s)){
   return vm.runInNewContext('let currentLab=null,labView=null;\n'+source.slice(renderStart,renderEnd)+'\nlabPage(s)',{
-    s,tracks,esc,recordFor:()=>record,inquiryProgress,readQuestionEvents,experimentEventText,workStorage:{},workStatus:()=> 'Private session'
+    s,tracks,esc,labLanguage,requesterPersona,recordFor:()=>record,inquiryProgress,readQuestionEvents,experimentEventText,workStorage:{},workStatus:()=> 'Private session'
   });
 }
 function openingTag(html,id){const match=new RegExp('<[a-z][^>]*\\bid="'+id+'"[^>]*>','i').exec(html);assert.ok(match,'Missing '+id);return match[0];}
@@ -49,6 +53,7 @@ class Node {
   close(){}
 }
 function controller(s){
+  const location={hash:labPageHash(s.id,1)},history={pushState(_state,_title,url){location.hash=url;},replaceState(_state,_title,url){location.hash=url;}};
   const record=recordFor(s),nodes=new Map(),calls={renders:0,saves:0,reports:0,visible:[]};
   const node=selector=>{if(!nodes.has(selector))nodes.set(selector,new Node());return nodes.get(selector);};
   const panels=['.case-sidebar','.bench-column','.evidence-sidebar'].map(node);
@@ -60,7 +65,7 @@ function controller(s){
     ['[data-clue]',s.clues.map(clue=>new Node({clue:clue.id}))],['[data-question]',s.questions.map((_,index)=>new Node({question:String(index)}))]
   ]);
   function renderBench(){calls.renders++;node('#workspace').children=new Map();if(s.track==='coding'){const editor=new Node();editor.value=record.state.code;nodes.set('#coding-editor',editor);}}
-  const context=vm.createContext({s,record,tracks,esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
+  const context=vm.createContext({s,record,tracks,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,mountRequesterChat,esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
     applyHardwareAction,verifyHardware,applyWorkspaceAction:(id,state,action,value)=>applyWorkspaceAction(id,state,action,value===undefined?undefined:structuredClone(value)),verifyWorkspace,
     retainExperimentEvents:(scenario,events)=>retainExperimentEvents(scenario,structuredClone(events)),experimentEventText,experimentReport,
     $:node,$$:selector=>{assert.ok(groups.has(selector),'Unknown control group '+selector);return groups.get(selector);},
@@ -69,16 +74,17 @@ function controller(s){
     renderHardware:renderBench,renderWorkspace:renderBench,cancelHardwareInteraction(){},setHardwareVisible(_workspace,visible){calls.visible.push(visible);},
     save(){calls.saves++;},showNotice(){},openReport(){calls.reports++;},renderRoute(){},attachClassroomLab:()=>null,normalizeLabRecord:(_scenario,value)=>value
   });
-  vm.runInContext('let workStorage={},classroomConnection=null,classroomSharingPaused=true,storageKey="test",store={labs:{}},labView={id:s.id,section:1};\n'+source.slice(helperStart,reportEnd)+'\nbindLab(s)',context);
+  vm.runInContext('let workStorage={},classroomConnection=null,classroomSharingPaused=true,storageKey="test",store={labs:{}},labNavigation=null,labView={id:s.id,section:1};\n'+source.slice(helperStart,reportEnd)+'\nbindLab(s)',context);
   return {record,nodes,calls,panels,tabs,node,select(section){tabs[section-1].fire('click');},report(){return context.reportText(s,record);}};
 }
 
 for(const scenario of SCENARIOS){
-  test(scenario.id+': request, clues and the workstation remain together while the learner navigates',()=>{
+  test(scenario.id+': each lab part has one visible page while navigation retains learner work',()=>{
     const html=renderTicket(scenario);
-    for(const id of ['lab-problem','lab-workbench']){
+    for(const [index,id] of ['lab-problem','lab-workbench','lab-finish'].entries()){
       const tag=openingTag(html,id);
-      assert.doesNotMatch(tag,/\bhidden(?:\s|>|=)|role="tabpanel"/,'Permanent panes cannot be hidden exclusive tabs.');
+      assert.equal(/\bhidden(?:\s|>|=)/.test(tag),index!==0,'Only Request & clues is initially visible.');
+      assert.match(tag,/role="region"/);assert.doesNotMatch(tag,/role="tabpanel"/);
       assert.equal([...html.matchAll(new RegExp('id="'+id+'"','g'))].length,1);
     }
     for(const id of ['workspace','question-form','student-question','report-button','finish-report','close-ticket','work-privacy'])openingTag(html,id);
@@ -93,16 +99,15 @@ for(const scenario of SCENARIOS){
     if(editor)editor.value='print(quantity * 3); // unsaved practice draft';
     for(const section of [2,3,1,3,2,1]){
       h.select(section);
-      assert.equal(h.panels[0].hidden,false,'Request stays available at step '+section);
-      assert.equal(h.panels[1].hidden,false,'Workstation stays available at step '+section);
-      assert.equal(h.panels[2].hidden,section!==3,'Check & explain follows the selected step.');
+      if(scenario.track==='hardware')assert.equal(h.calls.visible.at(-1),section===2,'Equipment is active only on the workbench page.');
+      assert.deepEqual(h.panels.map(panel=>!panel.hidden),[1,2,3].map(value=>value===section),'Only the selected lab part is visible at step '+section);
       assert.equal(h.node('#student-question'),question);assert.ok(question.value.startsWith('An unfinished'));
       assert.equal(h.node('#workspace').querySelector('[data-workspace-draft]'),draft);assert.equal(draft.value,'An unapplied workspace choice');
       if(editor){assert.equal(h.node('#coding-editor'),editor);assert.match(editor.value,/unsaved practice draft/);}
     }
     assert.deepEqual(h.record,before,'Navigation must not repair, test, execute code, save, or reset work.');
     assert.equal(h.calls.renders,renders,'Focus navigation cannot remount the equipment.');
-    if(scenario.track==='hardware')assert.ok(h.calls.visible.every(Boolean),'A persistent hardware bench remains active.');
+    if(scenario.track==='hardware')assert.equal(h.calls.visible.at(-1),false,'Leaving the equipment page pauses the retained bench.');
   });
 }
 
@@ -119,7 +124,7 @@ test('all five beginner pathways render instructions alongside a single persiste
   }
 });
 
-test('every capstone work order routes to the same split investigation rather than a separate workspace',()=>{
+test('every capstone work order routes to the same three-page investigation',()=>{
   const html=renderCapstone({},()=>({ok:false}));
   assert.equal(CAPSTONE_STAGES.length,5);
   for(const stage of CAPSTONE_STAGES){
@@ -129,7 +134,7 @@ test('every capstone work order routes to the same split investigation rather th
   }
 });
 
-test('the shared split layout keeps learner content escaped and private assessment data out of reports',async()=>{
+test('the shared three-page layout keeps learner content escaped and private assessment data out of reports',async()=>{
   const base=SCENARIOS.find(s=>s.id==='NET-201'),privateCanary='PRIVATE_ASSESSMENT_CANARY_SPLIT';
   const scenario={...base,brief:'</blockquote><img src=x onerror=alert(1)>',rubric:[privateCanary],answerKey:privateCanary};
   const record=recordFor(scenario);record.plan='<script>fictional hypothesis</script>';record.notes='Fictional learner notes';
