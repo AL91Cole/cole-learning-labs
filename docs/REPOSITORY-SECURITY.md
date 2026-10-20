@@ -35,7 +35,7 @@ GitHub settings showed private vulnerability reporting, dependency graph, Depend
 
 The active **Protect main releases** ruleset targets the default branch `main`, with no bypass actors. It requires a pull request, resolved conversations, linear history, current branches, and the three named checks from **GitHub Actions**. Force pushes and branch deletion are blocked. Required approvals are zero because the current maintainer cannot independently approve their own change; this does not establish independent review. Both CodeQL jobs and all 125 tests passed on the security pull request. Recheck results after any new commit.
 
-Cloudflare's build command and `dist` output were saved and verified in a successful security preview. That preview passed all 125 tests, retained the closed production API entry, and excluded development file contents. Source-only URLs may return the homepage through Cloudflare's fallback. The custom-domain production deployment must be verified after merging; preview success alone is insufficient.
+Cloudflare's build command and `dist` output were saved and verified in a successful security preview. That preview passed all 125 tests, retained the closed production API entry, and excluded development file contents. That October 16 preview predates the top-level error page and could return the homepage for source-only URLs. Current releases must return 404 for missing static paths, or 403 where the custom edge rule blocks a non-public path. The custom-domain production deployment must be verified after merging; preview success alone is insufficient.
 
 ## Reconnaissance hardening — October 19, 2026
 
@@ -52,7 +52,7 @@ A top-level scriptless `404.html` removes Pages' automatic homepage fallback for
 1. Keep credentials and real school records out of source, branches, issues, previews, build logs, and test fixtures. Use synthetic examples. Check the proposed diff for unintended files and permission changes.
 2. Submit a focused pull request. Run `npm run check`, `npm test`, and `npm run build` with the supported Node version. Review all required check results and code-scanning findings. A failed, skipped, missing, or stale check needs explanation and resolution before release.
 3. Review changes to workflows, hosting headers, authentication, classroom ownership, exports, and the production privacy gate with particular care. Changing collection or processing requires reopening the documented privacy review; routine deployment approval is insufficient.
-4. Merge the reviewed commit and confirm Cloudflare deploys that revision successfully. Verify the canonical HTTPS site, response policies, representative labs, and the production API's closed-gate response. Check that development/source-only files are not served as static content. Use fictional data for verification.
+4. Merge the reviewed commit and confirm Cloudflare deploys that revision successfully. Verify the canonical HTTPS site, response policies, representative labs, and the production API's closed-gate response. Check that missing static paths return 404 and development/source-only paths return 404 or the expected edge-rule 403, without source contents or homepage HTML. Use fictional data for verification.
 5. Record the deployed commit, results, limitations, and any follow-up owner. Revert a defective release to a known reviewed version, then verify its actual responses. Do not disable TLS validation, DNSSEC, or the privacy gate to make a deployment pass.
 
 ## Incident handling
