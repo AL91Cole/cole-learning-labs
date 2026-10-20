@@ -97,4 +97,5 @@ jobs:
       - name: Analyze source and upload security findings
         uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
+          upload: false
           category: /language:${{ matrix.language }}
