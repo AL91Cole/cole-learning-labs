@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PUBLIC_FILES } from '../scripts/build.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const ORIGIN = 'https://release-test.invalid/';
-const ENTRIES = ['index.html', '404.html', 'classroom.html', 'teacher/index.html', 'school-it.html', 'secure-reports.html'];
+const ENTRIES = PUBLIC_FILES.filter(filename => filename.endsWith('.html'));
 const read = filename => readFileSync(path.join(ROOT, filename), 'utf8');
 
 function attributes(tag) {

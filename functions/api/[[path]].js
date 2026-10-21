@@ -1,7 +1,7 @@
 /** Optional, fail-closed classroom service. Public simulations remain independent. */
 import { SCENARIOS } from '../../src/scenarios.js';
 import { EXPANDED_SCENARIOS, expandedStateFields } from '../../src/expanded-labs.js';
-import { CODING_SCENARIOS } from '../../src/coding-lab.js';
+import { CODING_SCENARIOS, codingFixtureCount } from '../../src/coding-lab.js';
 // Production release lock. Only a reviewed code release may change this after the
 // applicable privacy, legal, district-agreement, and operational requirements are met.
 // Environment variables, request values, and runtime options cannot approve a release.
@@ -155,7 +155,7 @@ const workspaceCommonFields = {
   results: workList(workRecord({ label: workString(300), ok: workBoolean }), 10)
 };
 const expandedWorkspaceFields=Object.fromEntries(EXPANDED_SCENARIOS.map(scenario=>[scenario.id,{testSignature:workString(160),...Object.fromEntries(Object.entries(expandedStateFields(scenario.id)).map(([field,values])=>[field,workEnum(values)]))}]));
-const codingWorkspaceFields=Object.fromEntries(CODING_SCENARIOS.map(scenario=>[scenario.id,{code:workString(4000),sourceAtRun:workString(4000),fixtureIndex:value=>Number.isInteger(value)&&value>=0&&value<=(scenario.id==='CODE-502'?3:2),output:workList(workString(300),20),errors:workList(workRecord({line:value=>Number.isInteger(value)&&value>=1&&value<=4001,message:workString(300)}),1)}]));
+const codingWorkspaceFields=Object.fromEntries(CODING_SCENARIOS.map(scenario=>[scenario.id,{code:workString(4000),sourceAtRun:workString(4000),language:workEnum(['javascript','python']),languageAtRun:workEnum(['','javascript','python']),fixtureIndex:value=>Number.isInteger(value)&&value>=0&&value<codingFixtureCount(scenario.id),output:workList(workString(300),20),errors:workList(workRecord({line:value=>Number.isInteger(value)&&value>=1&&value<=4001,message:workString(300)}),1)}]));
 const workspaceStateFields = {
   ...expandedWorkspaceFields, ...codingWorkspaceFields,
   'NET-201': Object.fromEntries(['ip', 'mask', 'gateway', 'dns'].map(key => [key, workString(64)])),

@@ -1,7 +1,7 @@
-import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261021-accessibility26';
-import { normalizeWorkspaceState } from './workspaces.js?release=20261021-accessibility26';
-import { inquiryProgress } from './interview.js?release=20261021-accessibility26';
-import { retainExperimentEvents } from './experiments.js?release=20261021-accessibility26';
+import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261021-table27';
+import { normalizeWorkspaceState, verifyWorkspace } from './workspaces.js?release=20261021-table27';
+import { inquiryProgress } from './interview.js?release=20261021-table27';
+import { retainExperimentEvents } from './experiments.js?release=20261021-table27';
 
 // Local storage and uploaded drafts are data, never trusted HTML or object shapes.
 export function normalizeLabRecord(scenario, value) {
@@ -18,6 +18,11 @@ export function normalizeLabRecord(scenario, value) {
   // Technical completion follows the current equipment, not a stale saved flag.
   // Written work remains available for correction and the next startup test.
   if (scenario.track === 'hardware' && !verifyHardware(scenario.id, record.state).ok) {
+    record.verified = false; record.closed = false;
+  }
+  // A saved completion flag cannot outlive a coding source/language change.
+  // Recompute the current fixture result; keep the learner's written work.
+  if (scenario.track === 'coding' && !verifyWorkspace(scenario.id, record.state).ok) {
     record.verified = false; record.closed = false;
   }
   // Earlier v2 records can predate the requester-clarification step. Keep their

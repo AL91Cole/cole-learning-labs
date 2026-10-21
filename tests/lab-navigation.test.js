@@ -59,7 +59,8 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
   const elements = new Map();
   for (const selector of ['#main','#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#reply-source','#requester-options','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
   elements.get('#question-suggestions').hidden=true;
-  for(const selector of ['#plan','#evidence-detail']){const drawer=new Element();drawer.open=false;elements.get(selector).disclosure=drawer;}
+  for(const field of ['plan','notes','reflection']){const error=new Element();error.hidden=true;elements.set('#'+field+'-error',error);}
+  for(const selector of ['#plan','#evidence-detail','#run-hypothesis-test']){const drawer=new Element();drawer.open=true;elements.get(selector).disclosure=drawer;}
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
   const groups = new Map([
     ['[data-lab-section]',[1,2,3].map(section => new Element({labSection:String(section)}))],
@@ -79,7 +80,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
   }
   const context = vm.createContext({
     scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,
-    mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,...requesterOptions}),
+    mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
     // Production modules share one realm. Transfer VM-created action data into
     // the model's realm so its strict plain-object boundary is tested fairly.
     applyWorkspaceAction:(caseId,previous,action,value)=>applyWorkspaceAction(caseId,previous,action,value===undefined?undefined:structuredClone(value)),
@@ -350,6 +351,18 @@ for(const [id,program] of Object.entries(codingPrograms)) {
   });
 }
 
+test('coding reports identify only the normalized practice-language labels, including legacy JavaScript records',()=>{
+  for(const scenario of SCENARIOS.filter(item=>item.track==='coding')){
+    const h=harness(scenario.id);
+    for(const [language,expected] of [['javascript','JavaScript subset'],['python','Python subset'],['unsupported\nFAKE REPORT FIELD','JavaScript subset'],[undefined,'JavaScript subset']]){
+      if(language===undefined)delete h.record.state.language;else h.record.state.language=language;
+      const report=h.report();assert.match(report,new RegExp('PRACTICE LANGUAGE\\n'+expected+'\\n\\nSAVED PRACTICE CODE','u'));
+      assert.equal((report.match(/PRACTICE LANGUAGE/gu)||[]).length,1);assert.doesNotMatch(report,/FAKE REPORT FIELD/u);
+    }
+  }
+  for(const scenario of SCENARIOS.filter(item=>item.track!=='coding'))assert.doesNotMatch(harness(scenario.id).report(),/PRACTICE LANGUAGE/u,scenario.id);
+});
+
 test('section buttons stay keyboard reachable and support wrap, Home, and End without replacing the workbench', () => {
   const h = harness(),tabs = h.groups.get('[data-lab-section]'); assert.deepEqual(tabs.map(tab => tab.tabIndex),[0,0,0]);
   assert.equal(h.key(0,'ArrowRight').defaultPrevented,true); assert.deepEqual(h.selected(),['false','true','false']); assert.deepEqual(tabs.map(tab => tab.tabIndex),[0,0,0]); assert.equal(tabs[1].focused,1);
@@ -423,27 +436,73 @@ test('casual character conversation stays in page history without entering repor
   h.context.navigation.dispose();
 });
 
-test('an opted-in AI extra reply changes only the current RAM conversation and cannot become case evidence',async()=>{
+test('messenger keeps the newest eight escaped pairs beside the composer without saving extra chat',()=>{
+  const h=harness('INC-101'),before=structuredClone(h.record),saved=h.calls.saved,log=h.elements.get('#interview-history');
+  log.scrollHeight=900;log.clientHeight=260;log.scrollTop=0;
+  const questions=['What did you have for breakfast?','What is your favorite color?','What are your hobbies?','What is your favorite food?','What is your favorite book?','What is your favorite music?','Tell me about dragons','Tell me about trains','Tell me about oceans','Tell me about mountains'];
+  for(const question of questions)h.ask(question);
+  assert.equal((log.innerHTML.match(/class="interview-pair"/gu)||[]).length,8);
+  assert.doesNotMatch(log.innerHTML,/What did you have for breakfast|What is your favorite color/u);
+  assert.ok(log.innerHTML.indexOf('What are your hobbies?')<log.innerHTML.indexOf('Tell me about mountains'));
+  assert.match(log.innerHTML,/interview-user.*You.*interview-requester.*Ms\. Rivera/su);
+  assert.equal(log.scrollTop,log.scrollHeight);assert.deepEqual(h.record,before);assert.equal(h.calls.saved,saved);
+  assert.doesNotMatch(h.report(),/What are your hobbies|Tell me about mountains/u);
+  h.section(2);h.section(1);assert.equal((log.innerHTML.match(/class="interview-pair"/gu)||[]).length,8);
+  h.ask('My email is learner@example.org. Tell me about dragons');
+  assert.match(log.innerHTML,/conversation-feedback.*leave out personal details/su);assert.doesNotMatch(log.innerHTML,/learner@example/u);
+  assert.equal((log.innerHTML.match(/class="interview-pair"/gu)||[]).length,8);assert.deepEqual(h.record,before);
+});
+
+test('closing an initially open core task panel stays closed while moving between the three pages',()=>{
+  const h=harness(),drawers=['#plan','#evidence-detail','#run-hypothesis-test'].map(selector=>h.elements.get(selector).disclosure);
+  assert.deepEqual(drawers.map(drawer=>drawer.open),[true,true,true]);
+  for(const drawer of drawers)drawer.open=false;
+  const renders=h.calls.rendered,before=structuredClone(h.record);
+  for(const section of [2,3,1,2,1])h.section(section);
+  assert.deepEqual(drawers.map(drawer=>drawer.open),[false,false,false]);assert.equal(h.calls.rendered,renders);assert.deepEqual(h.record,before);
+});
+
+test('Python language and an unfinished Python source stay together through page navigation and fresh testing',()=>{
+  const h=harness('CODE-501');h.input('plan','The changing quantity should determine the total in the chosen language.');
+  h.action('set-language',{language:'python',code:'print(quantity + 3)'});
+  assert.equal(h.record.state.language,'python');assert.equal(h.record.state.tested,false);
+  const editor=h.elements.get('#coding-editor');editor.value='total = quantity * 3\nprint(total)';
+  for(const section of [3,1,2])h.section(section);
+  assert.equal(h.elements.get('#coding-editor'),editor);assert.equal(editor.value,'total = quantity * 3\nprint(total)');assert.equal(h.record.state.language,'python');assert.equal(h.record.state.tested,false);
+  h.elements.get('#run-hypothesis-test').fire('click');
+  assert.equal(h.record.state.code,editor.value);assert.equal(h.record.state.language,'python');assert.equal(h.record.state.languageAtRun,'python');assert.equal(h.record.verified,true);
+});
+
+test('an available cloud extra reply changes only the current RAM conversation and cannot become case evidence',async()=>{
   const requests=[],answer='<b>A fictional AI extra response.</b>';
   const h=harness('INC-101',1,answerQuestion,()=>{},{},{fetcher:async(path,options)=>{
     requests.push({path,options});
     return new Response(JSON.stringify(options.method==='GET'?{enabled:true}:{kind:'ai',ungraded:true,answer}),{status:200});
   }});
-  const options=h.elements.get('#requester-options');options.querySelector('[data-ai-check]').fire('click');
-  await new Promise(resolve=>setImmediate(resolve));
-  options.querySelector('[data-ai-consent]').checked=true;options.querySelector('[data-ai-consent]').fire('change');
-  options.querySelector('[data-ai-toggle]').checked=true;options.querySelector('[data-ai-toggle]').fire('change');
+  const options=h.elements.get('#requester-options');await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(options.querySelector('[data-ai-toggle]').getAttribute('aria-pressed'),'true');
   const before=structuredClone(h.record),saved=h.calls.saved;
   h.ask('What did you have for breakfast?');await new Promise(resolve=>setImmediate(resolve));
   assert.deepEqual(requests.map(request=>request.options.method),['GET','POST']);
   assert.deepEqual(JSON.parse(requests[1].options.body),{scenarioId:'INC-101',topic:'breakfast'});
   assert.doesNotMatch(requests[1].options.body,/What did you|question|notes|history|state/u,'Only an authored topic reaches transport.');
   assert.equal(h.elements.get('#question-response').textContent,answer);
-  assert.match(h.elements.get('#interview-history').innerHTML,/AI extra reply.*&lt;b&gt;A fictional AI extra response\.&lt;\/b&gt;/u);
+  assert.match(h.elements.get('#interview-history').innerHTML,/&lt;b&gt;A fictional AI extra response\.&lt;\/b&gt;.*AI reply.*may be wrong.*not case evidence/u);
   assert.doesNotMatch(h.elements.get('#interview-history').innerHTML,/<b>A fictional/u,'Even generated markup must display as escaped text.');
   assert.deepEqual(h.record,before);assert.equal(h.calls.saved,saved);assert.equal(inquiryProgress(h.scenario,h.record.events).complete,false);
   assert.doesNotMatch(h.report(),/fictional AI extra response|What did you have for breakfast/iu);
   h.context.navigation.dispose();
+});
+
+test('a delayed cloud reply does not pull a reader away from older visible messages',async()=>{
+  let deliver;
+  const h=harness('INC-101',1,answerQuestion,()=>{},{},{fetcher:async(_path,options)=>options.method==='GET'?new Response(JSON.stringify({enabled:true}),{status:200}):new Promise(resolve=>{deliver=()=>resolve(new Response(JSON.stringify({kind:'ai',ungraded:true,answer:'A quiet creative breakfast idea.'}),{status:200}));})});
+  await new Promise(resolve=>setImmediate(resolve));
+  const log=h.elements.get('#interview-history');log.scrollHeight=1000;log.clientHeight=250;log.scrollTop=0;
+  h.ask('What did you have for breakfast?');assert.equal(log.scrollTop,1000);
+  log.scrollTop=0;const before=structuredClone(h.record);deliver();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(log.scrollTop,0);assert.match(log.innerHTML,/A quiet creative breakfast idea/u);assert.match(log.innerHTML,/AI reply.*may be wrong/u);
+  assert.deepEqual(h.record,before);h.context.navigation.dispose();
 });
 
 test('optional follow-up suggestions render bounded plain text as ordinary buttons',()=>{
@@ -528,6 +587,45 @@ test('finishing a technically repaired detailed ticket opens the missing evidenc
   assert.equal(h.elements.get('#plan').scrolled[0].behavior,'instant','Validation focus must not race an earlier navigation scroll.');
 });
 
+test('missing hypothesis guidance stays beside its identified field until the learner corrects it',()=>{
+  const h=harness('INC-102',2),field=h.elements.get('#plan'),error=h.elements.get('#plan-error');
+  h.elements.get('#run-hypothesis-test').fire('click');
+  assert.equal(field.getAttribute('aria-invalid'),'true');assert.equal(error.hidden,false);
+  assert.equal(error.textContent,labLanguage(h.scenario).hypothesisRequired);
+  assert.equal(h.calls.notices.length,0,'Required guidance must not depend on an expiring toast.');
+  h.input('plan','Too short');assert.equal(error.hidden,false);assert.equal(field.getAttribute('aria-invalid'),'true');
+  h.input('plan','The disconnected power cable may explain why the computer will not start.');
+  assert.equal(error.hidden,true);assert.equal(error.textContent,'');assert.equal(field.getAttribute('aria-invalid'),null);
+  assert.equal(h.record.closed,false);assert.equal(h.record.verified,false);
+});
+
+test('finish focuses the actual missing explanation, preserves the other answer, and clears corrected field errors',()=>{
+  for(const missing of ['notes','reflection']){
+    const h=harness('INC-102');h.action('plug-in');h.action('boot');h.action('open-document');
+    h.groups.get('[data-clue]')[0].fire('click');h.groups.get('[data-clue]')[1].fire('click');
+    h.input('plan','The computer was unplugged, so reconnecting power should let it start.');
+    const other=missing==='notes'?'reflection':'notes',answer='I reconnected the virtual power cable and the lesson opened after startup.';
+    h.input(other,answer);h.section(3);h.elements.get('#close-ticket').fire('click');
+    assert.equal(h.elements.get('#'+missing).focused,1,missing);assert.equal(h.elements.get('#'+other).focused,0,other);
+    assert.equal(h.elements.get('#'+missing).getAttribute('aria-invalid'),'true');
+    assert.equal(h.elements.get('#'+missing+'-error').hidden,false);assert.equal(h.record[other],answer);
+    assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);
+    h.input(missing,'The startup and lesson result support the idea that the power connection was missing.');
+    assert.equal(h.elements.get('#'+missing+'-error').hidden,true);assert.equal(h.elements.get('#'+missing).getAttribute('aria-invalid'),null);
+    h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,true);assert.equal(h.calls.reports,1);
+  }
+});
+
+test('a missing-clues check focuses a clue rather than marking an already valid hypothesis as invalid',()=>{
+  const h=harness('INC-102');h.action('plug-in');h.action('boot');h.action('open-document');
+  h.input('plan','The unplugged power cable explains why the computer could not start.');h.section(3);
+  h.elements.get('#close-ticket').fire('click');
+  assert.equal(h.groups.get('[data-clue]')[0].focused,1);assert.equal(h.elements.get('#plan').focused,0);
+  assert.equal(h.elements.get('#plan').getAttribute('aria-invalid'),null);
+  assert.equal(h.elements.get('#evidence-detail').textContent,labLanguage(h.scenario).cluesPlanRequired);
+  assert.deepEqual(h.visible(),[true,false,false]);assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);
+});
+
 test('all cases render labelled pages and accessible navigation with only the request visible initially', () => {
   const renderStart = source.indexOf('function labPage(s){'),renderEnd = source.indexOf('\nfunction evidenceList(',renderStart); assert.ok(renderStart >= 0 && renderEnd > renderStart);
   const context = vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
@@ -539,31 +637,38 @@ test('all cases render labelled pages and accessible navigation with only the re
       const tab = html.match(new RegExp('<button\\b[^>]*\\bid="lab-tab-'+(index+1)+'"[^>]*>','u'))?.[0]; assert.ok(tab); assert.doesNotMatch(tab,/role="tab"/u); assert.match(tab,new RegExp('aria-controls="'+id+'"','u')); if(index===0)assert.match(tab,/aria-current="step"/u);else assert.doesNotMatch(tab,/aria-current=/u);
     }
     for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','question-suggestions','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
+    for(const field of ['plan','notes','reflection']){
+      const input=html.match(new RegExp('<textarea\\b[^>]*id="'+field+'"[^>]*>','u'))?.[0];
+      assert.match(input,new RegExp('aria-describedby="[^"]*'+field+'-error','u'));
+      assert.match(html,new RegExp('<p id="'+field+'-error"[^>]*role="alert"[^>]*hidden>','u'));
+    }
     assert.match(html,/<div id="question-suggestions"[^>]*role="group"[^>]*aria-label="Suggested follow-up questions"[^>]*hidden/u);
-    assert.match(html,/<div class="requester-live-reply" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"[^>]*><\/p><p id="question-response"/u,'The warning and answer must be announced together, with the source first.');
+    assert.match(html,/<div class="requester-live-reply sr-only" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"[^>]*><\/p><p id="question-response"/u,'The warning and answer must be announced together, with the source first.');
     assert.match(html,/id="reset-ticket"[^>]*aria-expanded="false"[^>]*aria-controls="reset-confirm"/u);
     assert.equal((html.match(/\brole="region"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,0); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/local conversation library/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
   }
 });
 
-test('every lab starts with the offline character and separates remote AI availability, consent, and opt-in',()=>{
+test('every lab offers one plain AI on/off button and a privacy link without cluttering or hiding the conversation',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
   const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for(const scenario of SCENARIOS) {
     const html=context.labPage(scenario);
-    const consent=html.match(/<input\b[^>]*\bdata-ai-consent[^>]*>/u)?.[0];
-    const toggle=html.match(/<input\b[^>]*\bdata-ai-toggle[^>]*>/u)?.[0];
-    assert.ok(consent,scenario.id+' must ask separately before sending authored topics.');
-    assert.ok(toggle,scenario.id+' must offer a separate optional AI control.');
-    assert.doesNotMatch(consent,/\bchecked\b/u);assert.doesNotMatch(toggle,/\bchecked\b/u);assert.match(toggle,/\bdisabled\b/u);
-    assert.match(html,/<button\b[^>]*\btype="button"[^>]*\bdata-ai-check/u);
-    assert.match(html,/Only an authored topic code and fictional case go to Cloudflare/u);
-    assert.match(html,/your typed question stays here/u);assert.match(html,/My typed question stays on this page/u);
-    assert.match(html,/No app or model download is needed/u);
-    assert.match(html,/Offline character is on\./u);assert.match(html,/Read the note, then check availability to choose cloud AI/u);
+    const toggle=html.match(/<button\b[^>]*\bdata-ai-toggle[^>]*>/u)?.[0];
+    const options=html.match(/<section class="requester-options"[^>]*>(.*?)<\/section>/su)?.[1];assert.ok(options);
+    assert.doesNotMatch(html,/data-ai-consent|data-ai-check|requester-cloud-notice/u);assert.ok(toggle,scenario.id+' must offer a native AI on/off button.');
+    assert.match(toggle,/type="button"/u);assert.match(toggle,/aria-pressed="true"/u);
+    assert.equal((options.match(/<button\b/gu)||[]).length,1);assert.match(options,/>AI replies on<\/button>/u);
+    assert.match(options,/<a class="text-link" href="#privacy">Reply privacy<\/a>/u);
+    assert.match(options,/<p data-ai-status role="status">Ready to chat\.<\/p>/u);
+    assert.doesNotMatch(options,/Cloudflare|provider|typed words|topic code|model download|checkbox/iu);
     assert.match(html,/extra replies.*cannot repair equipment, award progress, or add case evidence/u);
     assert.match(html,/(?:Ask in|Use) your own words\./u);assert.match(html,/Suggestions are optional\./u);
+    assert.match(html,new RegExp('Talk with '+escapeHtml(requesterPersona(scenario).name).replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'u'));
+    assert.doesNotMatch(html,/FICTIONAL REQUESTER|<details class="conversation-history"|<summary>Conversation history/u);
+    assert.match(html,/<div id="interview-history"[^>]*role="log"[^>]*aria-live="off"[^>]*tabindex="0"/u);
+    assert.ok(html.indexOf('id="interview-history"')<html.indexOf('id="question-form"'));
   }
 });
 

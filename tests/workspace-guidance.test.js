@@ -56,16 +56,16 @@ function availableWorkspaceGuide(scenario,state) {
       assert.match(guide,/Read the input and edit/,scenario.id);
       assert.match(guide,/actual and expected output/,scenario.id);
       assert.match(html,/<label for="coding-editor"><b>Your code<\/b>/,scenario.id);
-      assert.match(html,/small JavaScript-like subset interpreted on this device/,scenario.id);
-      assert.match(html,/No network requests, real files, browser APIs/,scenario.id);
+      assert.match(html,/bounded JavaScript and Python subsets run in our own interpreter on this device/,scenario.id);
+      assert.match(html,/No full runtime, installation, network, packages, real files or browser APIs/,scenario.id);
     }
     return {html,guide};
 }
 
 test('every settings workspace offers three optional instructions that name its visible real controls',()=>{
-  assert.equal(SCENARIOS.length,29);
+  assert.equal(SCENARIOS.length,32);
   assert.equal(SCENARIOS.filter(item=>item.track==='hardware').length,8);
-  assert.equal(legacyScenarios.length,9);assert.equal(expandedScenarios.length,9);assert.equal(codingScenarios.length,3);
+  assert.equal(legacyScenarios.length,9);assert.equal(expandedScenarios.length,9);assert.equal(codingScenarios.length,6);
   for(const scenario of settingsScenarios) {
     const {html,guide}=availableWorkspaceGuide(scenario,initialWorkspaceState(scenario.id));
     assert.match(html,supportsCodingLab(scenario.id)?/Run the program to see results for every fixture/:supportsExpandedLab(scenario.id)?/No current full test/:/No current test results/,scenario.id);
@@ -111,11 +111,14 @@ test('the nine decision labs retain optional guidance after real saved changes a
   }
 });
 
-test('the three coding labs retain optional guidance from draft changes through executed fixture results',()=>{
+test('all coding labs retain optional guidance from draft changes through executed fixture results',()=>{
   const programs={
     'CODE-501':'print(quantity * 3);',
     'CODE-502':'if (temperature < 20) { print("Heating"); } else { if (temperature <= 25) { print("Comfortable"); } else { print("Cooling"); } }',
-    'CODE-503':'let station = 1; repeat(stations) { print("Ready " + station); station = station + 1; }'
+    'CODE-503':'let station = 1; repeat(stations) { print("Ready " + station); station = station + 1; }',
+    'CODE-504':'console.log("Energy " + snacks * 4);',
+    'CODE-505':'if (points >= 100) { console.log("Badge"); } else if (points >= 50) { console.log("Sticker"); } else { console.log("Try again"); }',
+    'CODE-506':'let total = 0; for (let step = 1; step <= steps; step++) { total = total + step; } console.log(total);'
   };
   for(const scenario of codingScenarios) {
     let state=initialWorkspaceState(scenario.id);

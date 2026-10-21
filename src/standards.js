@@ -1,4 +1,4 @@
-import {SCENARIOS} from './scenarios.js?release=20261021-accessibility26';
+import {SCENARIOS} from './scenarios.js?release=20261021-table27';
 
 const esc=value=>String(value??'').replace(/[&<>"']/gu,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const NYS_CONCEPTS=Object.freeze(['Impacts of Computing','Computational Thinking','Networks and Systems Design','Cybersecurity','Digital Literacy']);
@@ -71,8 +71,9 @@ export function standardsAlignmentHTML() {
   <button type="button" class="button button-outline button-small" data-standards-reset>Clear filters</button></div>
   <p class="result-count" data-standards-count role="status" aria-live="polite">5 pathways shown.</p>
   <p id="standards-band-help">Lab starting grades are teaching suggestions. NYSED uses grades 7–8 and 9–12 here; CSTA 2026 uses middle school (6–8) and high school (9–12). The lab’s 9–10 and 11–12 groups both sit within those high-school bands.</p>
-  <div class="standards-table-scroll" role="region" tabindex="0" aria-labelledby="standards-heading" aria-describedby="standards-band-help">
-  <table class="standards-table"><caption>Suggested concept connections across the 29 fictional investigations. Review the actual activity and student explanation before selecting an individual standard.</caption>
+  <p id="standards-scroll-help">On smaller screens, scroll sideways to see all four columns. Keyboard: focus the table, then use the Left and Right arrow keys.</p>
+  <div class="standards-table-scroll" role="region" tabindex="0" aria-labelledby="standards-heading" aria-describedby="standards-band-help standards-scroll-help">
+  <table class="standards-table"><caption>Suggested concept connections across the ${SCENARIOS.length} fictional investigations. Review the actual activity and student explanation before selecting an individual standard.</caption>
   <thead><tr><th scope="col">Pathway and examples</th><th scope="col">Practice and evidence to review</th><th scope="col">NYS concepts</th><th scope="col">CSTA 2026 concepts</th></tr></thead><tbody>
   ${STANDARDS_ALIGNMENTS.map(row=>`<tr data-standards-row="${esc(row.pathway)}"><th scope="row"><a href="#labs/${esc(row.pathway)}">${esc(row.name)}</a><p data-standards-grades>Starting grades ${esc(row.grades.join(', '))}</p><ul data-standards-examples>${exampleItems(row.examples)}</ul></th><td><p>${esc(row.practice)}</p><p><strong>Teacher look-for:</strong> ${esc(row.evidence)}</p></td><td>${list(row.nys)}</td><td>${list(row.csta)}</td></tr>`).join('')}
   </tbody></table></div>

@@ -27,6 +27,8 @@ input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea{
 .steps b{color:#006e63}
 /* Persistent form errors stay in the document rather than covering controls. */
 #portal-error{position:static;transform:none;width:auto;max-width:calc(100% - 34px);margin:16px auto;box-shadow:none}
+.lab-shell .field-error{color:#ffe0df;border-left:3px solid #ffb8b3;padding:10px 12px;background:#4b252b;line-height:1.55}
+.lab-shell :is(textarea,input)[aria-invalid=true]{border-color:#ffb8b3!important}
 
 /* Preserve readable content when a narrow viewport or text spacing needs room. */
 main,:is(.wrap,.panel,.cp-card,.case-panel,.foundation-panel){min-width:0}

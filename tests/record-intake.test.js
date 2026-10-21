@@ -5,6 +5,7 @@ import {normalizeLabRecord} from '../src/records.js';
 import {normalizeWorkCollection} from '../src/local-work.js';
 import {answerQuestion,questionEvent,inquiryProgress} from '../src/interview.js';
 import {initialHardwareState,applyHardwareAction,verifyHardware} from '../src/hardware.js';
+import {initialCodingState,applyCodingAction,verifyCoding} from '../src/coding-lab.js';
 
 // These tests concern clarification and question quotas. Retained hardware
 // completion must start from equipment actually delivered through public actions.
@@ -42,9 +43,24 @@ for(const scenario of SCENARIOS.filter(s=>s.intake?.kind==='follow-up')){
   });
 }
 
-test('detailed requests and non-ticket activities keep existing completion without a question quota',()=>{
+function deliveredCoding(id){
+  const programs={
+    'CODE-501':'print(quantity * 3);',
+    'CODE-502':'if (temperature < 20) { print("Heating"); } else if (temperature <= 25) { print("Comfortable"); } else { print("Cooling"); }',
+    'CODE-503':'for (let n = 1; n <= stations; n++) { print("Ready " + n); }',
+    'CODE-504':'print("Energy " + snacks * 4);',
+    'CODE-505':'if (points < 50) { print("Try again"); } else if (points < 100) { print("Sticker"); } else { print("Badge"); }',
+    'CODE-506':'let total = 0; for (let n = 1; n <= steps; n++) { total = total + n; } print(total);'
+  };
+  let state=applyCodingAction(id,initialCodingState(id),'save-code',{code:programs[id]}).state;
+  state=applyCodingAction(id,state,'run-check').state;
+  assert.equal(verifyCoding(id,state).ok,true,id);
+  return state;
+}
+
+test('detailed requests and non-ticket activities keep valid completion without a question quota',()=>{
   for(const scenario of SCENARIOS.filter(s=>s.intake?.kind!=='follow-up')){
-    const record=normalizeLabRecord(scenario,{closed:true,verified:true,events:[],...(scenario.track==='hardware'?{state:deliveredHardware(scenario.id)}:{})});
+    const record=normalizeLabRecord(scenario,{closed:true,verified:true,events:[],...(scenario.track==='hardware'?{state:deliveredHardware(scenario.id)}:scenario.track==='coding'?{state:deliveredCoding(scenario.id)}:{})});
     assert.equal(record.closed,true,scenario.id);assert.equal(record.verified,true,scenario.id);
   }
 });

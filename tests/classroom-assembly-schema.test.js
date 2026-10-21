@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { onRequest } from '../functions/api/[[path]].js';
 import { SCENARIOS } from '../src/scenarios.js';
 import { EXPANDED_SCENARIOS, expandedStateFields } from '../src/expanded-labs.js';
-import { CODING_SCENARIOS } from '../src/coding-lab.js';
+import { CODING_SCENARIOS, codingFixtureCount } from '../src/coding-lab.js';
 import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
 import { assemblyActions } from '../src/assembly-model.js';
 import { normalizeLabRecord } from '../src/records.js';
@@ -18,7 +18,7 @@ const start = source.indexOf('const invalidWork =');
 const end = source.indexOf('\nasync function readBody', start);
 assert.ok(start >= 0 && end > start, 'the server work-validation boundary must exist');
 const validate = vm.runInNewContext(`${source.slice(start, end)}; workPayload`, {
-  Object, Array, Number, SCENARIOS, EXPANDED_SCENARIOS, expandedStateFields, CODING_SCENARIOS,
+  Object, Array, Number, SCENARIOS, EXPANDED_SCENARIOS, expandedStateFields, CODING_SCENARIOS, codingFixtureCount,
   encoder: new TextEncoder(), MAX_WORK: 65_536,
   plain: value => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype,
   fail(status, code, message) { const error = new Error(message); error.status = status; error.code = code; throw error; }
@@ -145,6 +145,22 @@ test('all four authored paste states and false fasteners survive validation with
     assert.equal(saved.state.assembly.paste, paste);
     assert.deepEqual(saved.state.assembly.psuScrews, [false, false, false, false]);
     assert.equal(saved.state.assembly.psuInstalled, false);
+  }
+});
+
+test('prepared coding drafts retain both language modes and every authored fixture without accepting unknown modes', () => {
+  for (const scenario of CODING_SCENARIOS) {
+    for (const language of ['javascript', 'python']) {
+      const value = normalizeLabRecord(scenario, {});
+      Object.assign(value.state, { language, languageAtRun: '', fixtureIndex: codingFixtureCount(scenario.id) - 1 });
+      assert.deepEqual(JSON.parse(validate(value, scenario.id)), value);
+      value.state.languageAtRun = language;
+      assert.equal(JSON.parse(validate(value, scenario.id)).state.languageAtRun, language);
+      for (const [field, invalid] of [['language','shell'], ['languageAtRun','Python'], ['fixtureIndex',codingFixtureCount(scenario.id)]]) {
+        const forged = structuredClone(value); forged.state[field] = invalid;
+        assert.throws(() => validate(forged, scenario.id), error => error.code === 'invalid_work');
+      }
+    }
   }
 });
 

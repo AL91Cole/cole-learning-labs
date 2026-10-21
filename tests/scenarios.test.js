@@ -68,6 +68,9 @@ const workspaceRepairs = {
   'CODE-501': [['save-code',{code:'print(quantity * 3);'}]],
   'CODE-502': [['save-code',{code:'if (temperature < 20) { print("Heating"); } else { if (temperature > 25) { print("Cooling"); } else { print("Comfortable"); } }'}]],
   'CODE-503': [['save-code',{code:'let station = 1; repeat(stations) { print("Ready " + station); station = station + 1; }'}]],
+  'CODE-504': [['save-code',{code:'console.log("Energy " + snacks * 4);'}]],
+  'CODE-505': [['save-code',{code:'if (points >= 100) { console.log("Badge"); } else if (points >= 50) { console.log("Sticker"); } else { console.log("Try again"); }'}]],
+  'CODE-506': [['save-code',{code:'let total = 0; for (let step = 1; step <= steps; step++) { total = total + step; } console.log(total);'}]],
   'NET-201': [['save-network', networkSettings]],
   'NET-202': [['save-access', accessSettings]],
   'NET-203': [['save-recovery', recoverySettings]],
@@ -82,13 +85,13 @@ const workspaceRepairs = {
   ]
 };
 
-test('the assignment catalogue has 29 distinct, implemented cases across five pathways', () => {
-  assert.equal(SCENARIOS.length, 29);
-  assert.equal(new Set(SCENARIOS.map(scenario => scenario.id)).size, 29);
+test('the assignment catalogue has 32 distinct, implemented cases across five pathways', () => {
+  assert.equal(SCENARIOS.length, 32);
+  assert.equal(new Set(SCENARIOS.map(scenario => scenario.id)).size, 32);
   const expected = [...Object.keys(hardwareRepairs), ...Object.keys(workspaceRepairs)].sort();
   assert.deepEqual(SCENARIOS.map(scenario => scenario.id).sort(), expected);
   assert.deepEqual(Object.fromEntries(['hardware','network','ai','security','coding'].map(track => [track, SCENARIOS.filter(scenario => scenario.track === track).length])), {
-    hardware:8, network:6, ai:6, security:6, coding:3
+    hardware:8, network:6, ai:6, security:6, coding:6
   });
 });
 
