@@ -53,9 +53,9 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
 
 test('the workbench uses PR #6 native schematic artwork immediately without any graphics engine or camera import',()=>{
   assert.doesNotMatch(source,/import\(|assembly-scene|BABYLON|THREE|<canvas|data-asm-camera|3D/);
-  const bench=fixture();assert.equal(bench.doc.activeElement,null);assert.match(bench.picture,/<svg[^>]+viewBox="0 0 900 620"/);
-  for(const detail of ['hw-chassis','hw-board','CLASSROOM WORKSTATION','MICRO-ATX','DDR4','SATA'])assert.ok(bench.picture.includes(detail),detail);
-  assert.match(bench.markup,/<button type="button" class="pc-power-button" data-assembly-action="power" aria-label="Power" aria-pressed="false"/);assert.match(bench.markup,/data-assembly-action="open-document">Open lesson/);
+  const bench=fixture();assert.equal(bench.doc.activeElement,null);assert.match(bench.picture,/<svg[^>]+viewBox="12 46 860 566"/);
+  for(const detail of ['hw-chassis','hw-board','MICRO-ATX','DDR4','SATA'])assert.ok(bench.picture.includes(detail),detail);
+  assert.match(bench.markup,/<button type="button" class="pc-power-button" data-assembly-action="power" aria-label="Power: off\. Turn PC on and check startup" aria-pressed="false"/);assert.match(bench.markup,/data-assembly-action="open-document">Open lesson/);
   assert.doesNotMatch(bench.markup,/data-assembly-action="(?:boot|power-off)"/);
   assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);assert.equal(bench.fields.get('[data-asm-tool-drawer]').hidden,true);bench.controller.dispose();
 });
@@ -63,7 +63,7 @@ test('the workbench uses PR #6 native schematic artwork immediately without any 
 test('all eight ticket workbenches always show the complete X-ray with the monitor, including old saved views',()=>{
   for(const caseId of Array.from({length:8},(_,index)=>`INC-10${index+1}`))for(const savedView of ['bench','inside','internals','rear','monitor','display']){
     const bench=fixture({caseId,stateOverride:state=>({...state,view:savedView})}),before=structuredClone(bench.state);
-    assert.match(bench.picture,/<svg[^>]+viewBox="0 0 900 620" data-asm-view="full-xray"/);
+    assert.match(bench.picture,/<svg[^>]+viewBox="12 46 860 566" data-asm-view="full-xray"/);
     assert.match(bench.picture,/Full PC X-ray workbench with monitor/);
     assert.match(bench.picture,/data-asm-monitor-screen=/);
     assert.doesNotMatch(bench.markup,/data-asm-picture-view|Inside PC|Rear connections/);
@@ -78,7 +78,7 @@ test('every tool, cable choice and complete-controls toggle keeps the full X-ray
     const bench=fixture({caseId}),before=structuredClone(bench.state);bench.complete();
     for(const tool of ASSEMBLY_TOOLS){bench.click('asmTool',tool.id);assert.match(bench.picture,/data-asm-view="full-xray"/);assert.match(bench.picture,/data-asm-monitor-screen=/);}
     bench.click('asmTool','cables');
-    for(const cable of ASSEMBLY_CABLES){bench.choose('[data-asm-cable]',cable.id);for(const socket of cable.sockets){bench.choose('[data-asm-cable-target]',socket.id);assert.match(bench.picture,/viewBox="0 0 900 620" data-asm-view="full-xray"/);}}
+    for(const cable of ASSEMBLY_CABLES){bench.choose('[data-asm-cable]',cable.id);for(const socket of cable.sockets){bench.choose('[data-asm-cable-target]',socket.id);assert.match(bench.picture,/viewBox="12 46 860 566" data-asm-view="full-xray"/);}}
     bench.complete(false);bench.controller.update(bench.state);
     assert.match(bench.picture,/data-asm-view="full-xray"/);
     assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
@@ -101,6 +101,19 @@ test('full PC X-ray and inspection are ephemeral and retain explicit focus and c
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
+test('Expand picture and Escape change only presentation, keep focus, and cancel held parts safely',()=>{
+  const bench=fixture(),before=structuredClone(bench.state),scene=bench.fields.get('[data-asm-scene]');
+  bench.click('asmTool','move');bench.begin('psu');assert.equal(bench.captures.size,1);
+  const toggle=bench.click('asmExpandPicture','toggle');
+  assert.equal(scene.attrs['data-picture-expanded'],'true');assert.equal(toggle.attrs['aria-pressed'],'true');assert.equal(toggle.textContent,'Fit picture');
+  assert.equal(bench.captures.size,0);bench.release('psu');assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);
+  bench.controller.update(bench.state);assert.equal(scene.attrs['data-picture-expanded'],'true','Equipment updates keep the presentation choice.');
+  bench.listeners.get('keydown')({target:toggle,key:'Escape'});
+  assert.equal(scene.attrs['data-picture-expanded'],'false');assert.equal(toggle.attrs['aria-pressed'],'false');assert.equal(toggle.textContent,'Expand picture');assert.equal(bench.doc.activeElement,toggle);
+  bench.click('asmExpandPicture','toggle');bench.click('asmExpandPicture','toggle');assert.equal(scene.attrs['data-picture-expanded'],'false');
+  assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
+});
+
 test('native Enter and Space activate labeled schematic equipment without repairing during inspect',()=>{
   const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);bench.complete();
   for(const [id,key]of [['ram','Enter'],['gpu',' ']]){const target=bench.pictures().find(item=>item.dataset.asmPicture===id);let prevented=false;bench.listeners.get('keydown')({target,key,preventDefault(){prevented=true;}});assert.equal(prevented,true);assert.equal(bench.fields.get('[data-asm-select]').value,id);}
@@ -116,6 +129,7 @@ test('the persistent Power button keeps focus while AC changes continue along th
 test('Power uses a native toggle, reports On or Off, and leaves startup and lesson verification separate',()=>{
   const bench=fixture({caseId:'INC-102'}),power=bench.root.querySelectorAll('[data-assembly-action]').find(item=>item.dataset.assemblyAction==='power');
   assert.equal(power.tag,'button');assert.equal(power.attrs['aria-pressed'],'false');
+  assert.equal(power.attrs['aria-label'],'Power: off. Turn PC on and check startup');
   assert.equal(bench.fields.get('[data-asm-power-state]').textContent,'Off');
   assert.equal(bench.root.querySelectorAll('[data-assembly-action]').find(item=>item.dataset.assemblyAction==='open-document').hidden,true);
   // Native buttons generate their own click for Enter/Space. The delegated
@@ -128,11 +142,13 @@ test('Power uses a native toggle, reports On or Off, and leaves startup and less
   bench.click('assemblyAction','plug-in');bench.click('assemblyAction','power');
   assert.equal(bench.state.pcOn,true);assert.equal(bench.state.booted,true);assert.equal(bench.state.documentOpened,false);
   assert.equal(power.attrs['aria-pressed'],'true');assert.equal(power.attrs.title,'Turn PC off');
+  assert.equal(power.attrs['aria-label'],'Power: on. Turn PC off');
   assert.equal(bench.fields.get('[data-asm-power-state]').textContent,'On');assert.equal(bench.doc.activeElement,power);
   assert.equal(bench.root.querySelectorAll('[data-assembly-action]').find(item=>item.dataset.assemblyAction==='open-document').hidden,false);
   bench.click('assemblyAction','power');
   assert.equal(bench.state.pcOn,false);assert.equal(bench.state.booted,false);assert.equal(bench.state.documentOpened,false);
   assert.equal(power.attrs['aria-pressed'],'false');assert.equal(bench.fields.get('[data-asm-power-state]').textContent,'Off');assert.equal(bench.doc.activeElement,power);
+  assert.equal(power.attrs['aria-label'],'Power: off. Turn PC on and check startup');
   assert.deepEqual(bench.committed,['boot','plug-in','boot','power-off']);bench.controller.dispose();
 });
 
@@ -201,7 +217,9 @@ test('both HDMI ends and monitor input affect the schematic display; a picture n
   const bench=fixture({caseId:'INC-101'});bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-pc');bench.choose('[data-asm-cable-target]','hdmi-gpu');bench.click('asmCableAction','connect');
   assert.match(bench.picture,/Classroom Desktop/);assert.equal(bench.state.documentOpened,false);
   bench.choose('[data-asm-cable]','hdmi-monitor');bench.click('asmCableAction','disconnect');assert.match(bench.picture,/NO SIGNAL/);assert.doesNotMatch(bench.picture,/Classroom Desktop/);
-  bench.click('asmCableAction','connect');bench.click('asmPicture','open-document');assert.equal(bench.state.documentOpened,true);assert.match(bench.picture,/Original file opened/);bench.controller.dispose();
+  bench.click('asmCableAction','connect');bench.click('asmPicture','open-document');assert.equal(bench.state.documentOpened,true);assert.match(bench.picture,/Original file opened/);
+  assert.equal(bench.doc.activeElement?.dataset?.assemblyAction,'open-document','The removed SVG launcher hands focus to the visible native lesson control.');
+  assert.equal(bench.doc.activeElement.hidden,false);bench.controller.dispose();
 });
 
 test('malformed picker values and inactive surfaces cannot create equipment changes',()=>{

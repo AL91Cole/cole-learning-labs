@@ -57,7 +57,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
   const record = {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:scenario.track === 'hardware' ? initialHardwareState(id) : initialWorkspaceState(id)};
   prepareRecord(record);
   const elements = new Map();
-  for (const selector of ['#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#reply-source','#requester-options','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
+  for (const selector of ['#main','#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#reply-source','#requester-options','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
   elements.get('#question-suggestions').hidden=true;
   for(const selector of ['#plan','#evidence-detail']){const drawer=new Element();drawer.open=false;elements.get(selector).disclosure=drawer;}
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
@@ -222,6 +222,13 @@ test('starting a lab over clears its work and forces a fresh Request & clues pag
   assert.deepEqual(h.calls.forcedRenders,[false],'An explicit reset must bypass same-ticket retained-DOM navigation.');
   assert.equal(h.calls.saved,1);assert.equal(h.historyEntries.length,1,'Reset replaces the active page URL.');
   assert.equal(h.record.state.code,initialWorkspaceState('CODE-501').code,'A discarded draft cannot become saved work.');
+});
+
+test('reset confirmation moves focus to the safe choice and Escape or cancellation returns it to the trigger',()=>{
+  const h=harness('INC-101',3),before=structuredClone(h.record),trigger=h.elements.get('#reset-ticket'),cancel=h.elements.get('#cancel-reset'),prompt=h.elements.get('#reset-confirm');
+  trigger.fire('click');assert.equal(prompt.hidden,false);assert.equal(trigger.getAttribute('aria-expanded'),'true');assert.equal(cancel.focused,1);
+  assert.equal(prompt.fire('keydown',{key:'Escape'}).defaultPrevented,true);assert.equal(prompt.hidden,true);assert.equal(trigger.focused,1);assert.equal(trigger.getAttribute('aria-expanded'),'false');
+  trigger.fire('click');cancel.fire('click');assert.equal(prompt.hidden,true);assert.equal(trigger.focused,2);assert.deepEqual(h.record,before);
 });
 
 test('page URLs, browser Back and Forward keep the same question, equipment and coding draft',()=>{
@@ -429,6 +436,8 @@ test('an opted-in AI extra reply changes only the current RAM conversation and c
   const before=structuredClone(h.record),saved=h.calls.saved;
   h.ask('What did you have for breakfast?');await new Promise(resolve=>setImmediate(resolve));
   assert.deepEqual(requests.map(request=>request.options.method),['GET','POST']);
+  assert.deepEqual(JSON.parse(requests[1].options.body),{scenarioId:'INC-101',topic:'breakfast'});
+  assert.doesNotMatch(requests[1].options.body,/What did you|question|notes|history|state/u,'Only an authored topic reaches transport.');
   assert.equal(h.elements.get('#question-response').textContent,answer);
   assert.match(h.elements.get('#interview-history').innerHTML,/AI extra reply.*&lt;b&gt;A fictional AI extra response\.&lt;\/b&gt;/u);
   assert.doesNotMatch(h.elements.get('#interview-history').innerHTML,/<b>A fictional/u,'Even generated markup must display as escaped text.');
@@ -531,11 +540,13 @@ test('all cases render labelled pages and accessible navigation with only the re
     }
     for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','question-suggestions','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
     assert.match(html,/<div id="question-suggestions"[^>]*role="group"[^>]*aria-label="Suggested follow-up questions"[^>]*hidden/u);
+    assert.match(html,/<div class="requester-live-reply" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"[^>]*><\/p><p id="question-response"/u,'The warning and answer must be announced together, with the source first.');
+    assert.match(html,/id="reset-ticket"[^>]*aria-expanded="false"[^>]*aria-controls="reset-confirm"/u);
     assert.equal((html.match(/\brole="region"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,0); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/local conversation library/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
   }
 });
 
-test('every lab starts with the fast character and separates remote AI availability, consent, and opt-in',()=>{
+test('every lab starts with the offline character and separates remote AI availability, consent, and opt-in',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
   const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
@@ -543,12 +554,14 @@ test('every lab starts with the fast character and separates remote AI availabil
     const html=context.labPage(scenario);
     const consent=html.match(/<input\b[^>]*\bdata-ai-consent[^>]*>/u)?.[0];
     const toggle=html.match(/<input\b[^>]*\bdata-ai-toggle[^>]*>/u)?.[0];
-    assert.ok(consent,scenario.id+' must ask separately before sending questions.');
+    assert.ok(consent,scenario.id+' must ask separately before sending authored topics.');
     assert.ok(toggle,scenario.id+' must offer a separate optional AI control.');
     assert.doesNotMatch(consent,/\bchecked\b/u);assert.doesNotMatch(toggle,/\bchecked\b/u);assert.match(toggle,/\bdisabled\b/u);
     assert.match(html,/<button\b[^>]*\btype="button"[^>]*\bdata-ai-check/u);
-    assert.match(html,/questions go to Cloudflare/u);assert.match(html,/No app or AI model download is needed/u);
-    assert.match(html,/Fast character is on\./u);assert.match(html,/awaits privacy review and service setup/u);
+    assert.match(html,/Only an authored topic code and fictional case go to Cloudflare/u);
+    assert.match(html,/your typed question stays here/u);assert.match(html,/My typed question stays on this page/u);
+    assert.match(html,/No app or model download is needed/u);
+    assert.match(html,/Offline character is on\./u);assert.match(html,/Read the note, then check availability to choose cloud AI/u);
     assert.match(html,/extra replies.*cannot repair equipment, award progress, or add case evidence/u);
     assert.match(html,/(?:Ask in|Use) your own words\./u);assert.match(html,/Suggestions are optional\./u);
   }
@@ -584,7 +597,7 @@ function routeHarness(id='CODE-501',initialPath='') {
     mountWorkControls(options){mounted=options;},workStatus:()=>'',showNotice(){},
     onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
     makeNavigation(scenario,route,{onModeChange}={}){const mountedRoute=route||learningRoute(location.hash);let mode=mountedRoute.mode;return {syncRoute(next){routeSyncs.push(next);if(next.page!=='lab'||next.id!==scenario.id||next.sequence!==mountedRoute.sequence)return false;if(next.mode!==mode){onModeChange?.(next.mode);mode=next.mode;}return true;},dispose(){}};},
-    routeLink:()=>'',labCards(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
+    routeLink:()=>'',labCards(){},bindHome(){},mountStandardsAlignment:()=>()=>{},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
   });
   vm.runInContext('let routeCleanup=null,store=initialStore,currentLab=null,labNavigation=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
     'let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});\n'+lifecycle.join('\n')+'\n'+

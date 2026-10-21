@@ -72,6 +72,7 @@ test('five separate beginner labs render one initial panel, named tabs, optional
     assert.equal((html.match(/role="tab"/g)||[]).length,3);assert.equal((html.match(/role="tabpanel"/g)||[]).length,3);
     for(const [index,name] of ['explore','practice','check'].entries()){
       const panel=html.match(new RegExp('<section id="foundation-panel-'+name+'"[^>]*>'))?.[0];assert.ok(panel);assert.equal(/\bhidden\b/.test(panel),index>0);
+      assert.match(panel,new RegExp('tabindex="'+(index===0?'0':'-1')+'"'),'The initial instruction panel is a keyboard stop.');
       assert.match(html,new RegExp('id="foundation-tab-'+name+'"[^>]*aria-controls="foundation-panel-'+name+'"'));
     }
     assert.match(html,/<details class="foundation-help"><summary>/);assert.doesNotMatch(html,/<details[^>]*\bopen\b/);
@@ -139,7 +140,9 @@ test('the classic beginner view has no camera/loading controls and reports use t
 
 test('section keys use roving focus and cleanup stops listeners and late scene actions',()=>{
   const view=fixture();assert.equal(view.key('explore','ArrowRight').prevented,true);assert.deepEqual(view.panels.map(panel=>panel.hidden),[true,false,true]);assert.equal(view.doc.activeElement?.dataset?.foundationSection,'practice');
+  assert.deepEqual(view.panels.map(panel=>panel.tabIndex),[-1,0,-1],'Tab can enter the active static instruction panel.');
   view.key('practice','End');assert.deepEqual(view.panels.map(panel=>panel.hidden),[true,true,false]);view.key('check','Home');assert.deepEqual(view.panels.map(panel=>panel.hidden),[false,true,true]);
+  assert.deepEqual(view.panels.map(panel=>panel.tabIndex),[0,-1,-1]);
   const changed=view.calls.changed;view.controller.dispose();view.controller.dispose();assert.equal(view.listeners.size,0);assert.equal(view.calls.disposed,1);
   view.sceneOptions.onAction('asm-fit-ram');view.sceneOptions.onStatus({kind:'ready',message:'Late status'});assert.equal(view.calls.changed,changed);
 });

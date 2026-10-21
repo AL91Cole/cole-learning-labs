@@ -1,4 +1,4 @@
-import { generateTeacherKeyFiles, inspectPublicKey, encryptReport, decryptReport, generateAlias, REPORT_LIMITS } from './report-crypto.js?release=20261020-chromebook24';
+import { generateTeacherKeyFiles, inspectPublicKey, encryptReport, decryptReport, generateAlias, REPORT_LIMITS } from './report-crypto.js?release=20261021-accessibility26';
 
 const byId = id => document.getElementById(id);
 const status = byId('status');
@@ -7,6 +7,12 @@ let generatedFiles = null, encryptedFile = null, operation = 0, busy = false;
 const downloads = new Set();
 
 function say(message, error = false) { status.textContent = message; status.dataset.error = String(error); }
+function inputError(message, fieldId) {
+  const field = byId(fieldId);
+  field?.setAttribute('aria-invalid', 'true');
+  if (field) field.setAttribute('aria-describedby', [...new Set([...(field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean), 'status'])].join(' '));
+  return Object.assign(new Error(message), { inputMessage: message, fieldId });
+}
 function lock(value) {
   busy = value;
   for (const field of document.querySelectorAll('button:not(#clear-all), form input, form textarea')) field.disabled = value || !supported;
@@ -14,9 +20,9 @@ function lock(value) {
 }
 async function fileText(input, maximum, extension) {
   const file = input.files?.[0];
-  if (!file || !file.name.toLowerCase().endsWith(extension) || file.size < 1 || file.size > maximum) throw new Error('Invalid file');
+  if (!file || !file.name.toLowerCase().endsWith(extension) || file.size < 1 || file.size > maximum) throw inputError(`Choose a non-empty ${extension} file no larger than ${Math.floor(maximum / 1024)} KiB.`, input.id);
   const text = await file.text();
-  if (new TextEncoder().encode(text).length > maximum) throw new Error('Invalid file');
+  if (new TextEncoder().encode(text).length > maximum) throw inputError(`This ${extension} file exceeds the ${Math.floor(maximum / 1024)} KiB text limit. Choose a smaller file.`, input.id);
   return text;
 }
 function download(content, filename) {
@@ -34,6 +40,7 @@ function clearPage() {
   for (const url of downloads) URL.revokeObjectURL(url);
   downloads.clear();
   for (const form of document.querySelectorAll('form')) form.reset();
+  for (const field of document.querySelectorAll('[aria-invalid="true"]')) field.removeAttribute('aria-invalid');
   for (const id of ['generated-fingerprint', 'decrypted-alias', 'decrypted-text']) byId(id).textContent = '';
   byId('selected-fingerprint').textContent = 'No public key selected.';
   for (const id of ['key-downloads', 'report-download', 'decrypted-result']) byId(id).hidden = true;
@@ -43,20 +50,37 @@ function clearPage() {
 async function task(message, work) {
   if (busy) return;
   const token = ++operation;
+  const origin = document.activeElement;
+  let focusTarget = origin;
+  for (const field of document.querySelectorAll('[aria-invalid="true"]')) field.removeAttribute('aria-invalid');
   lock(true); say(message);
-  try { await work(() => token === operation); }
-  catch { if (token === operation) say('Unable to process this file or input. Check the file type, size, teacher key, and passphrase. No report was sent.', true); }
-  finally { if (token === operation) lock(false); }
+  try {
+    const resultId = await work(() => token === operation);
+    if (typeof resultId === 'string') focusTarget = byId(resultId);
+  } catch (error) {
+    if (token === operation) {
+      say(error?.inputMessage || 'Unable to process this file or input. Check the file type, size, teacher key, and passphrase. No report was sent.', true);
+      if (error?.fieldId) focusTarget = byId(error.fieldId);
+    }
+  } finally {
+    if (token === operation) {
+      lock(false);
+      const active = document.activeElement;
+      // Do not take focus from Clear this page, navigation, or another control
+      // the user deliberately chose while local cryptography was running.
+      if (!active || active === document.body || active === origin || !active.isConnected || active.disabled) focusTarget?.focus();
+    }
+  }
 }
 
 byId('generate-form').addEventListener('submit', event => {
   event.preventDefault();
-  task('Creating and protecting your key files on this device. This may take a moment…', async current => {
+  return task('Creating and protecting your key files on this device. This may take a moment…', async current => {
     generatedFiles = null; byId('key-downloads').hidden = true;
     let passphrase = byId('new-passphrase').value;
     const matches = passphrase === byId('confirm-passphrase').value;
     byId('new-passphrase').value = ''; byId('confirm-passphrase').value = '';
-    if (!matches) { passphrase = ''; throw new Error('Passphrases do not match'); }
+    if (!matches) { passphrase = ''; throw inputError('The passphrases did not match. Enter the same passphrase in both fields again.', 'new-passphrase'); }
     let result;
     try { result = await generateTeacherKeyFiles(passphrase); } finally { passphrase = ''; }
     if (!current()) return;
@@ -64,6 +88,7 @@ byId('generate-form').addEventListener('submit', event => {
     byId('generated-fingerprint').textContent = result.fingerprint;
     byId('key-downloads').hidden = false;
     say('Key files ready. Download and protect the private key; share only the public key.');
+    return 'download-private';
   });
 });
 byId('download-private').addEventListener('click', () => download(generatedFiles?.privateFile, 'cole-teacher-private.cllkey'));
@@ -72,7 +97,7 @@ byId('download-public').addEventListener('click', () => download(generatedFiles?
 byId('public-key-file').addEventListener('change', () => {
   invalidateReport(); byId('fingerprint-confirm').checked = false;
   byId('selected-fingerprint').textContent = 'Checking public key…';
-  task('Checking the selected public key locally…', async current => {
+  return task('Checking the selected public key locally…', async current => {
     try {
       const text = await fileText(byId('public-key-file'), REPORT_LIMITS.keyFileBytes, '.cllpub');
       const result = await inspectPublicKey(text);
@@ -84,7 +109,7 @@ byId('public-key-file').addEventListener('change', () => {
 });
 byId('report-file').addEventListener('change', () => {
   invalidateReport();
-  task('Opening the text report on this device…', async current => {
+  return task('Opening the text report on this device…', async current => {
     const text = await fileText(byId('report-file'), REPORT_LIMITS.reportBytes, '.txt');
     if (!current()) return;
     byId('report-text').value = text;
@@ -94,14 +119,15 @@ byId('report-file').addEventListener('change', () => {
 for (const id of ['report-text', 'student-alias', 'fingerprint-confirm']) byId(id).addEventListener('input', invalidateReport);
 byId('encrypt-form').addEventListener('submit', event => {
   event.preventDefault();
-  task('Encrypting the report on this device…', async current => {
+  return task('Encrypting the report on this device…', async current => {
     invalidateReport();
-    if (!byId('fingerprint-confirm').checked) throw new Error('Confirm fingerprint');
+    if (!byId('fingerprint-confirm').checked) throw inputError('Confirm the teacher’s public key fingerprint before encrypting.', 'fingerprint-confirm');
     const keyText = await fileText(byId('public-key-file'), REPORT_LIMITS.keyFileBytes, '.cllpub');
     const result = await encryptReport(keyText, { report: byId('report-text').value, alias: byId('student-alias').value });
     if (!current()) return;
     encryptedFile = result; byId('report-download').hidden = false;
     say('Encrypted report ready. Download it, then manually submit through your teacher’s approved assignment system.');
+    return 'download-report';
   });
 });
 byId('download-report').addEventListener('click', () => download(encryptedFile, 'cole-lab-report.cllreport'));
@@ -111,7 +137,7 @@ for (const id of ['private-key-file', 'encrypted-report-file', 'unlock-passphras
 });
 byId('decrypt-form').addEventListener('submit', event => {
   event.preventDefault();
-  task('Unlocking the report locally…', async current => {
+  return task('Unlocking the report locally…', async current => {
     byId('decrypted-result').hidden = true; byId('decrypted-text').textContent = ''; byId('decrypted-alias').textContent = '';
     let passphrase = byId('unlock-passphrase').value;
     byId('unlock-passphrase').value = '';
@@ -128,6 +154,7 @@ byId('decrypt-form').addEventListener('submit', event => {
     byId('decrypted-text').textContent = result.report;
     byId('decrypted-result').hidden = false;
     say('Report decrypted for local review. Clear this page when finished.');
+    return 'decrypted-title';
   });
 });
 byId('clear-all').addEventListener('click', clearPage);

@@ -17,6 +17,8 @@ await scan('src'); await scan('functions'); await scan('scripts');
 await scan('terminal-sandbox/public');
 await scan('terminal-sandbox/scripts');
 files.push('terminal-sandbox/server.js');
+// The separately deployed requester must be reviewed without walking bundles.
+files.push('worker-requester/worker.js','worker-requester/budget.js');
 for (const file of files) {
   const result = spawnSync(process.execPath, ['--check', file], {stdio:'inherit'});
   if (result.status !== 0) process.exit(result.status || 1);

@@ -7,7 +7,8 @@
   <meta name="description" content="Optional browser-only encryption for manually exchanging lab reports with a teacher. No accounts, roster imports, or report uploads to Cole Learning Labs.">
   <title>Encrypted report exchange · Cole Learning Labs</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="src/secure-reports.css?release=20261020-chromebook24">
+  <link rel="stylesheet" href="src/secure-reports.css?release=20261021-accessibility26">
+  <link rel="stylesheet" href="src/accessibility.css?release=20261021-accessibility26">
 </head>
 <body>
   <a class="skip" href="#main">Skip to main content</a>
@@ -15,7 +16,7 @@
     <a href="index.html" class="brand"><img src="assets/cole-learning-labs-logo.png" width="1942" height="809" alt="Cole Learning Labs home"></a>
     <nav aria-label="Main navigation"><a href="index.html#labs">Virtual labs</a><a href="classroom.html">Classrooms</a><a href="school-it.html">School IT review</a></nav>
   </header>
-  <main id="main">
+  <main id="main" tabindex="-1">
     <section class="intro">
       <p class="eyebrow">A teacher-held key. A private learning report.</p>
       <h1>Encrypted report exchange</h1>
@@ -25,16 +26,16 @@
     </section>
     <div class="steps" aria-label="How this works"><span><b>01</b> Teacher shares a public key</span><span><b>02</b> Student encrypts a report</span><span><b>03</b> Teacher unlocks it locally</span></div>
     <div id="compatibility" class="notice warning" role="alert" hidden>Encryption requires an up-to-date browser in a secure HTTPS connection. Try a current version of Chrome, Microsoft Edge, Firefox, or Safari. The tool is unavailable in this browser.</div>
-    <p id="status" class="status" role="status" aria-live="polite">Ready. No files have been opened.</p>
+    <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Ready. No files have been opened.</p>
     <section class="workspace" aria-label="Report exchange tools">
       <article class="panel" id="teacher-setup">
         <p class="eyebrow">01 · Teacher setup</p><h2>Create your key files</h2>
         <p>Create a key for a class or assignment. Keep the private key and passphrase yourself; share only the public key through your established school channel. Confirm its fingerprint with students through that same trusted channel.</p>
         <form id="generate-form" autocomplete="off">
           <label for="new-passphrase">New passphrase <span>16–256 characters; use a long, unique phrase</span></label>
-          <input id="new-passphrase" type="password" minlength="16" maxlength="256" required autocomplete="new-password" spellcheck="false">
+          <input id="new-passphrase" type="password" minlength="16" maxlength="256" required autocomplete="new-password" spellcheck="false" aria-describedby="status">
           <label for="confirm-passphrase">Confirm passphrase</label>
-          <input id="confirm-passphrase" type="password" minlength="16" maxlength="256" required autocomplete="new-password" spellcheck="false">
+          <input id="confirm-passphrase" type="password" minlength="16" maxlength="256" required autocomplete="new-password" spellcheck="false" aria-describedby="status">
           <button type="submit">Create teacher key files</button>
         </form>
         <div id="key-downloads" class="result" hidden>
@@ -49,9 +50,9 @@
         <p class="eyebrow">02 · Student report</p><h2>Encrypt your work</h2>
         <p>Open the public key your teacher shared. Check its fingerprint with your teacher before encrypting.</p>
         <form id="encrypt-form" autocomplete="off">
-          <label for="public-key-file">Teacher’s public key (.cllpub)</label><input id="public-key-file" type="file" accept=".cllpub,application/json" required>
+          <label for="public-key-file">Teacher’s public key (.cllpub)</label><input id="public-key-file" type="file" accept=".cllpub,application/json" required aria-describedby="selected-fingerprint status">
           <p class="label">Selected key fingerprint · SHA-256</p><code id="selected-fingerprint">No public key selected.</code>
-          <label for="report-file">Open a text report (optional, .txt)</label><input id="report-file" type="file" accept=".txt,text/plain">
+          <label for="report-file">Open a text report (optional, .txt)</label><input id="report-file" type="file" accept=".txt,text/plain" aria-describedby="status">
           <label for="report-text">Lab report <span>Text only; up to 128 KiB, with an additional encoded size limit</span></label><textarea id="report-text" rows="9" maxlength="131072" required spellcheck="false" placeholder="Paste your lab report here. Leave out personal information."></textarea>
           <label for="student-alias">Random learner code<span>Generated on this device. A code is not a name, student ID, or proof of identity.</span></label><input id="student-alias" type="text" maxlength="17" readonly autocomplete="off" spellcheck="false" placeholder="A random learner code appears here"><button id="new-alias" type="button">Use a new random code</button>
           <label class="check"><input id="fingerprint-confirm" type="checkbox" required> I checked this public key’s fingerprint using my teacher’s trusted instructions.</label>
@@ -67,7 +68,7 @@
           <label for="unlock-passphrase">Private key passphrase</label><input id="unlock-passphrase" type="password" minlength="16" maxlength="256" required autocomplete="off" spellcheck="false">
           <button type="submit">Decrypt for local review</button>
         </form>
-        <section id="decrypted-result" class="result" aria-labelledby="decrypted-title" hidden><h3 id="decrypted-title">Decrypted report</h3><p id="decrypted-alias"></p><pre id="decrypted-text" tabindex="0" aria-label="Decrypted lab report"></pre><p class="small">This view contains plaintext. Protect your screen and device. No plaintext download is created automatically.</p></section>
+        <section id="decrypted-result" class="result" aria-labelledby="decrypted-title" hidden><h3 id="decrypted-title" tabindex="-1">Decrypted report</h3><p id="decrypted-alias"></p><pre id="decrypted-text" tabindex="0" role="region" aria-label="Decrypted lab report"></pre><p class="small">This view contains plaintext. Protect your screen and device. No plaintext download is created automatically.</p></section>
       </article>
     </section>
     <section class="clear-box"><div><h2>Finished on this device?</h2><p>Clear file selections, text, passphrases, downloads held by this page, and the decrypted view. Downloaded files remain on your device. Clearing cannot guarantee removal from browser memory, clipboard, backups, or device monitoring.</p></div><button id="clear-all" type="button" class="secondary">Clear this page</button></section>
@@ -75,6 +76,6 @@
   </main>
   <footer><a href="index.html">Cole Learning Labs</a><span>Practical learning. Careful data handling.</span><a href="index.html#privacy">Privacy & accessibility</a></footer>
   <noscript><p class="notice">This optional local encryption tool requires JavaScript. Use your school’s approved submission process instead.</p></noscript>
-  <script type="module" src="src/secure-reports.js?release=20261020-chromebook24"></script>
+  <script type="module" src="src/secure-reports.js?release=20261021-accessibility26"></script>
 </body>
 </html>

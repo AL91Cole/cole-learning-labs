@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261020-chromebook24';
+import { SCENARIOS } from './scenarios.js?release=20261021-accessibility26';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';
@@ -87,8 +87,16 @@ async function pollProgress(key) {
   }
 }
 function notice(message,kind='info') {
-  const box=document.querySelector('#portal-notice'); box.textContent=message;box.dataset.kind=kind;box.hidden=false;
-  clearTimeout(notice.timer); notice.timer=setTimeout(()=>{box.hidden=true;},8000);
+  const box=document.querySelector(kind==='error'?'#portal-error':'#portal-notice');
+  document.querySelector(kind==='error'?'#portal-notice':'#portal-error').hidden=true;
+  box.hidden=false;box.textContent=message;box.dataset.kind=kind;
+  clearTimeout(notice.timer);
+  if(kind!=='error')notice.timer=setTimeout(()=>{box.hidden=true;},8000);
+}
+function portalInputError(message,field) {
+  field?.setAttribute('aria-invalid','true');
+  if(field)field.setAttribute('aria-describedby',[...new Set([...(field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean),'portal-error'])].join(' '));
+  return Object.assign(new Error(message),{focusElement:field});
 }
 function errorMessage(error) {
   if(error.code==='student_session_changed')return error.message;
@@ -109,7 +117,7 @@ function syncActiveSession(session) {
 }
 const button = (label,action,extra='',secondary=false) => `<button class="cp-button${secondary?' cp-button-secondary':''}" type="button" data-action="${action}" ${extra}>${label}</button>`;
 const tag = (text,kind='') => `<span class="cp-tag ${kind?`cp-tag-${kind}`:''}">${esc(text)}</span>`;
-function intro(eyebrow,title,copy) { return `<section class="cp-intro"><p class="cp-eyebrow">${eyebrow}</p><h1>${title}</h1><p>${copy}</p></section>`; }
+function intro(eyebrow,title,copy) { return `<section class="cp-intro"><p class="cp-eyebrow">${eyebrow}</p><h1 tabindex="-1">${title}</h1><p>${copy}</p></section>`; }
 function availability() {
   if(model.mode==='live') return `<div class="cp-service cp-service-ready"><span aria-hidden="true">●</span><div><strong>Classroom service available</strong><p>${teacherEntry?'Teacher identity and class ownership are checked by the server.':'Joining creates a classroom session in this browser. Independent labs remain available separately.'}</p></div></div>`;
   return `<div class="cp-service"><span aria-hidden="true">○</span><div><strong>${model.mode==='checking'?'Checking classroom service…':'Live classroom tools are unavailable'}</strong><p>${esc(model.error || 'Live classroom records remain locked pending school privacy review, required agreements, and operational approval. Independent labs and fictional demo work remain available.')}</p></div>${button('Check again','refresh','',true)}</div>`;
@@ -146,14 +154,14 @@ function counts(detail) {
 function teacherDashboard() {
   const detail=model.detail;
   const stats=counts(detail);
-  return `${model.mode==='demo'?demoBanner():''}${intro(model.mode==='demo'?'DEMO TEACHER DESK':'TEACHER DESK','A clear view of<br><em>the next step.</em>',model.mode==='demo'?'Explore one fictional class. Inspect the sample work before deciding what feedback would help.':`Teacher access verified for <strong>${esc(model.session.teacher?.email || 'your account')}</strong>. Classroom records below come from the classroom service.`)}<div class="cp-dashboard"><aside class="cp-class-sidebar"><section class="cp-card"><div class="cp-section-heading"><h2>Classes</h2>${model.mode==='live'?button('Refresh','refresh-classes','',true):tag('Demo')}</div><div class="cp-class-list">${model.classes.map(c=>`<button class="cp-class-button${c.id===model.selectedClass?' cp-selected':''}" data-class="${esc(c.id)}" type="button"><b>${esc(c.name)}</b><span>${esc(c.studentCount ?? '—')} aliases · ${esc(c.assignmentCount ?? '—')} assignments</span></button>`).join('') || '<p class="cp-muted">No classes yet. Create one below.</p>'}</div><form id="create-class"><label>New class name<input name="name" required maxlength="80" placeholder="Example: Technology 8 · Period 2"></label><button class="cp-button" type="submit" ${model.mode==='demo'?'disabled':''}>Create class</button>${model.mode==='demo'?'<p class="cp-small">Class creation is a live-service action. The demo uses one example class.</p>':''}</form></section></aside><div class="cp-dashboard-main">${detail?`<section class="cp-card"><div class="cp-section-heading"><div><p class="cp-eyebrow">${model.mode==='demo'?'FICTIONAL CLASS':'SELECTED CLASS'}</p><h2>${esc(detail.classroom.name)}</h2></div>${tag(detail.classroom.locked?'Joins & changes locked':'Class open',detail.classroom.locked?'warn':'ready')}</div><div class="cp-class-code"><div><span>Join code</span><strong>${esc(detail.classroom.code || 'Not available')}</strong></div><p>Share only through your classroom. A code creates a new alias session; it is not an account-recovery method.</p></div><div class="cp-toolbar">${button(detail.classroom.locked?'Unlock class':'Lock joins & changes','lock-class','',true)}${button('Delete class','delete-class','',true)}<span class="cp-small">Expires ${esc(date(detail.classroom.expiresAt))}</span></div></section><div class="cp-stat-grid"><div><b data-progress-stat="students">${stats.students}</b><span>Classroom aliases</span></div><div><b data-progress-stat="assigned">${stats.assigned}</b><span>Assigned labs</span></div><div><b data-progress-stat="submitted">${stats.submitted}</b><span>Work with a submission</span></div><div><b data-progress-stat="reviewed">${stats.reviewed}</b><span>Graded or returned</span></div></div>${assignmentPanel(detail)}${rosterPanel(detail)}${model.studentWork?workPanel():''}`:'<section class="cp-card cp-empty"><h2>Your first classroom.</h2><p>Create a class, then assign a lab. Students join with a class code and receive a server-generated random alias.</p></section>'}</div></div>`;
+  return `${model.mode==='demo'?demoBanner():''}${intro(model.mode==='demo'?'DEMO TEACHER DESK':'TEACHER DESK','A clear view of<br><em>the next step.</em>',model.mode==='demo'?'Explore one fictional class. Inspect the sample work before deciding what feedback would help.':`Teacher access verified for <strong>${esc(model.session.teacher?.email || 'your account')}</strong>. Classroom records below come from the classroom service.`)}<div class="cp-dashboard"><aside class="cp-class-sidebar"><section class="cp-card"><div class="cp-section-heading"><h2>Classes</h2>${model.mode==='live'?button('Refresh','refresh-classes','',true):tag('Demo')}</div><div class="cp-class-list">${model.classes.map(c=>`<button class="cp-class-button${c.id===model.selectedClass?' cp-selected':''}" data-class="${esc(c.id)}" aria-pressed="${c.id===model.selectedClass}" type="button"><b>${esc(c.name)}</b><span>${esc(c.studentCount ?? '—')} aliases · ${esc(c.assignmentCount ?? '—')} assignments</span></button>`).join('') || '<p class="cp-muted">No classes yet. Create one below.</p>'}</div><form id="create-class"><label>New class name<input name="name" required maxlength="80" placeholder="Example: Technology 8 · Period 2"></label><button class="cp-button" type="submit" ${model.mode==='demo'?'disabled':''}>Create class</button>${model.mode==='demo'?'<p class="cp-small">Class creation is a live-service action. The demo uses one example class.</p>':''}</form></section></aside><div class="cp-dashboard-main">${detail?`<section class="cp-card"><div class="cp-section-heading"><div><p class="cp-eyebrow">${model.mode==='demo'?'FICTIONAL CLASS':'SELECTED CLASS'}</p><h2>${esc(detail.classroom.name)}</h2></div>${tag(detail.classroom.locked?'Joins & changes locked':'Class open',detail.classroom.locked?'warn':'ready')}</div><div class="cp-class-code"><div><span>Join code</span><strong>${esc(detail.classroom.code || 'Not available')}</strong></div><p>Share only through your classroom. A code creates a new alias session; it is not an account-recovery method.</p></div><div class="cp-toolbar">${button(detail.classroom.locked?'Unlock class':'Lock joins & changes','lock-class','',true)}${button('Delete class','delete-class','',true)}<span class="cp-small">Expires ${esc(date(detail.classroom.expiresAt))}</span></div></section><div class="cp-stat-grid"><div><b data-progress-stat="students">${stats.students}</b><span>Classroom aliases</span></div><div><b data-progress-stat="assigned">${stats.assigned}</b><span>Assigned labs</span></div><div><b data-progress-stat="submitted">${stats.submitted}</b><span>Work with a submission</span></div><div><b data-progress-stat="reviewed">${stats.reviewed}</b><span>Graded or returned</span></div></div>${assignmentPanel(detail)}${rosterPanel(detail)}${model.studentWork?workPanel():''}`:'<section class="cp-card cp-empty"><h2>Your first classroom.</h2><p>Create a class, then assign a lab. Students join with a class code and receive a server-generated random alias.</p></section>'}</div></div>`;
 }
 function assignmentPanel(detail) {
   const assigned=new Set(detail.assignments.map(a=>a.labId));
   return `<section class="cp-card"><div class="cp-section-heading"><div><p class="cp-eyebrow">PLAN THE LESSON</p><h2>Assignments</h2></div><span class="cp-small">${detail.assignments.length} assigned</span></div><div class="cp-assigned-list">${detail.assignments.map(a=>`<span>${esc(a.labId)}<b>${esc(a.title || lab(a.labId)?.title || 'Lab')}</b></span>`).join('') || '<p class="cp-muted">Choose the first investigation below.</p>'}</div><form id="add-assignment" class="cp-inline-form"><label>Assign an investigation<select name="labId" required><option value="">Choose from 29 labs</option>${SCENARIOS.map(s=>`<option value="${esc(s.id)}" ${assigned.has(s.id)?'disabled':''}>${esc(s.id)} · ${esc(s.title)} · ${esc(s.grade)}</option>`).join('')}</select></label><button class="cp-button" type="submit">Add assignment</button></form></section>`;
 }
 function rosterRows(detail) {
-  return detail.students.map(student=>{const progress=detail.progress.filter(p=>p.studentId===student.id);return `<tr><th scope="row"><b>${esc(student.alias)}</b><small>${esc(student.id.slice(0,8))}</small></th><td>${progress.filter(p=>Number(p.version)>0).length}</td><td>${progress.filter(p=>p.submissionId).length}</td><td>${progress.filter(p=>p.status==='graded' || p.status==='returned').length}</td><td>${button('Review work','student-work',`data-student="${esc(student.id)}"`,true)}</td></tr>`;}).join('') || '<tr><td colspan="5">No aliases have joined this class.</td></tr>';
+  return detail.students.map(student=>{const progress=detail.progress.filter(p=>p.studentId===student.id);return `<tr><th scope="row"><b>${esc(student.alias)}</b><small>${esc(student.id.slice(0,8))}</small></th><td>${progress.filter(p=>Number(p.version)>0).length}</td><td>${progress.filter(p=>p.submissionId).length}</td><td>${progress.filter(p=>p.status==='graded' || p.status==='returned').length}</td><td>${button('Review work','student-work',`data-student="${esc(student.id)}" aria-label="Review work for ${esc(student.alias)}"`,true)}</td></tr>`;}).join('') || '<tr><td colspan="5">No aliases have joined this class.</td></tr>';
 }
 function rosterPanel(detail) {
   const updating=model.mode==='live'?`<div class="cp-live-controls"><p id="cp-update-status">${model.updatesPaused?'Automatic progress updates paused.':`Refreshes about every 15 seconds while open. Last checked ${model.lastChecked?new Date(model.lastChecked).toLocaleTimeString():'not yet'}.`}</p><div>${button(model.updatesPaused?'Resume updates':'Pause updates','toggle-updates',`aria-pressed="${model.updatesPaused}"`,true)}${button('Refresh progress','refresh-progress','',true)}</div></div>`:'';
@@ -175,7 +183,7 @@ function reviewDirty() {
 function renderWorkValue(value) {
   if(value==null || value==='') return '<p class="cp-muted">Not recorded.</p>';
   if(Array.isArray(value)) return `<ul>${value.map(item=>`<li>${esc(typeof item==='object'?JSON.stringify(item):item)}</li>`).join('')}</ul>`;
-  if(typeof value==='object') return `<pre>${esc(JSON.stringify(value,null,2))}</pre>`;
+  if(typeof value==='object') return `<pre tabindex="0" role="region" aria-label="Recorded work details">${esc(JSON.stringify(value,null,2))}</pre>`;
   return `<p>${esc(value)}</p>`;
 }
 function workEvidence(work,labId) {
@@ -183,19 +191,39 @@ function workEvidence(work,labId) {
   const scenario=lab(labId);
   const evidence=Array.isArray(work.evidence)?work.evidence.map(value=>scenario?.clues.find(clue=>clue.id===value)?.text || value):work.evidence;
   const fields=[['Evidence',evidence],['Working explanation',work.plan],['Tests & observations',work.notes],['Reflection',work.reflection]];
-  return `<div class="cp-work-evidence">${fields.map(([title,value])=>`<section><h4>${title}</h4>${renderWorkValue(value)}</section>`).join('')}<div class="cp-inline-note"><b>Learner-reported state</b><p>Technical verification: ${work.verified===true?'reported complete':'not reported complete'} · Ticket delivery: ${work.closed===true?'reported complete':'not reported complete'}</p><span>These flags are not an automatic grade.</span></div>${work.events?`<details class="cp-details"><summary>Inspect recorded action log</summary>${renderWorkValue(work.events)}</details>`:''}<details class="cp-details"><summary>Inspect complete saved snapshot</summary><pre>${esc(JSON.stringify(work,null,2))}</pre></details></div>`;
+  return `<div class="cp-work-evidence">${fields.map(([title,value])=>`<section><h4>${title}</h4>${renderWorkValue(value)}</section>`).join('')}<div class="cp-inline-note"><b>Learner-reported state</b><p>Technical verification: ${work.verified===true?'reported complete':'not reported complete'} · Ticket delivery: ${work.closed===true?'reported complete':'not reported complete'}</p><span>These flags are not an automatic grade.</span></div>${work.events?`<details class="cp-details"><summary>Inspect recorded action log</summary>${renderWorkValue(work.events)}</details>`:''}<details class="cp-details"><summary>Inspect complete saved snapshot</summary><pre tabindex="0" role="region" aria-label="Complete saved work snapshot">${esc(JSON.stringify(work,null,2))}</pre></details></div>`;
 }
 function workPanel() {
   const {student,work=[]}=model.studentWork;
   const selected=chosenSubmission();
-  return `<section class="cp-card" id="work-review"><div class="cp-section-heading"><div><p class="cp-eyebrow">${model.mode==='demo'?'FICTIONAL WORK REVIEW':'WORK REVIEW'}</p><h2>${esc(student.alias)}</h2></div><div class="cp-review-tools">${model.mode==='live'?button('Refresh work','refresh-work','',true):''}${button('Close review','close-review','',true)}</div></div><p class="cp-small">Alias ID ${esc(student.id)} · Joined ${esc(date(student.joinedAt))}</p>${work.length?`<div class="cp-work-grid"><aside class="cp-work-list">${work.map(item=>`<section><h3>${esc(item.labId)} · ${esc(lab(item.labId)?.title || 'Investigation')}</h3>${item.submissions.map(submission=>`<button type="button" class="cp-work-button${model.selectedWork?.submissionId===submission.id?' cp-selected':''}" data-submission="${esc(submission.id)}" data-assignment="${esc(item.assignmentId)}"><b>Submitted version ${esc(submission.draftVersion)}</b><span>${esc(submission.status)}${submission.grade!=null?` · ${esc(submission.grade)}/100`:''} · ${esc(date(submission.createdAt))}</span></button>`).join('') || '<p class="cp-small">No submitted version.</p>'}${item.draft?.work?`<details class="cp-details"><summary>Inspect current draft · v${esc(item.draft.version)}</summary><p class="cp-small">Drafts can change. Grade a submitted snapshot, not this draft.</p>${workEvidence(item.draft.work,item.labId)}</details>`:''}</section>`).join('')}</aside><div class="cp-work-detail">${selected?submissionPanel(selected.item,selected.submission):'<div class="cp-empty"><h3>Choose a submitted version.</h3><p>Read the evidence and reasoning before recording a manual grade. A current draft can be inspected separately.</p></div>'}</div></div>`:'<div class="cp-empty"><h3>No saved work yet.</h3><p>This alias has not saved a draft or submitted an assignment.</p></div>'}</section>`;
+  return `<section class="cp-card" id="work-review"><div class="cp-section-heading"><div><p class="cp-eyebrow">${model.mode==='demo'?'FICTIONAL WORK REVIEW':'WORK REVIEW'}</p><h2 id="work-review-title" tabindex="-1">${esc(student.alias)}</h2></div><div class="cp-review-tools">${model.mode==='live'?button('Refresh work','refresh-work','',true):''}${button('Close review','close-review','',true)}</div></div><p class="cp-small">Alias ID ${esc(student.id)} · Joined ${esc(date(student.joinedAt))}</p>${work.length?`<div class="cp-work-grid"><aside class="cp-work-list">${work.map(item=>`<section><h3>${esc(item.labId)} · ${esc(lab(item.labId)?.title || 'Investigation')}</h3>${item.submissions.map(submission=>`<button type="button" class="cp-work-button${model.selectedWork?.submissionId===submission.id?' cp-selected':''}" data-submission="${esc(submission.id)}" data-assignment="${esc(item.assignmentId)}" aria-pressed="${model.selectedWork?.submissionId===submission.id}"><b>Submitted version ${esc(submission.draftVersion)}</b><span>${esc(submission.status)}${submission.grade!=null?` · ${esc(submission.grade)}/100`:''} · ${esc(date(submission.createdAt))}</span></button>`).join('') || '<p class="cp-small">No submitted version.</p>'}${item.draft?.work?`<details class="cp-details"><summary>Inspect current draft · v${esc(item.draft.version)}</summary><p class="cp-small">Drafts can change. Grade a submitted snapshot, not this draft.</p>${workEvidence(item.draft.work,item.labId)}</details>`:''}</section>`).join('')}</aside><div class="cp-work-detail">${selected?submissionPanel(selected.item,selected.submission):'<div class="cp-empty"><h3>Choose a submitted version.</h3><p>Read the evidence and reasoning before recording a manual grade. A current draft can be inspected separately.</p></div>'}</div></div>`:'<div class="cp-empty"><h3>No saved work yet.</h3><p>This alias has not saved a draft or submitted an assignment.</p></div>'}</section>`;
 }
 function submissionPanel(item,submission) {
-  return `<div class="cp-submission-heading"><div><h3>${esc(item.labId)} · Submitted v${esc(submission.draftVersion)}</h3><p class="cp-small">Immutable work snapshot · ${esc(date(submission.createdAt))}</p></div>${tag(submission.status)}</div>${workEvidence(submission.work,item.labId)}<section class="cp-review-guidance"><h3>Use your private assessment criteria</h3><p>Keep your rubric and answer keys in a school-approved system restricted to the assigned teacher. This public site does not store or deliver teacher rubrics. A completed simulation alone does not determine a grade.</p><p class="cp-small">The fictional dashboard is a public demonstration; its teacher label does not protect private material.</p></section><form id="grade-submission" class="cp-grade-form"><h3>${model.mode==='demo'?'Try a fictional review':'Manual teacher review'}</h3><label>Grade out of 100 <span class="cp-small">Optional when returning for revision</span><input name="grade" type="number" inputmode="decimal" min="0" max="100" step="1" value="${submission.grade==null?'':esc(submission.grade)}" placeholder="0–100"></label><label>Feedback<textarea name="feedback" rows="5" maxlength="4000" placeholder="Name the evidence that worked and a specific next step.">${esc(submission.feedback || '')}</textarea></label><label>Review decision<select name="status"><option value="graded" ${submission.status==='graded'?'selected':''}>Record grade and feedback</option><option value="returned" ${submission.status==='returned'?'selected':''}>Return for revision</option></select></label><button class="cp-button" type="submit">${model.mode==='demo'?'Save demo feedback':'Save teacher review'}</button><p class="cp-small">${model.mode==='demo'?'This review changes fictional page-memory data only.':'The server checks teacher ownership and the submission revision before saving. Submitted work is preserved.'}</p></form>`;
+  return `<div class="cp-submission-heading"><div><h3 id="cp-submission-title" tabindex="-1">${esc(item.labId)} · Submitted v${esc(submission.draftVersion)}</h3><p class="cp-small">Immutable work snapshot · ${esc(date(submission.createdAt))}</p></div>${tag(submission.status)}</div>${workEvidence(submission.work,item.labId)}<section class="cp-review-guidance"><h3>Use your private assessment criteria</h3><p>Keep your rubric and answer keys in a school-approved system restricted to the assigned teacher. This public site does not store or deliver teacher rubrics. A completed simulation alone does not determine a grade.</p><p class="cp-small">The fictional dashboard is a public demonstration; its teacher label does not protect private material.</p></section><form id="grade-submission" class="cp-grade-form"><h3>${model.mode==='demo'?'Try a fictional review':'Manual teacher review'}</h3><label>Grade out of 100 <span class="cp-small">Optional when returning for revision</span><input name="grade" type="number" inputmode="decimal" min="0" max="100" step="1" value="${submission.grade==null?'':esc(submission.grade)}" placeholder="0–100"></label><label>Feedback<textarea name="feedback" rows="5" maxlength="4000" placeholder="Name the evidence that worked and a specific next step.">${esc(submission.feedback || '')}</textarea></label><label>Review decision<select name="status"><option value="graded" ${submission.status==='graded'?'selected':''}>Record grade and feedback</option><option value="returned" ${submission.status==='returned'?'selected':''}>Return for revision</option></select></label><button class="cp-button" type="submit">${model.mode==='demo'?'Save demo feedback':'Save teacher review'}</button><p class="cp-small">${model.mode==='demo'?'This review changes fictional page-memory data only.':'The server checks teacher ownership and the submission revision before saving. Submitted work is preserved.'}</p></form>`;
 }
-function render() {
+function portalFocusKey(element) {
+  if(!element || !main.contains(element))return null;
+  const attributes=['id','name','data-action','data-student','data-class','data-submission','data-assignment','href'];
+  const identity=attributes.flatMap(name=>element.hasAttribute(name)?[[name,element.getAttribute(name)]]:[]);
+  return {tag:element.tagName,identity,form:element.form?.id || '',text:identity.length?'':element.textContent};
+}
+function focusPortal(element,scroll=false) {
+  if(!element)return;
+  if(!element.matches('a,button,input,select,textarea,summary,[tabindex]'))element.setAttribute('tabindex','-1');
+  element.focus({preventScroll:true});
+  if(scroll)element.scrollIntoView({behavior:'auto',block:'nearest'});
+}
+function restorePortalFocus(key) {
+  if(!key)return;
+  const replacement=[...main.querySelectorAll('a,button,input,select,textarea,summary,[tabindex]')].find(element=>element.tagName===key.tag && !element.disabled && (element.form?.id || '')===key.form && key.identity.every(([name,value])=>element.getAttribute(name)===value) && (key.identity.length || element.textContent===key.text));
+  focusPortal(replacement || main.querySelector('h1'));
+}
+function render(focusSelector='') {
+  const focusKey=portalFocusKey(document.activeElement);
   main.innerHTML=model.mode==='demo'?teacherDashboard():teacherEntry?teacherEntryView():studentEntry();
   bind();syncPolling();
+  if(focusSelector)focusPortal(main.querySelector(focusSelector),true);
+  else restorePortalFocus(focusKey);
 }
 async function refresh() {
   const generation=++refreshGeneration;
@@ -234,14 +262,18 @@ async function loadStudent(id) {
     if(!data.student || !Array.isArray(data.work)) throw new Error('The learner work could not be validated.');
     model.studentWork=data;
   }
-  model.selectedStudent=id;model.selectedWork=null;render();document.querySelector('#work-review')?.scrollIntoView({behavior:'smooth',block:'start'});
+  model.selectedStudent=id;model.selectedWork=null;render('#work-review-title');
 }
 async function act(operation) {
   if(model.busy) return;
+  main.querySelectorAll('[aria-invalid="true"]').forEach(field=>field.removeAttribute('aria-invalid'));
   model.busy=true;main.setAttribute('aria-busy','true');
   try {await operation();} catch(error) {
     if([401,403,503].includes(error.status)) {model={...model,mode:'unavailable',session:null,classes:[],selectedClass:null,detail:null,studentWork:null,selectedWork:null,error:errorMessage(error)};render();}
-    notice(errorMessage(error),'error');
+    const dialogError=document.querySelector('.cp-dialog[open] #delete-dialog-error');
+    if(dialogError)dialogError.textContent=errorMessage(error);
+    else notice(errorMessage(error),'error');
+    if(error.focusElement?.isConnected)focusPortal(error.focusElement,true);
   } finally {model.busy=false;main.removeAttribute('aria-busy');}
 }
 async function lockClass() {
@@ -253,12 +285,15 @@ async function lockClass() {
 }
 function confirmDelete() {
   const id=model.selectedClass,name=model.detail.classroom.name;
+  const opener=document.activeElement;
   const dialog=document.createElement('dialog');dialog.className='cp-dialog';
-  dialog.innerHTML=`<form method="dialog"><p class="cp-eyebrow">${model.mode==='demo'?'DEMO DELETE':'DELETE CLASSROOM'}</p><h2>Delete ${esc(name)}?</h2><p>${model.mode==='demo'?'This removes the fictional example from this page. Reloading or reopening the demo restores it.':'This permanently removes this class, its aliases, saved work, submissions, and grades. Export anything your school needs before continuing.'}</p><label>Type DELETE to confirm<input name="confirm" autocomplete="off" required pattern="DELETE"></label><div class="cp-toolbar"><button class="cp-button cp-button-danger" id="delete-class-confirm" type="button">Delete class</button><button class="cp-button cp-button-secondary" value="cancel" formnovalidate>Keep class</button></div><p id="delete-dialog-error" class="cp-small" role="status"></p></form>`;
+  dialog.setAttribute('aria-labelledby','delete-class-title');
+  dialog.setAttribute('aria-describedby','delete-class-description');
+  dialog.innerHTML=`<form method="dialog"><p class="cp-eyebrow">${model.mode==='demo'?'DEMO DELETE':'DELETE CLASSROOM'}</p><h2 id="delete-class-title">Delete ${esc(name)}?</h2><p id="delete-class-description">${model.mode==='demo'?'This removes the fictional example from this page. Reloading or reopening the demo restores it.':'This permanently removes this class, its aliases, saved work, submissions, and grades. Export anything your school needs before continuing.'}</p><label>Type DELETE to confirm<input name="confirm" autocomplete="off" required pattern="DELETE" aria-describedby="delete-dialog-error"></label><div class="cp-toolbar"><button class="cp-button cp-button-danger" id="delete-class-confirm" type="button">Delete class</button><button class="cp-button cp-button-secondary" value="cancel" formnovalidate>Keep class</button></div><p id="delete-dialog-error" class="cp-small" role="alert" aria-atomic="true"></p></form>`;
   document.body.append(dialog);dialog.showModal();dialog.querySelector('input').focus();
-  dialog.addEventListener('close',()=>dialog.remove());
+  dialog.addEventListener('close',()=>{dialog.remove();focusPortal(opener?.isConnected?opener:main.querySelector('h1'));});
   dialog.querySelector('#delete-class-confirm').addEventListener('click',()=>act(async()=>{
-    if(dialog.querySelector('input').value!=='DELETE'){dialog.querySelector('#delete-dialog-error').textContent='Type DELETE exactly before confirming.';return;}
+    if(dialog.querySelector('input').value!=='DELETE'){dialog.querySelector('#delete-dialog-error').textContent='Type DELETE exactly before confirming.';dialog.querySelector('input').setAttribute('aria-invalid','true');dialog.querySelector('input').focus();return;}
     if(model.mode==='demo'){model.classes=[];model.detail=null;model.studentWork=null;model.selectedClass=null;dialog.close();render();notice('Fictional demo class removed from this page only.');return;}
     const response=await api(`/api/teacher/classes/${idPath(id)}`,'DELETE',{});if(response.deleted!==true)throw new Error('Deletion was not confirmed.');
     model.selectedClass=null;dialog.close();await loadClasses();notice('Class and its classroom records deleted.');
@@ -282,7 +317,10 @@ function bind() {
       case 'exit-demo':demo=null;model.selectedClass=null;await refresh();break;
       case 'refresh-classes':await loadClasses();break;
       case 'student-work':await loadStudent(control.dataset.student);break;
-      case 'close-review':model.studentWork=null;model.selectedWork=null;render();break;
+      case 'close-review':{
+        const student=model.selectedStudent;model.studentWork=null;model.selectedWork=null;render();
+        focusPortal([...main.querySelectorAll('[data-student]')].find(control=>control.dataset.student===student),true);break;
+      }
       case 'toggle-updates':model.updatesPaused=!model.updatesPaused;updatePollControls();syncPolling();break;
       case 'refresh-progress':{
         const detail=validateDetail(await api(`/api/teacher/classes/${idPath(model.selectedClass)}`));
@@ -303,7 +341,7 @@ function bind() {
   main.querySelectorAll('[data-class]').forEach(control=>control.addEventListener('click',()=>act(async()=>{
     if(model.mode==='demo'){model.detail={classroom:demo.classroom,students:demo.students,assignments:demo.assignments,progress:demo.progress};model.selectedClass=demo.classroom.id;model.studentWork=null;render();}else await loadClass(control.dataset.class);
   })));
-  main.querySelectorAll('[data-submission]').forEach(control=>control.addEventListener('click',()=>{model.selectedWork={assignmentId:control.dataset.assignment,submissionId:control.dataset.submission};render();document.querySelector('.cp-work-detail')?.scrollIntoView({behavior:'smooth',block:'start'});}));
+  main.querySelectorAll('[data-submission]').forEach(control=>control.addEventListener('click',()=>{model.selectedWork={assignmentId:control.dataset.assignment,submissionId:control.dataset.submission};render('#cp-submission-title');}));
   main.querySelector('#join-class')?.addEventListener('submit',event=>{event.preventDefault();const values=new FormData(event.currentTarget);act(async()=>{
     if(model.mode!=='live') throw new Error('Live classroom joining is not available.');
     const data=await api('/api/student/join','POST',{code:String(values.get('code')).trim().toUpperCase()});
@@ -318,12 +356,12 @@ function bind() {
     if(model.mode==='demo'){const assignment={id:`demo-assignment-${Date.now()}`,labId:scenario.id,title:scenario.title,createdAt:new Date().toISOString()};demo.assignments.push(assignment);demo.classroom.assignmentCount=demo.assignments.length;render();notice('Fictional assignment added in page memory only.');return;}
     const response=await api(`/api/teacher/classes/${idPath(model.selectedClass)}/assignments`,'POST',{labId:scenario.id,title:scenario.title});if(!response.assignment)throw new Error('Assignment creation was not confirmed.');await loadClass(model.selectedClass);notice('Investigation assigned. Students can refresh their classroom entry.');
   });});
-  main.querySelector('#grade-submission')?.addEventListener('submit',event=>{event.preventDefault();const values=new FormData(event.currentTarget);act(async()=>{
+  main.querySelector('#grade-submission')?.addEventListener('submit',event=>{event.preventDefault();const form=event.currentTarget,values=new FormData(form);act(async()=>{
     const chosen=chosenSubmission();if(!chosen)throw new Error('Choose a submitted work version first.');
     const raw=String(values.get('grade')).trim(),grade=raw===''?null:Number(raw),status=String(values.get('status')),feedback=String(values.get('feedback')).trim();
-    if(grade!==null && (!Number.isFinite(grade)||grade<0||grade>100))throw new Error('Use a grade between 0 and 100.');
-    if(status==='graded' && grade===null)throw new Error('Enter a grade, or choose Return for revision.');
-    if(status==='returned' && !feedback)throw new Error('Add a specific feedback note before returning work for revision.');
+    if(grade!==null && (!Number.isFinite(grade)||grade<0||grade>100))throw portalInputError('Use a grade between 0 and 100.',form.elements.namedItem('grade'));
+    if(status==='graded' && grade===null)throw portalInputError('Enter a grade, or choose Return for revision.',form.elements.namedItem('grade'));
+    if(status==='returned' && !feedback)throw portalInputError('Add a specific feedback note before returning work for revision.',form.elements.namedItem('feedback'));
     if(model.mode==='demo'){
       Object.assign(chosen.submission,{grade,feedback,status,gradedAt:new Date().toISOString(),revision:chosen.submission.revision+1});
       const progress=demo.progress.find(p=>p.submissionId===chosen.submission.id);if(progress)Object.assign(progress,{grade,feedback,status});render();notice('Demo review saved in page memory. No real grade changed.');return;

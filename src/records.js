@@ -1,7 +1,7 @@
-import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261020-chromebook24';
-import { normalizeWorkspaceState } from './workspaces.js?release=20261020-chromebook24';
-import { inquiryProgress } from './interview.js?release=20261020-chromebook24';
-import { retainExperimentEvents } from './experiments.js?release=20261020-chromebook24';
+import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261021-accessibility26';
+import { normalizeWorkspaceState } from './workspaces.js?release=20261021-accessibility26';
+import { inquiryProgress } from './interview.js?release=20261021-accessibility26';
+import { retainExperimentEvents } from './experiments.js?release=20261021-accessibility26';
 
 // Local storage and uploaded drafts are data, never trusted HTML or object shapes.
 export function normalizeLabRecord(scenario, value) {

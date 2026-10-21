@@ -114,3 +114,12 @@
   .foundation-equipment-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .foundation-instructions .foundation-answer-options{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* Beginner labs share the studio palette with a clear, comfortable reading size. */
+.foundation-lab{border-radius:19px;border-color:#3e6170;background:#102736;box-shadow:0 8px 25px #07172218}
+.foundation-heading{background:radial-gradient(ellipse at 100% 0,#285950,transparent 65%),linear-gradient(115deg,#143c49,#192f47);border-top:4px solid #90dfc7}
+.foundation-heading h1{font-size:clamp(1.8rem,3.2vw,2.5rem)}.foundation-heading>p:last-child{font-size:1rem;line-height:1.7;color:#d0e4e8}.foundation-eyebrow{font-size:.79rem;color:#a1ecd6}
+.foundation-tabs{gap:9px;padding:10px;background:#102432}.foundation-tabs button{font-size:1rem;border-radius:9px;min-height:46px}.foundation-tabs button>span{background:#09252b;color:#b3f1dc}.foundation-tabs button[aria-selected=true]{background:#20594f;border-color:#97e5ca}
+.foundation-instructions,.foundation-split>.foundation-stage{border-color:#365765;background:#122c3b;border-radius:13px}.foundation-pane-heading{font-size:1.18rem;line-height:1.4}.foundation-prompt{border-color:#3b6470;background:#183a47;border-radius:12px}.foundation-prompt p,.foundation-caption p{font-size:1rem;line-height:1.75;color:#cce1e7}.foundation-caption{border-radius:0 13px 13px 13px;background:#163a43;padding:16px}.foundation-caption h2{font-size:1.2rem;color:#bff5e0}.foundation-prompt h2,.foundation-instructions .foundation-prompt h2{font-size:1.28rem;line-height:1.4}
+.foundation-lab button{font-size:1rem}.foundation-item-buttons button{font-size:.94rem}.foundation-item-buttons span{font-size:.8rem;color:#b7eddd}.foundation-feedback{font-size:1rem;line-height:1.7;background:#154844;color:#e0f5ec;border-color:#51968b;border-radius:11px}.foundation-small,.foundation-prompt .foundation-small{font-size:.92rem}.foundation-help{background:#143340;border-radius:11px}.foundation-help summary{font-size:1rem}.foundation-visual-readout{font-size:.92rem}.foundation-equipment-grid .foundation-equipment-card{border-radius:12px;background:#173e4b}.foundation-equipment-card span{font-size:.9rem;color:#cee1e6}
+@media(max-width:580px){.foundation-heading{padding:17px}.foundation-tabs{gap:6px;padding:8px}.foundation-tabs button{font-size:.9rem;gap:5px}.foundation-caption{padding:14px}.foundation-prompt p{font-size:1rem}}

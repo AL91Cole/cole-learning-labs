@@ -37,7 +37,8 @@ test('the student lab has no rubric viewer and the public manifest has no privat
 test('the public teacher demo cannot render assessment criteria from a scenario object', async () => {
   const source = await readFile(new URL('../src/classroom-portal.js', import.meta.url), 'utf8');
   const start = source.indexOf('function submissionPanel(');
-  const end = source.indexOf('\nfunction render(', start);
+  // Stop at the next top-level function; focus helpers may sit before render.
+  const end = source.indexOf('\nfunction ', start + 1);
   assert.ok(start >= 0 && end > start);
   const panel = new Script(`(${source.slice(start, end)})`).runInNewContext({
     lab: () => ({ rubric: ['PRIVATE_ASSESSMENT_CANARY_NEVER_RENDER'] }),

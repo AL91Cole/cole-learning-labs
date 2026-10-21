@@ -1,5 +1,6 @@
 /** Authored offline character lines. These are fictional personality details,
  * never evidence about a lab, a real person, or the learner's equipment. */
+import {requesterLibraryReply,requesterLibraryFollowUp} from './requester-library.js?release=20261021-accessibility26';
 const clean = value => typeof value==='string'?value.replace(/[’‘]/gu,"'").replace(/\s+/gu,' ').trim().toLowerCase().replace(/[?!.]+$/gu,''):'';
 const hash = value => [...value].reduce((total,letter) => (total * 31 + letter.charCodeAt(0)) >>> 0,0);
 const pick = (items,seed) => items[seed % items.length];
@@ -86,6 +87,8 @@ const DEFINITIONS = Object.freeze([
   definition('function','A function is a named group of program steps you can use again. It can take inputs and may return an output.')
 ]);
 
+export const REQUESTER_DEFINITIONS = DEFINITIONS;
+
 function termReply(text) {
   const match = /^(?:what (?:is|are)(?: a| an| the)?|define|explain(?: a| an| the)?|tell me about(?: a| an| the)?) (.+?)(?: in simple (?:words|terms)| simply| for beginners)?$/u.exec(text)
     || /^what does (.+?) (?:mean|stand for|do)$/u.exec(text);
@@ -108,7 +111,7 @@ function arithmeticReply(text) {
 
 /** Recognize only explicit small talk or simple general questions. No case state,
  * saved answer, learner identity, clock, network, or random source is consulted. */
-export function requesterPersonaReply(scenario,question) {
+function personaReplyBase(scenario,question) {
   if (typeof question!=='string' || !question.trim() || question.length>240) return null;
   const text=clean(question).replace(/^(?:hi|hello|hey|good morning)[,! ]+(?=(?:how|what|who|can|tell|do|are)\b)/u,'').replace(/^(?:please |(?:can|could|would) you (?:please )?)/u,'');
   const character=requesterPersona(scenario);
@@ -116,29 +119,29 @@ export function requesterPersonaReply(scenario,question) {
   const seed=hash(label);
   const general=termReply(text) || arithmeticReply(text);
   if (general) return general;
-  if (/^(?:hi|hello|hey|good morning|good afternoon|good evening)(?: there| requester)?$/u.test(text)) return result(`Hi! I am ${character?.name||label}, the fictional requester for ${character?.focus||'this case'}. My replies are written for practice on this device. We can chat, or discuss the observations in the request.`);
-  if (/^(?:thanks|thank you|thanks a lot|thank you so much|okay thanks|ok thanks|cheers)$/u.test(text)) return result(`You are welcome! ${character?.voice||'I am glad to help.'} When you return to the case, try one change at a time and compare the test result with your idea.`);
+  if (/^(?:hi|hello|hey|good morning|good afternoon|good evening)(?: there| requester)?$/u.test(text)) return result(`Hi! I am ${character?.name||label}. I am here for ${character?.focus||'this case'}. Away from the task, I enjoy ${character?.interests||'puzzles'}. We can chat or look at the request together.`);
+  if (/^(?:thanks|thank you|thanks a lot|thank you so much|okay thanks|ok thanks|cheers)$/u.test(text)) return result(`You are welcome! I am glad we could talk. ${character?.voice||'I like taking things one step at a time.'} Whenever you are ready, we can keep chatting or return to the request.`);
   if (/^(?:bye|goodbye|see you|see you later|good night)$/u.test(text)) return result('See you next time! You can return to the request and workbench whenever you are ready.');
   if (/\b(?:your name|who are you|introduce yourself|tell me about yourself)\b/u.test(text)) return result(`I am ${character?.name||label}, the fictional requester for ${character?.focus||'this lab'}. I am a written practice character, not a real person chatting with you.`);
   if (/^(?:what(?:'s| is) your (?:job|role)|what do you do(?: for work)?|are you (?:a )?teacher)$/u.test(text)) return result(`My fictional role is ${character?.role||'the practice requester'}. ${character?.voice||'I like a clear, careful explanation.'} My request card has the actual task and observations.`);
-  if (/^(?:how are you(?: doing| today)?|how do you feel(?: today)?|how's it going|are you (?:happy|sad|okay|ok))$/u.test(text)) return result(`I feel hopeful about ${character?.focus||'the request'}. ${character?.voice||'I like taking one step at a time.'} That mood is fictional character flavor, not another repair clue.`);
-  if (/\b(?:are you real|are you (?:an? )?(?:ai|robot|person|human)|do you know everything|how do you answer|can you chat|can we chat|can we talk|what can you talk about|can you (?:see|hear) me)\b/u.test(text)) return result('I am an offline practice character with written replies and case facts. I can chat about a few topics and explain computer words. I do not know everything, and I cannot see or hear you or inspect your real device.');
-  if (/\b(?:breakfast|what did you eat|what have you eaten)\b/u.test(text)) return result(`In my fictional backstory, I had ${character?.breakfast||pick(['oatmeal and berries','toast and a banana','yogurt and granola'],seed)} for breakfast. That is a character detail, not evidence about the computer.`);
-  if (/\b(?:your hobbies|your hobby|do for fun|do you (?:like to )?(?:play|enjoy) (?:video )?games|favorite game|favourite game|free time|your weekend)\b/u.test(text)) return result(`For this fictional character, I enjoy ${character?.interests||pick(['puzzle games and drawing maps','building little cardboard models and playing board games','reading adventures and solving word puzzles'],seed)}. Those interests do not explain the case fault.`);
+  if (/^(?:how are you(?: doing| today)?|how do you feel(?: today)?|how's it going|are you (?:happy|sad|okay|ok))$/u.test(text)) return result(`I feel hopeful about ${character?.focus||'the request'}. ${character?.voice||'I like taking one step at a time.'} I would enjoy a little creative break with ${character?.interests||'a puzzle'}, too.`);
+  if (/\b(?:are you real|are you (?:an? )?(?:ai|robot|person|human)|do you know everything|how do you answer|can you chat|can we chat|can we talk|what can you talk about|can you (?:see|hear) me)\b/u.test(text)) return result('I am an offline practice character with authored, combined replies and case facts. We can discuss everyday ideas, imaginary adventures, and computer words. I do not know everything, and I cannot see or hear you or inspect your real device.');
+  if (/\b(?:breakfast|what did you eat|what have you eaten)\b/u.test(text)) return result(`I had ${character?.breakfast||pick(['oatmeal and berries','toast and a banana','yogurt and granola'],seed)} for breakfast. Simple and easy suits me. If I were planning a slow morning, I would add time for ${character?.interests||'a puzzle'}.`);
+  if (/\b(?:your hobbies|your hobby|do for fun|do you (?:like to )?(?:play|enjoy) (?:video )?games|favorite game|favourite game|free time|your weekend)\b/u.test(text)) return result(`I enjoy ${character?.interests||pick(['puzzle games and drawing maps','building little cardboard models and playing board games','reading adventures and solving word puzzles'],seed)}. I like having something small to explore, then giving it my own twist. A quiet creative afternoon sounds good to me.`);
   if (/\b(?:tell me (?:a |another )?joke|say something funny|make me laugh|know any jokes)\b/u.test(text)) return result(pick(['A little computer joke: why did the computer bring a blanket? It left its Windows open!','A little computer joke: why was the keyboard good at music? It had plenty of keys!','A little computer joke: what is a computer’s favorite snack? Microchips!'],seed));
   if (/\b(?:favorite|favourite)\b/u.test(text)) {
     const preferences=[[/colou?r/u,[character?.color||'teal']],[/food|meal|snack|pizza/u,[character?.food||'vegetable pizza']],[/animal|pet/u,['an owl','a fox','a turtle']],[/book|read/u,[character?.book||'adventure stories']],[/music|song/u,[character?.music||'calm instrumental music']],[/sport/u,['badminton','swimming','cycling']],[/season|weather/u,['spring','autumn','summer']],[/drink/u,['water with lemon','warm cocoa','mint tea']],[/subject|class/u,['art','science','technology']]];
     const preference=preferences.find(([pattern])=>pattern.test(text));
-    if (preference) return result(`My fictional character’s favorite is ${pick(preference[1],seed)}. It is just a made-up preference; it does not reveal a repair clue.`);
+    if (preference) return result(`My favorite is ${pick(preference[1],seed)}. I would work it into a little project about ${character?.interests||'puzzles'}; choosing a familiar favorite can be a nice starting point for a new idea.`);
     return result('My fictional character likes learning new things and solving puzzles. I do not have a written favorite for every topic, so I would rather say I do not know than make one up.');
   }
   if (/\b(?:where do you live|where are you from|how old are you|your (?:address|phone number|birthday|age|family))\b/u.test(text)) return result('I belong to this fictional classroom story. I do not have a real home address, phone number, or personal records to share. We can use the character details on the request card.');
   if (/^(?:i am|i'm|i feel) (?:sad|upset|frustrated|confused|tired|stressed)$/u.test(text)) return result('You can take a pause. A trusted teacher or adult can help if you need support. I am a fictional practice character; for the lab, we can take one small step at a time.');
   if (/\b(?:how can i help you|why (?:are you asking|do you need) for help|tell me about your (?:day|classroom|work)|what (?:worries|concerns) you|are you worried)\b/u.test(text)) return result(`My fictional role is ${character?.role||'the practice requester'}, and I am thinking about ${character?.focus||'the request'}. I can discuss the observations written in the case. My personality does not add a new fault or hidden event.`,'casual-case-context');
   if (/\b(?:how (?:should|would you like) (?:me|us|i) to explain|how should i explain|what makes a good (?:technician|helper)|any (?:general )?tips|are you (?:angry|mad) (?:at|with) me|is this my fault)\b/u.test(text)) return result(`${character?.voice||'Let us take one step at a time.'} A helpful technician listens, explains what the evidence shows, and says when something is uncertain. This is practice; asking a question does not pass a test.`,'casual-case-context');
-  if (/\b(?:do you like (?:school|learning)|what inspires you|tell me something about yourself)\b/u.test(text)) return result(`My fictional character enjoys ${character?.interests||'solving puzzles'}. In this lab I care about ${character?.focus||'the request'}. I like explanations that help someone understand, rather than guesses that only sound confident.`);
-  if (/\b(?:how (?:was|is) your day|what is your day like|how was your weekend|what are you looking forward to)\b/u.test(text)) return result(`This fictional day is about ${character?.focus||'the classroom request'}. Away from the case, my character enjoys ${character?.interests||'puzzles'}. That is story flavor, not a timeline of what caused the problem.`);
-  if (/\b(?:what (?:do|would) you (?:eat|like) for lunch|do you like (?:cooking|baking)|what is for lunch)\b/u.test(text)) return result(`My fictional character would choose ${character?.food||'vegetable pizza'} for lunch. Food preferences are just a friendly conversation topic, separate from the case evidence.`);
+  if (/\b(?:do you like (?:school|learning)|what inspires you|tell me something about yourself)\b/u.test(text)) return result(`I enjoy ${character?.interests||'solving puzzles'}. I like explanations that help someone understand, rather than guesses that only sound confident. A tiny new idea is often enough to make me want to learn more.`);
+  if (/\b(?:how (?:was|is) your day|what is your day like|how was your weekend|what are you looking forward to)\b/u.test(text)) return result(`I am thinking about ${character?.focus||'the classroom request'}. For a pleasant break, I would choose ${character?.interests||'puzzles'} and a little ${character?.music||'music'}. That sounds like a good balance to me.`);
+  if (/\b(?:what (?:do|would) you (?:eat|like) for lunch|do you like (?:cooking|baking)|what is for lunch)\b/u.test(text)) return result(`I would choose ${character?.food||'vegetable pizza'} for lunch. For an imaginary cafe, I would put that on the menu and decorate it in ${character?.color||'teal'}. A small, friendly place would suit me.`);
   if (/\b(?:tell me (?:a |another )?(?:short )?story|make up a story)\b/u.test(text)) return result(`Here is a made-up mini-story: ${character?.name||'a classroom helper'} made a puzzle for a friend. The first plan was confusing, so they listened and tried a clearer version. Working together mattered more than getting it right immediately.`);
   if (/^(?:do you like|what do you think (?:of|about)|have you ever) /u.test(text) && !/\b(?:pc|computer|monitor|screen|cable|ram|memory|network|request|problem|case|repair|test|code|program|printer|file|prompt|security|message|account|record|backup|router|drive|storage|wi-fi|wifi)\b/u.test(text)) return result(`I do not have a written opinion or memory for every topic. My fictional character enjoys ${character?.interests||'puzzles'}, but I will not pretend a made-up experience is part of the case.`,'casual-unknown');
   // A generic legacy keyword such as "who", "where", or "cost" must not
@@ -148,14 +151,62 @@ export function requesterPersonaReply(scenario,question) {
   return null;
 }
 
+const PERSONAL_ANCHOR = /\b(?:your name|who are you|your role|your job|breakfast|your hobbies|your hobby|your interests|do for fun|your weekend|your day|your favorite (?:color|colour|food|meal|snack|pizza|animal|pet|book|music|song|sport|season|weather|drink|subject|class)|your favourite (?:color|colour|food|meal|snack|pizza|animal|pet|book|music|song|sport|season|weather|drink|subject|class)|your family|your age|your address|your phone|how old are you|where do you live|where are you from)\b/u;
+const CASUAL_FOLLOW_UP = /^(?:(?:can|could|would) you )?(?:please )?(?:why|how come|why is that|how so|tell me more|more please|go on|keep going|what about you|how about you|and you|tell me another story|another story|what happened next|what happens next|and then|say that again|repeat that|explain that|explain it|in simple words|say it simply|what do you mean(?: by that)?)$/u;
+const CHITCHAT_ONLY = /^(?:hi|hello|hey|good morning|good afternoon|good evening|thanks|thank you|thanks a lot|thank you so much|bye|goodbye|see you later)(?: there)?$/u;
+
+/** History only selects an authored variation. It cannot add observations or
+ * instructions, and its answer strings are never read. */
+export function requesterPersonaReply(scenario,question,history=[]) {
+  if (typeof question!=='string' || !question.trim() || question.length>240) return null;
+  const text=clean(question), profile=requesterPersona(scenario);
+  const base=personaReplyBase(scenario,question);
+  const general=termReply(text) || arithmeticReply(text);
+  if (general) return general;
+  const library=!PERSONAL_ANCHOR.test(text)?requesterLibraryReply(scenario,profile,question,history):null;
+  if (library) return library;
+  if (!base || base.topic!=='casual-persona' || CHITCHAT_ONLY.test(text)) return base;
+  const repeats=(Array.isArray(history)?history.slice(-8):[]).filter(pair=>clean(pair?.question)===text).length;
+  if (!repeats || !profile) return base;
+  if (repeats%3===1 && /\b(?:favorite|favourite|hobb|breakfast|lunch|fun)\b/u.test(text)) return result(`I still like that choice. ${base.answer.split(/(?<=[.!?])\s/u)[0]} For a different angle, I could make a ${profile.color} sketch inspired by ${profile.interests}.`);
+  if (repeats%3===2 && /\b(?:favorite|favourite|hobb|breakfast|lunch|fun)\b/u.test(text)) return result(`${base.answer.split(/(?<=[.!?])\s/u)[0]} If we made a little story from it, I would give ${profile.name} a creative afternoon, some ${profile.music}, and time to try one new idea.`);
+  return base;
+}
+
+/** A short-lived conversational anchor. Recompute from questions, never AI or
+ * saved answer text. A newer case question takes priority over an older chat. */
+export function requesterCasualFollowUp(scenario,question,history=[]) {
+  if (!CASUAL_FOLLOW_UP.test(clean(question)) || !Array.isArray(history)) return null;
+  const profile=requesterPersona(scenario);
+  if (!profile) return null;
+  let turn=0;
+  for (const pair of history.slice(-8).reverse()) {
+    if (!pair || typeof pair.question!=='string' || pair.question.length>240) return null;
+    const prior=clean(pair.question);
+    if (CASUAL_FOLLOW_UP.test(prior)) {turn++;continue;}
+    if (CHITCHAT_ONLY.test(prior)) continue;
+    const library=requesterLibraryFollowUp(scenario,profile,question,pair.question,turn);
+    if (library) return library;
+    const base=personaReplyBase(scenario,pair.question);
+    if (!base || base.topic==='casual-unknown' || base.topic==='casual-case-context') return null;
+    const text=clean(question);
+    if (base.topic==='casual-definition' || base.topic==='casual-math') return result(`Here is the general idea again: ${base.answer}`,'casual-followup');
+    if (!PERSONAL_ANCHOR.test(prior) && !/\b(?:lunch|hobbies|fun|mood|how are you)\b/u.test(prior)) return null;
+    if (/^(?:why|how come|why is that|how so)$/u.test(text)) return result(`It suits the way I like to spend a creative break. ${base.answer.split(/(?<=[.!?])\s/u)[0]} My interest in ${profile.interests} gives me a way to turn that preference into a little project.`,'casual-followup');
+    if (/\b(?:story|next|then)\b/u.test(text)) return result(`If we imagined a little scene, ${profile.name} would start with ${profile.interests}, add a splash of ${profile.color}, and invite a friend to suggest a twist. They would finish with a tiny project to share.`,'casual-followup');
+    return result(`${base.answer.split(/(?<=[.!?])\s/u)[0]} To add a little more: I would pair it with ${profile.music} and a quiet chance to explore ${profile.interests}. That is my kind of creative break.`,'casual-followup');
+  }
+  return null;
+}
+
 /** Unknown subjects receive an honest, varied reply instead of invented knowledge. */
 export function requesterUnknownReply(scenario,question) {
   const seed=hash((typeof scenario?.id==='string'?scenario.id:'')+' '+clean(question));
   const focus=requesterPersona(scenario)?.focus;
   return result(pick([
-    'I don’t know that answer. I am a fictional offline character with a limited set of written replies. We can try a computer word, a little small talk, or a question about the case.',
-    'That is outside what I know. I would rather be honest than invent an answer or a case clue. I can explain some computer terms, chat about my fictional character, or discuss the visible request.',
-    'I don’t have a written answer for that topic. I can still chat, but I cannot look things up or make up evidence. Ask me a computer term or something I observed in this fictional case.',
-    'I’m not sure about that. My offline character knows the supplied case and a few everyday topics. For another subject, check a trusted source or ask your teacher rather than treating my guess as a fact.'
+    'I don’t know that answer. I can talk about many everyday ideas and imaginary adventures, but my offline library has limits. We could try a related idea or check a trusted source.',
+    'That is outside what I know. I would rather say so than invent a confident answer. I enjoy creative questions, though: we could imagine a story or try a topic like nature, art, or teamwork.',
+    'I don’t have a written answer for that topic. I cannot look things up. We could choose a different subject, make up a clearly imaginary adventure, or return to the visible request.',
+    'I’m not sure about that. Some questions need a trusted source or a person who knows the subject. I can still join in a creative chat, as long as we keep guesses separate from facts.'
   ],seed)+(focus?` Here, I can discuss ${focus}.`:''),'casual-unknown');
 }

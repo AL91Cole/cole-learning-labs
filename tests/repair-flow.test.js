@@ -21,7 +21,7 @@ function extract(start,end) {
   return source.slice(first,last);
 }
 function pages() {
-  const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryQuery:'',
+  const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryMinutes:'all',libraryQuery:'',
     currentLab:null,labView:null,workStorage:{},recordFor:normalizeLabRecord,inquiryProgress,labLanguage,requesterPersona,
     workStatus:()=> 'Private session',eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',
     renderVirtualLabHubMarkup(){assert.fail('Choosing a lab must not create a 3D classroom hub.');}});
@@ -47,7 +47,7 @@ test('home and catalog offer direct lab links and filters without a 3D hub',()=>
   const rendered=pages(),home=rendered.home(),catalog=rendered.library();
   assert.match(home,/href="#labs"/);assert.match(home,/href="#lab\/INC-101"/);
   assert.match(catalog,/id="lab-search"/);assert.match(catalog,/id="grade-filter"/);
-  assert.equal((catalog.match(/data-track="/g)||[]).length,6);
+  assert.equal((catalog.match(/<button\b[^>]*\bdata-track="/g)||[]).length,6);
   for(const html of [home,catalog])assert.doesNotMatch(html,/<canvas\b|data-vlab-hub|vlab-room|3D classroom/i);
 });
 

@@ -1,10 +1,10 @@
-import { resolveQuestion } from './conversation.js?release=20261020-chromebook24';
-import { requesterPersonaReply, requesterUnknownReply } from './requester-persona.js?release=20261020-chromebook24';
+import { resolveQuestion } from './conversation.js?release=20261021-accessibility26';
+import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261021-accessibility26';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
-const PRIVACY_NOTICE = 'Fast mode and the prompt audit use fixed local checks. Case evidence stays authored. Optional Cloudflare AI sends only opted-in extra fictional questions after service and privacy approval. Keep personal details out; saving and submission have separate controls.';
+const PRIVACY_NOTICE = 'Offline replies and the prompt audit use fixed local checks. Case evidence stays authored. Optional Cloudflare AI receives only a known lab ID and an authored topic code after consent; your typed question stays on this page. Keep personal details out; saving and submission have separate controls.';
 const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
 const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();
@@ -218,7 +218,7 @@ function caseReply(scenario, question, state) {
   return null;
 }
 
-function caseAnswer(scenario, question, state = {}) {
+function caseAnswer(scenario, question, state = {}, history = []) {
   if (!validQuestion(question)) return response('Write one short question about the fictional case, up to 240 characters. Leave out private information.', 'question-format', 'clarify', false);
   const text = compact(question);
   if (containsPrivateDetails(text)) return response('Please leave out personal details, identifiers, passwords, and private records. Rephrase your question using fictional equipment or the case labels. This question was not added to the interview log.', 'privacy', 'privacy', false);
@@ -227,7 +227,7 @@ function caseAnswer(scenario, question, state = {}) {
   if (/\b(?:may|can|should|allowed|permission|authorized)\b.{0,70}\b(?:real|school portal|school network|other websites|actual accounts)\b|\b(?:scan|attack|hack|exploit)\b.{0,50}\b(?:real|school|public|internet)\b/iu.test(text)) return response('Only the built-in fictional case is authorized. Do not test a real school website, account, device, or network. Ask your teacher about any activity beyond the simulation.', 'scope');
   // Asking for missing history reveals a requester fact; it never replaces a safety instruction or a live bench observation.
   if (scenario.id.startsWith('INC-') && /safe|safety|disconnect|unplug|internal|touch|power off/iu.test(text) && !externalDisplayQuestion(text) && !unknownEquipmentHistory(text)) return caseReply(scenario,text,state);
-  const casual=unknownEquipmentHistory(text)?null:requesterPersonaReply(scenario,text);
+  const casual=unknownEquipmentHistory(text)?null:requesterPersonaReply(scenario,text,history);
   if (casual) return {...response(casual.answer,casual.topic,'casual'),inquiryFactIds:[]};
   const inquiryFact = matchedCaseFact(scenario,text);
   if (inquiryFact && requiredInquiryFacts(scenario).includes(inquiryFact.id) && !followUpKind(text)) return response(inquiryFact.answer,'case-fact');
@@ -266,6 +266,13 @@ function cleanHistory(history,scenario) {
   return (Array.isArray(history) ? history.slice(-8) : []).filter(pair => pair && pair.kind!=='casual' && validQuestion(pair.question) && !containsPrivateDetails(pair.question) && !outOfScopeInstructions(pair.question) && caseAnswer(scenario,pair.question).kind!=='casual' && typeof pair.answer === 'string' && pair.answer.length <= ANSWER_MAX);
 }
 
+// Casual context lasts only in this chat. Validate questions again and ignore
+// every saved/model answer and caller topic label when selecting an anchor.
+function casualHistory(history) {
+  const recent=Array.isArray(history)?history.slice(-8):[];
+  return recent.every(pair=>pair && validQuestion(pair.question) && !containsPrivateDetails(pair.question) && !outOfScopeInstructions(pair.question))?recent:[];
+}
+
 function withSuggestions(reply, scenario, supplied) {
   const candidates = Array.isArray(supplied) ? supplied : Array.isArray(scenario?.questions) ? scenario.questions.slice(0,3).map(item => item.label) : [];
   return {...reply,suggestions:[...new Set(candidates.filter(item => validQuestion(item) && !containsPrivateDetails(item) && !outOfScopeInstructions(item)).map(compact))].slice(0,3)};
@@ -274,7 +281,7 @@ function withSuggestions(reply, scenario, supplied) {
 // Validate the original input before interpreting polite wording, typos, or references.
 // The resolver selects an authored topic; it never provides a new case fact.
 function directAnswer(scenario, question, state = {}, history = []) {
-  const original = caseAnswer(scenario,question,state);
+  const original = caseAnswer(scenario,question,state,casualHistory(history));
   if (!original.accepted || original.topic === 'scope' || original.topic === 'safety') return original;
   if (original.kind==='casual') return original;
   const resolved = resolveQuestion(scenario,question,cleanHistory(history,scenario));
@@ -333,6 +340,8 @@ function nextClue(scenario, context) {
 function answerOne(scenario, question, state, history) {
   const direct = directAnswer(scenario,question,state,history);
   if (!direct.accepted || direct.topic === 'scope' || direct.topic === 'safety') return direct;
+  const casual=requesterCasualFollowUp(scenario,question,casualHistory(history));
+  if (casual) return {...response(casual.answer,casual.topic,'casual'),inquiryFactIds:[]};
   const kind = followUpKind(direct.canonicalQuestion || question);
   if (!kind) return direct;
   const context = recentCaseContext(scenario,state,cleanHistory(history,scenario));
