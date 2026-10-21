@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261021-chat27';
+import { SCENARIOS } from './scenarios.js?release=20261021-chat27b';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';

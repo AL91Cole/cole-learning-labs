@@ -486,7 +486,7 @@ test('an available cloud extra reply changes only the current RAM conversation a
   assert.deepEqual(JSON.parse(requests[1].options.body),{scenarioId:'INC-101',topic:'breakfast'});
   assert.doesNotMatch(requests[1].options.body,/What did you|question|notes|history|state/u,'Only an authored topic reaches transport.');
   assert.equal(h.elements.get('#question-response').textContent,answer);
-  assert.match(h.elements.get('#interview-history').innerHTML,/&lt;b&gt;A fictional AI extra response\.&lt;\/b&gt;.*Cloud reply.*may be wrong.*not case evidence/u);
+  assert.match(h.elements.get('#interview-history').innerHTML,/&lt;b&gt;A fictional AI extra response\.&lt;\/b&gt;.*AI reply.*may be wrong.*not case evidence/u);
   assert.doesNotMatch(h.elements.get('#interview-history').innerHTML,/<b>A fictional/u,'Even generated markup must display as escaped text.');
   assert.deepEqual(h.record,before);assert.equal(h.calls.saved,saved);assert.equal(inquiryProgress(h.scenario,h.record.events).complete,false);
   assert.doesNotMatch(h.report(),/fictional AI extra response|What did you have for breakfast/iu);
@@ -500,7 +500,7 @@ test('a delayed cloud reply does not pull a reader away from older visible messa
   const log=h.elements.get('#interview-history');log.scrollHeight=1000;log.clientHeight=250;log.scrollTop=0;
   h.ask('What did you have for breakfast?');assert.equal(log.scrollTop,1000);
   log.scrollTop=0;const before=structuredClone(h.record);deliver();await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(log.scrollTop,0);assert.match(log.innerHTML,/A quiet creative breakfast idea/u);assert.match(log.innerHTML,/Cloud reply.*may be wrong/u);
+  assert.equal(log.scrollTop,0);assert.match(log.innerHTML,/A quiet creative breakfast idea/u);assert.match(log.innerHTML,/AI reply.*may be wrong/u);
   assert.deepEqual(h.record,before);h.context.navigation.dispose();
 });
 
@@ -604,20 +604,20 @@ test('all cases render labelled pages and accessible navigation with only the re
   }
 });
 
-test('every lab exposes the cloud off control and privacy explanation without hiding the conversation',()=>{
+test('every lab offers one plain AI on/off button and a privacy link without cluttering or hiding the conversation',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
   const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for(const scenario of SCENARIOS) {
     const html=context.labPage(scenario);
     const toggle=html.match(/<button\b[^>]*\bdata-ai-toggle[^>]*>/u)?.[0];
-    assert.doesNotMatch(html,/data-ai-consent/u);assert.ok(toggle,scenario.id+' must offer a native cloud on/off button.');
-    assert.match(toggle,/type="button"/u);assert.match(toggle,/aria-pressed="true"/u);assert.match(toggle,/aria-describedby="requester-cloud-notice"/u);
-    assert.match(html,/<button\b[^>]*\btype="button"[^>]*\bdata-ai-check/u);
-    assert.match(html,/Cloudflare receives only a lab ID and an authored topic code/u);
-    assert.match(html,/your typed words stay here/u);assert.match(html,/Turn cloud replies off any time/u);
-    assert.match(html,/No app or model download is needed/u);
-    assert.match(html,/Checking cloud availability.*offline character is ready/u);
+    const options=html.match(/<section class="requester-options"[^>]*>(.*?)<\/section>/su)?.[1];assert.ok(options);
+    assert.doesNotMatch(html,/data-ai-consent|data-ai-check|requester-cloud-notice/u);assert.ok(toggle,scenario.id+' must offer a native AI on/off button.');
+    assert.match(toggle,/type="button"/u);assert.match(toggle,/aria-pressed="true"/u);
+    assert.equal((options.match(/<button\b/gu)||[]).length,1);assert.match(options,/>AI replies on<\/button>/u);
+    assert.match(options,/<a class="text-link" href="#privacy">Reply privacy<\/a>/u);
+    assert.match(options,/<p data-ai-status role="status">Ready to chat\.<\/p>/u);
+    assert.doesNotMatch(options,/Cloudflare|provider|typed words|topic code|model download|checkbox/iu);
     assert.match(html,/extra replies.*cannot repair equipment, award progress, or add case evidence/u);
     assert.match(html,/(?:Ask in|Use) your own words\./u);assert.match(html,/Suggestions are optional\./u);
     assert.match(html,new RegExp('Talk with '+escapeHtml(requesterPersona(scenario).name).replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'u'));

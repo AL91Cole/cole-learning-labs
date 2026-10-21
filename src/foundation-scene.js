@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261021-chat27';
+import { pcActivity } from './pc-activity.js?release=20261021-chat27b';
 /** Beginner equipment views. The model owns every answer and practice result. */
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tracks=new Set(['hardware','network','ai','security','coding']);

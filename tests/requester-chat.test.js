@@ -24,7 +24,7 @@ class Control{
   async fire(name='click'){await Promise.all((this.listeners.get(name)||[]).map(callback=>callback({target:this})));await flush();}
 }
 function harness(provider,{timeoutMs=1000,preference={enabled:true}}={}){
-  const nodes=new Map(['check','toggle','status'].map(name=>['[data-ai-'+name+']',new Control()]));
+  const nodes=new Map(['toggle','status'].map(name=>['[data-ai-'+name+']',new Control()]));
   const calls=[],answers=[];
   const chat=mountRequesterChat({querySelector(selector){assert.ok(nodes.has(selector),selector);return nodes.get(selector);}},{
     scenario,timeoutMs,preference,fetcher(path,options){calls.push({path,options});return provider(path,options);}
@@ -54,12 +54,12 @@ test('off works while availability is pending, and a late probe cannot turn it b
   pending.resolve(json({enabled:true}));await flush();h.enrich();await flush();
   assert.equal(on(h),false);assert.equal(h.preference.enabled,false);assert.equal(h.calls.length,1);h.chat.dispose();
 });
-test('off remains in page memory across lab mounts and manual availability checks do not enable it',async()=>{
+test('off remains in page memory across lab mounts and turning on rechecks availability without replaying a question',async()=>{
   const preference={enabled:true},first=harness(enabledProvider,{preference});await first.ready();await first.toggle.fire();first.chat.dispose();
   const next=harness(enabledProvider,{preference});await next.ready();assert.equal(next.calls.length,0);assert.equal(on(next),false);
-  await next.check.fire();assert.equal(next.calls.length,1);assert.equal(on(next),false);
-  next.enrich();assert.equal(next.calls.length,1);
-  await next.toggle.fire();next.enrich();await flush();assert.equal(next.calls.length,2);next.chat.dispose();
+  next.enrich();assert.equal(next.calls.length,0);
+  await next.toggle.fire();assert.equal(next.calls.length,1);assert.equal(on(next),true);assert.deepEqual(next.answers,[]);
+  next.enrich();await flush();assert.equal(next.calls.length,2);next.chat.dispose();
 });
 test('cloud payload contains only an authored topic and case ID, never typed words or browser credentials',async()=>{
   const h=harness(enabledProvider);await h.ready();h.enrich('  What did you have for breakfast?  ');await flush();
@@ -132,7 +132,7 @@ test('turning off or disposing aborts work and suppresses late callbacks',async(
     if(finish==='off')await h.toggle.fire();else h.chat.dispose();
     const status=h.status.textContent;pending.resolve(json(extra('Too late.')));await flush();
     assert.equal(h.calls[1].options.signal.aborted,true);assert.deepEqual(h.answers,[]);assert.equal(h.status.textContent,status);
-    const count=h.calls.length;h.enrich();if(finish==='dispose')await h.check.fire();await flush();assert.equal(h.calls.length,count);h.chat.dispose();
+    const count=h.calls.length;h.enrich();if(finish==='dispose')await h.toggle.fire();await flush();assert.equal(h.calls.length,count);h.chat.dispose();
   }
 });
 test('disposing during the initial probe aborts it and cannot revive availability',async()=>{

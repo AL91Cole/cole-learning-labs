@@ -22,6 +22,12 @@ test('every shipped lab has a consistent individual fictional character card, wi
     focuses.add(profile.focus);greetings.add(ask('Hello!',entry).answer);moods.add(ask('How are you?',entry).answer);
     assert.match(ask('What is your name?',entry).answer,new RegExp(profile.name.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'u'));
     assert.match(ask('What did you have for breakfast?',entry).answer,new RegExp(profile.breakfast,'u'));
+    for(const question of ['What do you like to build?','Hello! What do you like to build?','What would you like to make?']){
+      const reply=ask(question,entry);
+      assert.equal(reply.topic,'casual-persona');assert.ok(reply.answer.includes(profile.interests));
+      assert.ok(reply.answer.length<=300);assert.equal(questionEvent(question,reply),null);
+    }
+    assert.equal(requesterPersonaReply(entry,'What do you like to build with an undocumented device?'),null,'Extra case words must not be rewritten as a hobby answer.');
   }
   assert.equal(focuses.size,SCENARIOS.length);assert.equal(greetings.size,SCENARIOS.length);assert.equal(moods.size,SCENARIOS.length);
   assert.equal(requesterPersona('UNKNOWN'),null);assert.equal(requesterPersona('__proto__'),null);

@@ -1,24 +1,24 @@
-import {SCENARIOS} from './scenarios.js?release=20261021-chat27';
-import {labLanguage} from './lab-language.js?release=20261021-chat27';
-import {requesterPersona} from './requester-persona.js?release=20261021-chat27';
-import {mountRequesterChat} from './requester-chat.js?release=20261021-chat27';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261021-chat27';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261021-chat27';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261021-chat27';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261021-chat27';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261021-chat27';
-import {normalizeLabRecord} from './records.js?release=20261021-chat27';
-import {privacyPage} from './privacy.js?release=20261021-chat27';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261021-chat27';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261021-chat27';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261021-chat27';
+import {SCENARIOS} from './scenarios.js?release=20261021-chat27b';
+import {labLanguage} from './lab-language.js?release=20261021-chat27b';
+import {requesterPersona} from './requester-persona.js?release=20261021-chat27b';
+import {mountRequesterChat} from './requester-chat.js?release=20261021-chat27b';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261021-chat27b';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261021-chat27b';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261021-chat27b';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261021-chat27b';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261021-chat27b';
+import {normalizeLabRecord} from './records.js?release=20261021-chat27b';
+import {privacyPage} from './privacy.js?release=20261021-chat27b';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261021-chat27b';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261021-chat27b';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261021-chat27b';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261021-chat27';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261021-chat27';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261021-chat27';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261021-chat27';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261021-chat27';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261021-chat27';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261021-chat27b';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261021-chat27b';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261021-chat27b';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261021-chat27b';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261021-chat27b';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261021-chat27b';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -119,7 +119,7 @@ function labPage(s){
     '<div id="classroom-status"></div><div class="lab-grid">',
     '<aside id="lab-problem" class="case-sidebar" tabindex="0" role="region" aria-labelledby="lab-tab-1"><h2 class="lab-section-heading">1. Request &amp; clues</h2><section class="case-panel"><p class="eyebrow">TICKET REQUEST</p><p class="eyebrow">'+(s.intake?.kind==='follow-up'?'INCOMPLETE REQUEST · ASK FOLLOW-UP QUESTIONS':s.intake?.kind==='detailed'?'DETAILED REQUEST · READY TO INVESTIGATE':'YOUR PRACTICE TASK')+'</p><h2>'+esc(s.requester)+'</h2><blockquote>'+esc(s.brief)+'</blockquote><div class="lab-step-actions"><button class="button" data-jump-section="2">Next: Workbench & test →</button></div><p class="intake-progress" id="intake-progress" role="status">'+esc(inquiryProgress(s,r.events).message)+'</p></section><div id="lab-learning"></div>',
     '<section class="case-panel interview-panel"><div class="requester-profile"><span class="requester-avatar" aria-hidden="true">'+esc(persona.name.slice(0,1))+'</span><div><p class="eyebrow">REQUESTER</p><h3>'+esc(persona.name)+'</h3><p>'+esc(persona.role)+'</p></div></div><p class="requester-intro">'+esc(persona.intro)+'</p><h2>Talk with '+esc(persona.name)+'</h2><p class="panel-help">'+esc(s.intake?.kind==='follow-up'?s.intake.missing:language.requesterPrompt)+'</p>',
-    '<section class="requester-options" id="requester-options" aria-label="Cloud reply controls"><p class="requester-cloud-note" id="requester-cloud-notice">Cloudflare receives only a lab ID and an authored topic code; your typed words stay here. Replies may be wrong. Turn cloud replies off any time. No app or model download is needed.</p><div class="requester-mode-actions"><button class="lab-tool" type="button" data-ai-toggle aria-pressed="true" aria-describedby="requester-cloud-notice" disabled>Cloud replies on</button><button class="lab-tool" type="button" data-ai-check>Check availability</button></div><p data-ai-status role="status">Checking cloud availability. The offline character is ready.</p></section>',
+    '<section class="requester-options" id="requester-options" aria-label="Reply options"><div class="requester-mode-actions"><button class="lab-tool" type="button" data-ai-toggle aria-pressed="true" disabled>AI replies on</button><a class="text-link" href="#privacy">Reply privacy</a></div><p data-ai-status role="status">Ready to chat.</p></section>',
     '<section class="conversation-history" aria-labelledby="conversation-heading"><h3 id="conversation-heading">Conversation</h3><p id="conversation-help" class="sr-only">The latest eight question and reply pairs appear here, newest at the bottom. Use the arrow keys to scroll this conversation. Extra chat stays in this page session; accepted case questions can go into your report.</p><div id="interview-history" class="interview-history" role="log" aria-label="Conversation with '+esc(persona.name)+'" aria-describedby="conversation-help" aria-live="off" tabindex="0">'+interviewList(r,s)+'</div></section>',
     '<form id="question-form" class="requester-composer"><label class="lab-field" for="student-question">'+esc(language.questionLabel)+'<textarea id="student-question" maxlength="240" rows="2" placeholder="'+esc(language.questionPlaceholder)+'" aria-describedby="question-help"></textarea></label><button class="button" type="submit">Send message</button></form><p id="question-help" class="panel-help">'+esc(language.questionHelp)+'</p><div class="requester-live-reply sr-only" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"></p><p id="question-response"></p></div><div id="question-suggestions" class="interview-suggestions" role="group" aria-label="Suggested follow-up questions" hidden></div><details class="intake-questions"><summary>Optional starter questions</summary>'+s.questions.map((q,i)=>'<button data-question="'+i+'" class="question-button" aria-pressed="'+String(r.questions.includes(i))+'">'+esc(q.label)+' <span>'+(r.questions.includes(i)?'Read':'+')+'</span></button>').join('')+'</details></section>',
     '<details class="case-panel repair-notes" open><summary>Clues &amp; evidence</summary><h2>Read two clues</h2><p class="panel-help">'+esc(language.evidencePrompt)+'</p><p class="panel-help">Tap a clue to add it to your report. “Ask first” means the requester needs to supply that detail.</p><div class="clue-buttons">'+s.clues.map(c=>'<button data-clue="'+esc(c.id)+'" class="question-button '+(r.evidence.includes(c.id)?'logged':'')+'" aria-pressed="'+String(r.evidence.includes(c.id))+'">'+esc(c.label)+' <span>'+(r.evidence.includes(c.id)?'Added':'+')+'</span></button>').join('')+'</div><div id="evidence-detail" class="question-response" aria-live="polite"></div></details>',
@@ -220,7 +220,7 @@ function bindLab(s,route=null,{onModeChange=null}={}){
     let pair=null;
     if(reply.accepted){pair={question:question.trim(),answer:reply.answer,kind:reply.kind,topic:reply.topic,source:reply.kind==='casual'?'Offline reply · extra chat':'Case reply'};chatPairs.push(pair);if(chatPairs.length>8)chatPairs.shift();renderChat();}
     else{const log=$('#interview-history');log.innerHTML=conversationPairsHTML(chatPairs,requesterPersona(s).name)+'<p class="conversation-feedback">'+esc(reply.answer)+'</p>';log.scrollTop=log.scrollHeight;}
-    requester.enrich(question,reply,answer=>{if(!pair)return;pair.answer=answer;pair.source='Cloud reply · may be wrong; not case evidence';$('#reply-source').textContent='Cloud reply · may be wrong; not case evidence';$('#question-response').textContent=answer;renderChat(false);});
+    requester.enrich(question,reply,answer=>{if(!pair)return;pair.answer=answer;pair.source='AI reply · may be wrong; not case evidence';$('#reply-source').textContent='AI reply · may be wrong; not case evidence';$('#question-response').textContent=answer;renderChat(false);});
     const suggestions=$('#question-suggestions');
     suggestions.replaceChildren();
     const prompts=Array.isArray(reply.suggestions)?[...new Set(reply.suggestions.filter(value=>typeof value==='string'&&value.trim()&&value.length<=240).map(value=>value.trim()))].slice(0,3):[];
@@ -337,7 +337,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261021-chat27');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261021-chat27b');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -349,7 +349,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261021-chat27');
+      const cryptoModule=await import('./report-crypto.js?release=20261021-chat27b');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;
