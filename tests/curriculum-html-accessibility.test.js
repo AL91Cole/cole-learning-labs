@@ -5,8 +5,16 @@ import {createHash} from 'node:crypto';
 
 const read=file=>readFileSync(new URL('../'+file,import.meta.url),'utf8');
 const workbook=read('student-workbook.html'),quizzes=read('practice-quizzes.html');
-const text=value=>value.replace(/<[^>]*>/gu,' ').replace(/&quot;/gu,'"').replace(/&#x27;|&#39;/gu,"'").replace(/&amp;/gu,'&').replace(/&lt;/gu,'<').replace(/&gt;/gu,'>').replace(/\s+/gu,' ').trim();
+const entities=Object.freeze({'&quot;':'"','&#x27;':"'",'&#39;':"'",'&amp;':'&','&lt;':'<','&gt;':'>'});
+// Decode the source once: a decoded ampersand must never start another pass.
+const text=value=>value.replace(/<[^>]*>/gu,' ').replace(/&(?:quot|amp|lt|gt|#x27|#39);/gu,entity=>entities[entity]).replace(/\s+/gu,' ').trim();
 const attr=(tag,name)=>tag.match(new RegExp('\\b'+name+'="([^"]*)"','u'))?.[1];
+
+test('worksheet comparison decodes entities once without reinterpreting escaped entity text',()=>{
+  assert.equal(text('<b>&quot;Plain&quot; &amp; simple</b>'),'"Plain" & simple');
+  assert.equal(text('&amp;lt;script&amp;gt;'),'&lt;script&gt;');
+  assert.equal(text('&#39;one&#x27; &unknown;'),"'one' &unknown;");
+});
 
 test('student HTML alternatives have named native fields and navigation without a submission or storage path',()=>{
   for(const [name,html] of [['workbook',workbook],['quizzes',quizzes]]){
