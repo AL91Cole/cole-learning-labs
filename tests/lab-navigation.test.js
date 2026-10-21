@@ -57,7 +57,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
   const record = {questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false,state:scenario.track === 'hardware' ? initialHardwareState(id) : initialWorkspaceState(id)};
   prepareRecord(record);
   const elements = new Map();
-  for (const selector of ['#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#reply-source','#requester-options','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
+  for (const selector of ['#main','#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#reply-source','#requester-options','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
   elements.get('#question-suggestions').hidden=true;
   for(const selector of ['#plan','#evidence-detail']){const drawer=new Element();drawer.open=false;elements.get(selector).disclosure=drawer;}
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
@@ -222,6 +222,13 @@ test('starting a lab over clears its work and forces a fresh Request & clues pag
   assert.deepEqual(h.calls.forcedRenders,[false],'An explicit reset must bypass same-ticket retained-DOM navigation.');
   assert.equal(h.calls.saved,1);assert.equal(h.historyEntries.length,1,'Reset replaces the active page URL.');
   assert.equal(h.record.state.code,initialWorkspaceState('CODE-501').code,'A discarded draft cannot become saved work.');
+});
+
+test('reset confirmation moves focus to the safe choice and Escape or cancellation returns it to the trigger',()=>{
+  const h=harness('INC-101',3),before=structuredClone(h.record),trigger=h.elements.get('#reset-ticket'),cancel=h.elements.get('#cancel-reset'),prompt=h.elements.get('#reset-confirm');
+  trigger.fire('click');assert.equal(prompt.hidden,false);assert.equal(trigger.getAttribute('aria-expanded'),'true');assert.equal(cancel.focused,1);
+  assert.equal(prompt.fire('keydown',{key:'Escape'}).defaultPrevented,true);assert.equal(prompt.hidden,true);assert.equal(trigger.focused,1);assert.equal(trigger.getAttribute('aria-expanded'),'false');
+  trigger.fire('click');cancel.fire('click');assert.equal(prompt.hidden,true);assert.equal(trigger.focused,2);assert.deepEqual(h.record,before);
 });
 
 test('page URLs, browser Back and Forward keep the same question, equipment and coding draft',()=>{
@@ -533,6 +540,8 @@ test('all cases render labelled pages and accessible navigation with only the re
     }
     for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','question-suggestions','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
     assert.match(html,/<div id="question-suggestions"[^>]*role="group"[^>]*aria-label="Suggested follow-up questions"[^>]*hidden/u);
+    assert.match(html,/<div class="requester-live-reply" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"[^>]*><\/p><p id="question-response"/u,'The warning and answer must be announced together, with the source first.');
+    assert.match(html,/id="reset-ticket"[^>]*aria-expanded="false"[^>]*aria-controls="reset-confirm"/u);
     assert.equal((html.match(/\brole="region"/g) || []).length,3); assert.equal((html.match(/\brole="tablist"/g) || []).length,0); assert.equal((html.match(/\bdata-lab-section="/g) || []).length,3); assert.match(html,/How to use this lab/u); assert.match(html,/local conversation library/iu); assert.doesNotMatch(html,/id="focus-toggle"|Show all steps|One step at a time/u);
   }
 });

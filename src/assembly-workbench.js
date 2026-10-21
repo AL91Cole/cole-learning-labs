@@ -1,8 +1,8 @@
-import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261020-requester26';
-import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261020-requester26';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261020-requester26';
-import { workbenchGuidance } from './workbench-guidance.js?release=20261020-requester26';
-import { pcActivity } from './pc-activity.js?release=20261020-requester26';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261021-accessibility26';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261021-accessibility26';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261021-accessibility26';
+import { workbenchGuidance } from './workbench-guidance.js?release=20261021-accessibility26';
+import { pcActivity } from './pc-activity.js?release=20261021-accessibility26';
 
 const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
 const NAMES = Object.fromEntries(GROUPS);
@@ -30,7 +30,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
   root.onclick=null;root.onkeydown=null;root.onchange=null;
   root.innerHTML=`<section class="asm-bench asm-repair" aria-label="Schematic repair workbench">
     <header class="asm-ticket-guide"><h3 data-asm-ticket-title></h3><p data-asm-instruction></p></header>
-    <div class="asm-power" role="group" aria-label="Virtual PC power controls"><div class="asm-power-switch"><button type="button" class="pc-power-button" data-assembly-action="power" aria-label="Power" aria-pressed="false" title="Turn PC on and check startup"><svg class="pc-power-symbol" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M12 3v9M6.4 6.4a8 8 0 1 0 11.2 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><span class="pc-power-caption">Power · <strong data-asm-power-state>Off</strong></span></div><div class="asm-machine-status"><strong data-asm-power></strong><span data-asm-next></span></div>${button('unplug','Unplug AC')}${button('plug-in','Connect AC')}${button('open-document','Open lesson')}</div>
+    <div class="asm-power" role="group" aria-label="Virtual PC power controls"><div class="asm-power-switch"><button type="button" class="pc-power-button" data-assembly-action="power" aria-label="Power: off. Turn PC on and check startup" aria-pressed="false" title="Turn PC on and check startup"><svg class="pc-power-symbol" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M12 3v9M6.4 6.4a8 8 0 1 0 11.2 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><span class="pc-power-caption">Power · <strong data-asm-power-state>Off</strong></span></div><div class="asm-machine-status"><strong data-asm-power></strong><span data-asm-next></span></div>${button('unplug','Unplug AC')}${button('plug-in','Connect AC')}${button('open-document','Open lesson')}</div>
     <div class="asm-top-controls"><section class="asm-toolbox" aria-label="Workbench tools"><div class="asm-tool-buttons" role="group" aria-label="Choose a workbench tool">${ASSEMBLY_TOOLS.map(tool=>`<button type="button" data-asm-tool="${tool.id}" aria-pressed="${tool.id==='inspect'}">${escape(tool.label)}</button>`).join('')}</div></section>
     <div class="asm-picture-tabs" aria-label="Equipment picture"><strong>Full PC X-ray</strong><button type="button" data-asm-expand-picture="toggle" aria-pressed="false">Expand picture</button></div></div>
     <div class="asm-layout"><div class="asm-visual"><div class="asm-schematic" data-asm-scene aria-label="Labeled virtual PC schematic"></div></div></div>
@@ -176,7 +176,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     const reason=assemblyFailure(current,current.assembly);
     $('[data-asm-next]').textContent=current.pcOn?'Power off before internal work.':current.acConnected?'Unplug AC before internal work.':'Safe for internal work.';
     $('[data-asm-power-state]').textContent=current.pcOn?'On':'Off';
-    root.querySelectorAll('[data-assembly-action]').forEach(el=>{if(el.dataset.assemblyAction==='power'){el.setAttribute('aria-pressed',String(current.pcOn));el.setAttribute('title',current.pcOn?'Turn PC off':'Turn PC on and check startup');}if(el.dataset.assemblyAction==='unplug')el.hidden=!current.acConnected;if(el.dataset.assemblyAction==='plug-in')el.hidden=current.acConnected;if(el.dataset.assemblyAction==='open-document')el.hidden=!activity.display.desktop;});
+    root.querySelectorAll('[data-assembly-action]').forEach(el=>{if(el.dataset.assemblyAction==='power'){el.setAttribute('aria-pressed',String(current.pcOn));el.setAttribute('aria-label',current.pcOn?'Power: on. Turn PC off':'Power: off. Turn PC on and check startup');el.setAttribute('title',current.pcOn?'Turn PC off':'Turn PC on and check startup');}if(el.dataset.assemblyAction==='unplug')el.hidden=!current.acConnected;if(el.dataset.assemblyAction==='plug-in')el.hidden=current.acConnected;if(el.dataset.assemblyAction==='open-document')el.hidden=!activity.display.desktop;});
     $('[data-asm-delivery]').textContent=activity.documentOpened?'Original lesson file opened. Explain your investigation in Check & explain.':activity.booted?'Original OS loaded. Check the monitor, then choose Open lesson.':reason?'Press Power to start the PC and check your repair. Fasteners, cooling and cables still matter.':'Finish the repair and connect AC. Press Power to check startup.';
     renderControls(focusAction);renderCableStatus();renderPicture();
   }
@@ -199,7 +199,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
   }
   function change(event){if(disposed||!visible)return;if(event.target.matches('[data-asm-all]')){cancel();allTools=event.target.checked===true;if(!allowed('groups',selected))selected=guidance.initialPart;if(!allowed('tools',activeTool))activeTool='inspect';if(!allowed('cables',selectedCable)){selectedCable=guidance.initialCable;selectedSocket=ASSEMBLY_CABLES.find(item=>item.id===selectedCable).sockets[0].id;}if(!allowed('screws',selectedScrew.split('-')[0]))selectedScrew=(guidance.screws[0]||'panel')+'-0';syncContext();renderTools();renderControls();renderPicture();return;}if(event.target.matches('[data-asm-select]')){if(Object.hasOwn(NAMES,event.target.value)&&allowed('groups',event.target.value))select(event.target.value);}else if(event.target.matches('[data-asm-fastener]')){if(/^(panel|psu|board|cooler|gpu|ssd)-[0-3]$/.test(event.target.value)&&allowed('screws',event.target.value.split('-')[0])&&Number(event.target.value.split('-').at(-1))<ASSEMBLY_FASTENERS[event.target.value.split('-')[0]].count){selectedScrew=event.target.value;renderPicture();}}else if(event.target.matches('[data-asm-cable]')){chooseCable(event.target.value);renderPicture();}else if(event.target.matches('[data-asm-cable-target]')){if(ASSEMBLY_CABLES.find(item=>item.id===selectedCable).sockets.some(socket=>socket.id===event.target.value)){cancel();selectedSocket=event.target.value;renderPicture();}}}
   function renderPicture(){
-    const focused=doc.activeElement?.dataset?.asmPicture;
+    const focused=root.contains(doc.activeElement)?doc.activeElement?.dataset?.asmPicture:null;
     const s={...current,selectedPart:({psu:'power',ssd:'storage',cables:'sata'})[selected]||selected};
     let markup=benchSvg(s);
     const a=current.assembly;
@@ -228,7 +228,15 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     }
     markup=markup.replace('</svg>',overlay+'</svg>');sceneHost.innerHTML=markup;sceneHost.style&&(sceneHost.style.touchAction=['move','cables'].includes(activeTool)?'none':'pan-y');
     syncActivity();
-    if(focused)root.querySelector(`[data-asm-picture="${focused}"]`)?.focus({preventScroll:true});
+    if(focused){
+      const same=root.querySelector(`[data-asm-picture="${focused}"]`);
+      // Opening the on-screen document removes its SVG launcher. Keep keyboard
+      // focus on the surviving visible control instead of losing it to the page.
+      const fallback=[...root.querySelectorAll('[data-assembly-action]')].find(control=>
+        control.dataset.assemblyAction===(focused==='open-document'?'open-document':'power')&&
+        !control.hidden&&!control.disabled&&!control.closest?.('[hidden]')&&!control.closest?.('details:not([open])'));
+      (same||fallback)?.focus({preventScroll:true});
+    }
   }
 
 function svgDefs() {

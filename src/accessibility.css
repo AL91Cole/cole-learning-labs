@@ -1,0 +1,51 @@
+/* Shared accessibility safeguards, loaded after each page's component styles. */
+:root{font-size:17px}
+body{line-height:1.5}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}
+
+/* A light inner ring and dark outer ring remain visible on both site palettes. */
+:is(a,button,input,select,textarea,summary,[tabindex],[contenteditable]):focus-visible{outline:3px solid #fff!important;outline-offset:3px!important;box-shadow:0 0 0 6px #102c46!important}
+:is(button,input,select,textarea,summary,[tabindex]){scroll-margin-block:150px 48px}
+:is(.foundation-lab,.paged-lab) :is(button,input,select,textarea,summary,[tabindex]){scroll-margin-top:170px}
+:where(p,li,dd,td) a:not(.button):not(.cp-button){text-decoration:underline;text-underline-offset:.18em}
+
+/* Native controls remain usable without precise pointing or color alone. */
+button:not(.foundation-diagram-part),select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]){min-height:44px}
+input[type=checkbox],input[type=radio]{min-width:24px;min-height:24px;accent-color:#006f66;flex-shrink:0}
+summary{cursor:pointer;min-height:44px;align-content:center}
+input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea{border-color:#667d87!important}
+.lab-shell .learning-controls{background:#eaf6f4;color:#183d48;border-color:#7b9f9d}
+.lab-shell .learning-controls label{color:#183d48}
+.lab-shell .learning-controls select{background:#fff;color:#183d48}
+.lab-shell .bench-log time{color:#9cbac9}
+.lab-shell .button-outline{background:transparent}
+.lab-shell .button-outline:hover{background:#173f3a}
+.cp-small,.cp-card-number,.cp-footer,.cp-empty,.cp-work-button>span{color:#476170}
+.cp-rubric p{color:#416354}
+.cp-class-button span,.cp-class-code span,.cp-class-code p,.cp-stat-grid span,.cp-table-scroll caption,.cp-table-scroll thead th,.cp-table-scroll tbody th small{color:#476170}
+.cp-assigned-list>span{color:#1b6757}
+.steps b{color:#006e63}
+/* Persistent form errors stay in the document rather than covering controls. */
+#portal-error{position:static;transform:none;width:auto;max-width:calc(100% - 34px);margin:16px auto;box-shadow:none}
+
+/* Preserve readable content when a narrow viewport or text spacing needs room. */
+main,:is(.wrap,.panel,.cp-card,.case-panel,.foundation-panel){min-width:0}
+:is(p,li,dd,label,summary,h1,h2,h3,h4,.status,.cp-notice){overflow-wrap:anywhere}
+:is(input,select,textarea){max-width:100%}
+@media(max-width:480px){
+  .site-header{height:auto;min-height:88px;flex-wrap:wrap;gap:12px;padding-block:12px}
+  .site-header .brand,.site-header .brand img{width:135px}
+  .site-header .header-cta{margin:0;max-width:100%;white-space:normal}
+  .lab-shell .lab-topbar{flex-wrap:wrap}
+  .lab-shell .lab-tools{flex-wrap:wrap}
+  .lab-shell .lab-section-jumps>button{white-space:normal;overflow-wrap:anywhere}
+  .library-options label{flex-basis:100%;min-width:0}
+  .lab-shell .learning-controls select{margin-left:0;width:100%}
+  .cp-class-code,.cp-toolbar,.cp-submission-heading{overflow-wrap:anywhere}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+@media(forced-colors:active){
+  :is(a,button,input,select,textarea,summary,[tabindex],[contenteditable]):focus-visible{outline:3px solid Highlight!important;box-shadow:none!important}
+  input:not([type=hidden]),select,textarea,button{border-color:ButtonText!important}
+  button[aria-pressed=true],[aria-current=step],[aria-selected=true]{outline:2px solid Highlight;outline-offset:-4px}
+}

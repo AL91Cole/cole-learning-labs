@@ -1,6 +1,6 @@
 # Chromebook lab and requester review
 
-Source release `20261020-requester26`, version `2.26.0`, October 20, 2026. This records the current visual and phase 4 requester source, local verification, and separately deployed Worker. PR #26's stable preview has verified one real reply, its shared-counter reservation, and the authored case-fact boundary. Production frontend publication still requires merge; school approval is not established.
+Source release `20261021-accessibility26`, version `2.26.1`, October 21, 2026. This records the current visual and phase 4 requester source, local verification, and separately deployed Worker. PR #26's stable preview has verified one real reply, its shared-counter reservation, and the authored case-fact boundary. Production frontend publication still requires merge; school approval is not established.
 
 ## Reading and equipment changes
 
@@ -40,9 +40,9 @@ Current local Windows verification:
 
 | Check | Result |
 | --- | --- |
-| Full `npm test` | 931 tests: 929 passed, 0 failed, 2 Windows file-link checks skipped |
+| Full `npm test` | 954 tests: 952 passed, 0 failed, 2 Windows file-link checks skipped |
 | `npm run check` | 51 application and server modules syntax checked |
-| `npm run build` | 65 reviewed public files prepared |
+| `npm run build` | 66 reviewed public files prepared |
 | Provider integration tests | Fake bindings for automated tests; one real preview reply verified separately |
 | Cloudflare deployment | Reviewed Worker bundle deployment `acfd4943`; both runtime enablement flags true; AI/D1 bindings configured |
 

@@ -1,6 +1,6 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261020-requester26';
-import {requesterTopic} from './requester-topics.js?release=20261020-requester26';
-import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261020-requester26';
+import {requesterTextIsPrivate} from './interview.js?release=20261021-accessibility26';
+import {requesterTopic} from './requester-topics.js?release=20261021-accessibility26';
+import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261021-accessibility26';
 
 // Optional remote conversation is separate from the authored case evidence.
 // Only authored topic IDs leave the page after availability, consent and mode

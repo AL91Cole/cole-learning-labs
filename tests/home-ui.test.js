@@ -11,27 +11,29 @@ const esc=value=>String(value??'').replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt
 const tracks=Object.fromEntries([...new Set(SCENARIOS.map(s=>s.track))].map(track=>[track,{name:track,short:track,color:track,description:track}]));
 const cut=(start,end)=>{const first=source.indexOf(start),last=source.indexOf(end,first);assert.ok(first>=0&&last>first);return source.slice(first,last);};
 class Control{
-  constructor(dataset={}){this.dataset=dataset;this.listeners=new Map();this.attributes={};this.hidden=false;this.textContent='';this.innerHTML='';}
+  constructor(dataset={}){this.dataset=dataset;this.listeners=new Map();this.attributes={};this.hidden=false;this.textContent='';this.innerHTML='';this.focused=0;const classes=new Set();this.classList={toggle(name,on){if(on)classes.add(name);else classes.delete(name);},contains:name=>classes.has(name)};}
   addEventListener(name,callback){this.listeners.set(name,callback);}
   setAttribute(name,value){this.attributes[name]=value;}
   click(){this.listeners.get('click')?.({target:this});}
+  focus(){this.focused++;}
 }
 function harness(){
   const hero=['video','power','keyboard'].map(heroCheck=>new Control({heroCheck}));
   const guardian=['before','after'].map(guardianView=>new Control({guardianView}));
-  const elements=new Map(['#hero-demo-feedback','#guardian-before','#guardian-after','#guardian-demo-feedback','#lab-count','#lab-results','#clear-filters'].map(id=>[id,new Control()]));
+  const elements=new Map(['#hero-demo-feedback','#guardian-before','#guardian-after','#guardian-demo-feedback','#lab-count','#lab-results','#clear-filters','#grade-filter','#duration-filter','#lab-search'].map(id=>[id,new Control()]));
+  const pathwayButtons=['all',...Object.keys(tracks)].map(track=>new Control({track}));
   elements.get('#guardian-after').hidden=true;
   const record={state:{pcOn:false},events:[],verified:false,closed:false},store={labs:{'INC-101':record}},before=structuredClone(store);
   let renders=0;
   const forbidden=()=>assert.fail('Public previews must not create lab records, change equipment, save progress, or call a network service.');
   const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
     $:selector=>{assert.ok(elements.has(selector),selector);return elements.get(selector);},
-    $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;assert.fail(selector);},
+    $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;if(selector==='.track-filters [data-track]')return pathwayButtons;assert.fail(selector);},
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,
     history:{replaceState(){}},renderRoute(){renders++;}
   });
   vm.runInContext("let libraryTrack='all',libraryGrade='all',libraryMinutes='all',libraryQuery='';\n"+cut('function routeLink(','\nfunction about(')+'\n'+cut('function library(','\nfunction labPage('),context);
-  return {context,hero,guardian,elements,store,before,get renders(){return renders;},filter({track='all',grade='all',minutes='all',query=''}={}){context.filterValues={track,grade,minutes,query};vm.runInContext('libraryTrack=filterValues.track;libraryGrade=filterValues.grade;libraryMinutes=filterValues.minutes;libraryQuery=filterValues.query;labCards();',context);return [...elements.get('#lab-results').innerHTML.matchAll(/href="#lab\/([A-Z]+-\d+)"/gu)].map(match=>match[1]);}};
+  return {context,hero,guardian,pathwayButtons,elements,store,before,get renders(){return renders;},filter({track='all',grade='all',minutes='all',query=''}={}){context.filterValues={track,grade,minutes,query};vm.runInContext('libraryTrack=filterValues.track;libraryGrade=filterValues.grade;libraryMinutes=filterValues.minutes;libraryQuery=filterValues.query;labCards();',context);return [...elements.get('#lab-results').innerHTML.matchAll(/href="#lab\/([A-Z]+-\d+)"/gu)].map(match=>match[1]);}};
 }
 
 test('the homepage explains its counts, real privacy boundaries, and manual report handoff',()=>{
@@ -91,7 +93,17 @@ test('time filters use actual estimates and combine with pathway, grade, and tex
   }
   assert.deepEqual(h.filter({minutes:'15',query:'monitor'}),SCENARIOS.filter(s=>s.minutes===15&&`${s.id} ${s.title} ${s.summary}`.toLowerCase().includes('monitor')).map(s=>s.id));
   h.filter({track:'coding',minutes:'15',query:'nothing'});h.elements.get('#clear-filters').click();
-  assert.equal(h.renders,1);assert.equal(vm.runInContext('libraryMinutes',h.context),'all');assert.equal(vm.runInContext('libraryTrack',h.context),'all');assert.equal(vm.runInContext('libraryGrade',h.context),'all');assert.equal(vm.runInContext('libraryQuery',h.context),'');
+  assert.equal(h.renders,0);assert.equal(h.elements.get('#lab-search').focused,1);assert.equal(h.elements.get('#grade-filter').value,'all');assert.equal(h.elements.get('#duration-filter').value,'all');assert.equal(h.elements.get('#lab-search').value,'');assert.equal(vm.runInContext('libraryMinutes',h.context),'all');assert.equal(vm.runInContext('libraryTrack',h.context),'all');assert.equal(vm.runInContext('libraryGrade',h.context),'all');assert.equal(vm.runInContext('libraryQuery',h.context),'');
+});
+
+test('pathway changes keep the existing toolbar and focus instead of replacing the page',()=>{
+  const h=harness(),button=h.pathwayButtons.find(item=>item.dataset.track==='hardware');button.focus();
+  h.context.filterLibraryTrack('hardware');
+  assert.equal(h.renders,0);assert.equal(button.focused,1);assert.equal(button.attributes['aria-pressed'],'true');
+  for(const other of h.pathwayButtons.filter(item=>item!==button))assert.equal(other.attributes['aria-pressed'],'false');
+  const ids=[...h.elements.get('#lab-results').innerHTML.matchAll(/href="#lab\/([A-Z]+-\d+)"/gu)].map(match=>match[1]);
+  assert.deepEqual(ids,SCENARIOS.filter(item=>item.track==='hardware').map(item=>item.id));
+  assert.deepEqual(h.store,h.before);
 });
 
 test('visible site pages omit the removed learning-profile links and preserve current chat/draft wiring',()=>{

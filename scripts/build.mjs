@@ -19,7 +19,7 @@ export const PUBLIC_FILES = Object.freeze([
   'src/privacy.js', 'src/interview.js', 'src/conversation.js', 'src/records.js', 'src/scenarios.js', 'src/workspaces.js',
   'src/expanded-labs.js', 'src/expanded-labs.css', 'src/coding-lab.js', 'src/coding-lab.css', 'src/interview.css',
   'src/report-crypto.js', 'src/report-downloads.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
-  'src/secure-reports.css',
+  'src/secure-reports.css', 'src/accessibility.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css'
 ]);
 const FILES = new Set(PUBLIC_FILES);

@@ -1,5 +1,5 @@
-import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261020-requester26';
-import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261020-requester26';
+import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261021-accessibility26';
+import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261021-accessibility26';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sections=['explore','practice','check'];
@@ -16,7 +16,7 @@ export function renderFoundationLab(candidate,record) {
     <div class="foundation-tabs" role="tablist" aria-label="Beginner lab sections">${sections.map((id,i)=>`<button type="button" id="foundation-tab-${id}" data-foundation-section="${id}" role="tab" aria-controls="foundation-panel-${id}" aria-selected="${i===0}" tabindex="${i===0?0:-1}"><span>${i+1}</span> ${['Explore','Practice','Check'][i]}</button>`).join('')}</div>
     <div class="foundation-body foundation-split">
       <div class="foundation-instructions" role="region" aria-label="Request and clues for this beginner lab"><h2 class="foundation-pane-heading">Request &amp; clues</h2>
-      <section id="foundation-panel-explore" data-foundation-panel="explore" role="tabpanel" aria-labelledby="foundation-tab-explore" tabindex="-1"><div class="foundation-prompt" data-foundation-explore></div></section>
+      <section id="foundation-panel-explore" data-foundation-panel="explore" role="tabpanel" aria-labelledby="foundation-tab-explore" tabindex="0"><div class="foundation-prompt" data-foundation-explore></div></section>
       <section id="foundation-panel-practice" data-foundation-panel="practice" role="tabpanel" aria-labelledby="foundation-tab-practice" tabindex="-1" hidden><div class="foundation-prompt" data-foundation-practice></div>
       </section>
       <section id="foundation-panel-check" data-foundation-panel="check" role="tabpanel" aria-labelledby="foundation-tab-check" tabindex="-1" hidden><div class="foundation-prompt" data-foundation-check></div><div class="foundation-handoff"><button type="button" class="foundation-primary" data-foundation-report>Review my practice report</button><a href="#lab/${esc(lab.nextLab)}">Next: try ticket ${esc(lab.nextLab)} →</a></div><p class="foundation-small">A report can include unfinished practice. Review and save it before leaving; saving does not submit it to a teacher.</p></section>
@@ -85,7 +85,7 @@ export function mountFoundationLab(root,{lab:candidate,record,onChange=()=>{},on
   function activate(next,{focusTab=false}={}) {
     if(!sections.includes(next))return;
     scene?.cancelInteraction?.();section=next;
-    all('[data-foundation-panel]').forEach(panel=>{panel.hidden=panel.dataset.foundationPanel!==section;});
+    all('[data-foundation-panel]').forEach(panel=>{const active=panel.dataset.foundationPanel===section;panel.hidden=!active;panel.tabIndex=active?0:-1;});
     all('[data-foundation-section]').forEach(tab=>{const active=tab.dataset.foundationSection===section;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;});
     // The equipment stays beside every instruction tab, including Check.
     $('[data-foundation-stage]').hidden=false;scene?.setMode?.(section);scene?.setVisible?.(true);

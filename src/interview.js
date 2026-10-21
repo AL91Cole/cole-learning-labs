@@ -1,5 +1,5 @@
-import { resolveQuestion } from './conversation.js?release=20261020-requester26';
-import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261020-requester26';
+import { resolveQuestion } from './conversation.js?release=20261021-accessibility26';
+import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261021-accessibility26';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
