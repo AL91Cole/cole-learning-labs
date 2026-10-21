@@ -15,7 +15,9 @@ Only these revised curriculum PDFs are approved for the current public build:
 
 These downloads supplement the on-page lab sections and HTML instructions. They do not collect responses, upload work, connect to an LMS, or create accounts. Learners submit any completed copy only through their teacher's approved process.
 
-The PDFs contain selectable text. The workbook is untagged, so selectable text alone must not be described as full accessibility. Use the on-site HTML Student Guide and in-lab instructions as the primary learning route, offer suitable alternatives, and check the intended reader, zoom, keyboard, and assistive-technology workflow. No PDF accessibility certification is claimed.
+The PDFs contain selectable text. The workbook is untagged and has no document language; the quiz's custom heading/paragraph roles map to paragraphs, so semantic question/choice navigation and reading order remain unverified. Selectable text or the presence of tags must not be described as full accessibility.
+
+The public build also includes [student-workbook.html](../student-workbook.html) and [practice-quizzes.html](../practice-quizzes.html): structured HTML alternatives preserving all six workbook sections and eight quiz forms, without solutions or answer keys. Native labeled fields, fieldsets, headings, a reference table, keyboard instructions, and print styles support browser use. These static pages have no scripts, submission, or application saving; entries are temporary and browser/extension handling is separate. Long responses need a print-preview check or copying into an approved document. Focused tests verify prompt/choice parity, radio grouping, labels, and absent submission paths; they do not replace assistive-technology acceptance. Keep the original PDFs and their pinned hashes unchanged unless the document-review process is repeated. Neither format is certified accessible; see [Accessibility review](ACCESSIBILITY-REVIEW.md).
 
 DOCX editions are not approved for publication because their final rendering review is incomplete. Their absence does not prevent using the reviewed PDF companions or HTML instructions.
 

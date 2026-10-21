@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261021-chat27c';
+import { SCENARIOS } from './scenarios.js?release=20261021-accessibility27';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';
@@ -92,6 +92,10 @@ function notice(message,kind='info') {
   box.hidden=false;box.textContent=message;box.dataset.kind=kind;
   clearTimeout(notice.timer);
   if(kind!=='error')notice.timer=setTimeout(()=>{box.hidden=true;},8000);
+}
+function announcePortalStatus(message){
+  const status=document.querySelector('#portal-service-status');
+  if(status)status.textContent=message;
 }
 function portalInputError(message,field) {
   field?.setAttribute('aria-invalid','true');
@@ -196,7 +200,7 @@ function workEvidence(work,labId) {
 function workPanel() {
   const {student,work=[]}=model.studentWork;
   const selected=chosenSubmission();
-  return `<section class="cp-card" id="work-review"><div class="cp-section-heading"><div><p class="cp-eyebrow">${model.mode==='demo'?'FICTIONAL WORK REVIEW':'WORK REVIEW'}</p><h2 id="work-review-title" tabindex="-1">${esc(student.alias)}</h2></div><div class="cp-review-tools">${model.mode==='live'?button('Refresh work','refresh-work','',true):''}${button('Close review','close-review','',true)}</div></div><p class="cp-small">Alias ID ${esc(student.id)} · Joined ${esc(date(student.joinedAt))}</p>${work.length?`<div class="cp-work-grid"><aside class="cp-work-list">${work.map(item=>`<section><h3>${esc(item.labId)} · ${esc(lab(item.labId)?.title || 'Investigation')}</h3>${item.submissions.map(submission=>`<button type="button" class="cp-work-button${model.selectedWork?.submissionId===submission.id?' cp-selected':''}" data-submission="${esc(submission.id)}" data-assignment="${esc(item.assignmentId)}" aria-pressed="${model.selectedWork?.submissionId===submission.id}"><b>Submitted version ${esc(submission.draftVersion)}</b><span>${esc(submission.status)}${submission.grade!=null?` · ${esc(submission.grade)}/100`:''} · ${esc(date(submission.createdAt))}</span></button>`).join('') || '<p class="cp-small">No submitted version.</p>'}${item.draft?.work?`<details class="cp-details"><summary>Inspect current draft · v${esc(item.draft.version)}</summary><p class="cp-small">Drafts can change. Grade a submitted snapshot, not this draft.</p>${workEvidence(item.draft.work,item.labId)}</details>`:''}</section>`).join('')}</aside><div class="cp-work-detail">${selected?submissionPanel(selected.item,selected.submission):'<div class="cp-empty"><h3>Choose a submitted version.</h3><p>Read the evidence and reasoning before recording a manual grade. A current draft can be inspected separately.</p></div>'}</div></div>`:'<div class="cp-empty"><h3>No saved work yet.</h3><p>This alias has not saved a draft or submitted an assignment.</p></div>'}</section>`;
+  return `<section class="cp-card" id="work-review"><div class="cp-section-heading"><div><p class="cp-eyebrow">${model.mode==='demo'?'FICTIONAL WORK REVIEW':'WORK REVIEW'}</p><h2 id="work-review-title" tabindex="-1">${esc(student.alias)}</h2></div><div class="cp-review-tools">${model.mode==='live'?button('Refresh work','refresh-work','',true):''}${button('Close review','close-review','',true)}</div></div><p class="cp-small">Alias ID ${esc(student.id)} · Joined ${esc(date(student.joinedAt))}</p>${work.length?`<div class="cp-work-grid"><aside class="cp-work-list">${work.map(item=>`<section><h3>${esc(item.labId)} · ${esc(lab(item.labId)?.title || 'Investigation')}</h3>${item.submissions.map(submission=>`<button type="button" class="cp-work-button${model.selectedWork?.submissionId===submission.id?' cp-selected':''}" data-submission="${esc(submission.id)}" data-assignment="${esc(item.assignmentId)}" aria-pressed="${model.selectedWork?.submissionId===submission.id}" aria-label="Submitted version ${esc(submission.draftVersion)} for ${esc(item.labId)} · ${esc(lab(item.labId)?.title || 'Investigation')}"><b>Submitted version ${esc(submission.draftVersion)}</b><span>${esc(submission.status)}${submission.grade!=null?` · ${esc(submission.grade)}/100`:''} · ${esc(date(submission.createdAt))}</span></button>`).join('') || '<p class="cp-small">No submitted version.</p>'}${item.draft?.work?`<details class="cp-details"><summary>Inspect current draft · v${esc(item.draft.version)}</summary><p class="cp-small">Drafts can change. Grade a submitted snapshot, not this draft.</p>${workEvidence(item.draft.work,item.labId)}</details>`:''}</section>`).join('')}</aside><div class="cp-work-detail">${selected?submissionPanel(selected.item,selected.submission):'<div class="cp-empty"><h3>Choose a submitted version.</h3><p>Read the evidence and reasoning before recording a manual grade. A current draft can be inspected separately.</p></div>'}</div></div>`:'<div class="cp-empty"><h3>No saved work yet.</h3><p>This alias has not saved a draft or submitted an assignment.</p></div>'}</section>`;
 }
 function submissionPanel(item,submission) {
   return `<div class="cp-submission-heading"><div><h3 id="cp-submission-title" tabindex="-1">${esc(item.labId)} · Submitted v${esc(submission.draftVersion)}</h3><p class="cp-small">Immutable work snapshot · ${esc(date(submission.createdAt))}</p></div>${tag(submission.status)}</div>${workEvidence(submission.work,item.labId)}<section class="cp-review-guidance"><h3>Use your private assessment criteria</h3><p>Keep your rubric and answer keys in a school-approved system restricted to the assigned teacher. This public site does not store or deliver teacher rubrics. A completed simulation alone does not determine a grade.</p><p class="cp-small">The fictional dashboard is a public demonstration; its teacher label does not protect private material.</p></section><form id="grade-submission" class="cp-grade-form"><h3>${model.mode==='demo'?'Try a fictional review':'Manual teacher review'}</h3><label>Grade out of 100 <span class="cp-small">Optional when returning for revision</span><input name="grade" type="number" inputmode="decimal" min="0" max="100" step="1" value="${submission.grade==null?'':esc(submission.grade)}" placeholder="0–100"></label><label>Feedback<textarea name="feedback" rows="5" maxlength="4000" placeholder="Name the evidence that worked and a specific next step.">${esc(submission.feedback || '')}</textarea></label><label>Review decision<select name="status"><option value="graded" ${submission.status==='graded'?'selected':''}>Record grade and feedback</option><option value="returned" ${submission.status==='returned'?'selected':''}>Return for revision</option></select></label><button class="cp-button" type="submit">${model.mode==='demo'?'Save demo feedback':'Save teacher review'}</button><p class="cp-small">${model.mode==='demo'?'This review changes fictional page-memory data only.':'The server checks teacher ownership and the submission revision before saving. Submitted work is preserved.'}</p></form>`;
@@ -227,7 +231,7 @@ function render(focusSelector='') {
 }
 async function refresh() {
   const generation=++refreshGeneration;
-  model.mode='checking';model.error='';render();
+  model.mode='checking';model.error='';render();announcePortalStatus('Checking classroom availability.');
   try {
     const session=await api('/api/session');
     if(generation!==refreshGeneration)return;
@@ -235,9 +239,10 @@ async function refresh() {
     assertPinnedStudent(session);model.session=session;model.mode='live';syncActiveSession(session);
     if(teacherEntry && session.role==='teacher') await loadClasses(generation);
     else render();
+    if(generation===refreshGeneration)announcePortalStatus('Classroom service available. Review the classroom options on this page.');
   } catch(error) {
     if(generation!==refreshGeneration)return;
-    model={...model,mode:'unavailable',session:null,classes:[],detail:null,studentWork:null,error:errorMessage(error)};render();
+    model={...model,mode:'unavailable',session:null,classes:[],detail:null,studentWork:null,error:errorMessage(error)};render();announcePortalStatus('Live classroom tools are unavailable. Independent labs and the classroom demo remain available.');
   }
 }
 async function loadClasses(generation) {
@@ -324,7 +329,7 @@ function bind() {
       case 'toggle-updates':model.updatesPaused=!model.updatesPaused;updatePollControls();syncPolling();break;
       case 'refresh-progress':{
         const detail=validateDetail(await api(`/api/teacher/classes/${idPath(model.selectedClass)}`));
-        model.detail=detail;model.lastChecked=Date.now();patchProgress(detail);break;
+        model.detail=detail;model.lastChecked=Date.now();patchProgress(detail);announcePortalStatus('Classroom progress refreshed. Open a learner’s work to review its details.');break;
       }
       case 'refresh-work':{
         if(reviewDirty() && !window.confirm('Refresh this work? Your unsaved grade or feedback edits will be discarded.'))return;

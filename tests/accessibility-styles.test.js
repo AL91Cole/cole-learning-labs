@@ -19,7 +19,7 @@ function contrast(a,b){const x=luminance(a),y=luminance(b);return (Math.max(x,y)
 function readable(fg,bgs,minimum=4.5){for(const bg of bgs)assert.ok(contrast(fg,bg)>=minimum,`${fg} on ${bg} has contrast ${contrast(fg,bg).toFixed(2)}; need ${minimum}`);}
 
 test('shared safeguards are the last stylesheet on every public HTML entry',async()=>{
-  for(const path of ['index.html','404.html','classroom.html','school-it.html','secure-reports.html','teacher/index.html']){
+  for(const path of ['index.html','404.html','classroom.html','school-it.html','secure-reports.html','teacher/index.html','student-workbook.html','practice-quizzes.html']){
     const html=await readFile(new URL(path,root),'utf8');
     const sheets=[...html.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/gu)];
     assert.ok(sheets.length,path);assert.match(sheets.at(-1)[1],/(?:^|\/)src\/accessibility\.css\?release=/u,path);
@@ -29,6 +29,11 @@ test('shared safeguards are the last stylesheet on every public HTML entry',asyn
 test('lab practice labels and action-log times meet normal-text contrast',()=>{
   readable(property('.lab-shell .learning-controls','color'),[property('.lab-shell .learning-controls','background')]);
   readable(property('.lab-shell .bench-log time','color'),['#132b3a','#102330','#0c1b28']);
+});
+
+test('persistent lab field errors keep readable text and visible invalid-control boundaries',()=>{
+  readable(property('.lab-shell .field-error','color'),[property('.lab-shell .field-error','background')]);
+  readable(property('.lab-shell :is(textarea,input)[aria-invalid=true]','border-color'),['#132b3a','#0c1e2c'],3);
 });
 test('classroom secondary labels stay readable on pale cards and table rows',()=>{
   readable(property('.cp-small,.cp-card-number,.cp-footer,.cp-empty,.cp-work-button>span','color'),['#ffffff','#f6f8f8','#ecf8f2']);

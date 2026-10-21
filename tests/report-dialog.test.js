@@ -15,10 +15,13 @@ assert.ok(escCode);
 
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 class Element {
-  constructor(attributes = '') {
+  constructor(attributes = '', document = null) {
+    this.document = document;
     this.attributes = new Map(); this.listeners = new Map(); this.textContent = ''; this.isConnected = true;
     this.hidden = /\bhidden\b/.test(attributes); this.disabled = /\bdisabled\b/.test(attributes); this.checked = false; this.files = []; this.open = false;
   }
+  set disabled(value) { this._disabled = value; if (value && this.document?.activeElement === this) this.document.activeElement = this.document.body; }
+  get disabled() { return this._disabled; }
   set href(value) { this.attributes.set('href', value); }
   get href() { return this.attributes.get('href'); }
   setAttribute(key, value) { this.attributes.set(key, value); }
@@ -30,15 +33,17 @@ class Element {
   showModal() { this.open = true; }
   async close() { this.open = false; await this.fire('close'); }
   replaceChildren() { this.markup = ''; }
-  focus() { this.focused = true; }
+  focus() { if (!this.disabled) { this.focused = true; if (this.document) this.document.activeElement = this; } }
   select() { this.selected = true; }
 }
 function harness({ inspect, encrypt, content = 'Synthetic fictional evidence.', copyError, shareHandler, canShare = true, urlError = false } = {}) {
   const elements = new Map(), created = [], revoked = [], clipboard = [], notices = [], shared = [], timers = [];
-  const panel = new Element(), dialog = new Element();
+  const document = {};
+  document.body = new Element('', document); document.activeElement = document.body;
+  const panel = new Element('', document), dialog = new Element('', document);
   Object.defineProperty(panel, 'innerHTML', { set(markup) {
     panel.markup = markup;
-    for (const match of markup.matchAll(/<[^>]+\bid="([^"]+)"[^>]*>/g)) elements.set(match[1], new Element(match[0]));
+    for (const match of markup.matchAll(/<[^>]+\bid="([^"]+)"[^>]*>/g)) elements.set(match[1], new Element(match[0], document));
   } });
   elements.set('dialog-content', panel); elements.set('lab-dialog', dialog);
   const urlApi = { createObjectURL(blob) { if (urlError) throw new Error('Browser restricted Blob links.'); const url = `blob:synthetic-${created.length + 1}`; created.push({ url, blob }); return url; }, revokeObjectURL(url) { revoked.push(url); } };
@@ -53,7 +58,7 @@ function harness({ inspect, encrypt, content = 'Synthetic fictional evidence.', 
     createReportURLs: () => createReportURLs({ api: urlApi, schedule: (callback, delay) => { timers.push({ callback, delay }); } }),
     $: selector => elements.get(selector.slice(1)),
     cryptoLoader: async () => ({ inspectPublicKey: inspect || (async text => ({ fingerprint: text })), encryptReport: encrypt || (async () => 'synthetic encrypted envelope'), generateAlias: () => 'Learner-ABCD-2345' }),
-    URL: urlApi, Blob, navigator: browser,
+    URL: urlApi, Blob, navigator: browser, document,
     showNotice: text => notices.push(text)
   });
   vm.runInContext(`${escCode}\n${dialogCode}\nglobalThis.openTestReport = openReport;`, context);
@@ -62,7 +67,7 @@ function harness({ inspect, encrypt, content = 'Synthetic fictional evidence.', 
   const choose = async (text, name = 'synthetic.cllpub') => { get('report-public-key').files = [{ name, size: text.length, text: async () => text }]; await get('report-public-key').fire('change'); };
   const confirm = async () => { get('report-key-confirm').checked = true; await get('report-key-confirm').fire('change'); };
   const approvePlain = async (value = true) => { get('plain-report-confirm').checked = value; await get('plain-report-confirm').fire('change'); };
-  return { get, choose, confirm, approvePlain, context, panel, dialog, created, revoked, clipboard, notices, shared, timers };
+  return { get, choose, confirm, approvePlain, context, panel, dialog, document, created, revoked, clipboard, notices, shared, timers };
 }
 
 test('opening a report creates no plaintext download or clipboard write, and escapes hostile report text', async () => {
@@ -202,4 +207,45 @@ test('invalid key files leave encryption unavailable without creating any downlo
   await h.choose('synthetic-key', 'wrong-extension.txt');
   assert.equal(h.get('report-key-confirm').disabled, true); assert.equal(h.get('encrypt-report').disabled, true);
   assert.equal(h.created.length, 0); assert.equal(h.clipboard.length, 0);
+  assert.equal(h.get('report-public-key').getAttribute('aria-invalid'), 'true');
+  await h.choose('synthetic-valid-public-key');
+  assert.equal(h.get('report-public-key').getAttribute('aria-invalid'), null);
+});
+
+test('encryption returns lost keyboard focus to its available result or retry action', async () => {
+  const h = harness();
+  await h.choose('synthetic-public'); await h.confirm(); h.get('encrypt-report').focus();
+  await h.get('encrypt-report').fire('click');
+  assert.equal(h.document.activeElement, h.get('encrypted-report-download'));
+  const failed = harness({ encrypt: async () => { throw new Error('Synthetic encryption failure.'); } });
+  await failed.choose('synthetic-public'); await failed.confirm(); failed.get('encrypt-report').focus();
+  await failed.get('encrypt-report').fire('click');
+  assert.equal(failed.document.activeElement, failed.get('encrypt-report'));
+  assert.equal(failed.get('encrypt-report').disabled, false);
+});
+
+test('encryption does not take focus from a deliberate move or after the report closes', async () => {
+  for (const close of [false, true]) {
+    const pending = deferred(), started = deferred();
+    const h = harness({ encrypt: async () => { started.resolve(); return pending.promise; } });
+    await h.choose('synthetic-public'); await h.confirm(); h.get('encrypt-report').focus();
+    const operation = h.get('encrypt-report').fire('click'); await started.promise;
+    h.get('report-text').focus();
+    if (close) await h.dialog.close();
+    const chosenFocus = h.document.activeElement;
+    pending.resolve('synthetic ciphertext'); await operation;
+    assert.equal(h.document.activeElement, chosenFocus);
+  }
+});
+
+test('cancelled device sharing restores its keyboard action without overriding a deliberate move', async () => {
+  for (const move of [false, true]) {
+    const pending = deferred(), h = harness({ shareHandler: () => pending.promise });
+    await h.approvePlain(); h.get('share-report').focus();
+    const operation = h.get('share-report').fire('click');
+    assert.equal(h.document.activeElement, h.document.body);
+    if (move) h.get('report-text').focus();
+    pending.resolve(); await operation;
+    assert.equal(h.document.activeElement, h.get(move ? 'report-text' : 'share-report'));
+  }
 });

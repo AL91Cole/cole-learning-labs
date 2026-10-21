@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const read = filename => readFileSync(new URL(`../${filename}`, import.meta.url), 'utf8');
+const WORKSHEET_ROUTES = ['/student-workbook', '/student-workbook.html', '/practice-quizzes', '/practice-quizzes.html'];
 
 function headerRules(source) {
   const rules = new Map();
@@ -50,18 +51,35 @@ test('public browser security limits scripts, connections, forms, and embedded c
     if (!headers.has('content-security-policy')) continue;
     const csp = cspDirectives(headers.get('content-security-policy'));
     const localReport = ['/secure-reports', '/secure-reports.html'].includes(route);
+    const worksheet = WORKSHEET_ROUTES.includes(route);
+    const localOnly = localReport || worksheet;
     for (const name of ['default-src', 'script-src', 'font-src']) {
-      assert.deepEqual(csp.get(name), ["'self'"], `${route}: ${name} must stay same-origin`);
+      assert.deepEqual(csp.get(name), [worksheet && name !== 'font-src' ? "'none'" : "'self'"], `${route}: ${name} must stay within the reviewed local policy`);
     }
-    const connections=localReport?["'none'"]:route==='/*'?["'self'",'https://cole-learning-labs-requester.alan91cole.workers.dev']:["'self'"];
+    const connections=localOnly?["'none'"]:route==='/*'?["'self'",'https://cole-learning-labs-requester.alan91cole.workers.dev']:["'self'"];
     assert.deepEqual(csp.get('connect-src'),connections,`${route}: connections must match the reviewed topic-only requester boundary`);
-    assert.deepEqual(csp.get('form-action'),localReport?["'none'"]:["'self'"],`${route}: forms must match the reviewed local boundary`);
+    assert.deepEqual(csp.get('form-action'),localOnly?["'none'"]:["'self'"],`${route}: forms must match the reviewed local boundary`);
     assert.deepEqual(csp.get('style-src'), localReport ? ["'self'"] : ["'self'", "'unsafe-inline'"], `${route}: unexpected stylesheet policy`);
     for (const name of ['object-src', 'base-uri', 'frame-src']) {
       assert.deepEqual(csp.get(name), ["'none'"], `${route}: ${name} must remain disabled`);
     }
-    assert.deepEqual(csp.get('img-src'), ["'self'", 'data:'], `${route}: unexpected image provider`);
+    assert.deepEqual(csp.get('img-src'), worksheet ? ["'self'"] : ["'self'", 'data:'], `${route}: unexpected image provider`);
     assert.ok(csp.has('upgrade-insecure-requests'), `${route}: insecure resource upgrade is required`);
+  }
+});
+
+test('HTML worksheets cannot run scripts, connect, submit, be framed, or be retained by a shared cache', () => {
+  const rules = headerRules(read('_headers'));
+  for (const route of WORKSHEET_ROUTES) {
+    const headers = rules.get(route);
+    assert.ok(headers, `${route}: both clean and HTML worksheet routes need explicit protection`);
+    const csp = cspDirectives(headers.get('content-security-policy'));
+    for (const name of ['default-src', 'script-src', 'connect-src', 'form-action', 'frame-ancestors', 'frame-src', 'object-src', 'base-uri']) {
+      assert.deepEqual(csp.get(name), ["'none'"], `${route}: ${name} must remain disabled`);
+    }
+    const cache = new Set((headers.get('cache-control') || '').split(',').map(value => value.trim()));
+    for (const name of ['private', 'no-store', 'no-transform']) assert.ok(cache.has(name), `${route}: ${name} is required`);
+    assert.ok(!cache.has('public'));
   }
 });
 

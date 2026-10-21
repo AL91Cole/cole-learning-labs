@@ -1,4 +1,4 @@
-import {normalizeLabRecord} from './records.js?release=20261021-chat27c';
+import {normalizeLabRecord} from './records.js?release=20261021-accessibility27';
 
 export const WORK_PREFIX = 'cole-learning-labs:v2';
 export const CLEAR_WORK_KEY = 'cole-learning-labs:clear-local-work';

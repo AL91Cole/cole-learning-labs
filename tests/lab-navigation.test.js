@@ -59,6 +59,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
   const elements = new Map();
   for (const selector of ['#main','#workspace','#coding-editor','#learning-mode','#experiment-predict','#lab-page-title','#lab-page-progress','.lab-shell','.save-status','#action-count','#verify-result','#action-feedback','#bench-log','#clue-count','#question-response','#reply-source','#requester-options','#question-suggestions','#intake-progress','#question-form','#student-question','#interview-history','#experiment-hypothesis','#experiment-result','#run-hypothesis-test','#evidence-detail','#evidence-list','#plan','#notes','#reflection','#verify-task','#close-ticket','#reading-toggle','#saving-options','#work-privacy details','#report-button','#finish-report','#reset-ticket','#cancel-reset','#reset-confirm','#confirm-reset','#dialog-close','#lab-dialog']) elements.set(selector,new Element());
   elements.get('#question-suggestions').hidden=true;
+  for(const field of ['plan','notes','reflection']){const error=new Element();error.hidden=true;elements.set('#'+field+'-error',error);}
   for(const selector of ['#plan','#evidence-detail','#run-hypothesis-test']){const drawer=new Element();drawer.open=true;elements.get(selector).disclosure=drawer;}
   for (const [className,panelId] of [['.case-sidebar','#lab-problem'],['.bench-column','#lab-workbench'],['.evidence-sidebar','#lab-finish']]) { const panel = new Element(); elements.set(className,panel); elements.set(panelId,panel); }
   const groups = new Map([
@@ -586,6 +587,45 @@ test('finishing a technically repaired detailed ticket opens the missing evidenc
   assert.equal(h.elements.get('#plan').scrolled[0].behavior,'instant','Validation focus must not race an earlier navigation scroll.');
 });
 
+test('missing hypothesis guidance stays beside its identified field until the learner corrects it',()=>{
+  const h=harness('INC-102',2),field=h.elements.get('#plan'),error=h.elements.get('#plan-error');
+  h.elements.get('#run-hypothesis-test').fire('click');
+  assert.equal(field.getAttribute('aria-invalid'),'true');assert.equal(error.hidden,false);
+  assert.equal(error.textContent,labLanguage(h.scenario).hypothesisRequired);
+  assert.equal(h.calls.notices.length,0,'Required guidance must not depend on an expiring toast.');
+  h.input('plan','Too short');assert.equal(error.hidden,false);assert.equal(field.getAttribute('aria-invalid'),'true');
+  h.input('plan','The disconnected power cable may explain why the computer will not start.');
+  assert.equal(error.hidden,true);assert.equal(error.textContent,'');assert.equal(field.getAttribute('aria-invalid'),null);
+  assert.equal(h.record.closed,false);assert.equal(h.record.verified,false);
+});
+
+test('finish focuses the actual missing explanation, preserves the other answer, and clears corrected field errors',()=>{
+  for(const missing of ['notes','reflection']){
+    const h=harness('INC-102');h.action('plug-in');h.action('boot');h.action('open-document');
+    h.groups.get('[data-clue]')[0].fire('click');h.groups.get('[data-clue]')[1].fire('click');
+    h.input('plan','The computer was unplugged, so reconnecting power should let it start.');
+    const other=missing==='notes'?'reflection':'notes',answer='I reconnected the virtual power cable and the lesson opened after startup.';
+    h.input(other,answer);h.section(3);h.elements.get('#close-ticket').fire('click');
+    assert.equal(h.elements.get('#'+missing).focused,1,missing);assert.equal(h.elements.get('#'+other).focused,0,other);
+    assert.equal(h.elements.get('#'+missing).getAttribute('aria-invalid'),'true');
+    assert.equal(h.elements.get('#'+missing+'-error').hidden,false);assert.equal(h.record[other],answer);
+    assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);
+    h.input(missing,'The startup and lesson result support the idea that the power connection was missing.');
+    assert.equal(h.elements.get('#'+missing+'-error').hidden,true);assert.equal(h.elements.get('#'+missing).getAttribute('aria-invalid'),null);
+    h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,true);assert.equal(h.calls.reports,1);
+  }
+});
+
+test('a missing-clues check focuses a clue rather than marking an already valid hypothesis as invalid',()=>{
+  const h=harness('INC-102');h.action('plug-in');h.action('boot');h.action('open-document');
+  h.input('plan','The unplugged power cable explains why the computer could not start.');h.section(3);
+  h.elements.get('#close-ticket').fire('click');
+  assert.equal(h.groups.get('[data-clue]')[0].focused,1);assert.equal(h.elements.get('#plan').focused,0);
+  assert.equal(h.elements.get('#plan').getAttribute('aria-invalid'),null);
+  assert.equal(h.elements.get('#evidence-detail').textContent,labLanguage(h.scenario).cluesPlanRequired);
+  assert.deepEqual(h.visible(),[true,false,false]);assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);
+});
+
 test('all cases render labelled pages and accessible navigation with only the request visible initially', () => {
   const renderStart = source.indexOf('function labPage(s){'),renderEnd = source.indexOf('\nfunction evidenceList(',renderStart); assert.ok(renderStart >= 0 && renderEnd > renderStart);
   const context = vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
@@ -597,6 +637,11 @@ test('all cases render labelled pages and accessible navigation with only the re
       const tab = html.match(new RegExp('<button\\b[^>]*\\bid="lab-tab-'+(index+1)+'"[^>]*>','u'))?.[0]; assert.ok(tab); assert.doesNotMatch(tab,/role="tab"/u); assert.match(tab,new RegExp('aria-controls="'+id+'"','u')); if(index===0)assert.match(tab,/aria-current="step"/u);else assert.doesNotMatch(tab,/aria-current=/u);
     }
     for (const id of ['plan','workspace','notes','reflection','verify-task','close-ticket','question-form','student-question','question-suggestions','interview-history','run-hypothesis-test','experiment-result']) assert.equal((html.match(new RegExp('\\bid="'+id+'"','g')) || []).length,1,scenario.id+' must include '+id+'.');
+    for(const field of ['plan','notes','reflection']){
+      const input=html.match(new RegExp('<textarea\\b[^>]*id="'+field+'"[^>]*>','u'))?.[0];
+      assert.match(input,new RegExp('aria-describedby="[^"]*'+field+'-error','u'));
+      assert.match(html,new RegExp('<p id="'+field+'-error"[^>]*role="alert"[^>]*hidden>','u'));
+    }
     assert.match(html,/<div id="question-suggestions"[^>]*role="group"[^>]*aria-label="Suggested follow-up questions"[^>]*hidden/u);
     assert.match(html,/<div class="requester-live-reply sr-only" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"[^>]*><\/p><p id="question-response"/u,'The warning and answer must be announced together, with the source first.');
     assert.match(html,/id="reset-ticket"[^>]*aria-expanded="false"[^>]*aria-controls="reset-confirm"/u);
