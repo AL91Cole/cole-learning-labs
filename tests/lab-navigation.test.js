@@ -552,7 +552,7 @@ test('every lab starts with the offline character and separates remote AI availa
     assert.match(html,/Only an authored topic code and fictional case go to Cloudflare/u);
     assert.match(html,/your typed question stays here/u);assert.match(html,/My typed question stays on this page/u);
     assert.match(html,/No app or model download is needed/u);
-    assert.match(html,/Offline character is on\./u);assert.match(html,/awaits privacy review and service setup/u);
+    assert.match(html,/Offline character is on\./u);assert.match(html,/Read the note, then check availability to choose cloud AI/u);
     assert.match(html,/extra replies.*cannot repair equipment, award progress, or add case evidence/u);
     assert.match(html,/(?:Ask in|Use) your own words\./u);assert.match(html,/Suggestions are optional\./u);
   }
