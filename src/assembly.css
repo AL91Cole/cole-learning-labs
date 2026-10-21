@@ -25,51 +25,41 @@
 .pc-power-caption{font-size:.8rem;line-height:1.4;color:#bed4df;max-width:6.5rem}
 .pc-power-caption strong{display:block;font-size:.85rem;color:#e4f2f5}
 
-/* Bounded pictures leave room for the large, equivalent keyboard/touch controls. */
-@media(min-width:720px) and (max-height:900px){
-  .asm-schematic .hw-svg{height:clamp(280px,46dvh,390px);min-height:0;max-height:none;aspect-ratio:auto}
-  .asm-schematic .hw-svg-closeup{height:clamp(300px,52dvh,440px)}
-  .asm-bench button,.asm-bench select{min-height:44px}
-  .asm-ticket-guide{padding:.6rem .75rem}
-  .asm-ticket-guide h3{font-size:.95rem}
-  .asm-ticket-guide p{font-size:.85rem;line-height:1.45}
-  .asm-toolbox,.asm-picture-tabs{padding:.4rem .5rem}
-  .asm-tool-buttons{gap:.4rem}
-  .asm-tool-buttons button{padding:.4rem .55rem;min-height:44px}
-  .asm-picture-tabs{align-items:center;font-size:.82rem;color:#a9c8d4}
-  .asm-feedback{padding:.6rem .75rem;font-size:.85rem;line-height:1.5}
-  .asm-current{padding:.65rem .75rem}
-  .asm-current p{font-size:.86rem}
-  .asm-drawer summary,.asm-help summary,.asm-all-tools summary,.asm-monitor-readout summary{min-height:44px;padding:.65rem .75rem}
-}
-
-/* The inspector sits beside the picture when the workbench itself has room.
-   Every panel remains in normal document scrolling, including open drawers. */
-@container lab-bench (min-width:820px){
-  .asm-bench{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,1fr);align-items:start}
-  .asm-ticket-guide,.asm-power{grid-column:1/-1}
-  .asm-top-controls{grid-column:1;grid-row:3;display:flex;align-self:stretch;border-bottom:1px solid var(--asm-edge)}
-  .asm-top-controls .asm-toolbox{flex:1;min-width:0;border-bottom:0}
-  .asm-top-controls .asm-tool-buttons button{flex:1 1 95px;max-width:none}
-  .asm-top-controls .asm-picture-tabs{flex:0 1 110px;min-width:0;border-left:1px solid var(--asm-edge)}
-  .asm-layout{grid-column:1;grid-row:4/9;align-self:start}
-  .asm-feedback{grid-column:2;grid-row:3;align-self:stretch;border-left:1px solid var(--asm-edge);border-top:0}
-  .asm-current{grid-column:2;grid-row:4;grid-template-columns:minmax(0,1fr);gap:.4rem;border-left:1px solid var(--asm-edge)}
-  .asm-current button{grid-column:1;grid-row:auto;justify-self:start;min-height:44px}
-  .asm-all-tools{grid-column:2;grid-row:5;border-left:1px solid var(--asm-edge);border-top:0}
-  .asm-drawers{grid-column:2;grid-row:6;grid-template-columns:minmax(0,1fr);border-left:1px solid var(--asm-edge)}
-  .asm-activity{grid-column:2;grid-row:7;border-left:1px solid var(--asm-edge)}
-  .asm-monitor-readout{grid-column:2;grid-row:8;border-left:1px solid var(--asm-edge)}
-  .asm-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .asm-tool-controls[data-cable-mode=true]{grid-template-columns:minmax(0,1fr)}
-  .asm-tool-controls{padding:.65rem;gap:.65rem}
-  .asm-tool-controls label,.asm-tool-controls button{flex-basis:100%;width:100%;min-width:0}
-  .asm-controls{padding:.65rem}
-}
+/* The equipment gets the full workbench width, including short Chromebook
+   screens. Let the page scroll instead of shrinking the PC to a short box. */
+.asm-bench{display:block;font-size:1rem;line-height:1.55}
+.asm-bench .asm-top-controls{display:flex;align-items:stretch;min-width:0;border-bottom:1px solid var(--asm-edge)}
+.asm-top-controls .asm-toolbox{flex:1;min-width:0;border-bottom:0;padding:.65rem .75rem}
+.asm-top-controls .asm-picture-tabs{flex:0 0 auto;align-items:center;padding:.65rem .85rem;border-left:1px solid var(--asm-edge);font-size:1rem;color:#c7e1ea}
+.asm-bench .asm-tool-buttons{gap:.5rem}
+.asm-bench .asm-tool-buttons button{flex:1 1 120px;max-width:240px;padding:.65rem .8rem}
+.asm-visual{padding:.5rem}
+.asm-schematic{max-width:min(100%,calc(clamp(480px,calc(100dvh - 110px),660px)*1.519435));margin-inline:auto}
+.asm-schematic[data-picture-expanded=true]{max-width:none}
+.asm-schematic .hw-svg,.asm-schematic .hw-svg-closeup{width:100%;height:auto;min-height:0;max-height:none;aspect-ratio:860/566}
+.asm-top-controls .asm-picture-tabs{gap:.65rem}
+.asm-top-controls [data-asm-expand-picture]{flex:none;min-height:48px;font-size:1rem}
+.asm-bench button,.asm-bench select{min-height:48px;font-size:1rem}
+.asm-ticket-guide{padding:.85rem 1rem}
+.asm-ticket-guide h3{font-size:1.15rem}
+.asm-ticket-guide p,.asm-feedback,.asm-current p,.asm-activity,.asm-monitor-readout p,.asm-all-tools label,.asm-all-tools p,.asm-readouts p,.asm-help ol,.asm-help>p,.asm-tool-drawer>p,.asm-cable-state{font-size:1rem;line-height:1.6}
+.asm-feedback,.asm-current{padding:.85rem 1rem}
+.asm-current h4{font-size:1.15rem}
+.asm-controls label,.asm-tool-controls label,.asm-tool-controls>span,.asm-delivery>strong{font-size:1rem;line-height:1.5}
+.asm-drawer summary,.asm-help summary,.asm-all-tools summary,.asm-monitor-readout summary{min-height:52px;padding:.85rem 1rem;font-size:1rem}
+.asm-power strong{font-size:1rem}
+.asm-power [data-asm-next],.pc-power-caption{font-size:.95rem}
+.asm-power>button{font-size:1rem}
+.asm-actions{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.asm-tool-controls[data-cable-mode=true]{grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.asm-tool-controls label,.asm-tool-controls button{min-width:0}
+.asm-drawers{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:719px){
   .asm-power .asm-machine-status{flex-basis:100%}
   .asm-power-switch{border-right:0;margin-right:auto}
-  .asm-schematic .hw-svg{min-height:0;max-height:440px}
+  .asm-bench .asm-top-controls{display:block}
+  .asm-top-controls .asm-picture-tabs{border-left:0;border-top:1px solid var(--asm-edge)}
+  .asm-drawers,.asm-tool-controls[data-cable-mode=true]{grid-template-columns:minmax(0,1fr)}
 }
-.larger-reading .asm-bench button,.larger-reading .asm-bench select{font-size:1rem}
-.larger-reading .asm-current p,.larger-reading .asm-feedback,.larger-reading .asm-ticket-guide p{font-size:1rem;line-height:1.55}
+.larger-reading .asm-bench button,.larger-reading .asm-bench select{font-size:1.125rem}
+.larger-reading .asm-current p,.larger-reading .asm-feedback,.larger-reading .asm-ticket-guide p,.larger-reading .asm-activity,.larger-reading .asm-monitor-readout p{font-size:1.125rem;line-height:1.6}

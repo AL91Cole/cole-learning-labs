@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cole-learning-labs-requester-free",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": true,
+  "ai": {"binding": "AI"},
+  "observability": {"enabled": false},
+  "vars": {
+    "REQUESTER_ENABLED": "false",
+    "REQUESTER_FREE_ACCOUNT_CONFIRMED": "false",
+    "REQUESTER_ALLOWED_ORIGINS": "https://www.colelearninglabs.com,https://colelearninglabs.com"
+  }
+}

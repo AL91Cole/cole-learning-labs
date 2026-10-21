@@ -47,7 +47,7 @@ test('home and catalog offer direct lab links and filters without a 3D hub',()=>
   const rendered=pages(),home=rendered.home(),catalog=rendered.library();
   assert.match(home,/href="#labs"/);assert.match(home,/href="#lab\/INC-101"/);
   assert.match(catalog,/id="lab-search"/);assert.match(catalog,/id="grade-filter"/);
-  assert.equal((catalog.match(/data-track="/g)||[]).length,6);
+  assert.equal((catalog.match(/<button\b[^>]*\bdata-track="/g)||[]).length,6);
   for(const html of [home,catalog])assert.doesNotMatch(html,/<canvas\b|data-vlab-hub|vlab-room|3D classroom/i);
 });
 

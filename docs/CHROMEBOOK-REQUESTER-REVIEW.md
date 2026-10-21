@@ -1,27 +1,57 @@
 # Chromebook lab and requester review
 
-Source release `20261020-chromebook24`, version `2.24.0`, October 20, 2026.
+Source release `20261020-chromebook25`, version `2.25.0`, October 20, 2026. This records the current phase 3 source and local verification; it does not establish a production deployment or school approval.
 
-The three investigation pages retain unfinished work while students move between them. Short laptop windows use a compact heading and a bounded schematic; controls sit beside the picture when space permits. The workbench has one Power symbol button: press it to shut down, or press it when off to start the PC and check startup. Power does not fix a fault or award completion. Safe internal work still requires disconnecting the virtual AC cord. Text readouts and keyboard/touch component controls remain available.
+## Reading and equipment changes
 
-Grades 7–8 use supported plain English, including “My first idea” with an explanation of hypothesis. Grades 9–10 introduce technical terms with explanations. Grades 11–12 use more precise evidence, hypothesis, and verification language. The task and its checks remain the same.
+The visual refresh uses a 17px default page type size, warmer public pages, consistent colored pathway illustrations, and clearer cards. Dark teal and navy workspaces retain visible focus, labeled controls, larger-text support, and keyboard/touch alternatives. Grade-band wording changes the amount of language support without changing the task or its checks: grades 7–8 use plain English and define terms; grades 9–10 introduce technical terms with short explanations; grades 11–12 emphasize precise evidence, predictions, and limitations.
 
-All 29 investigations have authored fictional requester cards. Each card has a role, conversational style, interests, preferences, and case focus. Shared language patterns cover everyday chat, 36 technology definitions, bounded arithmetic, and honest unknown replies. This is a finite conversation library, not an encyclopedia or an unrestricted AI model. Canonical case facts and supported current observations take priority. Unrelated conversation cannot supply missing investigation evidence.
+The complete PC and monitor now have the workbench's full available width, with equivalent controls below the picture rather than a narrow inspector beside it. The default fitted view keeps the whole schematic visible at a bounded height. **Expand picture** uses the available width for a larger image; **Fit picture** or Escape restores the fitted view. Expansion changes presentation only. It does not modify equipment, records, tests, or progress, and does not invoke browser fullscreen or trap scrolling.
 
-Fast replies work without an AI service or model download. Extra conversation stays in an eight-pair page-memory history and is excluded from saved records, exported reports, and inquiry credit. Accepted canonical case questions continue through the existing record and privacy controls. Private-looking or unsupported instruction requests are rejected before optional AI routing; these checks cannot identify every possible personal detail.
+The Power symbol button uses the existing startup and shutdown actions. Turning it on checks startup; it does not repair a fault or award completion. Internal work still requires switching off and disconnecting virtual AC. Static text readouts and large component/cable controls remain available. Short windows can require normal vertical page scrolling: the design does not promise that every picture, instruction, and control fits on one screen.
 
-## Prepared Cloudflare option
+The three investigation pages retain unfinished questions, notes, code, settings, and equipment while students move within the same investigation. Browser Back/Forward and numbered navigation preserve the mounted workbench. Leaving the workbench pauses its activity; explicit reset and clear controls retain their existing behavior.
 
-`functions/api/requester.js` prepares one bounded Workers AI call using a fixed model, trusted source case/persona context, and grade-aware instructions. The browser sends only a known lab ID and a question after availability, separate consent, and mode selection. It sends no browser credentials, saved history, student notes, or equipment state. AI output is ungraded text and cannot change the simulation. No OpenAI key, third-party browser script, local AI model, app installation, or paid-plan change is included.
+## Local conversation and the topic-only boundary
 
-The source privacy lock remains false. Adding an AI binding or environment flag cannot activate production inference. Privacy/provider review, actual account configuration, and a verified usage budget must be completed before a separately reviewed release opens it. The independent classroom-data source lock is unchanged.
+All 29 investigations have distinct authored fictional requester profiles with a role, voice, interests, preferences, and case focus. The offline library supports bounded small talk, 36 technology definitions, simple calculations, and honest unknown replies. It is finite, not an unrestricted AI model. Canonical case facts and supported current observations remain local and take priority over casual conversation.
 
-On HTTP 429 (an allowance, capacity, or configured request limit), the browser automatically switches AI mode off and retains the immediate fast-character reply. Subsequent questions stay offline until the user chooses AI again. Network and provider failures also retain the fast reply. New questions, revoked consent, and route cleanup suppress stale AI responses.
+Fast character works immediately without a provider, app installation, or AI model download. Extra conversation stays in an eight-pair page-memory history and is excluded from saved work, exported reports, and inquiry credit. Accepted authored case questions continue through the existing record and privacy controls. Private-looking input and requests for hidden instructions are refused, but filtering cannot reliably detect every identifying detail.
 
-The Workers Paid base subscription is not an AI spending ceiling. Paid usage above the shared daily allowance can incur charges; anonymous per-isolate backstops are not a global budget. No live inference or billing changes were performed during this code review. Actual account configuration and a verified usage budget remain activation prerequisites. See [deployment](DEPLOYMENT.md) for the release requirements and current provider documentation.
+The optional remote transport now contains exactly two authored identifiers: `{scenarioId, topic}`. There are **49 allowed topics: 13 character topics and 36 technology definitions**. A recognized question is mapped locally to a topic ID; the learner's typed words never become that remote request or model input. Notes, conversation history, records, current equipment state, and client-supplied prompts are also excluded. Unknown questions, calculations, case questions, and current-state observations remain offline.
 
-## Verification
+If separately configured and approved, generated variation could express an allowed topic in the selected fictional character's voice and grade band. It cannot supply canonical case clues, alter equipment, earn evidence, verify a repair, award completion, or enter saved work and reports. Generated text can still be incorrect and needs human judgment.
 
-Automated tests exercise authored facts and requester chat across all investigations, privacy rejection, evidence boundaries, power startup/off behavior, retained drafts, server input bounds and source locks, mocked AI errors, automatic offline switching, and cancellation. Provider tests use stubs and do not prove real model quality or live account configuration.
+## Prepared service and activation limits
 
-Chrome browser checks used fictional data at 1366×768, 1280×720, and 960×600, including Larger text. The tested pages had no horizontal document overflow. These are browser viewport checks, not testing on a physical 4 GB Chromebook. Normal vertical page scrolling remains available; the entire lab is not squeezed into one screen.
+`worker-requester/worker.js` prepares a separate Workers Free-only service. It validates the exact lab/topic pair and rebuilds its prompt from source-controlled fictional profiles and topic templates. Case briefs, clues, repairs, goals, rubrics, and learner data are absent from its model context. It uses one fixed `@cf/meta/llama-3.1-8b-instruct-fp8-fast` call with a 140-output-token limit and no retries, Gateway credits, alternate provider, or model selected by the caller. Returned JSON contains at most 600 characters of ungraded plain text; output checks reject obvious private details, HTML, code blocks, and links.
+
+The Worker configuration is disabled. No new Free account, Worker deployment, AI activation, or live inference has been approved or completed for this preparation. `src/requester-config.js` still points to the legacy same-origin `/api/requester` route. Its older `functions/api/requester.js` production entry retains the hardcoded false privacy lock; an environment assertion cannot open it. The independent classroom privacy gate remains unchanged and closed.
+
+Strict no-inference-overage operation depends on an independently verified **Workers Free account**, whose provider-enforced allowance currently stops further inference beyond 10,000 neurons per day. Other services in that account share the allowance. Workers Paid can bill beyond its included allowance; neither a subscription's base fee nor this code creates a Paid-account spending ceiling. Environment flags assert an operator's review, not automatic subscription detection. Account selection or creation remains a separate user decision. See [Worker setup](../worker-requester/README.md), [deployment requirements](DEPLOYMENT.md), and [Cloudflare pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/).
+
+Anonymous backstops allow two unfinished calls, 12 starts per minute, and 500 starts per UTC day **per isolate**. Other isolates and restarts have separate counters, so these are not global quotas or spending caps. A timeout stops waiting but may not cancel provider inference; its concurrency slot stays occupied until the invocation settles. HTTP 429 switches AI mode off automatically and keeps the immediate offline reply. Other network/provider failures also retain that reply. New questions, revoked consent, and route cleanup suppress stale responses.
+
+Any future activation needs account verification, an exact HTTPS origin allowlist, an AI binding, the reviewed Worker URL and matching site connection policy, explicit visitor opt-in, and applicable provider/school review. CORS is not authentication. Only authored topic IDs leave the browser, but Cloudflare would still receive the selected topic, lab ID, and ordinary connection metadata. No live model quality, provider account configuration, or absence of all privacy risk is claimed.
+
+## Verification and remaining device checks
+
+Current local Windows verification:
+
+| Check | Result |
+| --- | --- |
+| Full `npm test` | 900 tests: 898 passed, 0 failed, 2 Windows-specific checks skipped |
+| `npm run check` | 48 application and server modules syntax checked |
+| `npm run build` | 63 reviewed public files prepared |
+| Provider integration tests | Fake bindings only; zero live inference calls |
+
+Tests cover retained learner work, authored facts, power behavior, fitted/expanded picture controls, privacy/source locks, all allowed topics, rejected raw questions and extra fields, fixed inference parameters, bounded output, grade-band instructions, error/quota fallback, and cancellation. Passing mocked tests does not verify an actual provider deployment, model accuracy, account plan, or spending boundary.
+
+Current Chrome browser observations used fictional data:
+
+| Browser viewport | Observed result |
+| --- | --- |
+| 1366 × 600 | Fitted SVG measured 742.9 × 488.9 CSS pixels; expanded SVG measured 1273.4 × 838.1; Escape restored the fitted view |
+| 960 × 600 | Library had no horizontal document overflow; default page type measured 17px |
+
+These are **browser viewport checks**, not tests on a physical 10–11-inch or 4 GB Chromebook. The expanded picture is intentionally taller than a short viewport and uses ordinary page scrolling. Physical screen size does not determine usable browser space, zoom, or school policy. Recheck current keyboard, touch, zoom, larger text, screen-reader behavior, downloads, and the actual managed device and network before classroom use. No universal browser compatibility, accessibility certification, or school approval is established by these results.

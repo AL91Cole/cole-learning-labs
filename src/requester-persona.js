@@ -86,6 +86,8 @@ const DEFINITIONS = Object.freeze([
   definition('function','A function is a named group of program steps you can use again. It can take inputs and may return an output.')
 ]);
 
+export const REQUESTER_DEFINITIONS = DEFINITIONS;
+
 function termReply(text) {
   const match = /^(?:what (?:is|are)(?: a| an| the)?|define|explain(?: a| an| the)?|tell me about(?: a| an| the)?) (.+?)(?: in simple (?:words|terms)| simply| for beginners)?$/u.exec(text)
     || /^what does (.+?) (?:mean|stand for|do)$/u.exec(text);

@@ -1,6 +1,6 @@
-import {learningModes,renderLabLearning} from './teaching.js?release=20261020-chromebook24';
-import {renderExperiments,mountExperiments} from './experiments.js?release=20261020-chromebook24';
-import {transferCaseFor} from './scenarios.js?release=20261020-chromebook24';
+import {learningModes,renderLabLearning} from './teaching.js?release=20261020-chromebook25';
+import {renderExperiments,mountExperiments} from './experiments.js?release=20261020-chromebook25';
+import {transferCaseFor} from './scenarios.js?release=20261020-chromebook25';
 
 export function learningRoute(hash) {
   const [path,query='']=String(hash||'').replace(/^#/,'').split('?'),params=new URLSearchParams(query);

@@ -429,6 +429,8 @@ test('an opted-in AI extra reply changes only the current RAM conversation and c
   const before=structuredClone(h.record),saved=h.calls.saved;
   h.ask('What did you have for breakfast?');await new Promise(resolve=>setImmediate(resolve));
   assert.deepEqual(requests.map(request=>request.options.method),['GET','POST']);
+  assert.deepEqual(JSON.parse(requests[1].options.body),{scenarioId:'INC-101',topic:'breakfast'});
+  assert.doesNotMatch(requests[1].options.body,/What did you|question|notes|history|state/u,'Only an authored topic reaches transport.');
   assert.equal(h.elements.get('#question-response').textContent,answer);
   assert.match(h.elements.get('#interview-history').innerHTML,/AI extra reply.*&lt;b&gt;A fictional AI extra response\.&lt;\/b&gt;/u);
   assert.doesNotMatch(h.elements.get('#interview-history').innerHTML,/<b>A fictional/u,'Even generated markup must display as escaped text.');
@@ -543,11 +545,13 @@ test('every lab starts with the fast character and separates remote AI availabil
     const html=context.labPage(scenario);
     const consent=html.match(/<input\b[^>]*\bdata-ai-consent[^>]*>/u)?.[0];
     const toggle=html.match(/<input\b[^>]*\bdata-ai-toggle[^>]*>/u)?.[0];
-    assert.ok(consent,scenario.id+' must ask separately before sending questions.');
+    assert.ok(consent,scenario.id+' must ask separately before sending authored topics.');
     assert.ok(toggle,scenario.id+' must offer a separate optional AI control.');
     assert.doesNotMatch(consent,/\bchecked\b/u);assert.doesNotMatch(toggle,/\bchecked\b/u);assert.match(toggle,/\bdisabled\b/u);
     assert.match(html,/<button\b[^>]*\btype="button"[^>]*\bdata-ai-check/u);
-    assert.match(html,/questions go to Cloudflare/u);assert.match(html,/No app or AI model download is needed/u);
+    assert.match(html,/Only an authored topic code and fictional case go to Cloudflare/u);
+    assert.match(html,/your typed question stays here/u);assert.match(html,/My typed question stays on this page/u);
+    assert.match(html,/No app or model download is needed/u);
     assert.match(html,/Fast character is on\./u);assert.match(html,/awaits privacy review and service setup/u);
     assert.match(html,/extra replies.*cannot repair equipment, award progress, or add case evidence/u);
     assert.match(html,/(?:Ask in|Use) your own words\./u);assert.match(html,/Suggestions are optional\./u);

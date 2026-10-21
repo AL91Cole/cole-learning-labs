@@ -25,3 +25,11 @@
 .interview-followup:focus-visible{outline:3px solid #79e4d3;outline-offset:3px}
 @media(max-width:580px){.single-page-lab .interview-pair p{max-width:100%;padding:11px 12px}.interview-history{max-height:400px;scrollbar-gutter:auto}}
 @media(forced-colors:active){.single-page-lab .interview-pair p,.interview-mode-note,.interview-mode-select,.interview-suggestions{border:1px solid CanvasText}}
+
+/* Warm character details distinguish the conversation from technical evidence. */
+.requester-avatar{width:60px;height:60px;flex-basis:60px;border:2px solid #e9d4a5;color:#193d47;background:#f2dfb8;box-shadow:4px 4px 0 #0c202c;border-radius:18px 18px 18px 6px;font-size:1.65rem}
+.requester-profile h3{font-size:1.28rem;color:#f2f6ee}.requester-profile p{font-size:.94rem;line-height:1.6}.requester-profile .eyebrow{color:#f2d59e;font-size:.72rem;letter-spacing:.09em}
+.requester-intro{background:#1b3b46;border-left-color:#e9c991;border-radius:0 13px 13px 13px;font-size:1rem;line-height:1.75;color:#d8e8e7;padding:14px 16px}
+.requester-options{background:#142e3c;border-color:#426573;border-radius:13px}.requester-options summary{font-size:1rem;color:#b2ecd8}.requester-options p,.requester-choice{font-size:.96rem;line-height:1.7}.requester-options [role=status]{font-size:.94rem;color:#c1eddf}
+.single-page-lab .interview-pair p{font-size:1rem;line-height:1.75;padding:14px 16px}.single-page-lab .interview-pair p:first-child{background:#1b4652;border-color:#4f8290}.single-page-lab .interview-pair p:last-child{background:#163540;border-color:#3a6571}.interview-pair strong{font-size:.79rem;color:#b9eedb;letter-spacing:.025em}.interview-suggestions{border-radius:12px;background:#15323d;border-color:#416672}.interview-mode-note{font-size:.96rem;line-height:1.7}
+.single-page-lab.larger-reading .interview-pair p,.single-page-lab.larger-reading .requester-intro,.single-page-lab.larger-reading .requester-options p{font-size:1.14rem}
