@@ -1,4 +1,3 @@
-// The paid site's legacy endpoint stays source-locked. Deployment replaces this
-// with the verified HTTPS endpoint in an independently confirmed Workers Free
-// account. Never accept a user-supplied endpoint or point this at a paid proxy.
-export const REQUESTER_ENDPOINT = '/api/requester';
+// One verified HTTPS Worker owns the shared early-budget ledger. The legacy
+// Pages endpoint stays source-locked. Never accept a user-supplied destination.
+export const REQUESTER_ENDPOINT = 'https://cole-learning-labs-requester.alan91cole.workers.dev/api/requester';

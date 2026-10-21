@@ -1,4 +1,4 @@
-import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261020-chromebook25';
+import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261020-requester26';
 
 /** Read-only teaching indicators. They never start a device or change saved work. */
 const plain = value => {

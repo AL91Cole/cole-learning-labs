@@ -1,4 +1,5 @@
-import {REQUESTER_DEFINITIONS} from './requester-persona.js?release=20261020-chromebook25';
+import {REQUESTER_DEFINITIONS} from './requester-persona.js?release=20261020-requester26';
+import {REQUESTER_LIBRARY_TOPICS,requesterLibraryTopic} from './requester-library.js?release=20261020-requester26';
 
 // Only authored topic IDs cross the optional AI boundary. A learner's words,
 // notes and conversation never become provider input, even if a filter misses PII.
@@ -18,7 +19,8 @@ const PERSONA_TOPICS = [
   ['goodbye','Say a friendly short goodbye as this fictional character. Do not imply completion.',/^(?:bye|goodbye|see you(?: later)?|have a good day)$/u]
 ];
 const definitionTopics=REQUESTER_DEFINITIONS.map((entry,index)=>({id:'definition-'+index,instruction:'Explain the following authored technology fact in this character voice at the supplied grade level. Preserve its meaning and do not add case observations: '+entry.answer,aliases:entry.aliases}));
-export const REQUESTER_TOPICS=Object.freeze([...PERSONA_TOPICS.map(([id,instruction])=>Object.freeze({id,instruction})),...definitionTopics.map(({id,instruction})=>Object.freeze({id,instruction}))]);
+const libraryTopics=REQUESTER_LIBRARY_TOPICS.map(card=>({id:'library-'+card.id,instruction:'Discuss this authored subject as extra conversation in the supplied character voice. General fact: '+card.idea+' If making up a scene, explicitly call it imagined: '+card.scene+'. Optional creative idea: '+card.activity+'. Never treat this story as an event, clue, repair or observation in the lab.'}));
+export const REQUESTER_TOPICS=Object.freeze([...PERSONA_TOPICS.map(([id,instruction])=>Object.freeze({id,instruction})),...definitionTopics.map(({id,instruction})=>Object.freeze({id,instruction})),...libraryTopics.map(topic=>Object.freeze(topic))]);
 const instructions=new Map(REQUESTER_TOPICS.map(topic=>[topic.id,topic.instruction]));
 export function requesterTopicInstruction(topic){return typeof topic==='string'?instructions.get(topic)||null:null;}
 export function requesterTopic(question){
@@ -26,5 +28,16 @@ export function requesterTopic(question){
   const text=question.trim().toLowerCase().replace(/[’‘]/gu,"'").replace(/[?!.]+$/gu,'').replace(/\s+/gu,' ');
   for(const [id,,pattern] of PERSONA_TOPICS)if(pattern.test(text))return id;
   const match=/^(?:what (?:is|are)(?: a| an| the)?|define|explain(?: a| an| the)?|tell me about(?: a| an| the)?) (.+?)(?: in simple (?:words|terms)| simply| for beginners)?$/u.exec(text)||/^what does (.+?) (?:mean|stand for|do)$/u.exec(text);
-  return match?definitionTopics.find(topic=>topic.aliases.includes(match[1]))?.id||null:null;
+  const definition=match?definitionTopics.find(topic=>topic.aliases.includes(match[1])):null;
+  if(definition)return definition.id;
+  const card=requesterLibraryTopic(text);
+  // Remote enrichment stays stricter than the broad local conversation matcher.
+  // Only complete known wordings map to an authored code; extra words stay local.
+  if(!card)return null;
+  for(const alias of card.aliases){
+    if([alias,'tell me about '+alias,'what is '+alias,'what are '+alias,'explain '+alias,'describe '+alias,
+      'do you like '+alias,'imagine '+alias,'imagine a story about '+alias,'tell me a story about '+alias,
+      'what if '+alias+' were real'].includes(text))return 'library-'+card.id;
+  }
+  return null;
 }

@@ -1,6 +1,6 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261020-chromebook25';
-import {requesterTopic} from './requester-topics.js?release=20261020-chromebook25';
-import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261020-chromebook25';
+import {requesterTextIsPrivate} from './interview.js?release=20261020-requester26';
+import {requesterTopic} from './requester-topics.js?release=20261020-requester26';
+import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261020-requester26';
 
 // Optional remote conversation is separate from the authored case evidence.
 // Only authored topic IDs leave the page after availability, consent and mode
@@ -11,7 +11,7 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
   let disposed=false,available=false,sequence=0,controller=null;
   const say=text=>{if(!disposed)status.textContent=text;};
   function cancel(){sequence++;controller?.abort();controller=null;}
-  function offline(message='Fast character is on. No question is sent to an AI provider.'){
+  function offline(message='Offline character is on. No question is sent to an AI provider.'){
     toggle.checked=false;cancel();say(message);
   }
   async function request(options){
@@ -31,7 +31,7 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
   }
   async function checkAvailability(){
     if(disposed||typeof fetcher!=='function')return;
-    check.disabled=true;say('Checking the free AI option. Your question stays on this page.');
+    check.disabled=true;say('Checking the cloud AI option. Your question stays on this page.');
     const data=await request({method:'GET'});
     if(disposed)return;
     check.disabled=false;
@@ -39,14 +39,14 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
     available=data?.enabled===true;
     toggle.disabled=!available;
     check.disabled=false;
-    if(!available)offline('Free AI is not available here yet. The fast character is ready; no question was sent.');
-    else say('Free AI is available. It receives a fictional character and an authored topic, not your typed question. Read the note before choosing it.');
+    if(!available)offline('Cloud AI is not available here yet. The offline character is ready; no question was sent.');
+    else say('Cloud AI is available. It receives a fictional character and an authored topic, not your typed question. Read the note before choosing it.');
   }
   check.addEventListener('click',checkAvailability);
   consent.addEventListener('change',()=>{if(!consent.checked)offline();});
   toggle.addEventListener('change',()=>{
     if(!available||!consent.checked){offline('Before using AI, confirm that fictional character topics go to Cloudflare. Your typed words stay on this page.');return;}
-    cancel();say(toggle.checked?'Free AI is on for extra conversation. Case clues still come from the lab.':'Fast character is on. No question is sent to an AI provider.');
+    cancel();say(toggle.checked?'Cloud AI is on for extra conversation. Case clues still come from the lab.':'Offline character is on. No question is sent to an AI provider.');
   });
   function enrich(question,reply,onGenerated){
     cancel();
@@ -54,13 +54,13 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
     if(disposed||!available||!toggle.checked||!consent.checked||reply?.kind!=='casual'||!reply.accepted)return;
     if(typeof question!=='string'||!question.trim()||question.length>240||requesterTextIsPrivate(question))return;
     const topic=requesterTopic(question);
-    if(!topic){say('The fast character answered this question locally. This wording is not sent to AI.');return;}
-    say('The fast reply is ready. Asking free AI for another response…');
+    if(!topic){say('The offline character answered this question locally. This wording is not sent to AI.');return;}
+    say('The offline reply is ready. Asking cloud AI for another response…');
     void request({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenarioId:scenario.id,topic})}).then(data=>{
       if(disposed||data===undefined||!toggle.checked||!consent.checked)return;
-      if(data?.limited){offline('AI has reached an allowance or request limit. Switched to the fast character automatically. Your work is unchanged.');return;}
+      if(data?.limited){offline('AI has reached an allowance or request limit. Switched to the offline character automatically. Your work is unchanged.');return;}
       if(!data||data.kind!=='ai'||data.ungraded!==true||typeof data.answer!=='string'||!data.answer.trim()||data.answer.length>600||requesterTextIsPrivate(data.answer)){
-        say('AI is busy or unavailable, or the free allowance is used up. Keep using the fast character.');return;
+        offline('AI is busy or unavailable. Switched to the offline character automatically. Your work is unchanged.');return;
       }
       say('AI extra reply · check it before trusting it. It does not count as a case clue.');
       onGenerated?.(data.answer.trim());

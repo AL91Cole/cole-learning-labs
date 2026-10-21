@@ -53,9 +53,9 @@ test('public browser security limits scripts, connections, forms, and embedded c
     for (const name of ['default-src', 'script-src', 'font-src']) {
       assert.deepEqual(csp.get(name), ["'self'"], `${route}: ${name} must stay same-origin`);
     }
-    for (const name of ['connect-src', 'form-action']) {
-      assert.deepEqual(csp.get(name), localReport ? ["'none'"] : ["'self'"], `${route}: ${name} must match its reviewed data boundary`);
-    }
+    const connections=localReport?["'none'"]:route==='/*'?["'self'",'https://cole-learning-labs-requester.alan91cole.workers.dev']:["'self'"];
+    assert.deepEqual(csp.get('connect-src'),connections,`${route}: connections must match the reviewed topic-only requester boundary`);
+    assert.deepEqual(csp.get('form-action'),localReport?["'none'"]:["'self'"],`${route}: forms must match the reviewed local boundary`);
     assert.deepEqual(csp.get('style-src'), localReport ? ["'self'"] : ["'self'", "'unsafe-inline'"], `${route}: unexpected stylesheet policy`);
     for (const name of ['object-src', 'base-uri', 'frame-src']) {
       assert.deepEqual(csp.get(name), ["'none'"], `${route}: ${name} must remain disabled`);

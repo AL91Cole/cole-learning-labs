@@ -1,4 +1,4 @@
-import { generateTeacherKeyFiles, inspectPublicKey, encryptReport, decryptReport, generateAlias, REPORT_LIMITS } from './report-crypto.js?release=20261020-chromebook25';
+import { generateTeacherKeyFiles, inspectPublicKey, encryptReport, decryptReport, generateAlias, REPORT_LIMITS } from './report-crypto.js?release=20261020-requester26';
 
 const byId = id => document.getElementById(id);
 const status = byId('status');

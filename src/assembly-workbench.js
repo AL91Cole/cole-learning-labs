@@ -1,8 +1,8 @@
-import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261020-chromebook25';
-import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261020-chromebook25';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261020-chromebook25';
-import { workbenchGuidance } from './workbench-guidance.js?release=20261020-chromebook25';
-import { pcActivity } from './pc-activity.js?release=20261020-chromebook25';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261020-requester26';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261020-requester26';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261020-requester26';
+import { workbenchGuidance } from './workbench-guidance.js?release=20261020-requester26';
+import { pcActivity } from './pc-activity.js?release=20261020-requester26';
 
 const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
 const NAMES = Object.fromEntries(GROUPS);

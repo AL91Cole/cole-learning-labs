@@ -537,7 +537,7 @@ test('all cases render labelled pages and accessible navigation with only the re
   }
 });
 
-test('every lab starts with the fast character and separates remote AI availability, consent, and opt-in',()=>{
+test('every lab starts with the offline character and separates remote AI availability, consent, and opt-in',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
   const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
@@ -552,7 +552,7 @@ test('every lab starts with the fast character and separates remote AI availabil
     assert.match(html,/Only an authored topic code and fictional case go to Cloudflare/u);
     assert.match(html,/your typed question stays here/u);assert.match(html,/My typed question stays on this page/u);
     assert.match(html,/No app or model download is needed/u);
-    assert.match(html,/Fast character is on\./u);assert.match(html,/awaits privacy review and service setup/u);
+    assert.match(html,/Offline character is on\./u);assert.match(html,/awaits privacy review and service setup/u);
     assert.match(html,/extra replies.*cannot repair equipment, award progress, or add case evidence/u);
     assert.match(html,/(?:Ask in|Use) your own words\./u);assert.match(html,/Suggestions are optional\./u);
   }
@@ -588,7 +588,7 @@ function routeHarness(id='CODE-501',initialPath='') {
     mountWorkControls(options){mounted=options;},workStatus:()=>'',showNotice(){},
     onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
     makeNavigation(scenario,route,{onModeChange}={}){const mountedRoute=route||learningRoute(location.hash);let mode=mountedRoute.mode;return {syncRoute(next){routeSyncs.push(next);if(next.page!=='lab'||next.id!==scenario.id||next.sequence!==mountedRoute.sequence)return false;if(next.mode!==mode){onModeChange?.(next.mode);mode=next.mode;}return true;},dispose(){}};},
-    routeLink:()=>'',labCards(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
+    routeLink:()=>'',labCards(){},bindHome(){},mountStandardsAlignment:()=>()=>{},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
   });
   vm.runInContext('let routeCleanup=null,store=initialStore,currentLab=null,labNavigation=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
     'let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});\n'+lifecycle.join('\n')+'\n'+

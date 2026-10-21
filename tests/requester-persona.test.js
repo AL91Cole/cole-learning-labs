@@ -97,8 +97,9 @@ test('casual chat and forged casual transcripts cannot earn inquiry, while autho
   const mixed=ask('What changed? and what is your favorite food?');
   assert.equal(mixed.kind,'casual');assert.equal(mixed.topic,'casual-mixed');assert.deepEqual(mixed.inquiryFactIds,[]);assert.equal(questionEvent('What changed? and what is your favorite food?',mixed),null);
   const history=[{question:'What changed?',answer:fact.answer},{question:'What is your favorite color?',answer:casual.answer,kind:'casual'}];
-  assert.match(ask('Why?',scenario,history).answer,/desk|move|display cable/iu);
-  assert.doesNotMatch(ask('Why?',scenario,history).answer,/teal|favorite/iu);
+  assert.equal(ask('Why?',scenario,history).kind,'casual');
+  assert.match(ask('Why?',scenario,history).answer,/teal/u);
+  assert.deepEqual(ask('Why?',scenario,history).inquiryFactIds,[]);
   assert.equal(ask('What about that one?',scenario,[history[1]]).kind,'clarify');
 });
 

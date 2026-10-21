@@ -1,19 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker,{handleRequesterFreeRequest,createRequesterFreeRateLimiter} from '../worker-requester/worker.js';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+import worker,{handleRequesterRequest,createRequesterRateLimiter} from '../worker-requester/worker.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {requesterPersona} from '../src/requester-persona.js';
 import {REQUESTER_TOPICS,requesterTopicInstruction} from '../src/requester-topics.js';
 
 const ORIGIN='https://www.colelearninglabs.com';
-const ENDPOINT='https://requester-free.example.workers.dev/api/requester';
+const ENDPOINT='https://requester.example.workers.dev/api/requester';
 const MODEL='@cf/meta/llama-3.1-8b-instruct-fp8-fast';
+const schema=readFileSync(new URL('../worker-requester/budget-schema.sql',import.meta.url),'utf8');
+function budgetFixture(){
+  const sqlite=new DatabaseSync(':memory:');sqlite.exec(schema);
+  return {sqlite,prepare(sql){return {async all(){return {success:true,results:sqlite.prepare(sql).all()};}};}};
+}
 function fixture(run=async()=>({response:'I enjoy oatmeal and berries in this fictional story.'})) {
   const calls=[];
-  const env={REQUESTER_ENABLED:'true',REQUESTER_FREE_ACCOUNT_CONFIRMED:'true',
+  const budget=budgetFixture();
+  const env={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',
+    REQUESTER_BUDGET:budget,
     REQUESTER_ALLOWED_ORIGINS:ORIGIN+',https://colelearninglabs.com,https://review-123.cole-learning-labs.pages.dev',
     AI:{run(...args){calls.push(args);return run(...args);}}};
-  const options={limiter:createRequesterFreeRateLimiter()};
+  const options={limiter:createRequesterRateLimiter()};
   function makeRequest({method='POST',body={scenarioId:'INC-101',topic:'breakfast'},url=ENDPOINT,headers={},signal,raw=false}={}) {
     const h=new Headers({Origin:ORIGIN,...(method==='POST'?{'Content-Type':'application/json'}:{}),...headers});
     for(const [key,value] of Object.entries(headers))if(value===null)h.delete(key);
@@ -21,17 +30,17 @@ function fixture(run=async()=>({response:'I enjoy oatmeal and berries in this fi
       ...(!['GET','HEAD'].includes(method)?{body:raw?body:JSON.stringify(body)}:{})});
   }
   async function request(settings={}) {
-    const response=await handleRequesterFreeRequest(makeRequest(settings),settings.selectedEnv||env,settings.dependencies||options);
+    const response=await handleRequesterRequest(makeRequest(settings),settings.selectedEnv||env,settings.dependencies||options);
     return {response,data:response.status===204?null:await response.json()};
   }
-  return {calls,env,options,makeRequest,request};
+  return {calls,budget,env,options,makeRequest,request};
 }
 
 test('disabled or unconfirmed configuration never reads the AI binding or starts inference',async()=>{
   const h=fixture();
-  for(const flags of [{REQUESTER_ENABLED:'false'},{REQUESTER_FREE_ACCOUNT_CONFIRMED:'false'},
-    {REQUESTER_ENABLED:true},{REQUESTER_FREE_ACCOUNT_CONFIRMED:true},
-    {REQUESTER_ENABLED:undefined},{REQUESTER_FREE_ACCOUNT_CONFIRMED:undefined}]){
+  for(const flags of [{REQUESTER_ENABLED:'false'},{REQUESTER_BILLING_REVIEWED:'false'},
+    {REQUESTER_ENABLED:true},{REQUESTER_BILLING_REVIEWED:true},
+    {REQUESTER_ENABLED:undefined},{REQUESTER_BILLING_REVIEWED:undefined}]){
     const env={...h.env,...flags,get AI(){assert.fail('Disabled gate accessed AI.');}};
     for(const method of ['GET','POST']){
       const result=await h.request({method,selectedEnv:env});
@@ -138,7 +147,7 @@ test('each fictional lab supplies only its authored persona and grade, never cas
   assert.equal(SCENARIOS.length,29);
   for(const scenario of SCENARIOS){
     const before=structuredClone(scenario),result=await h.request({body:{scenarioId:scenario.id,topic:'breakfast'},
-      dependencies:{limiter:createRequesterFreeRateLimiter()}});
+      dependencies:{limiter:createRequesterRateLimiter()}});
     assert.equal(result.response.status,200,scenario.id);
     const [model,input]=h.calls.at(-1),prompt=input.messages[0].content;
     assert.equal(model,MODEL);assert.equal(input.max_tokens,140);assert.equal(input.stream,false);
@@ -160,7 +169,7 @@ test('each fictional lab supplies only its authored persona and grade, never cas
 test('every accepted topic maps to a source-authored instruction and cannot select another provider',async()=>{
   const h=fixture();
   for(const topic of REQUESTER_TOPICS){
-    const r=await h.request({body:{scenarioId:'INC-101',topic:topic.id},dependencies:{limiter:createRequesterFreeRateLimiter()}});
+    const r=await h.request({body:{scenarioId:'INC-101',topic:topic.id},dependencies:{limiter:createRequesterRateLimiter()}});
     assert.equal(r.response.status,200,topic.id);
     const call=h.calls.at(-1);assert.equal(call.length,2,'No gateway or alternate billing options.');
     assert.equal(call[0],MODEL);assert.equal(call[1].messages[1].content,topic.instruction);
@@ -225,13 +234,13 @@ test('timeouts keep actual unfinished inference slots occupied and an aborted re
 });
 
 test('anonymous per-isolate backstops bound bursts, daily starts and concurrency without identity',()=>{
-  let time=Date.parse('2026-10-20T12:00:00Z');const limiter=createRequesterFreeRateLimiter({now:()=>time});
+  let time=Date.parse('2026-10-20T12:00:00Z');const limiter=createRequesterRateLimiter({now:()=>time});
   const first=limiter.acquire(),second=limiter.acquire();assert.ok(first&&second);assert.equal(limiter.acquire(),null);
   first();first();const third=limiter.acquire();assert.ok(third);second();third();
-  const burst=createRequesterFreeRateLimiter({now:()=>time});
+  const burst=createRequesterRateLimiter({now:()=>time});
   for(let i=0;i<12;i++){const release=burst.acquire();assert.ok(release);release();}
   assert.equal(burst.acquire(),null);time+=60_000;const release=burst.acquire();assert.ok(release);release();
-  const daily=createRequesterFreeRateLimiter({now:()=>time});
+  const daily=createRequesterRateLimiter({now:()=>time});
   for(let i=0;i<500;i++){if(i%12===0)time+=60_000;const done=daily.acquire();assert.ok(done);done();}
   time+=60_000;assert.equal(daily.acquire(),null);time+=86_400_000;assert.ok(daily.acquire());
 });
@@ -240,4 +249,37 @@ test('default Worker wrapper cannot treat Cloudflare execution context as handle
   const h=fixture();
   const result=await worker.fetch(h.makeRequest(),h.env,{get limiter(){assert.fail('Execution context became a policy override.');}});
   assert.equal(result.status,200);assert.equal(h.calls.length,1);
+});
+
+test('all 4669 trusted lab-topic combinations stay inside the prompt byte ceiling',async()=>{
+  for(const scenario of SCENARIOS){
+    const h=fixture();
+    for(const topic of REQUESTER_TOPICS){
+      const r=await h.request({body:{scenarioId:scenario.id,topic:topic.id},dependencies:{limiter:createRequesterRateLimiter()}});
+      assert.equal(r.response.status,200,scenario.id+'/'+topic.id);
+      const input=h.calls.at(-1)[1];
+      assert.ok(new TextEncoder().encode(JSON.stringify(input.messages)).byteLength<=2500);
+      assert.equal(input.max_tokens,140);
+    }
+    h.budget.sqlite.close();
+  }
+});
+
+test('the persistent shared budget stops inference across fresh handlers and consumes failed calls',async()=>{
+  const h=fixture(async()=>{throw new Error('Synthetic provider failure');});
+  h.budget.sqlite.prepare("INSERT INTO requester_ai_budget VALUES (date('now'),5975),(date('now','+1 day'),5975)").run();
+  const first=await h.request();assert.equal(first.response.status,503);assert.equal(h.calls.length,1);
+  const second=await h.request({dependencies:{limiter:createRequesterRateLimiter()}});
+  assert.equal(second.response.status,429);assert.equal(second.data.error,'requester_budget_exhausted');
+  assert.equal(h.calls.length,1);
+  assert.deepEqual(h.budget.sqlite.prepare('SELECT reserved_neurons FROM requester_ai_budget ORDER BY day').all().map(row=>row.reserved_neurons),[6000,6000]);
+});
+
+test('missing, broken or ambiguous budget storage can never start uncounted inference',async()=>{
+  for(const storage of [undefined,{prepare(){throw new Error('Synthetic unavailable');}},
+    {prepare(){return {all:async()=>({success:true,results:[]})};}},
+    {prepare(){return {all:async()=>({success:true,results:[{day:'2099-01-01',reserved_neurons:25},{day:'2099-01-02',reserved_neurons:25}]})};}}]){
+    const h=fixture(),r=await h.request({selectedEnv:{...h.env,REQUESTER_BUDGET:storage}});
+    assert.ok([429,503].includes(r.response.status));assert.equal(h.calls.length,0);assert.equal(r.data.fallback,true);
+  }
 });

@@ -1,13 +1,15 @@
-/** Optional fictional conversation, deployed only to a verified Workers Free account. */
+/** Optional topic-only fictional conversation with shared early budget admission. */
 import {SCENARIOS} from '../src/scenarios.js';
 import {requesterPersona} from '../src/requester-persona.js';
 import {requesterTopicInstruction} from '../src/requester-topics.js';
 import {requesterTextIsPrivate} from '../src/interview.js';
+import {reserveRequesterBudget,requesterBudgetReservationCurrent} from './budget.js';
 
 const MODEL='@cf/meta/llama-3.1-8b-instruct-fp8-fast';
 const BODY_MAX=600;
 const ANSWER_MAX=600;
 const TIMEOUT_MS=12_000;
+const PROMPT_BYTES_MAX=2500;
 const LABS=new Map(SCENARIOS.map(scenario=>[scenario.id,scenario]));
 const compact=value=>value.replace(/\s+/gu,' ').trim();
 const bounded=(value,max)=>typeof value==='string'?compact(value).slice(0,max):'';
@@ -27,10 +29,10 @@ function response(body,status,origin='',extra={}) {
 const fallback=(status,error,origin='')=>response({enabled:false,error,fallback:true,accepted:false},status,origin);
 
 /** Anonymous per-isolate backstop, NOT a global quota or spending cap. Other
- * isolates/restarts have independent counters. Only the provider's enforced
- * Workers Free limits prevent paid inference overages; an environment flag
- * cannot inspect or enforce the actual account subscription. No identity is kept. */
-export function createRequesterFreeRateLimiter({now=Date.now}={}) {
+ * isolates/restarts have independent counters. The persistent early-budget
+ * D1 admission below is shared across isolates. Neither mechanism can
+ * control unrelated AI use or impose a provider-wide billing cap. No identity is kept. */
+export function createRequesterRateLimiter({now=Date.now}={}) {
   let minute=-1,day=-1,count=0,daily=0,inflight=0;
   return {acquire(){
     const time=now(),nextMinute=Math.floor(time/60_000),nextDay=Math.floor(time/86_400_000);
@@ -41,7 +43,7 @@ export function createRequesterFreeRateLimiter({now=Date.now}={}) {
     return ()=>{if(!released){released=true;inflight--;}};
   }};
 }
-const rateLimiter=createRequesterFreeRateLimiter();
+const rateLimiter=createRequesterRateLimiter();
 
 function allowedOrigins(value) {
   if(typeof value!=='string'||value.length>4000)return new Set();
@@ -121,7 +123,7 @@ async function limitedInference(promise,signal,timeoutMs) {
 
 /** Options are test dependencies only. No request field or Cloudflare execution
  * context can change approval, model, prompts, rate policy or inference options. */
-export async function handleRequesterFreeRequest(request,env,{limiter=rateLimiter,timeoutMs=TIMEOUT_MS}={}) {
+export async function handleRequesterRequest(request,env,{limiter=rateLimiter,timeoutMs=TIMEOUT_MS}={}) {
   let origin='';
   try{
     const url=new URL(request.url);
@@ -130,9 +132,9 @@ export async function handleRequesterFreeRequest(request,env,{limiter=rateLimite
     const candidate=request.headers.get('Origin');
     if(!candidate||!allowedOrigins(env?.REQUESTER_ALLOWED_ORIGINS).has(candidate))fail(403,'origin_not_allowed');
     origin=candidate;
-    // These explicit operator assertions do not detect a plan upgrade. Deploy
-    // only after independently verifying Workers Free, and keep it Free.
-    if(env?.REQUESTER_ENABLED!=='true'||env?.REQUESTER_FREE_ACCOUNT_CONFIRMED!=='true')fail(503,'requester_not_enabled');
+    // Billing review confirms the fixed model and shared ledger, not a provider
+    // spending cap. Other AI apps in this Paid account still share its allowance.
+    if(env?.REQUESTER_ENABLED!=='true'||env?.REQUESTER_BILLING_REVIEWED!=='true')fail(503,'requester_not_enabled');
     if(request.headers.has('Cookie')||request.headers.has('Authorization'))fail(403,'credentials_not_allowed');
     if(!['GET','POST','OPTIONS'].includes(request.method))return response({enabled:false,error:'method_not_allowed',fallback:true,accepted:false},405,origin,{Allow:'GET, POST, OPTIONS'});
     if(request.method==='OPTIONS'){
@@ -147,16 +149,25 @@ export async function handleRequesterFreeRequest(request,env,{limiter=rateLimite
       if(request.headers.has('Content-Encoding'))fail(415,'encoded_body_not_allowed');
     }
     const body=request.method==='POST'?await readBody(request):null;
-    if(typeof env?.AI?.run!=='function')fail(503,'requester_not_configured');
+    if(typeof env?.AI?.run!=='function'||typeof env?.REQUESTER_BUDGET?.prepare!=='function')fail(503,'requester_not_configured');
     if(request.method==='GET')return response({enabled:true,provider:'cloudflare-workers-ai',requiresConsent:true},200,origin);
     if(request.signal.aborted)fail(499,'request_cancelled');
     const release=limiter.acquire();if(!release)fail(429,'requester_rate_limited');
     const {scenario,profile,instruction}=body;
+    const messages=[{role:'system',content:instructions(scenario,profile)},{role:'user',content:instruction}];
+    if(new TextEncoder().encode(JSON.stringify(messages)).byteLength>PROMPT_BYTES_MAX){release();fail(503,'requester_prompt_limit');}
+    // A successful committed reservation is mandatory before inference. Errors,
+    // timeouts, cancellation and rejected output never refund a reservation.
+    const reservation=await reserveRequesterBudget(env.REQUESTER_BUDGET);
+    if(!reservation.ok){release();fail(reservation.error==='requester_budget_exhausted'?429:503,reservation.error);}
+    if(request.signal.aborted){release();fail(499,'request_cancelled');}
+    if(!requesterBudgetReservationCurrent(reservation)){release();fail(429,'requester_budget_rollover');}
     // One fixed, non-streaming binding call, without gateway, retries, tools,
     // alternate provider, caller text, requested model or requested token limit.
-    const inference=Promise.resolve().then(()=>env.AI.run(MODEL,{messages:[
-      {role:'system',content:instructions(scenario,profile)},{role:'user',content:instruction}
-    ],max_tokens:140,stream:false}));
+    const inference=Promise.resolve().then(()=>{
+      if(request.signal.aborted||!requesterBudgetReservationCurrent(reservation))throw new RequesterError(429,'requester_budget_rollover');
+      return env.AI.run(MODEL,{messages,max_tokens:140,stream:false});
+    });
     // A deadline does not guarantee provider cancellation. Keep its concurrency
     // slot until the actual invocation settles, even after a timeout or abort.
     void inference.then(release,release);
@@ -178,4 +189,4 @@ export async function handleRequesterFreeRequest(request,env,{limiter=rateLimite
 
 // Cloudflare passes an execution context as argument three. Do not treat it as
 // the test dependency object, or permit it to override handler policy.
-export default {fetch(request,env){return handleRequesterFreeRequest(request,env);}};
+export default {fetch(request,env){return handleRequesterRequest(request,env);}};
