@@ -1,4 +1,4 @@
-import { ASSEMBLY_FASTENERS, normalizeAssemblyState } from './assembly-model.js?release=20261021-chat27b';
+import { ASSEMBLY_FASTENERS, normalizeAssemblyState } from './assembly-model.js?release=20261021-chat27c';
 
 /** Fixed tool choices shared by the accessible controls and the 3D workbench. */
 export const ASSEMBLY_TOOLS = Object.freeze([

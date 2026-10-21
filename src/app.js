@@ -1,24 +1,24 @@
-import {SCENARIOS} from './scenarios.js?release=20261021-chat27b';
-import {labLanguage} from './lab-language.js?release=20261021-chat27b';
-import {requesterPersona} from './requester-persona.js?release=20261021-chat27b';
-import {mountRequesterChat} from './requester-chat.js?release=20261021-chat27b';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261021-chat27b';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261021-chat27b';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261021-chat27b';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261021-chat27b';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261021-chat27b';
-import {normalizeLabRecord} from './records.js?release=20261021-chat27b';
-import {privacyPage} from './privacy.js?release=20261021-chat27b';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261021-chat27b';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261021-chat27b';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261021-chat27b';
+import {SCENARIOS} from './scenarios.js?release=20261021-chat27c';
+import {labLanguage} from './lab-language.js?release=20261021-chat27c';
+import {requesterPersona} from './requester-persona.js?release=20261021-chat27c';
+import {mountRequesterChat} from './requester-chat.js?release=20261021-chat27c';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261021-chat27c';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261021-chat27c';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261021-chat27c';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261021-chat27c';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261021-chat27c';
+import {normalizeLabRecord} from './records.js?release=20261021-chat27c';
+import {privacyPage} from './privacy.js?release=20261021-chat27c';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261021-chat27c';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261021-chat27c';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261021-chat27c';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261021-chat27b';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261021-chat27b';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261021-chat27b';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261021-chat27b';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261021-chat27b';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261021-chat27b';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261021-chat27c';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261021-chat27c';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261021-chat27c';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261021-chat27c';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261021-chat27c';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261021-chat27c';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -337,7 +337,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261021-chat27b');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261021-chat27c');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -349,7 +349,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261021-chat27b');
+      const cryptoModule=await import('./report-crypto.js?release=20261021-chat27c');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;

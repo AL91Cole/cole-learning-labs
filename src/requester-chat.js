@@ -1,6 +1,6 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261021-chat27b';
-import {requesterTopic} from './requester-topics.js?release=20261021-chat27b';
-import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261021-chat27b';
+import {requesterTextIsPrivate} from './interview.js?release=20261021-chat27c';
+import {requesterTopic} from './requester-topics.js?release=20261021-chat27c';
+import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261021-chat27c';
 
 // Page memory only: an off choice or automatic fallback survives lab changes.
 const pagePreference={enabled:true};
