@@ -34,6 +34,25 @@ test('lesson timing totals match all supported classroom lengths and modes',()=>
   assert.equal(invalid.duration,40);assert.equal(invalid.mode,'guided');assert.equal(invalid.grouping,'pairs');
 });
 
+test('new coding investigations open learning supports and bounded teacher preparation in every mode',()=>{
+  for(const id of ['CODE-504','CODE-505','CODE-506']){
+    const scenario=SCENARIOS.find(item=>item.id===id);
+    assert.ok(scenario, id+' must be a selectable public investigation');
+    for(const mode of learningModes){
+      const plan=buildLessonPlan(scenario,{mode:mode.id,duration:20});
+      assert.equal(plan.id,id);
+      assert.equal(plan.link,`#lab/${id}?mode=${mode.id}`);
+      assert.match(renderLabLearning(scenario,mode.id),/Words you can tap to define/);
+      const prompt=buildTeacherPrompt({...scenario,brief:'PRIVATE_DRAFT',requester:'PRIVATE_NAME'}, {support:mode.id});
+      assert.ok(prompt.includes('Public simulation case: '+id+'.'));
+      assert.doesNotMatch(prompt,/PRIVATE_/);
+      assert.match(prompt,/not a grading decision/);
+    }
+  }
+  const rover=lessonFor(SCENARIOS.find(item=>item.id==='CODE-506'));
+  assert.ok(rover.vocabulary.some(item=>item.term==='Accumulator'));
+});
+
 test('assignment URLs accept only reviewed case identities and a bounded support mode',()=>{
   assert.equal(lessonLink(SCENARIOS[0],'independent'),'#lab/INC-101?mode=independent');
   assert.equal(lessonLink(SCENARIOS[0],'challenge&student=private'),'#lab/INC-101?mode=guided');

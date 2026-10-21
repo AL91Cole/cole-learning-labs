@@ -41,7 +41,7 @@ test('the homepage explains its counts, real privacy boundaries, and manual repo
   assert.match(html,new RegExp(`<b>${FOUNDATION_LABS.length+SCENARIOS.length}</b><span>learning activities`));
   assert.match(html,new RegExp(`<b>${FOUNDATION_LABS.length}</b><span>starter modules`));
   assert.match(html,new RegExp(`<b>${SCENARIOS.length}</b><span>ticket investigations`));
-  for(const copy of ['No account required for public labs','Practice stays on this device','School IT review available','after consent','downloaded reports','approved LMS'])assert.ok(html.includes(copy),copy);
+  for(const copy of ['No account required for public labs','Practice stays on this device','School IT review available','turn cloud replies off','downloaded reports','approved LMS'])assert.ok(html.includes(copy),copy);
   assert.match(html,/preview your report.*\.txt.*review it for personal information.*upload/iu);
   assert.doesNotMatch(html,/zero PII|FERPA.compliant|COPPA.compliant|automatically.*Google Classroom|guaranteed school approval/iu);
   assert.deepEqual(h.store,h.before);

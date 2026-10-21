@@ -9,20 +9,37 @@ const scenario=SCENARIOS.find(item=>item.id==='INC-101');
 const ask=(question,entry=scenario,history=[])=>answerQuestion(entry,question,Object.freeze({pcOn:false,acConnected:false,ramSeated:false,booted:false,documentOpened:false}),history);
 
 test('every shipped lab has a consistent individual fictional character card, without private learner data',()=>{
-  assert.equal(SCENARIOS.length,29);
+  assert.equal(SCENARIOS.length,32);
   const focuses=new Set(),greetings=new Set(),moods=new Set();
   for(const entry of SCENARIOS){
     const profile=requesterPersona(entry);
     assert.ok(profile,entry.id);assert.equal(requesterPersona(entry.id),profile);assert.equal(Object.isFrozen(profile),true);
-    assert.match(profile.intro,/fictional.*made up.*case evidence/iu);
+    assert.ok(profile.intro.includes(profile.name));
+    assert.ok(profile.intro.includes(profile.role.toLowerCase()));
+    assert.ok(profile.intro.includes(profile.focus));
+    assert.doesNotMatch(profile.intro,/(?:am|is) (?:a |the )?fictional|my fictional|made up|written practice|not a real person/iu);
     for(const value of Object.values(profile))assert.ok(typeof value==='string'&&value.length>0&&value.length<=300,entry.id);
     focuses.add(profile.focus);greetings.add(ask('Hello!',entry).answer);moods.add(ask('How are you?',entry).answer);
     assert.match(ask('What is your name?',entry).answer,new RegExp(profile.name.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&'),'u'));
     assert.match(ask('What did you have for breakfast?',entry).answer,new RegExp(profile.breakfast,'u'));
   }
-  assert.equal(focuses.size,29);assert.equal(greetings.size,29);assert.equal(moods.size,29);
+  assert.equal(focuses.size,SCENARIOS.length);assert.equal(greetings.size,SCENARIOS.length);assert.equal(moods.size,SCENARIOS.length);
   assert.equal(requesterPersona('UNKNOWN'),null);assert.equal(requesterPersona('__proto__'),null);
   assert.equal(requesterPersona('INC-102').breakfast,requesterPersona('INC-103').breakfast,'The same named fictional teacher keeps a consistent backstory.');
+});
+
+test('ordinary conversation stays natural while direct identity and unknown-detail questions remain honest',()=>{
+  for(const entry of SCENARIOS){
+    for(const question of ['What is your name?','What is your role?','How can I help you?','Can we chat?','I feel frustrated','What is your favorite constellation?']){
+      const reply=ask(question,entry);
+      assert.equal(reply.kind,'casual',entry.id+'/'+question);
+      assert.doesNotMatch(reply.answer,/my fictional (?:role|character)|(?:am|is) (?:a |the )?fictional|written practice character|not a real person/iu);
+      assert.equal(questionEvent(question,reply),null);
+    }
+    assert.match(ask('Are you real?',entry).answer,/character in this technology lab.*rather than a person/iu);
+    assert.match(ask('Can you see me?',entry).answer,/can.t see or hear you/iu);
+    assert.match(ask('How old are you?',entry).answer,/detail isn.t provided/iu);
+  }
 });
 
 test('broad everyday conversation stays explicitly ungraded and separate from case events in every lab',()=>{

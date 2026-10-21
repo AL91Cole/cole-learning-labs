@@ -1,12 +1,12 @@
-import { resolveQuestion } from './conversation.js?release=20261021-accessibility26';
-import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261021-accessibility26';
+import { resolveQuestion } from './conversation.js?release=20261021-chat27';
+import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261021-chat27';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
-const PRIVACY_NOTICE = 'Offline replies and the prompt audit use fixed local checks. Case evidence stays authored. Optional Cloudflare AI receives only a known lab ID and an authored topic code after consent; your typed question stays on this page. Keep personal details out; saving and submission have separate controls.';
-const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
-const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
+const PRIVACY_NOTICE = 'Case replies use local facts. Cloud replies start on for supported extra topics after an availability check; you can turn them off. Cloudflare receives only the lab ID and a fixed topic code, never your typed words or work. Extra chat stays out of saved reports.';
+const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
+const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();
 const bounded = text => text.length <= ANSWER_MAX ? text : text.slice(0, ANSWER_MAX - 1).trimEnd() + '…';
 const response = (answer, topic, kind = 'answer', accepted = true) => ({ accepted, answer:bounded(answer), kind, topic });
@@ -352,7 +352,7 @@ function answerOne(scenario, question, state, history) {
   }
   if (kind === 'next') {
     const clue = nextClue(scenario,context);
-    return withSuggestions(response('I would check ' + (clue ? '“' + clue.label + '”' : 'the visible request and clues') + ' next. ' + (clue?.text ? clue.text + ' ' : '') + 'Compare this evidence with your hypothesis before one change in the workbench.','conversation-next'),scenario,[context.question]);
+    return withSuggestions(response('I would check ' + (clue ? '“' + clue.label + '”' : 'the visible request and clues') + ' next. Compare this evidence with your hypothesis before one change in the workbench. ' + (clue?.text || ''),'conversation-next'),scenario,[context.question]);
   }
   if (kind === 'why') return response('Here is the evidence I can point to: ' + context.reply.answer + ' Use that observation to decide what to test; it does not prove a cause on its own.','conversation-evidence');
   if (kind === 'simple') {

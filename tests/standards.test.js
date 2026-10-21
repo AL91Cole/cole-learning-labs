@@ -25,7 +25,7 @@ function fixture(){
 
 test('mapping examples remain real investigations in the declared pathway and grade bands reflect source metadata',()=>{
   assert.deepEqual(STANDARDS_ALIGNMENTS.map(row=>row.pathway),[...new Set(SCENARIOS.map(scenario=>scenario.track))]);
-  assert.equal(SCENARIOS.length,29);assert.equal(STANDARDS_ALIGNMENTS.length,5);
+  assert.equal(SCENARIOS.length,32);assert.equal(STANDARDS_ALIGNMENTS.length,5);
   const nys=new Set(['Impacts of Computing','Computational Thinking','Networks and Systems Design','Cybersecurity','Digital Literacy']);
   const csta=new Set(['Algorithms & Design','Programming','Data & Analysis','Systems & Security','Computing & Society']);
   for(const row of STANDARDS_ALIGNMENTS){
@@ -53,7 +53,7 @@ test('rendered table exposes labeled filters, source versions, grade distinction
   for(const key of ['pathway','nys','csta','grade']){
     assert.ok(html.includes(`for="standards-${key}"`));assert.ok(html.includes(`id="standards-${key}" data-standards-${key}`));
   }
-  assert.match(html,/<caption>.*29 fictional investigations/u);assert.match(html,/scope="col"/u);assert.match(html,/scope="row"/u);
+  assert.match(html,/<caption>.*32 fictional investigations/u);assert.match(html,/scope="col"/u);assert.match(html,/scope="row"/u);
   assert.match(html,/role="region" tabindex="0"/u);assert.match(html,/role="status" aria-live="polite"/u);
   assert.match(html,/2026 CSTA PK–12/u);assert.match(html,/middle school \(6–8\) and high school \(9–12\)/u);
   assert.match(html,/not an official NYSED or CSTA review/u);assert.match(html,/No individual standard codes are asserted/u);

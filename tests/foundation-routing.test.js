@@ -28,7 +28,7 @@ function fixture(){
 }
 
 test('five beginner routes keep the established investigation catalog and next tickets intact',()=>{
-  assert.equal(SCENARIOS.length,29);
+  assert.equal(SCENARIOS.length,32);
   assert.deepEqual(FOUNDATION_LABS.map(lab=>lab.id),['hardware','network','ai','security','coding']);
   const f=fixture();
   for(const lab of FOUNDATION_LABS){

@@ -1,16 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CODING_SCENARIOS,supportsCodingLab,executeCoding,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,getCodingMission,renderCoding,codingDiagnostic} from '../src/coding-lab.js';
+import {CODING_SCENARIOS,CODING_LANGUAGES,codingFixtureCount,supportsCodingLab,executeCoding,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,getCodingMission,renderCoding,codingDiagnostic} from '../src/coding-lab.js';
 
 const solutions={
   'CODE-501':'let total = quantity * 3;\nprint(total);',
   'CODE-502':'if (temperature < 20) { print("Heating"); } else { if (temperature <= 25) { print("Comfortable"); } else { print("Cooling"); } }',
-  'CODE-503':'let station = 1;\nrepeat(stations) { print("Ready " + station); station = station + 1; }'
+  'CODE-503':'let station = 1;\nrepeat(stations) { print("Ready " + station); station = station + 1; }',
+  'CODE-504':'let energy = snacks * 4; console.log("Energy " + energy);',
+  'CODE-505':'if (points < 50) { console.log("Try again"); } else if (points < 100) { console.log("Sticker"); } else { console.log("Badge"); }',
+  'CODE-506':'let energy = 0; for (let leg = 1; leg <= steps; leg++) { energy = energy + leg; } console.log(energy);'
 };
 const run=(id,source)=>applyCodingAction(id,initialCodingState(id),'run-check',{code:source}).state;
 
-test('three coding cases expose changing inputs without student identifiers or teacher rubrics',()=>{
-  assert.equal(CODING_SCENARIOS.length,3);
+test('six coding cases expose changing inputs without student identifiers or teacher rubrics',()=>{
+  assert.equal(CODING_SCENARIOS.length,6);
   for(const scenario of CODING_SCENARIOS) {
     assert.equal(scenario.track,'coding');assert.ok(supportsCodingLab(scenario.id));
     assert.equal(scenario.clues.length,3);assert.equal(scenario.questions.length,2);
@@ -33,7 +36,7 @@ for(const id of Object.keys(solutions)) {
     assert.equal(mission.passed,mission.total);assert.equal(mission.stage,'Verified');
   });
   test(id+' hardcoded output cannot pass all fixtures',()=>{
-    const fixed=id==='CODE-501'?'print(6);':id==='CODE-502'?'print("Heating");':'print("Ready 1");';
+    const fixed={'CODE-501':'print(6);','CODE-502':'print("Heating");','CODE-503':'print("Ready 1");','CODE-504':'print("Energy 0");','CODE-505':'print("Try again");','CODE-506':'print(0);'}[id];
     const state=run(id,fixed);assert.ok(state.results.some(result=>result.ok));assert.equal(verifyCoding(id,state).ok,false);
   });
 }
@@ -74,7 +77,7 @@ test('device, network, imports, execution APIs and prototype access are unavaila
   const attempts=['fetch("https://example.test");','window.location = "x";','document.write("x");','eval("print(1)");','Function("return 1");','import("x");','let x = constructor;','let x = __proto__;','new Worker("x");','process.exit();','localStorage.clear();','console["log"](1);','print((1).constructor);'];
   for(const code of attempts) {const result=executeCoding(code);assert.equal(result.ok,false,code);assert.deepEqual(result.output,[],code);}
 });
-test('while, for, functions, arrays and objects are explicitly outside the language',()=>{
+test('unrestricted loops, functions, arrays and objects are explicitly outside the language',()=>{
   for(const code of ['while(true) {}','for (;;) {}','function go() {}','let a = [];','let a = {};']) assert.equal(executeCoding(code).ok,false,code);
 });
 test('repeat cannot run indefinitely or exceed its explicit count limits',()=>{

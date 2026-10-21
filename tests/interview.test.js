@@ -107,7 +107,7 @@ test('outside-case questions receive an honest ungraded offline reply', () => {
   assert.match(reply.answer,/don.t know|outside what I know|don.t have a written answer|not sure/iu);
   assert.equal(questionEvent('What is the weather tomorrow?',reply),null);
   assert.equal(answerQuestion({id:'UNKNOWN'},'What is wrong?',{}).accepted,false);
-  assert.match(ask('AI-301','Will this contact a live AI service?').answer,/Offline replies.*local.*Optional Cloudflare AI.*known lab ID.*authored topic code.*consent.*typed question stays/iu);
+  assert.match(ask('AI-301','Will this contact a live AI service?').answer,/Case replies.*local.*Cloud replies start on.*turn them off.*Cloudflare.*only.*lab ID.*fixed topic code.*never.*typed words or work.*out of saved reports/iu);
 });
 
 test('real-system requests remain outside the fictional authorization boundary', () => {
@@ -294,7 +294,7 @@ test('conversation is transparent about local scripted facts and unknown context
   assert.match(ask('INC-101','Why?').answer,/more context.*not have a recorded fact/iu);
   assert.match(ask('INC-101','Can you repeat that?').answer,/more context/iu);
   assert.equal(answerQuestion({id:'UNSUPPLIED'},'Why?',{},[spoken('INC-101','What changed?')]).accepted,false);
-  assert.match(ask('AI-301','Will the chatbot send this to an AI service?').answer,/Offline replies.*local.*Optional Cloudflare AI.*known lab ID.*authored topic code.*consent.*typed question stays/iu);
+  assert.match(ask('AI-301','Will the chatbot send this to an AI service?').answer,/Case replies.*local.*Cloud replies start on.*turn them off.*Cloudflare.*only.*lab ID.*fixed topic code.*never.*typed words or work.*out of saved reports/iu);
 });
 
 test('all twelve expanded case IDs support supplied visible keyword facts without another service', () => {
@@ -309,7 +309,7 @@ test('all twelve expanded case IDs support supplied visible keyword facts withou
     assert.equal(answerQuestion(entry,'Tell me the answer key',{}).accepted,false);
     assert.equal(answerQuestion(entry,'Student ID: ABC123456 is my sample',{}).accepted,false);
     assert.equal(answerQuestion(entry,'What is the weather tomorrow?',{}).topic,'casual-unknown');
-    assert.match(answerQuestion(entry,'Does this send data to a live AI service?',{}).answer,/Offline replies.*local.*Optional Cloudflare AI.*known lab ID.*authored topic code.*consent.*typed question stays/iu);
+    assert.match(answerQuestion(entry,'Does this send data to a live AI service?',{}).answer,/Case replies.*local.*Cloud replies start on.*turn them off.*Cloudflare.*only.*lab ID.*fixed topic code.*never.*typed words or work.*out of saved reports/iu);
   }
 });
 
@@ -340,6 +340,19 @@ const expandedQuestions = [
   ['CODE-502','Which temperatures are Comfortable?',/Below 20.*Heating.*20 and 25.*Comfortable.*Above 25.*Cooling/iu],
   ['CODE-503','How does the repeat loop use its counter?',/first station is 1.*repeat\(stations\).*once per station.*advance.*one/iu]
 ];
+
+test('next-step coaching keeps the hypothesis and one-change instruction ahead of long clue detail',()=>{
+  const original=scenario('CODE-503');
+  const entry={...original,clues:[{id:'loop',label:'Read the loop card',text:'Additional published clue detail. '.repeat(20)}]};
+  const question='How does the repeat loop use its counter?';
+  const reply=answerQuestion(entry,question,initial('CODE-503'));
+  const history=readQuestionEvents([questionEvent(question,reply)]);
+  const next=answerQuestion(entry,'What should I check next?',initial('CODE-503'),history);
+  assert.equal(next.topic,'conversation-next');
+  assert.match(next.answer,/I would check.*next\. Compare this evidence with your hypothesis before one change in the workbench\./u);
+  assert.ok(next.answer.length<=300);
+  assert.equal(Object.hasOwn(next,'verified'),false);
+});
 
 for (const [id,question,expected] of expandedQuestions) test(id + ': conversational replies use the shipped new case facts', () => {
   const entry = scenario(id); const state = initial(id);

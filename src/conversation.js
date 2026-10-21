@@ -1,5 +1,5 @@
 /** Small, on-device language resolver. It selects an authored case question; it never invents a fact. */
-const IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503']);
+const IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const compact = value => value.replace(/\s+/gu,' ').trim();
 const valid = value => typeof value === 'string' && value.length <= 240 && compact(value).length > 0 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value);
 // Correct only a few unambiguous classroom words, rather than guessing arbitrary names or text.
@@ -147,6 +147,18 @@ const rules = {
     rule('coding.sequence',/\b(?:first|last|zero|start|begin|ready|extra|line|lines|number|numbering|one too many|off by one)\b/u,'What should the first line be?'),
     rule('coding.loop',/\b(?:loop|repeat|count|counter|again|iteration|times|advance)\b/u,'How does repeat work?'),
     rule('coding.stations',/\b(?:station|stations|room|input|fixture|size|supplied|change)\b/u,'How many stations are supplied by each input fixture?')
+  ],
+  'CODE-504':[
+    rule('coding.pet-scope',/\b(?:real pet|real food|feeding|animal care|animal-care)\b/u,'Is this advice about feeding a pet?'),
+    rule('coding.energy',/\b(?:snack|snacks|token|tokens|energy|multiply|times|zero|total)\b/u,'How much energy does a token add?')
+  ],
+  'CODE-505':[
+    rule('coding.prize-boundary',/\b(?:49|50|99|100|fifty|hundred|exactly|boundary|boundaries|threshold|prize|sticker|badge)\b/u,'What happens at exactly 50 or 100?'),
+    rule('coding.score-input',/\b(?:point|points|score|input|fixture|change|edit|win)\b/u,'Can I change the score to win?')
+  ],
+  'CODE-506':[
+    rule('coding.rover-output',/\b(?:print|output|display|total|sum|accumulate|accumulation|empty|zero)\b/u,'When should the program print?'),
+    rule('coding.rover-route',/\b(?:first|last|leg|legs|step|steps|route|start|stop|counter|loop|range|boundary)\b/u,'What are the first and last legs?')
   ]
 };
 

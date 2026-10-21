@@ -33,3 +33,26 @@
 .requester-options{background:#142e3c;border-color:#426573;border-radius:13px}.requester-options summary{font-size:1rem;color:#b2ecd8}.requester-options p,.requester-choice{font-size:.96rem;line-height:1.7}.requester-options [role=status]{font-size:.94rem;color:#c1eddf}
 .single-page-lab .interview-pair p{font-size:1rem;line-height:1.75;padding:14px 16px}.single-page-lab .interview-pair p:first-child{background:#1b4652;border-color:#4f8290}.single-page-lab .interview-pair p:last-child{background:#163540;border-color:#3a6571}.interview-pair strong{font-size:.79rem;color:#b9eedb;letter-spacing:.025em}.interview-suggestions{border-radius:12px;background:#15323d;border-color:#416672}.interview-mode-note{font-size:.96rem;line-height:1.7}
 .single-page-lab.larger-reading .interview-pair p,.single-page-lab.larger-reading .requester-intro,.single-page-lab.larger-reading .requester-options p{font-size:1.14rem}
+
+/* The conversation stays open. Only its eight recent pairs scroll; the
+   composer remains in normal document flow immediately underneath. */
+.single-page-lab .conversation-history{margin:18px 0 12px;min-width:0}
+.conversation-history>h3{font-size:1.08rem;line-height:1.4;margin:0 0 10px;color:#dceee9}
+.interview-history{display:block;min-height:150px;max-height:clamp(240px,42dvh,420px);overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:14px;background:#0d2230;border:1px solid #416573;border-radius:14px;scroll-behavior:auto;overflow-wrap:anywhere}
+.interview-history:focus-visible{outline:3px solid #a3f1db;outline-offset:3px}
+.interview-pair{display:flex;flex-direction:column;gap:10px;margin:0 0 18px;min-width:0}
+.interview-pair:last-child{margin-bottom:0}
+.interview-turn{max-width:92%;min-width:0;padding:12px 15px;border:1px solid #548393;border-radius:14px;overflow-wrap:anywhere}
+.interview-user{align-self:flex-end;background:#234c5a;border-bottom-right-radius:3px}
+.interview-requester{align-self:flex-start;background:#183947;border-color:#406575;border-bottom-left-radius:3px}
+.single-page-lab .interview-pair .interview-turn p,.single-page-lab .interview-pair .interview-turn p:first-child,.single-page-lab .interview-pair .interview-turn p:last-child{max-width:none;margin:0;padding:0;border:0;border-radius:0;background:transparent;font-size:1rem;line-height:1.7;color:#eef5f4}
+.interview-turn .interview-speaker{display:block;margin:0 0 5px;font-size:.9rem;line-height:1.45;color:#c1f2e1;letter-spacing:0}
+.interview-source{display:block;margin-top:7px;font-size:.86rem;line-height:1.5;color:#c4dcdf}
+.single-page-lab .conversation-empty,.single-page-lab .conversation-feedback{font-size:1rem;line-height:1.65;margin:0;color:#d0e5e7;padding:10px}
+.single-page-lab .conversation-feedback{border-left:3px solid #f1c574;background:#263b43;border-radius:5px;margin-top:12px}
+.requester-composer{display:grid;gap:10px;margin:0;padding-top:5px}.requester-composer .lab-field{margin:0}.requester-composer textarea{width:100%;min-height:92px;resize:vertical}.requester-composer>.button{justify-self:end;min-height:48px;min-width:140px;font-size:1rem}
+.requester-options .requester-cloud-note{font-size:1rem;line-height:1.65;margin:0 0 12px}
+.requester-mode-actions{gap:9px;align-items:center}.requester-mode-actions [data-ai-toggle]{min-height:48px;font-size:1rem;min-width:155px}.requester-mode-actions [data-ai-toggle][aria-pressed=true]{background:#17695e;border-color:#82d5bc;color:#f3fff7}.requester-mode-actions [data-ai-toggle][aria-pressed=false]{background:#203b4d;border-color:#7a9da8;color:#e4f0f2}.requester-mode-actions [data-ai-check]{font-size:1rem;min-height:48px}.requester-options [data-ai-status]{margin:12px 0 0}
+.single-page-lab.larger-reading .interview-pair .interview-turn p{font-size:1.14rem}.single-page-lab.larger-reading .interview-source{font-size:1rem}
+@media(max-width:580px){.interview-history{max-height:clamp(240px,45dvh,360px);padding:11px;scrollbar-gutter:auto}.interview-turn{max-width:97%;padding:12px}.requester-composer>.button{width:100%;justify-self:stretch}.requester-mode-actions>*{flex:1 1 160px}}
+@media(forced-colors:active){.interview-history,.interview-turn,.conversation-feedback{border:1px solid CanvasText}.requester-mode-actions [data-ai-toggle][aria-pressed=true]{outline:2px solid Highlight;outline-offset:-4px}}

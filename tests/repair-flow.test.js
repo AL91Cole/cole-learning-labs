@@ -65,7 +65,7 @@ test('the initial application module graph does not download a 3D engine or scen
   assert.doesNotMatch([...seen].join('\n'),/\/(?:virtual-lab-scene|assembly-scene|babylon|three\.(?:module|core)(?:\.min)?)\.js(?:$|\n)/);
 });
 
-test('every investigation begins with the ticket and leaves optional help closed',()=>{
+test('every investigation begins with the ticket, exposes its core tasks, and leaves optional help closed',()=>{
   const rendered=pages();
   for(const scenario of SCENARIOS) {
     rendered.labView=null;
@@ -74,7 +74,10 @@ test('every investigation begins with the ticket and leaves optional help closed
     assert.ok(html.indexOf(esc(scenario.brief),request)<bench,scenario.id+' must present the actual ticket before repair');
     const firstRepairLink=html.indexOf('data-jump-section="2"',request);
     assert.ok(firstRepairLink>request&&firstRepairLink<html.indexOf('id="lab-learning"'),scenario.id+' needs a clear repair entry beside the ticket');
-    for(const name of ['lab-options','intake-questions','conversation-history','repair-notes','guide-plan','hypothesis-test','bench-log'])assert.doesNotMatch(detailTag(html,name),/\bopen(?:\s|=|>)/,scenario.id+' '+name);
+    for(const name of ['lab-options','intake-questions','bench-log'])assert.doesNotMatch(detailTag(html,name),/\bopen(?:\s|=|>)/,scenario.id+' '+name);
+    for(const name of ['repair-notes','guide-plan','hypothesis-test'])assert.match(detailTag(html,name),/\bopen(?:\s|=|>)/,scenario.id+' '+name);
+    assert.doesNotMatch(html,/<details\b[^>]*class="conversation-history"/u);
+    assert.ok(html.indexOf('id="interview-history"')<html.indexOf('id="question-form"'),scenario.id+' conversation must be visible above the composer');
     const modeHelp=enclosingDetails(html,'learning-mode');
     assert.equal(modeHelp.length,1,scenario.id+' practice settings belong in optional help');
     assert.doesNotMatch(modeHelp[0],/\bopen(?:\s|=|>)/,scenario.id);
