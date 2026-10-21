@@ -1,6 +1,6 @@
 # Chat and coding studio review - v2.27.0
 
-The final frontend cache key is `20261021-chat27b`. Its Worker build differs from deployed version `47e0fa28` only in five esbuild module-path comment lines; an exact line comparison found no executable-code changes. That reproducible cache-refreshed artifact is 151,827 bytes, SHA-256 `494a4fdbcadc0035d0954c66d33de56e9e7d4ebba9481c11de8cef7c7849179a`. The separately recorded 151,822-byte hash below identifies the actual deployed artifact.
+The final JavaScript cache key is `20261021-chat27b`; the chat stylesheet uses `20261021-chat27c` for its lighter, underlined privacy link. The Worker build differs from deployed version `47e0fa28` only in five esbuild module-path comment lines; an exact line comparison found no executable-code changes. That reproducible cache-refreshed artifact is 151,827 bytes, SHA-256 `494a4fdbcadc0035d0954c66d33de56e9e7d4ebba9481c11de8cef7c7849179a`. The separately recorded 151,822-byte hash below identifies the actual deployed artifact.
 
 This change adds three investigations to the existing coding pathway: CODE-504 Pixel Pet Snack Time (grades 7-8), CODE-505 Arcade Prize Patrol (grades 9-10), and CODE-506 Rover Energy Planner (grades 11-12). The catalog now contains 32 investigations, including six coding investigations, plus five separate starter modules.
 
