@@ -1,4 +1,4 @@
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261021-accessibility27';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261021-table27';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';

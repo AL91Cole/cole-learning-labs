@@ -1,24 +1,24 @@
-import {SCENARIOS} from './scenarios.js?release=20261021-accessibility27';
-import {labLanguage} from './lab-language.js?release=20261021-accessibility27';
-import {requesterPersona} from './requester-persona.js?release=20261021-accessibility27';
-import {mountRequesterChat} from './requester-chat.js?release=20261021-accessibility27';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261021-accessibility27';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261021-accessibility27';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261021-accessibility27';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261021-accessibility27';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261021-accessibility27';
-import {normalizeLabRecord} from './records.js?release=20261021-accessibility27';
-import {privacyPage} from './privacy.js?release=20261021-accessibility27';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261021-accessibility27';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261021-accessibility27';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261021-accessibility27';
+import {SCENARIOS} from './scenarios.js?release=20261021-table27';
+import {labLanguage} from './lab-language.js?release=20261021-table27';
+import {requesterPersona} from './requester-persona.js?release=20261021-table27';
+import {mountRequesterChat} from './requester-chat.js?release=20261021-table27';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261021-table27';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261021-table27';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261021-table27';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace} from './workspaces.js?release=20261021-table27';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261021-table27';
+import {normalizeLabRecord} from './records.js?release=20261021-table27';
+import {privacyPage} from './privacy.js?release=20261021-table27';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261021-table27';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261021-table27';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261021-table27';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261021-accessibility27';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261021-accessibility27';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261021-accessibility27';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261021-accessibility27';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261021-accessibility27';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261021-accessibility27';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261021-table27';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261021-table27';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261021-table27';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261021-table27';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261021-table27';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261021-table27';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -348,7 +348,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261021-accessibility27');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261021-table27');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -360,7 +360,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261021-accessibility27');
+      const cryptoModule=await import('./report-crypto.js?release=20261021-table27');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;
