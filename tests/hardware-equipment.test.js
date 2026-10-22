@@ -157,6 +157,22 @@ test('storage instruments distinguish data, power, missing original drive, and o
   assert.match(getHardwareReadouts('INC-104',state).storage.detail,/do not prove that the OS starts/);
 });
 
+test('the drive-cable case needs both connections while the memory and source cases keep one clear repair',()=>{
+  let state=initialHardwareState('INC-104');
+  assert.equal(state.originalDriveInstalled,true);assert.equal(state.sataDataConnected,false);assert.equal(state.sataPowerConnected,false);
+  for(const action of ['enable-assembly','power-off','unplug','asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-connect-sata-data','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1','plug-in','boot'])state=applyHardwareAction('INC-104',state,action).state;
+  assert.equal(state.booted,false);assert.equal(verifyHardware('INC-104',state).ok,false,'A data-only repair cannot power the original drive.');
+  assert.equal(getHardwareReadouts('INC-104',state).storage.value,'SATA power disconnected');
+  for(const action of ['power-off','unplug','asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-connect-sata-power','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1','plug-in','boot','open-document'])state=applyHardwareAction('INC-104',state,action).state;
+  assert.equal(verifyHardware('INC-104',state).ok,true);assert.equal(state.originalDriveInstalled,true);
+  let memory=initialHardwareState('INC-103');
+  for(const action of ['power-off','unplug','seat-ram','plug-in','boot','open-document'])memory=applyHardwareAction('INC-103',memory,action).state;
+  assert.equal(verifyHardware('INC-103',memory).ok,true,'The memory case remains a single seating problem.');
+  let source=initialHardwareState('INC-107');
+  for(const action of ['input-hdmi','open-document'])source=applyHardwareAction('INC-107',source,action).state;
+  assert.equal(verifyHardware('INC-107',source).ok,true);assert.equal(source.bootCount,0,'A source correction does not require a restart.');
+});
+
 test('held cables and selected instruments do not leak between bench roots or case changes',()=>{
   const a=bench('INC-101'),b=bench('INC-101');
   a.click({hwCable:'pickup'});

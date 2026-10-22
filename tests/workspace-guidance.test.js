@@ -167,6 +167,7 @@ test('test feedback explains a retry without changing the assessment result',()=
   const html=view(scenario,{...initialWorkspaceState(scenario.id),tested:true,checkRuns:1});
   assert.match(html,/Your latest test results/);
   assert.match(html,/A “Try again” result is a clue/);
-  assert.equal((html.match(/class="ws-fail"/g)||[]).length,3);
+  assert.equal((html.match(/class="ws-fail"/g)||[]).length,1,'Only the ownership check starts faulty.');
+  assert.equal((html.match(/class="ws-pass"/g)||[]).length,2,'Correct key and query protections remain working.');
   assert.doesNotMatch(html,/All checks passed/);
 });

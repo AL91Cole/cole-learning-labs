@@ -63,7 +63,7 @@ test('large classroom snapshots retain earned requester facts and restore a comp
   const other = questionEvent(longQuestion,answerQuestion(scenario,longQuestion));
   assert.ok(other && other.message.length <= 600);
   const events = [earned,...Array.from({length:99},(_,index) => ({...other,time:new Date(1000 + index).toISOString()}))];
-  const record = normalizeLabRecord(scenario,{state:deliveredHardware(),events,plan:'🧰'.repeat(1000),notes:'🧰'.repeat(2000),reflection:'🧰'.repeat(1000),closed:true});
+  const record = normalizeLabRecord(scenario,{state:deliveredHardware(),events,symptoms:'The monitor is powered but has no picture.',ideaSaved:true,plan:'🧰'.repeat(1000),notes:'🧰'.repeat(2000),reflection:'🧰'.repeat(1000),closed:true});
   const before = JSON.stringify(record);
   assert.equal(inquiryProgress(scenario,record.events).complete,true);
   assert.ok(new TextEncoder().encode(before).byteLength > 60000,'The fixture must exercise size trimming, not only the event count.');
@@ -78,7 +78,19 @@ test('large classroom snapshots retain earned requester facts and restore a comp
   const restored = normalizeLabRecord(scenario,snapshot);
   assert.equal(inquiryProgress(scenario,restored.events).complete,true);
   assert.equal(restored.closed,true);
-  assert.deepEqual(Object.keys(snapshot).sort(),['state','evidence','questions','plan','notes','reflection','events','verified','closed'].sort());
+  assert.deepEqual(Object.keys(snapshot).sort(),['state','evidence','questions','symptoms','plan','ideaSaved','notes','reflection','events','verified','closed'].sort());
+});
+
+test('classroom sharing retains saved symptoms and hypotheses and cannot award malformed save credit', () => {
+  const scenario=SCENARIOS.find(item=>item.id==='INC-102');
+  const source={symptoms:'The PC has no lights and makes no fan noise.',plan:'I think its power cable came loose during the move.',ideaSaved:true,events:[]};
+  const snapshot=progressSnapshot(source,scenario.id),restored=normalizeLabRecord(scenario,JSON.parse(JSON.stringify(snapshot)));
+  assert.equal(snapshot.symptoms,source.symptoms);assert.equal(snapshot.plan,source.plan);assert.equal(restored.ideaSaved,true);
+  for(const malformed of [{symptoms:[]},{plan:{}},{ideaSaved:'true'},{symptoms:'short'}]){
+    const invalid=progressSnapshot({...source,...malformed,closed:true},scenario.id);
+    assert.equal(invalid.ideaSaved,false);assert.equal(invalid.closed,false);
+    assert.equal(normalizeLabRecord(scenario,invalid).ideaSaved,false);
+  }
 });
 
 test('an oversized snapshot fails instead of deleting the only earned requester fact', () => {
@@ -122,7 +134,7 @@ async function connectedFixture(t,options={}) {
   let timerId=0,connection,restored=0;
   const fixture={
     requests,host,window:windowTarget,onPut:null,
-    record:normalizeLabRecord(SCENARIOS[0],{state:deliveredHardware(),notes:'This belongs to learner A.',closed:true,events:[questionEvent('What changed?',answerQuestion(SCENARIOS[0],'What changed?'))]}),
+    record:normalizeLabRecord(SCENARIOS[0],{state:deliveredHardware(),symptoms:'The monitor has power but shows no picture.',plan:'The display cable may be using the wrong output.',ideaSaved:true,notes:'This belongs to learner A.',closed:true,events:[questionEvent('What changed?',answerQuestion(SCENARIOS[0],'What changed?'))]}),
     setSelection(studentId=STUDENT_B,classId=CLASS_A) { values.set(CLASSROOM_ACTIVE_KEY,JSON.stringify({studentId,classId})); },
     removeSelection() { values.delete(CLASSROOM_ACTIVE_KEY); },
     button(label) { const found=host.find(node=>node.tagName==='button' && node.textContent===label);assert.ok(found,`Missing button: ${label}`);return found; },

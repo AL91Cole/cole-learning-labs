@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {learningRoute,labPageHash,mountLabLearning} from '../src/learning-tools.js';
 import {SCENARIOS} from '../src/scenarios.js';
-import {normalizeLabRecord} from '../src/records.js';
+import {normalizeLabRecord,workbenchProgress} from '../src/records.js';
+import {applyHardwareAction,verifyHardware} from '../src/hardware.js';
+import {readExperiments,observationSnapshot} from '../src/experiments.js';
 import {learningModes} from '../src/teaching.js';
 
 test('routes accept reviewed mode and sequence values while ignoring unrelated query information',()=>{
@@ -52,25 +54,102 @@ function viewFixture(t,hash='#lab/CODE-503/workbench?mode=guided&sequence=openin
       replaceChildren(...children){this.children=[...children];},append(...children){this.children.push(...children);},focus(){}});
     return nodes.get(key);
   }
-  const inputs=['predict','changed','observed','explain'].map(part=>{const input=node('experiment-'+part);input.dataset.experimentField=part;return input;});
+  const inputs=['predict','evidence','changed','observed','explain'].map(part=>{const input=node('experiment-'+part);input.dataset.experimentField=part;return input;});
   const host=node('#experiment-tools');
   let notebookMarkup='',notebookMounts=0;
   Object.defineProperty(host,'innerHTML',{get:()=>notebookMarkup,set(value){notebookMarkup=value;notebookMounts++;}});
-  host.querySelector=selector=>node('host:'+selector);
+  host.querySelector=selector=>{const field=/^\[data-experiment-field="([^"]+)"\]$/.exec(selector);return field?inputs.find(input=>input.dataset.experimentField===field[1]):node('host:'+selector);};
   host.querySelectorAll=selector=>selector==='[data-experiment-field]'?inputs:[];
   node('.lab-shell').dataset.section=String(learningRoute(hash).section||1);
   node('.lab-shell').classList={toggle(name,enabled){if(enabled)classes.add(name);else classes.delete(name);}};
   const root={querySelector:node};
   Object.defineProperty(root,'innerHTML',{set(){assert.fail('Switching support must not remount the student workspace.');}});
   const location={hash};
-  const globals={location,document:{createElement:tag=>node('created-'+tag+'-'+nodes.size),addEventListener:(event,handler)=>documentListeners.set(event,handler),removeEventListener:(event,handler)=>{if(documentListeners.get(event)===handler)documentListeners.delete(event);}},history:{replaceState(_state,_title,url){urls.push(url);location.hash=url;}}};
+
+  const emit=(type,detail)=>{for(const handler of [...(documentListeners.get(type)||[])])handler({type,detail});};
+  const globals={location,document:{createElement:tag=>node('created-'+tag+'-'+nodes.size),addEventListener(event,handler){if(!documentListeners.has(event))documentListeners.set(event,new Set());documentListeners.get(event).add(handler);},removeEventListener(event,handler){const handlers=documentListeners.get(event);handlers?.delete(handler);if(handlers?.size===0)documentListeners.delete(event);},dispatchEvent(event){emit(event.type,event.detail);}},history:{replaceState(_state,_title,url){urls.push(url);location.hash=url;}}};
   for(const [key,value] of Object.entries(globals)) {
     const descriptor=Object.getOwnPropertyDescriptor(globalThis,key);
     Object.defineProperty(globalThis,key,{value,configurable:true,writable:true});
     t.after(()=>{if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];});
   }
-  return {root,node,classes,inputs,documentListeners,urls,location,get notebookMounts(){return notebookMounts;}};
+  return {root,node,classes,inputs,documentListeners,urls,emit,location,get notebookMounts(){return notebookMounts;},
+    input(part,value){const target=inputs.find(input=>input.dataset.experimentField===part);assert.equal(target.disabled,false,part+' must be available before typing');target.value=value;target.listeners.get('input')();},
+    click(selector){node('host:'+selector).listeners.get('click')();}
+  };
 }
+
+function firstIdeaRecord(scenario){
+  const record=normalizeLabRecord(scenario,{plan:'I think the wall power cord and motherboard power lead are disconnected.',symptoms:'The PC has no lights or fan noise.',ideaSaved:true,evidence:scenario.clues.filter(clue=>clue.id==='power'||/24.pin|motherboard power/i.test(clue.text)).slice(0,2).map(clue=>clue.id)});
+  record.state=applyHardwareAction(scenario.id,record.state,'enable-assembly').state;return record;
+}
+
+function repairPowerConnections(scenario,record){
+  for(const action of ['power-off','unplug','asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-connect-atx','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1','plug-in','boot','open-document']){
+    const result=applyHardwareAction(scenario.id,record.state,action);assert.notEqual(result.kind,'warning',action+': '+result.message);record.state=result.state;
+  }
+}
+
+function explainAttempt(view){
+  view.input('changed','I connected the motherboard power lead safely, secured the case, connected AC and started the PC.');
+  view.input('observed','The original lesson file opened in the classroom desktop.');
+  view.input('explain','Restoring the power path supports my idea because the requested task now works.');
+}
+
+test('entering page two seeds the saved first idea, selected clues and original baseline once',t=>{
+  const view=viewFixture(t,'#lab/INC-102/request?mode=guided'),scenario=SCENARIOS.find(item=>item.id==='INC-102'),record=firstIdeaRecord(scenario),initial=observationSnapshot(scenario,record.state);
+  let saves=0;
+  const dispose=mountLabLearning(view.root,{scenario,record,onSave:()=>saves++,getResult:()=>verifyHardware(scenario.id,record.state)});
+  view.emit('cole:lab-section-change',{id:'INC-101',section:2});assert.equal(readExperiments(record).draft.before,undefined);
+  view.emit('cole:lab-section-change',{id:scenario.id,section:2});
+  const draft=readExperiments(record).draft;
+  assert.equal(draft.predict,record.plan);assert.ok(draft.evidence.includes(scenario.clues[0].text));assert.deepEqual(draft.before,initial);
+  assert.equal(view.inputs.find(input=>input.dataset.experimentField==='predict').value,record.plan);assert.equal(record.verified,false);
+  const before=structuredClone(record),saved=saves;view.emit('cole:lab-section-change',{id:scenario.id,section:2});
+  assert.deepEqual(record,before);assert.equal(saves,saved,'Returning to the workbench cannot restart an existing test.');
+  view.input('predict','I want to compare another cause with the result from this test.');const revised=readExperiments(record).draft.predict;
+  view.emit('cole:lab-section-change',{id:scenario.id,section:2});assert.equal(readExperiments(record).draft.predict,revised,'An unfinished new idea is never overwritten by the original one.');
+  dispose();assert.equal(view.documentListeners.size,0);
+});
+
+test('a correct first idea can pass immediately, but page three waits for the three remaining notebook answers and Save',t=>{
+  const view=viewFixture(t),scenario=SCENARIOS.find(item=>item.id==='INC-102'),record=firstIdeaRecord(scenario);let ready=false;
+  const result=()=>verifyHardware(scenario.id,record.state);
+  const dispose=mountLabLearning(view.root,{scenario,record,getResult:result,onSave:()=>{ready=workbenchProgress(scenario,record,result()).ready;}});
+  view.emit('cole:lab-section-change',{id:scenario.id,section:2});const originalBefore=readExperiments(record).draft.before;
+  repairPowerConnections(scenario,record);
+  record.verified=result().ok;view.emit('cole:lab-test-result',{id:scenario.id,firstIdea:true});
+  const captured=readExperiments(record).draft;
+  assert.equal(captured.predict,record.plan);assert.deepEqual(captured.before,originalBefore);assert.notDeepEqual(captured.after,originalBefore);assert.equal(captured.check.ok,true);
+  assert.equal(ready,false);assert.equal(readExperiments(record).attempts.length,0);
+  explainAttempt(view);assert.equal(ready,false,'Typing does not replace selecting Save this attempt.');
+  view.click('[data-experiment-save]');assert.equal(ready,true);assert.equal(readExperiments(record).attempts.length,1);assert.equal(readExperiments(record).attempts[0].predict,record.plan);
+  dispose();assert.equal(view.documentListeners.size,0);
+});
+
+test('an unsuccessful first idea remains evidence while a later saved passing test unlocks page three',t=>{
+  const view=viewFixture(t),scenario=SCENARIOS.find(item=>item.id==='INC-102'),record=firstIdeaRecord(scenario);let tests=0,ready=false;
+  record.plan='I think reconnecting the wall power cord will let the PC start.';
+  const result=()=>verifyHardware(scenario.id,record.state);
+  const dispose=mountLabLearning(view.root,{scenario,record,getResult:result,onSave:()=>{ready=workbenchProgress(scenario,record,result()).ready;},onTest:()=>{tests++;record.verified=result().ok;return true;}});
+  view.emit('cole:lab-section-change',{id:scenario.id,section:2});
+  for(const action of ['plug-in','boot'])record.state=applyHardwareAction(scenario.id,record.state,action).state;
+  view.emit('cole:lab-test-result',{id:scenario.id,firstIdea:true});
+  assert.equal(readExperiments(record).draft.check.ok,false);
+  view.input('changed','I connected the wall power cord and pressed the power button.');
+  view.input('observed','The PC still did not start.');
+  view.input('explain','AC alone did not complete the power path. Another power connection needs checking.');
+  view.click('[data-experiment-save]');
+  assert.equal(ready,false);assert.equal(readExperiments(record).attempts[0].check.ok,false);
+  view.input('predict','I think the disconnected motherboard power lead is stopping startup.');view.input('evidence','The AC-only test failed and the internal power clue shows the 24-pin lead is disconnected.');
+  view.click('[data-experiment-start]');
+  repairPowerConnections(scenario,record);
+  view.emit('cole:lab-state-change',{id:scenario.id,changed:true});view.click('[data-experiment-capture]');explainAttempt(view);view.click('[data-experiment-save]');
+  assert.equal(tests,1);assert.equal(ready,true);assert.deepEqual(readExperiments(record).attempts.map(attempt=>attempt.check.ok),[false,true]);
+  const other=()=>{};document.addEventListener('cole:lab-state-change',other);dispose();
+  assert.equal(view.documentListeners.get('cole:lab-state-change').has(other),true,'Disposing this controller keeps other listeners intact.');
+  document.removeEventListener('cole:lab-state-change',other);assert.equal(view.documentListeners.size,0);
+});
 
 test('support mode changes preserve unsaved questions, code, notes, and the experiment draft',t=>{
   const view=viewFixture(t),scenario=SCENARIOS.find(item=>item.id==='CODE-503'),record=normalizeLabRecord(scenario);

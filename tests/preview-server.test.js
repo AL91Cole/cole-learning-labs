@@ -185,7 +185,7 @@ test('linked public directories cannot expose files outside the approved source 
   await rm(path.join(root, 'src'), { recursive: true });
   try { await symlink(outside, path.join(root, 'src'), process.platform === 'win32' ? 'junction' : 'dir'); }
   catch (error) {
-    if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) { t.skip('This host cannot create directory links.'); return; }
+    if (process.env.CLL_REQUIRE_LINK_TESTS !== '1' && ['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) { t.skip('This host cannot create directory links.'); return; }
     throw error;
   }
   const response = await request(server, '/src/app.js');
@@ -200,7 +200,7 @@ test('a symbolic link cannot replace an approved preview file', async t => {
   await rm(path.join(root, 'index.html'));
   try { await symlink(outside, path.join(root, 'index.html'), 'file'); }
   catch (error) {
-    if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) { t.skip('This host cannot create file links.'); return; }
+    if (process.env.CLL_REQUIRE_LINK_TESTS !== '1' && ['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) { t.skip('This host cannot create file links.'); return; }
     throw error;
   }
   const response = await request(server, '/');

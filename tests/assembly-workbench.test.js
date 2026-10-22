@@ -25,20 +25,20 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
     };
     Object.defineProperty(element,'hidden',{get:()=>hidden,set(value){hidden=!!value;if(hidden&&doc.activeElement===element)doc.activeElement=null;}});return element;
   }
-  function parse(html){return [...html.matchAll(/<(button|g)\b([^>]*)>/g)].map(([,tag,attrs])=>{const data=Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([,key,value])=>[key.replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));return node(data,tag);});}
-  for(const key of ['monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-title','part-state','actions','feedback','power','power-state','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','fastener','cable','cable-target','cable-state'])fields.set(`[data-asm-${key}]`,node({},'div'));
+  function parse(html){return [...html.matchAll(/<(button|g)\b([^>]*)>/g)].map(([,tag,attrs])=>{const data=Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([,key,value])=>[key.replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));const element=node(data,tag);for(const[,name,value]of attrs.matchAll(/\s([\w:-]+)="([^"]*)"/g))element.setAttribute(name,value);return element;});}
+  for(const key of ['on','ac-label','monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-title','part-state','actions','feedback','power','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','power-reference','fastener','cable','cable-target','cable-state'])fields.set(`[data-asm-${key}]`,node({},'div'));
   fields.get('[data-asm-select]').drawer=fields.get('[data-asm-component-drawer]');
   Object.defineProperty(fields.get('[data-asm-actions]'),'innerHTML',{set(html){actions=parse(html);actions.forEach(button=>button.drawer=fields.get('[data-asm-component-drawer]'));},get(){return'';}});
   Object.defineProperty(fields.get('[data-asm-tool-controls]'),'innerHTML',{set(html){tools=parse(html);this.markup=html;},get(){return this.markup||'';}});
   Object.defineProperty(fields.get('[data-asm-scene]'),'innerHTML',{set(html){pictureMarkup=html;pictures=parse(html);},get(){return pictureMarkup;}});
   const all=()=>[...staticButtons,...actions,...tools,...pictures];
   const root={ownerDocument:doc,closest:()=>hidden?{}:null,contains:target=>[...fields.values(),...all()].includes(target),
-    querySelector(selector){if(selector==='[data-asm-actions] button')return actions[0];const match=/^\[data-asm-picture="([^"]+)"\]$/.exec(selector);return match?pictures.find(item=>item.dataset.asmPicture===match[1]):fields.get(selector)||null;},
+    querySelector(selector){if(selector==='[data-asm-actions] button')return actions[0];const match=/^\[data-([a-z-]+)="([^"]+)"\]$/.exec(selector);return match?all().find(item=>item.dataset[match[1].replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase())]===match[2])||null:fields.get(selector)||null;},
     querySelectorAll(selector){const key={'[data-asm-tool]':'asmTool','[data-asm-part]':'asmPart','[data-assembly-action]':'assemblyAction','[data-asm-picture-view]':'asmPictureView'}[selector];return key?all().filter(item=>item.dataset[key]):[];},
     addEventListener:(key,fn)=>listeners.set(key,fn),removeEventListener:(key,fn)=>{if(listeners.get(key)===fn)listeners.delete(key);},
     setPointerCapture:id=>captures.add(id),hasPointerCapture:id=>captures.has(id),releasePointerCapture:id=>captures.delete(id)
   };
-  Object.defineProperty(root,'innerHTML',{set(html){writes++;markup=html;staticButtons=parse(html);},get(){return markup;}});
+  Object.defineProperty(root,'innerHTML',{set(html){writes++;markup=html;staticButtons=parse(html);staticButtons.filter(button=>['power-off','unplug','plug-in','boot','open-document'].includes(button.dataset.assemblyAction)).forEach(button=>button.drawer=fields.get('[data-asm-power-reference]'));},get(){return markup;}});
   doc.elementFromPoint=()=>dropTarget;
   const mount=vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm,'').replace('export function mountAssemblyWorkbench','function mountAssemblyWorkbench')};mountAssemblyWorkbench`,{assemblyActions,assemblyFailure,ASSEMBLY_FASTENERS,ASSEMBLY_TOOLS,assemblyToolAction,ASSEMBLY_CABLES,cableConnection,assemblyCableAction,workbenchGuidance,pcActivity});
   let state=stateOverride(applyHardwareAction(caseId,initialHardwareState(caseId),'enable-assembly').state),controller;
@@ -51,12 +51,24 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
   return{root,controller,fields,doc,listeners,docListeners,viewListeners,captures,committed,click,choose,complete,begin,release,get state(){return state;},get writes(){return writes;},get markup(){return markup;},get picture(){return pictureMarkup;},pictures:()=>pictures};
 }
 
+function reconnectMotherboardPower(bench){
+  if(bench.state.pcOn)bench.click('asmToggle','power');
+  if(bench.state.acConnected)bench.click('asmToggle','ac');
+  bench.click('asmPart','panel');
+  for(const action of ['asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel'])bench.click('assemblyAction',action);
+  bench.click('asmTool','cables');bench.choose('[data-asm-cable]','atx');bench.choose('[data-asm-cable-target]','atx-header');bench.click('asmCableAction','connect');
+  assert.equal(bench.state.atxConnected,true);
+  bench.click('asmPart','panel');
+  for(const action of ['asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1'])bench.click('assemblyAction',action);
+  assert.equal(bench.state.assembly.panelInstalled,true);assert.ok(bench.state.assembly.panelScrews.every(Boolean));
+}
+
 test('the workbench uses PR #6 native schematic artwork immediately without any graphics engine or camera import',()=>{
   assert.doesNotMatch(source,/import\(|assembly-scene|BABYLON|THREE|<canvas|data-asm-camera|3D/);
   const bench=fixture();assert.equal(bench.doc.activeElement,null);assert.match(bench.picture,/<svg[^>]+viewBox="12 46 860 566"/);
   for(const detail of ['hw-chassis','hw-board','MICRO-ATX','DDR4','SATA'])assert.ok(bench.picture.includes(detail),detail);
-  assert.match(bench.markup,/<button type="button" class="pc-power-button" data-assembly-action="power" aria-label="Power: off\. Turn PC on and check startup" aria-pressed="false"/);assert.match(bench.markup,/data-assembly-action="open-document">Open lesson/);
-  assert.doesNotMatch(bench.markup,/data-assembly-action="(?:boot|power-off)"/);
+  assert.match(bench.markup,/<button type="button" class="asm-round-power" data-asm-toggle="power" aria-label="Power on and test startup" aria-pressed="false"/);
+  assert.doesNotMatch(bench.markup.split('<details class="asm-drawer asm-power-reference"')[0],/data-assembly-action="(?:boot|power-off)"/);
   assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);assert.equal(bench.fields.get('[data-asm-tool-drawer]').hidden,true);bench.controller.dispose();
 });
 
@@ -105,7 +117,7 @@ test('Expand picture and Escape change only presentation, keep focus, and cancel
   const bench=fixture(),before=structuredClone(bench.state),scene=bench.fields.get('[data-asm-scene]');
   bench.click('asmTool','move');bench.begin('psu');assert.equal(bench.captures.size,1);
   const toggle=bench.click('asmExpandPicture','toggle');
-  assert.equal(scene.attrs['data-picture-expanded'],'true');assert.equal(toggle.attrs['aria-pressed'],'true');assert.equal(toggle.textContent,'Fit picture');
+  assert.equal(scene.attrs['data-picture-expanded'],'true');assert.equal(toggle.attrs['aria-pressed'],'true');assert.equal(toggle.textContent,'Collapse picture');
   assert.equal(bench.captures.size,0);bench.release('psu');assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);
   bench.controller.update(bench.state);assert.equal(scene.attrs['data-picture-expanded'],'true','Equipment updates keep the presentation choice.');
   bench.listeners.get('keydown')({target:toggle,key:'Escape'});
@@ -120,47 +132,95 @@ test('native Enter and Space activate labeled schematic equipment without repair
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
-test('the persistent Power button keeps focus while AC changes continue along the visible strip',()=>{
+test('top power changes retain native focus and extra power actions remain in an optional drawer',()=>{
   const bench=fixture({caseId:'INC-101'});
-  for(const[action,next]of [['power','power'],['unplug','plug-in'],['plug-in','power']]){bench.click('assemblyAction',action);assert.equal(bench.doc.activeElement.dataset.assemblyAction,next);assert.equal(bench.doc.activeElement.hidden,false);assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);}
+  bench.click('asmToggle','power');assert.equal(bench.doc.activeElement.dataset.asmToggle,'power','The visible native toggle keeps focus.');
+  assert.equal(bench.fields.get('[data-asm-power-reference]').open,false);
+  bench.click('asmToggle','power');bench.fields.get('[data-asm-power-reference]').open=true;
+  for(const[action,next]of [['power-off','unplug'],['unplug','plug-in'],['plug-in','boot']]){bench.click('assemblyAction',action);assert.equal(bench.doc.activeElement.dataset.assemblyAction,next);assert.equal(bench.doc.activeElement.hidden,false);assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);}
   bench.controller.dispose();
 });
 
-test('Power uses a native toggle, reports On or Off, and leaves startup and lesson verification separate',()=>{
-  const bench=fixture({caseId:'INC-102'}),power=bench.root.querySelectorAll('[data-assembly-action]').find(item=>item.dataset.assemblyAction==='power');
-  assert.equal(power.tag,'button');assert.equal(power.attrs['aria-pressed'],'false');
-  assert.equal(power.attrs['aria-label'],'Power: off. Turn PC on and check startup');
-  assert.equal(bench.fields.get('[data-asm-power-state]').textContent,'Off');
-  assert.equal(bench.root.querySelectorAll('[data-assembly-action]').find(item=>item.dataset.assemblyAction==='open-document').hidden,true);
-  // Native buttons generate their own click for Enter/Space. The delegated
-  // key handler must not add a second toggle before that native click arrives.
-  for(const key of ['Enter',' '])bench.listeners.get('keydown')({target:power,key,preventDefault(){assert.fail('Native Power keys must keep their browser behavior.');}});
-  assert.deepEqual(bench.committed,[]);
-  bench.click('assemblyAction','power');
-  assert.equal(bench.state.pcOn,false);assert.equal(bench.state.booted,false);assert.equal(bench.state.bootCount,0);
-  assert.equal(power.attrs['aria-pressed'],'false');assert.match(bench.fields.get('[data-asm-feedback]').textContent,/No AC power/);
-  bench.click('assemblyAction','plug-in');bench.click('assemblyAction','power');
-  assert.equal(bench.state.pcOn,true);assert.equal(bench.state.booted,true);assert.equal(bench.state.documentOpened,false);
-  assert.equal(power.attrs['aria-pressed'],'true');assert.equal(power.attrs.title,'Turn PC off');
-  assert.equal(power.attrs['aria-label'],'Power: on. Turn PC off');
-  assert.equal(bench.fields.get('[data-asm-power-state]').textContent,'On');assert.equal(bench.doc.activeElement,power);
-  assert.equal(bench.root.querySelectorAll('[data-assembly-action]').find(item=>item.dataset.assemblyAction==='open-document').hidden,false);
-  bench.click('assemblyAction','power');
-  assert.equal(bench.state.pcOn,false);assert.equal(bench.state.booted,false);assert.equal(bench.state.documentOpened,false);
-  assert.equal(power.attrs['aria-pressed'],'false');assert.equal(bench.fields.get('[data-asm-power-state]').textContent,'Off');assert.equal(bench.doc.activeElement,power);
-  assert.equal(power.attrs['aria-label'],'Power: off. Turn PC on and check startup');
-  assert.deepEqual(bench.committed,['boot','plug-in','boot','power-off']);bench.controller.dispose();
+test('every ticket shows one round native power toggle beside its labeled AC plug in the top strip',()=>{
+  for(const caseId of Array.from({length:8},(_,index)=>`INC-10${index+1}`)){
+    const bench=fixture({caseId});
+    assert.doesNotMatch(bench.picture,/data-asm-picture="case-(?:power|ac)"/);
+    const strip=bench.markup.match(/<div class="asm-power"[\s\S]*?<div class="asm-top-controls">/)?.[0];
+    assert.ok(strip);assert.doesNotMatch(strip,/data-assembly-action=/);
+    for(const toggle of ['power','ac']){
+      assert.equal((strip.match(new RegExp('data-asm-toggle="'+toggle+'"','g'))||[]).length,1);
+      const control=bench.root.querySelector('[data-asm-toggle="'+toggle+'"]');
+      assert.equal(control.tag,'button');assert.equal(control.attrs.type,'button');assert.ok(control.attrs['aria-label']);
+    }
+    assert.match(strip,/class="asm-round-power"[^>]*data-asm-toggle="power"/);
+    assert.match(strip,/class="asm-ac-toggle"[^>]*data-asm-toggle="ac"[^>]*><svg/);
+    assert.match(bench.markup,/<details[^>]*data-asm-power-reference><summary>More power controls<\/summary>/);
+    assert.equal(bench.fields.get('[data-asm-power-reference]').open,false);assert.deepEqual(bench.committed,[]);
+    bench.controller.dispose();
+  }
 });
 
-test('Power runs the existing failed-startup checks without repairing components or granting completion',()=>{
-  const bench=fixture({caseId:'INC-103'}),assembly=structuredClone(bench.state.assembly),bootCount=bench.state.bootCount;
-  bench.click('assemblyAction','power');assert.equal(bench.state.pcOn,false);
-  bench.click('assemblyAction','power');
-  assert.equal(bench.state.pcOn,true);assert.equal(bench.state.booted,false);assert.equal(bench.state.bootCount,bootCount+1);
-  assert.equal(bench.state.ramSeated,false);assert.equal(bench.state.documentOpened,false);assert.deepEqual(bench.state.assembly,assembly);
-  assert.equal(bench.fields.get('[data-asm-power-state]').textContent,'On');assert.match(bench.fields.get('[data-asm-feedback]').textContent,/memory|DDR4/i);
-  assert.equal(bench.root.querySelectorAll('[data-assembly-action]').find(item=>item.dataset.assemblyAction==='open-document').hidden,true);
-  assert.deepEqual(bench.committed,['power-off','boot']);bench.controller.dispose();
+test('native top power and AC toggles retain focus, announce state and obey running-PC safety',()=>{
+  const bench=fixture({caseId:'INC-102'});
+  const power=bench.root.querySelector('[data-asm-toggle="power"]'),plug=bench.root.querySelector('[data-asm-toggle="ac"]');
+  assert.equal(power.attrs['aria-pressed'],'false');assert.equal(plug.attrs['aria-label'],'Connect AC');
+  bench.click('asmToggle','ac');
+  assert.equal(bench.state.acConnected,true);assert.equal(bench.state.pcOn,false);assert.equal(bench.doc.activeElement,plug);
+  assert.equal(plug.attrs['aria-label'],'Disconnect AC');assert.equal(bench.fields.get('[data-asm-ac-label]').textContent,'Disconnect AC');
+  // Native buttons supply Enter/Space activation in the browser; this boundary
+  // exercises their resulting click, without inventing a second key handler.
+  bench.click('asmToggle','power');
+  assert.equal(bench.state.pcOn,true);assert.equal(bench.state.booted,false,'AC alone leaves the motherboard power fault unresolved.');assert.equal(bench.state.documentOpened,false);
+  assert.equal(bench.doc.activeElement,power);assert.equal(power.attrs['aria-pressed'],'true');assert.equal(power.attrs['aria-label'],'Power off');assert.equal(bench.fields.get('[data-asm-on]').textContent,'On');
+  bench.click('asmToggle','ac');assert.equal(bench.state.acConnected,true,'The model refuses unplugging a running PC.');
+  assert.match(bench.fields.get('[data-asm-feedback]').textContent,/power off|shut down/i);
+  bench.click('asmToggle','power');assert.equal(bench.state.pcOn,false);assert.equal(power.attrs['aria-pressed'],'false');
+  bench.click('asmToggle','ac');assert.equal(bench.state.acConnected,false);
+  assert.equal(bench.doc.activeElement,plug);assert.equal(plug.attrs['aria-label'],'Connect AC');assert.equal(bench.fields.get('[data-asm-on]').textContent,'Off');
+  assert.deepEqual(bench.committed,['plug-in','boot','unplug','power-off','unplug']);
+  bench.controller.dispose();
+});
+
+test('Expand picture changes only the view and keeps the same schematic host and equipment',()=>{
+  const bench=fixture({caseId:'INC-102'}),before=structuredClone(bench.state),host=bench.fields.get('[data-asm-scene]');
+  const expand=bench.root.querySelector('[data-asm-expand="picture"]');
+  assert.equal(expand.tag,'button');assert.equal(expand.attrs.type,'button');assert.equal(expand.attrs['aria-expanded'],'false');
+  bench.click('asmExpand','picture');assert.equal(host.dataset.expanded,'true');assert.equal(expand.attrs['aria-expanded'],'true');assert.equal(expand.textContent,'Collapse picture');
+  bench.controller.update(bench.state);assert.equal(bench.fields.get('[data-asm-scene]'),host);assert.equal(host.dataset.expanded,'true');
+  assert.equal(bench.doc.activeElement,expand);assert.match(bench.picture,/data-asm-view="full-xray"/);
+  bench.click('asmExpand','picture');assert.equal(host.dataset.expanded,'false');assert.equal(expand.attrs['aria-expanded'],'false');assert.equal(expand.textContent,'Expand picture');
+  assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);assert.equal(bench.writes,1);bench.controller.dispose();
+});
+
+test('top power, AC and expand controls ignore clicks while the workbench is hidden',()=>{
+  const bench=fixture({caseId:'INC-102'}),before=structuredClone(bench.state),host=bench.fields.get('[data-asm-scene]');
+  bench.controller.setVisible(false);
+  for(const toggle of ['power','ac'])bench.click('asmToggle',toggle);
+  bench.click('asmExpand','picture');assert.equal(host.dataset.expanded,undefined);
+  assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);
+  bench.controller.setVisible(true);bench.click('asmToggle','ac');assert.equal(bench.state.acConnected,true);bench.controller.dispose();
+});
+
+test('only a working desktop offers the monitor file link and its keyboard action checks the original file',()=>{
+  const bench=fixture({caseId:'INC-102'});
+  assert.doesNotMatch(bench.fields.get('[data-asm-activity-detail]').textContent,/Click Lesson_Practice_File/);
+  assert.doesNotMatch(bench.picture,/data-asm-picture="open-document"/);
+  reconnectMotherboardPower(bench);
+  bench.click('asmToggle','ac');bench.click('asmToggle','power');
+  assert.equal(bench.state.documentOpened,false);
+  assert.equal(bench.fields.get('[data-asm-activity-detail]').textContent,'Click Lesson_Practice_File.docx on the monitor to check your fix.');
+  assert.match(bench.picture,/role="button" tabindex="0" aria-label="Open Lesson_Practice_File.docx to check your fix" data-asm-picture="open-document"/);
+  assert.match(bench.picture,/text-decoration="underline">Lesson_Practice_File.docx/);
+  const file=bench.pictures().find(item=>item.dataset.asmPicture==='open-document');file.focus();
+  bench.listeners.get('keydown')({target:file,key:'Enter',preventDefault(){}});
+  assert.equal(bench.state.documentOpened,true);assert.equal(bench.state.originalDriveInstalled,true);
+  assert.equal(bench.doc.activeElement.dataset.asmToggle,'power','The disappearing file target returns focus to the visible native power button.');
+  assert.match(bench.fields.get('[data-asm-activity-detail]').textContent,/original lesson file opened.*passed the file check/i);
+  bench.click('asmToggle','power');assert.doesNotMatch(bench.picture,/data-asm-picture="open-document"/);
+  assert.doesNotMatch(bench.fields.get('[data-asm-activity-detail]').textContent,/Click Lesson_Practice_File|passed the file check/);
+  bench.controller.dispose();
+  const blocked=fixture({caseId:'INC-103'});blocked.click('assemblyAction','open-document');
+  assert.equal(blocked.state.documentOpened,false);assert.doesNotMatch(blocked.picture,/data-asm-picture="open-document"/);blocked.controller.dispose();
 });
 
 test('tool drawers retain user disclosure and picker focus across equipment updates',()=>{
@@ -174,7 +234,7 @@ test('all eighteen numbered screws are native targets and still obey safety rule
   const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);bench.complete();bench.click('asmTool','screwdriver');
   for(const[group,spec]of Object.entries(ASSEMBLY_FASTENERS))for(let i=0;i<spec.count;i++)assert.ok(bench.picture.includes(`data-asm-picture="${group}-${i}"`));
   bench.click('asmPicture','panel-0');assert.equal(bench.committed.at(-1),'asm-loosen-panel-0');assert.deepEqual(bench.state,before);
-  bench.click('assemblyAction','power');bench.click('assemblyAction','unplug');bench.click('asmPicture','panel-0');assert.equal(bench.state.assembly.panelScrews[0],false);bench.controller.dispose();
+  bench.click('asmToggle','power');bench.click('assemblyAction','unplug');bench.click('asmPicture','panel-0');assert.equal(bench.state.assembly.panelScrews[0],false);bench.controller.dispose();
 });
 
 test('optional native part dragging proposes only a matching mount or tray action on release',()=>{
@@ -218,13 +278,13 @@ test('both HDMI ends and monitor input affect the schematic display; a picture n
   assert.match(bench.picture,/Classroom Desktop/);assert.equal(bench.state.documentOpened,false);
   bench.choose('[data-asm-cable]','hdmi-monitor');bench.click('asmCableAction','disconnect');assert.match(bench.picture,/NO SIGNAL/);assert.doesNotMatch(bench.picture,/Classroom Desktop/);
   bench.click('asmCableAction','connect');bench.click('asmPicture','open-document');assert.equal(bench.state.documentOpened,true);assert.match(bench.picture,/Original file opened/);
-  assert.equal(bench.doc.activeElement?.dataset?.assemblyAction,'open-document','The removed SVG launcher hands focus to the visible native lesson control.');
+  assert.equal(bench.doc.activeElement?.dataset?.asmToggle,'power','The removed SVG launcher hands focus to the visible native power control.');
   assert.equal(bench.doc.activeElement.hidden,false);bench.controller.dispose();
 });
 
 test('malformed picker values and inactive surfaces cannot create equipment changes',()=>{
   const bench=fixture(),before=structuredClone(bench.state);for(const value of ['__proto__','constructor','<script>'])bench.choose('[data-asm-select]',value);
-  bench.controller.setVisible(false);bench.click('asmPart','psu');bench.click('assemblyAction','power');assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);
+  bench.controller.setVisible(false);bench.click('asmPart','psu');bench.click('asmToggle','power');assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);
   const external={dataset:{assemblyAction:'boot'}};bench.doc.activeElement=external;bench.controller.update(bench.state);assert.equal(bench.doc.activeElement,external);bench.controller.dispose();
 });
 
@@ -253,11 +313,15 @@ test('memory and storage tickets keep only the fasteners and cable choices their
   memory.click('asmTool','cables');const cables=memory.fields.get('[data-asm-tool-controls]').innerHTML;
   assert.match(cables,/value="ac"/);assert.doesNotMatch(cables,/value="(?:sata-data|hdmi-pc|cpu-fan)"/);memory.controller.dispose();
   const storage=fixture({caseId:'INC-104'});storage.click('asmTool','screwdriver');
-  assert.match(storage.fields.get('[data-asm-tool-controls]').innerHTML,/value="ssd-1"/);
-  assert.doesNotMatch(storage.fields.get('[data-asm-tool-controls]').innerHTML,/value="(?:board|cooler|gpu)-/);
+  const cableScrews=storage.fields.get('[data-asm-tool-controls]').innerHTML;
+  for(const id of ['panel-0','panel-1'])assert.ok(cableScrews.includes(`value="${id}"`));
+  assert.doesNotMatch(cableScrews,/value="(?:board|cooler|gpu|ssd)-/);
+  assert.doesNotMatch(storage.fields.get('[data-asm-select]').innerHTML,/value="ssd"/,'A drive-cable repair does not need drive removal.');
   storage.click('asmTool','cables');const storageCables=storage.fields.get('[data-asm-tool-controls]').innerHTML;
   for(const id of ['ac','sata-data','sata-power'])assert.ok(storageCables.includes(`value="${id}"`));
   assert.doesNotMatch(storageCables,/value="(?:atx|eps|hdmi-pc|cpu-fan)"/);storage.controller.dispose();
+  const replacement=fixture({caseId:'INC-105'});replacement.click('asmTool','screwdriver');
+  assert.match(replacement.fields.get('[data-asm-tool-controls]').innerHTML,/value="ssd-1"/,'Restoring a removed original drive still exposes its mounts.');replacement.controller.dispose();
 });
 
 test('contextual cable help omits unrelated internal steps and build guidance stays out of simple external tickets',()=>{
@@ -269,7 +333,8 @@ test('contextual cable help omits unrelated internal steps and build guidance st
   display.choose('[data-asm-cable]','atx');assert.match(display.fields.get('[data-asm-tool-help]').textContent,/Power off.*disconnect AC.*side panel/);display.controller.dispose();
   const power=fixture({caseId:'INC-102'});power.click('asmTool','cables');
   assert.match(power.fields.get('[data-asm-tool-help]').textContent,/Power off.*before unplugging AC/);
-  assert.doesNotMatch(power.fields.get('[data-asm-tool-help]').textContent,/side panel/);assert.equal(power.fields.get('[data-asm-build-help]').hidden,true);power.controller.dispose();
+  assert.doesNotMatch(power.fields.get('[data-asm-tool-help]').textContent,/side panel/);assert.equal(power.fields.get('[data-asm-build-help]').hidden,false);
+  power.choose('[data-asm-cable]','atx');assert.match(power.fields.get('[data-asm-tool-help]').textContent,/Power off.*disconnect AC.*side panel/);power.controller.dispose();
   const memory=fixture({caseId:'INC-103'});assert.equal(memory.fields.get('[data-asm-build-help]').hidden,false);memory.controller.dispose();
 });
 
@@ -277,7 +342,7 @@ test('all eight tickets filter native part action rows as well as their toolbars
   const screws=group=>Array.from({length:ASSEMBLY_FASTENERS[group].count},(_,i)=>['tighten','loosen'].map(operation=>`asm-${operation}-${group}-${i}`)).flat();
   const parts=part=>['fit','remove'].map(operation=>`asm-${operation}-${part}`);
   const cables=id=>['connect','disconnect'].map(operation=>`asm-${operation}-${id}`);
-  const permitted={display:new Set(cables('display')),power:new Set(),memory:new Set([...screws('panel'),...parts('panel'),...parts('ram'),'asm-open-ram-clips','asm-close-ram-clips']),storage:new Set([...screws('panel'),...screws('ssd'),...parts('panel'),...parts('ssd'),...cables('sata-data'),...cables('sata-power')])};
+  const permitted={display:new Set(cables('display')),power:new Set([...screws('panel'),...parts('panel'),...cables('atx')]),memory:new Set([...screws('panel'),...parts('panel'),...parts('ram'),'asm-open-ram-clips','asm-close-ram-clips']),storage:new Set([...screws('panel'),...screws('ssd'),...parts('panel'),...parts('ssd'),...cables('sata-data'),...cables('sata-power')])};
   for(const caseId of ['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108']){
     const bench=fixture({caseId}),before=structuredClone(bench.state),guide=workbenchGuidance(bench.state);
     const kind=['INC-101','INC-107','INC-108'].includes(caseId)?'display':caseId==='INC-102'?'power':caseId==='INC-103'?'memory':caseId==='INC-106'?'build':'storage';
@@ -285,7 +350,7 @@ test('all eight tickets filter native part action rows as well as their toolbars
       bench.choose('[data-asm-select]',group);
       const rows=bench.root.querySelectorAll('[data-assembly-action]').map(item=>item.dataset.assemblyAction).filter(id=>id.startsWith('asm-'));
       if(kind!=='build')for(const action of rows)assert.ok(permitted[kind].has(action),`${caseId}/${group} must not offer unrelated ${action}`);
-      if(kind==='power')assert.deepEqual(rows,[],'The power profile uses its external power/cable controls, not PSU teardown');
+      if(kind==='power')assert.ok(rows.every(action=>!/-psu(?:-|$)/.test(action)),'The power profile allows its panel and motherboard cable, not PSU teardown');
     }
     bench.complete();bench.choose('[data-asm-select]','psu');
     let rows=bench.root.querySelectorAll('[data-assembly-action]').map(item=>item.dataset.assemblyAction);
@@ -333,7 +398,7 @@ test('fan motion follows powered fitted components even when POST fails, and sto
   for(const part of ['cpu','psu','gpu'])assert.match(bench.picture,new RegExp(`class="[^"]*asm-fan-${part}" data-running="true"`));
   assert.match(bench.fields.get('[data-asm-fan-status]').textContent,/CPU cooler fan: running/);
   assert.doesNotMatch(bench.picture,/asm-fan-(?:ram|ssd)/);assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);
-  bench.click('assemblyAction','power');assert.match(bench.fields.get('[data-asm-power]').textContent,/standby/i);
+  bench.click('asmToggle','power');assert.match(bench.fields.get('[data-asm-power]').textContent,/standby/i);
   for(const part of ['cpu','psu','gpu'])assert.match(bench.picture,new RegExp(`class="[^"]*asm-fan-${part}" data-running="false"`));
   assert.match(bench.fields.get('[data-asm-fan-status]').textContent,/CPU cooler fan: stopped/);bench.controller.dispose();
 });
@@ -342,7 +407,7 @@ test('the visible activity banner gives neutral state guidance while detailed di
   for(const caseId of ['INC-101','INC-103']){
     const bench=fixture({caseId}),banner=bench.fields.get('[data-asm-activity-detail]').textContent;
     assert.doesNotMatch(banner,/graphics.card|motherboard output|memory|RAM|seat|Use the graphics/i);
-    assert.match(banner,/Inspect|evidence|test/);
+    assert.match(banner,/Inspect|evidence|test|Check/);
     assert.ok(bench.fields.get('[data-asm-diagnostic-detail]').textContent.length>0);
     assert.match(bench.markup,/<details class="asm-drawer asm-readouts">/);
     assert.doesNotMatch(bench.markup,/<details[^>]*asm-readouts[^>]*\bopen\b/);
@@ -397,11 +462,12 @@ test('monitor SVG and accessible transcript show actual ticket-specific startup 
 
 test('explicit power and original-file actions update the monitor snapshot without timers or premature success',()=>{
   const bench=fixture({caseId:'INC-102'});
+  reconnectMotherboardPower(bench);
   assert.match(bench.picture,/MONITOR STANDBY/);bench.click('assemblyAction','plug-in');assert.match(bench.picture,/MONITOR STANDBY/);
-  assert.equal(bench.state.booted,false);bench.click('assemblyAction','power');assert.match(bench.picture,/Classroom Desktop/);
+  assert.equal(bench.state.booted,false);bench.click('assemblyAction','boot');assert.match(bench.picture,/Classroom Desktop/);
   assert.equal(bench.state.documentOpened,false);assert.match(bench.fields.get('[data-asm-monitor-readout]').textContent,/UEFI and boot manager: completed/);
   bench.click('assemblyAction','open-document');assert.match(bench.picture,/Original file opened/);
-  bench.click('assemblyAction','power');assert.match(bench.picture,/MONITOR STANDBY/);assert.doesNotMatch(bench.picture,/Original file opened|Classroom Desktop/);
-  assert.deepEqual(bench.committed,['plug-in','boot','open-document','power-off']);
+  bench.click('assemblyAction','power-off');assert.match(bench.picture,/MONITOR STANDBY/);assert.doesNotMatch(bench.picture,/Original file opened|Classroom Desktop/);
+  assert.deepEqual(bench.committed.slice(-4),['plug-in','boot','open-document','power-off']);
   assert.doesNotMatch(source,/requestAnimationFrame|setInterval|setTimeout/);bench.controller.dispose();
 });

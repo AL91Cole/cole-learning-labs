@@ -45,6 +45,16 @@ test('server drafts accept normalized hardware records with and without detailed
   }
 });
 
+test('server drafts round-trip first-idea answers while accepting earlier drafts without the new fields', () => {
+  const value={...work('INC-102'),symptoms:'The desktop has no lights and no fan noise.',plan:'I think its power cable came loose during the move.',ideaSaved:true};
+  assert.deepEqual(JSON.parse(validate(value,'INC-102')),value);
+  const legacy=structuredClone(value);delete legacy.symptoms;delete legacy.ideaSaved;
+  assert.deepEqual(JSON.parse(validate(legacy,'INC-102')),legacy);
+  for(const invalid of [{symptoms:[]},{symptoms:'s'.repeat(2001)},{symptoms:'Control\u0000character'},{ideaSaved:'true'},{ideaSaved:1},{ideaSaved:{studentEmail:'private@example.test'}}]){
+    rejects({...value,...invalid});
+  }
+});
+
 test('prepared drafts retain the explicit PC HDMI connection as a boolean and only its authored disconnect action', () => {
   for(const connected of [false,true]) {
     const value=work('INC-101');value.state.pcVideoConnected=connected;

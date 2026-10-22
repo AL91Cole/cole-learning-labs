@@ -177,7 +177,7 @@ function workPayload(value, labId) {
     evidence: workList(workEnum(scenario.clues.map(clue => clue.id)), scenario.clues.length),
     questions: workList(index => Number.isInteger(index) && index >= 0 && index < scenario.questions.length, scenario.questions.length),
     events: workList(workRecord({ time: workString(40), message: workString(600), kind: workEnum(['info', 'warning', 'success']) }), 100),
-    plan: workString(2000), notes: workString(4000), reflection: workString(2000), verified: workBoolean, closed: workBoolean
+    symptoms: workString(2000), plan: workString(2000), ideaSaved: workBoolean, notes: workString(4000), reflection: workString(2000), verified: workBoolean, closed: workBoolean
   });
   if (scenario.track === 'hardware' && value.state) {
     // Legacy drafts may omit both assembly fields. Once detailed mode is

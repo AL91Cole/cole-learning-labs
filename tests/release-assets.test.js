@@ -118,7 +118,7 @@ test('stylesheet imports cannot load an unversioned or external dependency', () 
 test('release validation rejects stale imports and normalizes query-bearing targets', () => {
   assert.equal(asset(`./hardware.js?release=${RELEASE}`, 'src/records.js', /\.js$/), 'src/hardware.js');
   assert.throws(() => asset('./hardware.js', 'src/records.js', /\.js$/), /release query/);
-  assert.throws(() => asset('./hardware.js?release=old-release', 'src/records.js', /\.js$/), /release query/);
+  assert.throws(() => asset('./hardware.js?release=20000101-stale', 'src/records.js', /\.js$/), /release query/);
   assert.throws(() => asset(`https://external.invalid/module.js?release=${RELEASE}`, 'src/records.js', /\.js$/), /local relative/);
   assert.throws(() => asset(`./missing-module.js?release=${RELEASE}`, 'src/records.js', /\.js$/), /does not exist/);
   assert.throws(() => asset(`./hardware.js?release=${RELEASE}#second-copy`, 'src/records.js', /\.js$/), /cache identity/);

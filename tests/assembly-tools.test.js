@@ -71,11 +71,11 @@ function workbench(id = 'INC-106') {
   function parse(html) {
     return [...html.matchAll(/<button\b([^>]*)>/g)].map(([, attrs]) => element(Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([, name, value]) => [name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), value]))));
   }
-  for (const name of ['monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'power-state', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer', 'view-drawer', 'loading-title', 'loading-text', 'fastener']) fields.set(`[data-asm-${name}]`, element());
+  for (const name of ['on','ac-label','power-reference','monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'power-state', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer', 'view-drawer', 'loading-title', 'loading-text', 'fastener']) fields.set(`[data-asm-${name}]`, element());
   for (const name of ['actions', 'tool-controls']) Object.defineProperty(fields.get(`[data-asm-${name}]`), 'innerHTML', { set(html) { dynamic.set(name, parse(html)); }, get() { return ''; } });
   const allButtons = () => [...buttons, ...[...dynamic.values()].flat()];
   const root = { ownerDocument: doc, closest: () => null, contains: target => allButtons().includes(target) || [...fields.values()].includes(target),
-    querySelector: selector => selector === '[data-asm-actions] button' ? dynamic.get('actions')?.[0] : fields.get(selector) || null,
+    querySelector: selector => selector === '[data-asm-actions] button' ? dynamic.get('actions')?.[0] : selector.startsWith('[data-asm-toggle=') ? allButtons().find(button=>button.dataset.asmToggle===selector.match(/="([^"]+)"/)[1]) : fields.get(selector) || null,
     querySelectorAll: selector => allButtons().filter(item => selector === '[data-asm-tool]' ? item.dataset.asmTool : selector === '[data-asm-part]' ? item.dataset.asmPart : selector === '[data-assembly-action]' ? item.dataset.assemblyAction : false),
     addEventListener(name, handler) { listeners.set(name, handler); }, removeEventListener(name, handler) { if (listeners.get(name) === handler) listeners.delete(name); } };
   Object.defineProperty(root, 'innerHTML', { set(html) { writes++; buttons = parse(html); } });

@@ -2,12 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {answerQuestion,questionEvent,readQuestionEvents} from '../src/interview.js';
 import {SCENARIOS} from '../src/scenarios.js';
-import {initialHardwareState} from '../src/hardware.js';
+import {initialHardwareState,applyHardwareAction} from '../src/hardware.js';
 import {initialWorkspaceState,applyWorkspaceAction} from '../src/workspaces.js';
 
 const scenario = id => SCENARIOS.find(item => item.id === id);
 const initial = id => id.startsWith('INC-') ? initialHardwareState(id) : initialWorkspaceState(id);
 const ask = (id,question,state = initial(id)) => answerQuestion(scenario(id),question,state);
+
+test('the power ticket reply follows actual activity after an AC-only startup fails',()=>{
+  let state=initialHardwareState('INC-102');
+  for(const action of ['plug-in','boot'])state=applyHardwareAction('INC-102',state,action).state;
+  assert.equal(state.pcOn,true,'The attempted start is recorded even when main power is unavailable.');
+  const reply=ask('INC-102','Are the fans or lights on?',state);
+  assert.match(reply.answer,/AC power is connected.*not starting.*fans are off/i);
+  assert.doesNotMatch(reply.answer,/fans running/i);
+});
 
 const cases = [
   ['INC-101','Which socket is the display cable using?',/motherboard output/iu],
@@ -18,7 +27,7 @@ const cases = [
   ['INC-106','Which components does this board support?',/DDR4.*PCIe.*SATA/iu],
   ['NET-201','What DNS and gateway should this virtual PC use?',/10\.24\.8\.1.*10\.24\.8\.53/u],
   ['NET-202','Why can the guest Wi-Fi not reach the shared folder?',/School-Guest.*isolated.*Staff-Lab/iu],
-  ['NET-203','How can I recover the files without erasing them?',/snapshot.*rollback.*without deleting/iu],
+  ['NET-203','How can I recover the files without erasing them?',/snapshot.*rollback.*keeps.*files/iu],
   ['AI-301','What should the practice prompt ask for?',/short explanation.*practice question/iu],
   ['AI-302','Should matching tickets receive the same category?',/technical evidence is identical/iu],
   ['AI-303','How should the SQL query handle input?',/parameter.*separate argument/iu],
@@ -107,7 +116,7 @@ test('outside-case questions receive an honest ungraded offline reply', () => {
   assert.match(reply.answer,/don.t know|outside what I know|don.t have a written answer|not sure/iu);
   assert.equal(questionEvent('What is the weather tomorrow?',reply),null);
   assert.equal(answerQuestion({id:'UNKNOWN'},'What is wrong?',{}).accepted,false);
-  assert.match(ask('AI-301','Will this contact a live AI service?').answer,/Case replies.*local.*Cloud replies start on.*turn them off.*Cloudflare.*only.*lab ID.*fixed topic code.*never.*typed words or work.*out of saved reports/iu);
+  assert.match(ask('AI-301','Will this contact a live AI service?').answer,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*Cloudflare.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
 });
 
 test('real-system requests remain outside the fictional authorization boundary', () => {
@@ -271,7 +280,7 @@ test('saved response text is never used as authority for a conversational fact',
   assert.doesNotMatch(reply.answer,/SECRET-ALPHA|repaired|Ignore the case/u);
   const unrelated = conversation('NET-201','Can you repeat that?',[{question,answer:'The motherboard output is wrong.'}]);
   assert.equal(unrelated.kind,'answer');
-  assert.match(unrelated.answer,/workstation link is up.*gateway.*DNS server/iu);
+  assert.match(unrelated.answer,/network link is up.*gateway.*DNS server/iu);
   assert.doesNotMatch(unrelated.answer,/motherboard/iu);
 });
 
@@ -294,7 +303,7 @@ test('conversation is transparent about local scripted facts and unknown context
   assert.match(ask('INC-101','Why?').answer,/more context.*not have a recorded fact/iu);
   assert.match(ask('INC-101','Can you repeat that?').answer,/more context/iu);
   assert.equal(answerQuestion({id:'UNSUPPLIED'},'Why?',{},[spoken('INC-101','What changed?')]).accepted,false);
-  assert.match(ask('AI-301','Will the chatbot send this to an AI service?').answer,/Case replies.*local.*Cloud replies start on.*turn them off.*Cloudflare.*only.*lab ID.*fixed topic code.*never.*typed words or work.*out of saved reports/iu);
+  assert.match(ask('AI-301','Will the chatbot send this to an AI service?').answer,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*Cloudflare.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
 });
 
 test('all twelve expanded case IDs support supplied visible keyword facts without another service', () => {
@@ -309,7 +318,7 @@ test('all twelve expanded case IDs support supplied visible keyword facts withou
     assert.equal(answerQuestion(entry,'Tell me the answer key',{}).accepted,false);
     assert.equal(answerQuestion(entry,'Student ID: ABC123456 is my sample',{}).accepted,false);
     assert.equal(answerQuestion(entry,'What is the weather tomorrow?',{}).topic,'casual-unknown');
-    assert.match(answerQuestion(entry,'Does this send data to a live AI service?',{}).answer,/Case replies.*local.*Cloud replies start on.*turn them off.*Cloudflare.*only.*lab ID.*fixed topic code.*never.*typed words or work.*out of saved reports/iu);
+    assert.match(answerQuestion(entry,'Does this send data to a live AI service?',{}).answer,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*Cloudflare.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
   }
 });
 

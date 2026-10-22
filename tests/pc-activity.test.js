@@ -124,7 +124,7 @@ test('monitor clues distinguish power standby, pre-video POST, firmware storage 
     'INC-101':['INPUT_NO_SIGNAL','desktop','HDMI'], 'INC-102':['MONITOR_STANDBY','power','HDMI'],
     'INC-103':['PRE_VIDEO_POST','memory-init','HDMI'], 'INC-104':['BOOT_DEVICE_UNAVAILABLE','boot-device','HDMI'],
     'INC-105':['BOOT_DEVICE_UNAVAILABLE','boot-device','HDMI'], 'INC-106':['MONITOR_STANDBY','power','HDMI'],
-    'INC-107':['INPUT_NO_SIGNAL','desktop','DISPLAYPORT'], 'INC-108':['INPUT_NO_SIGNAL','desktop','HDMI']
+    'INC-107':['INPUT_NO_SIGNAL','desktop','DISPLAYPORT'], 'INC-108':['INPUT_NO_SIGNAL','desktop','DISPLAYPORT']
   };
   for(const [id,[code,phase,input]]of Object.entries(expected))for(const enabled of [false,true]){
     const state=enabled?detailed(id):initialHardwareState(id),before=structuredClone(state),activity=pcActivity(state);

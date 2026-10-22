@@ -35,6 +35,16 @@ function harness(provider,{timeoutMs=1000,preference={enabled:true}}={}){
 const enabledProvider=(_path,options)=>Promise.resolve(json(options.method==='GET'?{enabled:true}:extra('An extra reply.')));
 const on=h=>h.toggle.getAttribute('aria-pressed')==='true';
 
+test('a lab without a reply toggle still checks availability and keeps the same private topic transport',async()=>{
+  const calls=[],answers=[],status=new Control();
+  const chat=mountRequesterChat({querySelector:selector=>selector==='[data-ai-status]'?status:null},{scenario,preference:{enabled:true},fetcher:async(path,options)=>{calls.push({path,options});return enabledProvider(path,options);}});
+  await flush();chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));await flush();
+  assert.deepEqual(calls.map(call=>call.options.method),['GET','POST']);
+  assert.deepEqual(JSON.parse(calls[1].options.body),{scenarioId:'INC-101',topic:'breakfast'});
+  assert.deepEqual(answers,['An extra reply.']);chat.dispose();
+  chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));assert.equal(calls.length,2);
+});
+
 test('mount automatically probes without a question or inference; eligible questions then use cloud replies',async()=>{
   const h=harness(enabledProvider);
   assert.deepEqual(h.calls.map(c=>c.options.method),['GET']);

@@ -85,8 +85,8 @@ test('mode supports differ while every learner can still open example and vocabu
   assert.match(independent,/Your first decision/);assert.match(challenge,/Compare two possible explanations/);
   for(const html of [guided,independent,challenge]){
     assert.match(html,/Words you can tap to define/);
-    assert.match(html,/Safety instructions, vocabulary, and help stay available/);
-    assert.match(html,/href="#educators"/);
+    assert.match(html,/Use only the lab’s virtual controls/);
+    assert.doesNotMatch(html,/Teacher lesson plans|href="#educators"/);
     assert.doesNotMatch(html,/href="#teach"/);
     assert.doesNotMatch(html,/<(?:script|iframe)|\bhidden\b/);
   }

@@ -120,7 +120,7 @@ export function buildLessonPlan(scenario, {duration=40,mode='guided',grouping='p
   const steps=[
     ['Introduce the task','Read the original request, the learning goal, safety, and scope. Define the unfamiliar words.'],
     [selected.id==='challenge'?'Predict an alternative':'Model the process',selected.id==='guided'?lesson.model:selected.id==='independent'?'Predict the first observation you will collect. Open the example if it helps.':'Name two possible explanations. Predict evidence that would distinguish them.'],
-    ['Investigate and test','Use the side-by-side request and workbench: ask and inspect; predict and make one change; compare the result. Open Check & explain when ready. Keep useful unsuccessful tests.'],
+    ['Investigate and test','Follow the three steps: ask and read clues; predict and test; compare and explain. Keep useful tests, including ideas that did not work.'],
     ['Check and explain','Retest the original goal. Explain which observations support your conclusion and what remains uncertain.'],
     ['Exit and handoff',lesson.exitQuestion+' Review and export through the teacher’s approved route.']
   ].map(([title,text],index)=>({title,text,minutes:durations[minutes][index]}));
@@ -137,12 +137,11 @@ function processMarkup() {
 export function renderLabLearning(scenario,mode='guided') {
   const lesson=lessonFor(scenario), selected=modeFor(mode);
   return `<section class="lab-learning teaching-mode-${selected.id}" aria-labelledby="learning-title">
-    <div class="learning-heading"><div><p class="eyebrow">Your learning support</p><h2 id="learning-title">${esc(selected.label)} investigation</h2></div><a href="#educators">Teacher lesson plans</a></div>
-    <p>${esc(selected.description)} Safety instructions, vocabulary, and help stay available in every mode.</p>
+    <div class="learning-heading"><h2 id="learning-title">${esc(selected.label)} investigation</h2></div>
+    <p>Use only the lab’s virtual controls. Open the example or word help if you need it.</p>
     ${processMarkup()}
-    <p class="learning-goal"><strong>Practise:</strong> ${esc(lesson.goals[0])}</p>
-    ${selected.id==='guided'?'<p class="learning-mode-task"><strong>Start here:</strong> Write one observation and one possible explanation. Before acting, predict what your test will show.</p>':selected.id==='independent'?'<p class="learning-mode-task"><strong>Your first decision:</strong> Choose a question or observation that will help you decide what to test. Explain your choice.</p>':'<p class="learning-mode-task"><strong>Challenge:</strong> Compare two possible explanations. Describe an observation that would favor one over the other, then test your prediction.</p>'}
-    <details class="learning-model"><summary>See a worked example of the process</summary><p>${esc(lesson.model)}</p><p>The example models reasoning. Apply the process to your own case and check its evidence.</p></details>
+    ${selected.id==='guided'?'<p class="learning-mode-task"><strong>Start here:</strong> Read the ticket and clues. Write what you notice, then explain what you think is happening.</p>':selected.id==='independent'?'<p class="learning-mode-task"><strong>Your first decision:</strong> Choose a question or clue to check. Explain why it will help.</p>':'<p class="learning-mode-task"><strong>Challenge:</strong> Compare two possible explanations. Predict a result that would help you choose between them.</p>'}
+    <details class="learning-model"><summary>See a worked example of the process</summary><p>${esc(lesson.model)}</p></details>
     <details class="learning-words"><summary>Words you can tap to define</summary>${vocabularyMarkup(lesson)}</details>
   </section>`;
 }

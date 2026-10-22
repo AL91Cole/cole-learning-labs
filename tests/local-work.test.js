@@ -24,7 +24,7 @@ test('opening each default lab does not trigger a private-work warning', () => {
   }
 });
 test('learner writing, action history, verification, and ticket delivery each count as private work', () => {
-  for (const record of [{ plan: 'A fictional explanation' }, { notes: 'Observed virtual power' }, { reflection: 'Check the original task' }, { events: [{ message: 'Moved virtual cable' }] }, { verified: true }, { closed: true }]) {
+  for (const record of [{ symptoms: 'No lights or fans.' }, { plan: 'A fictional explanation' }, { notes: 'Observed virtual power' }, { reflection: 'Check the original task' }, { events: [{ message: 'Moved virtual cable' }] }, { verified: true }, { closed: true }]) {
     assert.equal(hasPrivateWork(record), true);
   }
 });
@@ -60,4 +60,37 @@ test('malformed or denied storage never activates persistence or breaks private 
   const blocked=createWorkStorage({key:WORK_PREFIX,scenarios:SCENARIOS,storage:{setItem(){throw Error('blocked');}}});assert.equal(blocked.enable(sample()),false);assert.equal(blocked.persistent,false);assert.equal(blocked.save(sample()),true);
   assert.deepEqual(normalizeWorkCollection(SCENARIOS,{version:2,labs:[]}),{version:2,labs:{}});
   assert.throws(()=>createWorkStorage({storage:disk,key:'other-site-data',scenarios:SCENARIOS}),/scope/);
+});
+
+test('saved first-idea answers survive explicit device saving, JSON export and resume without sharing identity fields', () => {
+  const scenario=SCENARIOS.find(item=>item.id==='INC-102');
+  const draft={symptoms:'The desktop has no lights or fan noise.',plan:'I think the desktop is not receiving power.',ideaSaved:true,studentName:'Do not retain',state:{}};
+  const before=structuredClone(draft),disk=storage();
+  const manager=createWorkStorage({storage:disk,key:WORK_PREFIX,scenarios:SCENARIOS});
+  assert.equal(manager.enable({version:2,labs:{[scenario.id]:draft}}),true);
+  const exported=JSON.parse(disk.getItem(WORK_PREFIX));
+  const restored=normalizeWorkCollection(SCENARIOS,exported).labs[scenario.id];
+  assert.equal(restored.symptoms,draft.symptoms);assert.equal(restored.plan,draft.plan);assert.equal(restored.ideaSaved,true);
+  assert.equal(Object.hasOwn(restored,'studentName'),false);assert.deepEqual(draft,before);
+  const next=createWorkStorage({storage:disk,key:WORK_PREFIX,scenarios:SCENARIOS});
+  assert.deepEqual(next.resume().labs[scenario.id],restored);
+});
+
+test('first-idea normalization preserves legacy writing but rejects malformed answers and false saved credit', () => {
+  const scenario=SCENARIOS.find(item=>item.id==='NET-202');
+  const legacy=normalizeLabRecord(scenario,{plan:'Keep the earlier working hypothesis.',notes:'Keep previous test notes.',verified:true,closed:true});
+  assert.equal(legacy.symptoms,'');assert.equal(legacy.ideaSaved,false);assert.equal(legacy.closed,false);assert.equal(legacy.verified,true);
+  assert.equal(legacy.plan,'Keep the earlier working hypothesis.');assert.equal(legacy.notes,'Keep previous test notes.');
+  for(const input of [
+    {symptoms:{html:'<script>'},plan:'A long enough hypothesis.',ideaSaved:true},
+    {symptoms:'The display is blank.',plan:['A long enough hypothesis.'],ideaSaved:true},
+    {symptoms:'The display is blank.',plan:'A long enough hypothesis.',ideaSaved:'true'},
+    {symptoms:'            ',plan:'A long enough hypothesis.',ideaSaved:true},
+    {symptoms:'The display is blank.',plan:'too short',ideaSaved:true}
+  ]) {
+    const record=normalizeLabRecord(scenario,{...input,closed:true});
+    assert.equal(record.ideaSaved,false);assert.equal(record.closed,false);
+  }
+  const bounded=normalizeLabRecord(scenario,{symptoms:'s'.repeat(2200),plan:'p'.repeat(2200),ideaSaved:true});
+  assert.equal(bounded.symptoms.length,2000);assert.equal(bounded.plan.length,2000);assert.equal(bounded.ideaSaved,true);
 });

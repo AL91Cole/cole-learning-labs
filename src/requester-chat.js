@@ -1,6 +1,6 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261021-table27';
-import {requesterTopic} from './requester-topics.js?release=20261021-table27';
-import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261021-table27';
+import {requesterTextIsPrivate} from './interview.js?release=20261022-learning';
+import {requesterTopic} from './requester-topics.js?release=20261022-learning';
+import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261022-learning';
 
 // Page memory only: an off choice or automatic fallback survives lab changes.
 const pagePreference={enabled:true};
@@ -12,7 +12,7 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
   let disposed=false,available=false,useCloud=preference.enabled!==false;
   let sequence=0,probeSequence=0,controller=null,probeController=null;
   const say=text=>{if(!disposed)status.textContent=text;};
-  function syncToggle(){toggle.setAttribute('aria-pressed',String(useCloud));toggle.textContent=useCloud?'AI replies on':'AI replies off';}
+  function syncToggle(){if(toggle){toggle.setAttribute('aria-pressed',String(useCloud));toggle.textContent=useCloud?'AI replies on':'AI replies off';}}
   function choose(enabled){useCloud=enabled;preference.enabled=enabled;syncToggle();}
   function cancel(){sequence++;controller?.abort();controller=null;}
   function offline(message='Built-in replies are ready.'){
@@ -56,9 +56,9 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
     choose(true);cancel();
     void checkAvailability();
   };
-  toggle.addEventListener('click',onToggle);
-  toggle.disabled=false;syncToggle();
-  if(typeof fetcher!=='function'){offline();toggle.disabled=true;}
+  toggle?.addEventListener('click',onToggle);
+  if(toggle)toggle.disabled=false;syncToggle();
+  if(typeof fetcher!=='function'){offline();if(toggle)toggle.disabled=true;}
   else if(useCloud)void checkAvailability();
   else say('Built-in replies are ready.');
 
@@ -82,6 +82,6 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
   return {enrich,cancel,dispose(){
     if(disposed)return;
     disposed=true;cancel();probeSequence++;probeController?.abort();probeController=null;available=false;
-    toggle.removeEventListener?.('click',onToggle);
+    toggle?.removeEventListener?.('click',onToggle);
   }};
 }

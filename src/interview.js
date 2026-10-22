@@ -1,10 +1,11 @@
-import { resolveQuestion } from './conversation.js?release=20261021-table27';
-import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261021-table27';
+import { resolveQuestion } from './conversation.js?release=20261022-learning';
+import { pcActivity } from './pc-activity.js?release=20261022-learning';
+import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261022-learning';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
-const PRIVACY_NOTICE = 'Case replies use local facts. Cloud replies start on for supported extra topics after an availability check; you can turn them off. Cloudflare receives only the lab ID and a fixed topic code, never your typed words or work. Extra chat stays out of saved reports.';
+const PRIVACY_NOTICE = 'Case replies use local facts. When available, extra cloud replies use a fixed topic code and lab ID. Cloudflare does not receive your typed words or work in that request. Extra chat stays out of saved reports. Built-in replies stay available if the service cannot reply.';
 const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();
@@ -113,7 +114,10 @@ function caseReply(scenario, question, state) {
   if (id === 'INC-102') {
     if (/power|outlet|plug|cable|ac|lights?|fans?|button|start/iu.test(question)) {
       const on = flag(state, 'pcOn'); const ac = flag(state, 'acConnected');
-      if (on !== undefined && ac !== undefined) return response('Current bench: AC power is ' + (ac ? 'connected' : 'disconnected') + ' and the desktop is ' + (on ? 'on, with its power light and fans running.' : 'off. Check the virtual power path before trying the power button.'), 'current-state');
+      if (on !== undefined && ac !== undefined) {
+        const powered=pcActivity(state).powered;
+        return response('Current bench: AC power is ' + (ac ? 'connected' : 'disconnected') + ' and the desktop is ' + (powered ? 'on, with its power light and fans running.' : on ? 'not starting. Its power light and fans are off. Check the cable from the power supply to the motherboard.' : 'off. Check the virtual power path before trying the power button.'), 'current-state');
+      }
       return fact(scenario, /switch/iu.test(question) ? 'switch' : 'power');
     }
     if (/parts|inside|installed|missing/iu.test(question)) return fact(scenario, 'components');
@@ -453,9 +457,31 @@ function inquiryRecords(scenario, events) {
   return records;
 }
 
-/** Protect the earned answer and its direct conversational anchor, never saved answer text as authority. */
+// Keep one answered case question even when the ticket needs no missing fact.
+// Replay questions against authored facts: greetings and clarification prompts
+// do not complete the conversation step, and saved reply text adds no authority.
+function answeredCaseIndices(scenario, events) {
+  if (!Array.isArray(events)) return [];
+  const history=[], dependencies=new Map();let latest=[];
+  for (const [index,event] of events.entries()) {
+    const pair=readQuestionEvents([event])[0];if(!pair)continue;
+    const recent=history.slice(-8),pairs=recent.map(item=>item.pair);
+    const reply=answerQuestion(scenario,pair.question,{},pairs);
+    if(reply.accepted&&reply.kind==='answer'&&!['conversation','how-to','privacy','scope','safety'].includes(reply.topic)) {
+      const contextQuestion=reply.contextQuestion||(followUpKind(pair.question)?recentCaseContext(scenario,{},pairs)?.question:undefined);
+      const anchor=contextQuestion?recent.toReversed().find(item=>compact(item.pair.question)===compact(contextQuestion)):undefined;
+      latest=anchor?[...new Set([...(dependencies.get(anchor.index)||[anchor.index]),index])]:[index];
+      dependencies.set(index,latest);
+    }
+    history.push({index,pair});
+  }
+  return latest;
+}
+
+/** Protect earned answers and the latest answered case question with their
+ * conversational anchors, never saved answer text as authority. */
 function inquiryProtectedIndices(scenario, events) {
-  const earned = new Set(), indices = new Set();
+  const earned = new Set(), indices = new Set(answeredCaseIndices(scenario,events));
   for (const record of inquiryRecords(scenario,events)) for (const id of record.ids) {
     if (earned.has(id)) continue;
     earned.add(id);record.indices.forEach(index => indices.add(index));
@@ -481,7 +507,6 @@ export function inquiryProgress(scenario, events) {
 /** Keep earned facts and any direct context needed to replay them inside the existing 100-event record. */
 export function retainInquiryEvents(scenario, events) {
   if (!Array.isArray(events)) return [];
-  if (!requiredInquiryFacts(scenario).length) return events.slice(-100);
   const kept = new Set(inquiryProtectedIndices(scenario,events));
   for (let index=events.length-1;index>=0 && kept.size<100;index--)kept.add(index);
   return [...kept].sort((a,b)=>a-b).map(index=>events[index]);

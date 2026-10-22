@@ -11,14 +11,14 @@ const css=readFileSync(new URL('../src/foundations.css',import.meta.url),'utf8')
 // layout, native touch and school-device acceptance remain browser QA.
 function fixture(track='hardware',{hidden=false,documentHidden=false,record}={}){
   const lab=getFoundation(track),listeners=new Map(),docListeners=new Map(),attrs={},calls={inspections:[],actions:[],statuses:[]};
-  let current=record||createFoundationRecord(track),markup='',nodes=[];
+  let current=record||createFoundationRecord(track),markup='',nodes=[],roleNodes=[];
   const doc={hidden:documentHidden,activeElement:null,addEventListener:(name,fn)=>docListeners.set(name,fn),removeEventListener:(name,fn)=>{if(docListeners.get(name)===fn)docListeners.delete(name);}},portrait={innerHTML:''},statusDetails={open:false};
-  const host={ownerDocument:doc,setAttribute:(name,value)=>{attrs[name]=value;},closest:()=>hidden?{}:null,contains:node=>nodes.includes(node),querySelector:selector=>selector==='[data-foundation-part-portrait]'?portrait:selector==='.foundation-pc-status'?statusDetails:null,querySelectorAll:selector=>selector==='[data-foundation-item]'?nodes:[],addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:(name,fn)=>{if(listeners.get(name)===fn)listeners.delete(name);}};
-  Object.defineProperty(host,'innerHTML',{get:()=>markup,set(value){markup=value;statusDetails.open=false;nodes=[...value.matchAll(/<(button|g)\b([^>]*data-foundation-item="([^"]+)")[^>]*>/g)].map(([,tag,,id])=>({tagName:tag==='button'?'BUTTON':'g',dataset:{foundationItem:id},attrs:{'aria-pressed':'false'},closest(selector){return selector==='[data-foundation-item]'?this:null;},setAttribute(name,value){this.attrs[name]=value;},focus(){doc.activeElement=this;}}));}});
+  const host={ownerDocument:doc,setAttribute:(name,value)=>{attrs[name]=value;},closest:()=>hidden?{}:null,contains:node=>nodes.includes(node),querySelector:selector=>selector==='[data-foundation-part-portrait]'?portrait:selector==='.foundation-pc-status'?statusDetails:null,querySelectorAll:selector=>selector==='[data-foundation-item]'?nodes:selector==='[data-foundation-card-role]'?roleNodes:[],addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:(name,fn)=>{if(listeners.get(name)===fn)listeners.delete(name);}};
+  Object.defineProperty(host,'innerHTML',{get:()=>markup,set(value){markup=value;statusDetails.open=false;roleNodes=[...value.matchAll(/<span\b[^>]*data-foundation-card-role="([^"]+)"([^>]*)>/g)].map(([,id,attrs])=>({dataset:{foundationCardRole:id},hidden:/\bhidden\b/.test(attrs)}));nodes=[...value.matchAll(/<(button|g)\b([^>]*data-foundation-item="([^"]+)")[^>]*>/g)].map(([,tag,,id])=>({tagName:tag==='button'?'BUTTON':'g',dataset:{foundationItem:id},attrs:{'aria-pressed':'false'},closest(selector){return selector==='[data-foundation-item]'?this:null;},setAttribute(name,value){this.attrs[name]=value;},focus(){doc.activeElement=this;}}));}});
   host.innerHTML=renderFoundationVisual(lab,current);
   const controller=mountFoundationScene(host,{lab,record:current,onInspect:id=>calls.inspections.push(id),onAction:action=>calls.actions.push(action),onStatus:status=>calls.statuses.push(status)});
   function target(id){const node=nodes.find(node=>node.dataset.foundationItem===id);assert.ok(node,`missing item ${id}`);return node;}
-  return {lab,doc,host,portrait,statusDetails,listeners,docListeners,attrs,calls,controller,get record(){return current;},set record(value){current=value;controller.update(value);},get nodes(){return nodes;},click(id){const node=target(id);node.focus();listeners.get('click')?.({target:node});},key(id,key){const event={target:target(id),key,preventDefault(){this.prevented=true;}};listeners.get('keydown')?.(event);return event;},show(){hidden=false;controller.setVisible(true);}};
+  return {lab,doc,host,portrait,statusDetails,listeners,docListeners,attrs,calls,controller,get record(){return current;},set record(value){current=value;controller.update(value);},get nodes(){return nodes;},get roleNodes(){return roleNodes;},click(id){const node=target(id);node.focus();listeners.get('click')?.({target:node});},key(id,key){const event={target:target(id),key,preventDefault(){this.prevented=true;}};listeners.get('keydown')?.(event);return event;},show(){hidden=false;controller.setVisible(true);}};
 }
 
 function prepared(){const lab=getFoundation('hardware');let state=createFoundationRecord(lab.id);for(const item of lab.items)state=applyFoundationAction(lab.id,state,{type:'inspect',item:item.id}).state;for(const check of lab.checks)state=applyFoundationAction(lab.id,state,{type:'answer',check:check.id,value:check.answer}).state;return state;}
@@ -38,9 +38,26 @@ test('four other pathways retain native named picture buttons for every curricul
   }
 });
 
+test('selected picture cards show their job beside the picture and retain it through updates',()=>{
+  for(const lab of FOUNDATION_LABS.filter(lab=>lab.id!=='hardware')){
+    const f=fixture(lab.id),first=lab.items[0],next=lab.items[1];
+    assert.equal(f.roleNodes.length,lab.items.length);assert.ok(f.roleNodes.every(node=>node.hidden));
+    f.click(first.id);
+    assert.deepEqual(f.roleNodes.filter(node=>!node.hidden).map(node=>node.dataset.foundationCardRole),[first.id]);
+    assert.ok(f.host.innerHTML.includes(escapeRole(first.role)));
+    const inspected=[...f.calls.inspections];f.controller.focus(next.id);f.record={...f.record};
+    assert.deepEqual(f.roleNodes.filter(node=>!node.hidden).map(node=>node.dataset.foundationCardRole),[next.id]);
+    assert.deepEqual(f.calls.inspections,inspected,'Showing a role does not award another inspection.');
+    assert.deepEqual(f.calls.actions,[]);assert.doesNotMatch(f.host.innerHTML,/foundation-item-role[^>]*aria-live/);
+    f.controller.dispose();
+  }
+});
+
+function escapeRole(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
 test('all nine part portraits remain recognizable without changing the physical model or granting practice',()=>{
   const f=fixture(),before=JSON.stringify(f.record),pictures=new Set();
-  for(const item of f.lab.items){f.controller.focus(item.id);assert.ok(f.portrait.innerHTML.includes('<svg '));assert.ok(f.portrait.innerHTML.includes(item.label));assert.ok(f.portrait.innerHTML.includes(item.looks));pictures.add(f.portrait.innerHTML.split('</svg>')[0]);}
+  for(const item of f.lab.items){f.controller.focus(item.id);assert.ok(f.portrait.innerHTML.includes('<svg '));assert.ok(f.portrait.innerHTML.includes(item.label));assert.ok(f.portrait.innerHTML.includes(item.looks));assert.ok(f.portrait.innerHTML.includes(escapeRole(item.role)));pictures.add(f.portrait.innerHTML.split('</svg>')[0]);}
   assert.equal(pictures.size,9);assert.equal(JSON.stringify(f.record),before);assert.deepEqual(f.calls.actions,[]);assert.deepEqual(f.calls.inspections,[]);f.controller.dispose();
 });
 
@@ -66,7 +83,7 @@ test('updates preserve selection and the currently focused picture without movin
 });
 
 test('diagram readouts update non-hardware state without awarding any action credit',()=>{
-  const f=fixture('network');f.record={...f.record,simulation:{wired:true,ipAssigned:true,dnsReady:false,serviceReachable:false}};assert.ok(f.host.innerHTML.includes('data-foundation-state="done">✓ Ethernet connected'));assert.ok(f.host.innerHTML.includes('data-foundation-state="waiting">○ Name lookup ready'));assert.deepEqual(f.calls.actions,[]);f.controller.dispose();
+  const f=fixture('network');f.record={...f.record,simulation:{wired:true,ipAssigned:true,dnsReady:false,serviceReachable:false}};assert.ok(f.host.innerHTML.includes('data-foundation-state="done">✓ Network cable connected'));assert.ok(f.host.innerHTML.includes('data-foundation-state="waiting">○ Name lookup (DNS) done'));assert.deepEqual(f.calls.actions,[]);f.controller.dispose();
 });
 
 test('hidden, background and disposed views ignore stale selections and disposal removes both listeners',()=>{
@@ -74,7 +91,7 @@ test('hidden, background and disposed views ignore stale selections and disposal
 });
 
 test('authored labels, portrait descriptions, and program output are escaped',()=>{
-  const lab={track:'ai',title:'<img src=x>',items:[{id:'prompt" autofocus="x',label:'<script>bad()</script>',looks:'<svg onload=bad()>'}]},html=renderFoundationVisual(lab,{});assert.ok(html.includes('&lt;script&gt;'));assert.ok(html.includes('prompt&quot; autofocus=&quot;x'));assert.ok(!html.includes('<img'));assert.ok(!html.includes('<script>'));
+  const lab={track:'ai',title:'<img src=x>',items:[{id:'prompt" autofocus="x',label:'<script>bad()</script>',looks:'<svg onload=bad()>',role:'<img src=x onerror=bad()>'}]},html=renderFoundationVisual(lab,{});assert.ok(html.includes('&lt;script&gt;'));assert.ok(html.includes('prompt&quot; autofocus=&quot;x'));assert.ok(html.includes('&lt;img src=x onerror=bad()&gt;'));assert.ok(!html.includes('<img'));assert.ok(!html.includes('<script>'));
   const output=renderFoundationVisual(getFoundation('coding'),{results:[{output:['<iframe src=x>','&private']}]});assert.ok(output.includes('&lt;iframe src=x&gt; · &amp;private'));assert.ok(!output.includes('<iframe'));
   const hardware=renderFoundationVisual({track:'hardware',items:[{id:'cpu',label:'CPU',looks:'<img src=x>'}]},{});assert.ok(hardware.includes('&lt;img src=x&gt;'));
 });

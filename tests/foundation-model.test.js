@@ -20,6 +20,15 @@ function practiceAll(id,state=prepared(id)) {
   for(const job of getFoundation(id).jobs)state=step(id,state,{type:'practice',action:job.action},'success').state;
   return state;
 }
+function finishPractice(id) {
+  if(id!=='coding')return practiceAll(id);
+  let state=step(id,prepared(id),{type:'code',source:'print(quantity * 3);'}).state;
+  return step(id,state,{type:'run-code'},'success').state;
+}
+function saveExplanation(id,state=finishPractice(id)) {
+  state=step(id,state,{type:'explain',notes:'I followed the steps and checked the practice result.',reflection:'I learned to compare the result with the task before finishing.'}).state;
+  return step(id,state,{type:'save-explanation'},'success').state;
+}
 
 test('five public beginner foundations stay separate from the 32 investigation tickets',()=>{
   assert.equal(FOUNDATION_LABS.length,5);assert.equal(SCENARIOS.length,32);
@@ -82,7 +91,7 @@ test('guided practice requires exploration and correct role checks before any cr
     let state=createFoundationRecord(lab.id);
     assert.match(step(lab.id,state,{type:'practice',action:lab.jobs[0].action},'warning').message,/Explore each/);
     for(const item of lab.items)state=step(lab.id,state,{type:'inspect',item:item.id}).state;
-    const blocked=step(lab.id,state,{type:'practice',action:lab.jobs[0].action},'warning');assert.match(blocked.message,/role checks/);assert.equal(blocked.state.practice.length,0);
+    const blocked=step(lab.id,state,{type:'practice',action:lab.jobs[0].action},'warning');assert.match(blocked.message,/all three questions/);assert.equal(blocked.state.practice.length,0);
   }
 });
 
@@ -102,20 +111,21 @@ test('the complete hardware mini-job needs mounts, display, startup, and origina
   const lab=getFoundation('hardware');let state=prepared(lab.id);
   for(let index=0;index<lab.jobs.length;index++){
     state=step(lab.id,state,{type:'practice',action:lab.jobs[index].action},'success').state;
-    assert.equal(foundationSummary(lab.id,state).complete,index===lab.jobs.length-1);
+    assert.equal(foundationSummary(lab.id,state).practiceComplete,index===lab.jobs.length-1);
   }
   assert.equal(state.hardware.assembly.ramClipsOpen,false);assert.equal(state.hardware.assembly.panelInstalled,true);
   assert.deepEqual(state.hardware.assembly.panelScrews,[true,true]);assert.equal(state.hardware.videoPort,'gpu');assert.equal(state.hardware.documentOpened,true);
-  assert.equal(verifyHardware('INC-101',state.hardware).ok,true);assert.equal(foundationSummary(lab.id,state).complete,true);
+  assert.equal(verifyHardware('INC-101',state.hardware).ok,true);assert.equal(foundationSummary(lab.id,state).practiceComplete,true);assert.equal(foundationSummary(lab.id,state).complete,false);
 });
 
 test('changing a role answer after practice preserves the learner equipment and reopens completion',()=>{
-  const lab=getFoundation('hardware'),complete=practiceAll(lab.id),before=structuredClone(complete.hardware);
+  const lab=getFoundation('hardware'),complete=saveExplanation(lab.id),before=structuredClone(complete.hardware);
   const check=lab.checks[0],wrong=check.options.find(option=>option.id!==check.answer);
   let state=step(lab.id,complete,{type:'answer',check:check.id,value:wrong.id},'warning').state;
   assert.deepEqual(state.hardware,before);assert.deepEqual(state.practice,complete.practice);assert.equal(foundationSummary(lab.id,state).complete,false);
   state=step(lab.id,state,{type:'answer',check:check.id,value:check.answer},'success').state;
-  assert.equal(foundationSummary(lab.id,state).complete,true);
+  assert.equal(foundationSummary(lab.id,state).practiceComplete,true);assert.equal(state.explanationSaved,false);assert.equal(state.notes,complete.notes);assert.equal(foundationSummary(lab.id,state).complete,false);
+  state=step(lab.id,state,{type:'save-explanation'},'success').state;assert.equal(foundationSummary(lab.id,state).complete,true);
 });
 
 test('network practice separates physical link, automatic settings, and DNS/application evidence',()=>{
@@ -126,7 +136,7 @@ test('network practice separates physical link, automatic settings, and DNS/appl
   state=step('network',state,{type:'practice',action:'request-dhcp'},'success').state;
   assert.deepEqual(state.simulation,{wired:true,ipAssigned:true,dnsReady:false,serviceReachable:false});
   state=step('network',state,{type:'practice',action:'test-service'},'success').state;
-  assert.equal(state.simulation.dnsReady,true);assert.equal(state.simulation.serviceReachable,true);assert.equal(foundationSummary('network',state).complete,true);
+  assert.equal(state.simulation.dnsReady,true);assert.equal(state.simulation.serviceReachable,true);assert.equal(foundationSummary('network',state).practiceComplete,true);
 });
 
 test('AI practice uses a fictional prompt then evidence and human review in order',()=>{
@@ -135,14 +145,14 @@ test('AI practice uses a fictional prompt then evidence and human review in orde
   for(const [action,expected] of [['choose-fictional',{fictionalPrompt:true,evidenceChecked:false,humanReviewed:false}],['check-evidence',{fictionalPrompt:true,evidenceChecked:true,humanReviewed:false}],['request-human-review',{fictionalPrompt:true,evidenceChecked:true,humanReviewed:true}]]){
     state=step('ai',state,{type:'practice',action},'success').state;assert.deepEqual(state.simulation,expected);
   }
-  assert.equal(foundationSummary('ai',state).complete,true);
+  assert.equal(foundationSummary('ai',state).practiceComplete,true);
 });
 
 test('security practice requires scope and simulated MFA before reducing the fictional role',()=>{
   let state=prepared('security');
   state=step('security',state,{type:'practice',action:'least-privilege'},'warning').state;assert.equal(state.simulation.role,'administrator');
   for(const action of ['confirm-scope','enable-mfa','least-privilege'])state=step('security',state,{type:'practice',action},'success').state;
-  assert.deepEqual(state.simulation,{scopeConfirmed:true,mfaEnabled:true,leastPrivilege:true,role:'learner'});assert.equal(foundationSummary('security',state).complete,true);
+  assert.deepEqual(state.simulation,{scopeConfirmed:true,mfaEnabled:true,leastPrivilege:true,role:'learner'});assert.equal(foundationSummary('security',state).practiceComplete,true);
 });
 
 test('coding starter fails actual 0, 2, and 5 fixtures; changing the operator passes all three',()=>{
@@ -153,7 +163,7 @@ test('coding starter fails actual 0, 2, and 5 fixtures; changing the operator pa
   assert.deepEqual(state.results,[]);assert.equal(state.sourceAtRun,'');
   state=step('coding',state,{type:'run-code'},'success').state;
   assert.deepEqual(state.results.map(run=>[run.quantity,run.expected,run.output,run.passed]),[[0,'0',['0'],true],[2,'6',['6'],true],[5,'15',['15'],true]]);
-  assert.deepEqual(state.practice,['fixture-0','fixture-2','fixture-5']);assert.equal(foundationSummary('coding',state).complete,true);
+  assert.deepEqual(state.practice,['fixture-0','fixture-2','fixture-5']);assert.equal(foundationSummary('coding',state).practiceComplete,true);
 });
 
 test('a constant answer cannot pass every fixture and every edited program needs a fresh run',()=>{
@@ -161,7 +171,7 @@ test('a constant answer cannot pass every fixture and every edited program needs
   state=step('coding',state,{type:'code',source:'print(6);'}).state;state=step('coding',state,{type:'practice',action:'run-code'},'warning').state;
   assert.deepEqual(state.practice,['fixture-2']);assert.equal(foundationSummary('coding',state).complete,false);
   state=step('coding',state,{type:'code',source:'print(quantity * 3);'}).state;state=step('coding',state,{type:'run-code'},'success').state;
-  const runCount=state.runCount;state=step('coding',state,{type:'code',source:state.code}).state;assert.equal(foundationSummary('coding',state).complete,true);assert.equal(state.runCount,runCount);
+  const runCount=state.runCount;state=step('coding',state,{type:'code',source:state.code}).state;assert.equal(foundationSummary('coding',state).practiceComplete,true);assert.equal(state.runCount,runCount);
   state=step('coding',state,{type:'code',source:'print(quantity + 3);'}).state;
   assert.equal(state.sourceAtRun,'');assert.deepEqual(state.results,[]);assert.deepEqual(state.practice,[]);assert.equal(foundationSummary('coding',state).complete,false);
 });
@@ -207,7 +217,7 @@ test('getters, sparse arrays, and malformed actions cannot execute or earn progr
 });
 
 test('reports describe actual current work, correct stale coding output, and include no hidden identity fields',()=>{
-  const hardware=practiceAll('hardware'),report=foundationReport('hardware',{...hardware,studentId:'not-for-report'});
+  const hardware=saveExplanation('hardware'),report=foundationReport('hardware',{...hardware,studentId:'not-for-report'});
   assert.match(report,/HW-100/);assert.match(report,/Status: COMPLETE/);assert.match(report,/Original lesson file opened: yes/);assert.doesNotMatch(report,/not-for-report/);
   let code=prepared('coding');code=step('coding',code,{type:'code',source:'print(quantity * 3);'}).state;code=step('coding',code,{type:'run-code'}).state;
   assert.match(foundationReport('coding',code),/quantity 5 — expected 15; actual 15; PASS/);
@@ -223,4 +233,74 @@ test('completed practice remains bounded and unknown or view-only actions cannot
   const extreme={...state,attempts:Number.MAX_SAFE_INTEGER,runCount:-1,explored:Array(2000).fill('device')};
   const bounded=applyFoundationAction('network',extreme,{type:'inspect',item:'dns'}).state;
   assert.ok(bounded.attempts<=1000000);assert.ok(bounded.explored.length<=getFoundation('network').items.length);assert.equal(bounded.runCount,0);
+});
+
+test('all five foundations require the actual practice result and two saved explanation answers',()=>{
+  for(const lab of FOUNDATION_LABS) {
+    let state=createFoundationRecord(lab.id);
+    state=step(lab.id,state,{type:'explain',notes:'I described the steps in my own words.',reflection:'I explained what I learned from the result.'}).state;
+    assert.equal(foundationSummary(lab.id,state).hasWork,true);
+    state=step(lab.id,state,{type:'save-explanation'},'warning').state;assert.equal(state.explanationSaved,false);
+    state=finishPractice(lab.id);assert.equal(foundationSummary(lab.id,state).practiceComplete,true);assert.equal(foundationSummary(lab.id,state).complete,false);
+    state=step(lab.id,state,{type:'explain',notes:'I completed the practice job and checked its result.'}).state;
+    state=step(lab.id,state,{type:'save-explanation'},'warning').state;
+    state=step(lab.id,state,{type:'explain',reflection:'   short   '}).state;
+    state=step(lab.id,state,{type:'save-explanation'},'warning').state;assert.equal(state.explanationSaved,false);
+    state=step(lab.id,state,{type:'explain',reflection:'I learned why the practice result meets the task.'}).state;
+    assert.equal(foundationSummary(lab.id,state).complete,false,'Typing both answers does not silently save them.');
+    state=step(lab.id,state,{type:'save-explanation'},'success').state;
+    assert.equal(foundationSummary(lab.id,state).complete,true);assert.equal(state.explanationSaved,true);
+    const report=foundationReport(lab.id,state);assert.match(report,/Status: COMPLETE/);assert.ok(report.includes(state.notes));assert.ok(report.includes(state.reflection));assert.match(report,/Explanation saved: yes/);
+  }
+});
+
+test('editing an explanation reopens completion without losing the finished practice or other answer',()=>{
+  for(const lab of FOUNDATION_LABS) {
+    let state=saveExplanation(lab.id),notes=state.notes;
+    state=step(lab.id,state,{type:'explain',notes}).state;assert.equal(state.explanationSaved,true,'An unchanged answer stays saved.');
+    state=step(lab.id,state,{type:'explain',reflection:'I changed my explanation after reviewing the result.'}).state;
+    assert.equal(state.notes,notes);assert.equal(state.explanationSaved,false);assert.equal(foundationSummary(lab.id,state).practiceComplete,true);assert.equal(foundationSummary(lab.id,state).complete,false);
+    assert.match(foundationReport(lab.id,state),/Status: IN PROGRESS/);
+    state=step(lab.id,state,{type:'save-explanation'},'success').state;assert.equal(foundationSummary(lab.id,state).complete,true);
+  }
+});
+
+test('inspection, repeated correct answers and fresh runs of unchanged code preserve the saved explanation',()=>{
+  for(const lab of FOUNDATION_LABS) {
+    let state=saveExplanation(lab.id),writing={notes:state.notes,reflection:state.reflection};
+    state=step(lab.id,state,{type:'inspect',item:lab.items[0].id},'success').state;
+    state=step(lab.id,state,{type:'answer',check:lab.checks[0].id,value:lab.checks[0].answer},'success').state;
+    if(lab.id==='coding') {
+      state=step(lab.id,state,{type:'code',source:state.code}).state;
+      state=step(lab.id,state,{type:'run-code'},'success').state;
+    }
+    assert.equal(state.explanationSaved,true);assert.equal(foundationSummary(lab.id,state).complete,true);assert.deepEqual({notes:state.notes,reflection:state.reflection},writing);
+  }
+});
+
+test('changed code and missing practice steps require another explanation save after actual retesting',()=>{
+  let code=saveExplanation('coding'),writing={notes:code.notes,reflection:code.reflection};
+  code=step('coding',code,{type:'code',source:'let cost = quantity * 3; print(cost);'}).state;
+  assert.equal(code.explanationSaved,false);assert.equal(foundationSummary('coding',code).practiceComplete,false);
+  code=step('coding',code,{type:'save-explanation'},'warning').state;
+  code=step('coding',code,{type:'run-code'},'success').state;
+  assert.equal(foundationSummary('coding',code).practiceComplete,true);assert.equal(foundationSummary('coding',code).complete,false);assert.deepEqual({notes:code.notes,reflection:code.reflection},writing);
+  code=step('coding',code,{type:'save-explanation'},'success').state;assert.equal(foundationSummary('coding',code).complete,true);
+  const prior=saveExplanation('network'),missing={...prior,practice:prior.practice.slice(0,-1)};
+  const repaired=step('network',missing,{type:'practice',action:'test-service'},'success').state;
+  assert.equal(foundationSummary('network',repaired).practiceComplete,true);assert.equal(repaired.explanationSaved,false);assert.equal(repaired.notes,prior.notes);
+});
+
+test('legacy and damaged records keep legitimate practice but cannot invent a saved explanation',()=>{
+  const completed=saveExplanation('network'),legacy={...completed};delete legacy.notes;delete legacy.reflection;delete legacy.explanationSaved;
+  assert.equal(foundationSummary('network',legacy).practiceComplete,true);assert.equal(foundationSummary('network',legacy).complete,false);
+  const restored=step('network',JSON.parse(JSON.stringify(completed)),{type:'inspect',item:'device'}).state;assert.equal(restored.explanationSaved,true);assert.equal(restored.notes,completed.notes);
+  for(const patch of [{notes:[]},{reflection:{}},{explanationSaved:'true'},{explanationSaved:1},{notes:'     '},{reflection:'short'}])assert.equal(foundationSummary('network',{...completed,...patch}).complete,false);
+  let reads=0;const damaged={...completed};Object.defineProperty(damaged,'notes',{get(){reads++;throw Error('do not read a writing getter');}});
+  assert.equal(foundationSummary('network',damaged).complete,false);assert.equal(reads,0);
+  const action={type:'explain'};Object.defineProperty(action,'reflection',{get(){reads++;throw Error('do not read an action getter');}});
+  const unchanged=step('network',completed,action).state;assert.equal(unchanged.reflection,completed.reflection);assert.equal(unchanged.explanationSaved,true);assert.equal(reads,0);
+  const bounded=step('network',completed,{type:'explain',notes:'n'.repeat(2500),reflection:'r'.repeat(2500)}).state;
+  assert.equal(bounded.notes.length,2000);assert.equal(bounded.reflection.length,2000);assert.equal(bounded.explanationSaved,false);
+  const invalid=step('network',completed,{type:'explain',notes:'A different answer.',reflection:[]},'warning').state;assert.equal(invalid.notes,completed.notes);assert.equal(invalid.reflection,completed.reflection);
 });
