@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261021-table27';
+import { pcActivity } from './pc-activity.js?release=20261022-learning';
 /** Beginner equipment views. The model owns every answer and practice result. */
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tracks=new Set(['hardware','network','ai','security','coding']);
@@ -21,14 +21,14 @@ function illustration(track,id){
 }
 function readout(lab,record){
   const s=record?.simulation||{};
-  const lines={network:[[s.wired,'Ethernet connected'],[s.ipAssigned,'IP address assigned'],[s.dnsReady,'Name lookup ready'],[s.serviceReachable,'Service reachable']],ai:[[s.fictionalPrompt,'Fictional input chosen'],[s.evidenceChecked,'Evidence checked'],[s.humanReviewed,'Human review complete']],security:[[s.scopeConfirmed,'Permission and scope confirmed'],[s.mfaEnabled,'MFA enabled'],[s.leastPrivilege,'Minimum access selected']]};
+  const lines={network:[[s.wired,'Network cable connected'],[s.ipAssigned,'IP address ready'],[s.dnsReady,'Name lookup (DNS) done'],[s.serviceReachable,'Practice page opened']],ai:[[s.fictionalPrompt,'Invented example chosen'],[s.evidenceChecked,'Source checked'],[s.humanReviewed,'Answer reviewed by a person']],security:[[s.scopeConfirmed,'Permission and limits checked'],[s.mfaEnabled,'MFA (extra sign-in check) on'],[s.leastPrivilege,'Only needed access allowed']]};
   if(trackFor(lab)==='coding'){
     const results=Array.isArray(record?.results)?record.results:[],last=results.at(-1);
-    return last?`<p class="foundation-visual-readout">Program output: <code>${escape((Array.isArray(last.output)?last.output.join(' · '):'').slice(0,300)||'No output yet')}</code></p>`:'';
+    return last?`<p class="foundation-visual-readout">Code output: <code>${escape((Array.isArray(last.output)?last.output.join(' · '):'').slice(0,300)||'No output yet')}</code></p>`:'';
   }
   return `<div class="foundation-visual-readout">${(lines[trackFor(lab)]||[]).map(([done,label])=>`<span data-foundation-state="${done?'done':'waiting'}">${done?'✓':'○'} ${label}</span>`).join('')}</div>`;
 }
-function portrait(lab,id){const item=itemsFor(lab).find(item=>item.id===id)||itemsFor(lab)[0];return item?`${illustration('hardware',item.id)}<div><strong>${escape(item.label)}</strong><p>${escape(item.looks)}</p></div>`:'';}
+function portrait(lab,id){const item=itemsFor(lab).find(item=>item.id===id)||itemsFor(lab)[0];return item?`${illustration('hardware',item.id)}<div><strong>${escape(item.label)}</strong><p>${escape(item.looks)}</p><p class="foundation-item-role">${escape(item.role)}</p></div>`:'';}
 
 const part=(id,label,body)=>`<g class="foundation-diagram-part" data-foundation-item="${id}" role="button" tabindex="0" aria-label="Inspect ${label}" aria-pressed="false"><title>${label}: choose to inspect</title>${body}</g>`;
 const screw=(x,y)=>`<circle cx="${x}" cy="${y}" r="4" fill="#485568" stroke="#8290a1"/><path d="M${x-2} ${y}h4m-2-2v4" stroke="#13202b" stroke-width="1.3"/>`;
@@ -38,7 +38,7 @@ function hardwareDiagram(record){
   const h=record?.hardware||{},a=h.assembly||{},ram=!!h.ramSeated,panel=!!a.panelInstalled,activity=pcActivity(h);
   const screenReady=activity.display.desktop,screenTitle=escape(activity.display.label),opened=activity.display.documentOpened;
   const subtitle=activity.display.screen.lines[0],nextLine=activity.display.screen.lines[1]||'';
-  return `<svg class="foundation-pc-svg" viewBox="0 0 900 620" role="group" aria-label="Illustrated classroom PC cutaway, monitor, and side panel. Choose a component or use its labeled button below.">
+  return `<svg class="foundation-pc-svg" viewBox="0 0 900 620" role="group" aria-label="Classroom PC, monitor, and side panel. Choose a part to inspect.">
     <defs><pattern id="foundation-grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#173042" stroke-width=".6"/></pattern><linearGradient id="foundation-metal" x2="1" y2="1"><stop stop-color="#a5b1bd"/><stop offset=".45" stop-color="#667687"/><stop offset="1" stop-color="#394a5c"/></linearGradient><linearGradient id="foundation-case" x2="1" y2="1"><stop stop-color="#263544"/><stop offset="1" stop-color="#0e1926"/></linearGradient><linearGradient id="foundation-board" x2="1" y2="1"><stop stop-color="#173c31"/><stop offset="1" stop-color="#0d2824"/></linearGradient></defs>
     <rect width="900" height="620" fill="#0a1420"/><rect width="900" height="620" fill="url(#foundation-grid)"/>
     <text x="28" y="32" fill="#bdcddd" font-size="11" letter-spacing="2">CLASSROOM WORKSTATION / SCHEMATIC CUTAWAY</text>
@@ -58,11 +58,11 @@ function hardwareDiagram(record){
   </svg>`;
 }
 
-function hardwareReadout(record){const h=record?.hardware||{},a=h.assembly||{},activity=pcActivity(h);return `<div class="foundation-visual-readout"><span>${escape(activity.status.label)}</span><span>AC ${h.acConnected?'connected':'disconnected'}</span><span>RAM ${h.ramSeated?'fitted':'in the parts tray'}</span><span>Memory clips ${a.ramClipsOpen?'open':'closed'}</span><span>Panel screws ${(Array.isArray(a.panelScrews)?a.panelScrews:[]).filter(Boolean).length}/2</span></div><details class="foundation-pc-status"><summary>What is running?</summary><p>CPU fan: ${activity.cpuFan?'running':'stopped'} · Graphics fan: ${activity.gpuFan?'running':'stopped'} · PSU fan: ${activity.psuFan?'running':'stopped'}.</p><p>${escape(activity.storage.label)}. ${escape(activity.startup.label)}.</p><p>${escape(activity.display.readout)}</p><p>Fans show modeled power, not proof of a working PC. This teaching workstation uses fixed-speed fans; other equipment can vary.</p></details>`;}
+function hardwareReadout(record){const h=record?.hardware||{},a=h.assembly||{},activity=pcActivity(h);return `<div class="foundation-visual-readout"><span>${escape(activity.status.label)}</span><span>Power cable ${h.acConnected?'connected':'disconnected'}</span><span>Memory (RAM) ${h.ramSeated?'fitted':'in the parts tray'}</span><span>Memory clips ${a.ramClipsOpen?'open':'closed'}</span><span>Panel screws ${(Array.isArray(a.panelScrews)?a.panelScrews:[]).filter(Boolean).length}/2 tight</span></div><details class="foundation-pc-status"><summary>What is running?</summary><p>Processor fan: ${activity.cpuFan?'running':'stopped'} · Graphics-card fan: ${activity.gpuFan?'running':'stopped'} · Power-supply fan: ${activity.psuFan?'running':'stopped'}.</p><p>${escape(activity.storage.label)}. ${escape(activity.startup.label)}.</p><p>${escape(activity.display.readout)}</p><p>Moving fans mean some parts have power. They do not prove the PC started.</p></details>`;}
 
 export function renderFoundationVisual(lab,record){
   if(trackFor(lab)==='hardware')return `<div class="foundation-hardware-diagram">${hardwareDiagram(record)}${hardwareReadout(record)}</div><div class="foundation-part-portrait" data-foundation-part-portrait>${portrait(lab,'')}</div>`;
-  return `<div class="foundation-equipment-map" role="group" aria-label="${escape(lab?.title||'Equipment explorer')}"><div class="foundation-equipment-grid">${itemsFor(lab).map(item=>`<button type="button" class="foundation-equipment-card" data-foundation-item="${escape(item.id)}" aria-pressed="false">${illustration(trackFor(lab),item.id)}<strong>${escape(item.label)}</strong><span>${escape(item.looks)}</span></button>`).join('')}</div>${readout(lab,record)}</div>`;
+  return `<div class="foundation-equipment-map" role="group" aria-label="${escape(lab?.title||'Equipment explorer')}"><div class="foundation-equipment-grid">${itemsFor(lab).map(item=>`<button type="button" class="foundation-equipment-card" data-foundation-item="${escape(item.id)}" aria-pressed="false">${illustration(trackFor(lab),item.id)}<strong>${escape(item.label)}</strong><span>${escape(item.looks)}</span><span class="foundation-item-role" data-foundation-card-role="${escape(item.id)}" hidden>${escape(item.role)}</span></button>`).join('')}</div>${readout(lab,record)}</div>`;
 }
 
 /** One native diagram host. Learning credit and guided actions belong to the model/controller. */
@@ -70,12 +70,12 @@ export function mountFoundationScene(host,{lab,record,onInspect=()=>{},onStatus=
   if(!host?.ownerDocument)return null;
   const doc=host.ownerDocument;let current=record,selected='',visible=!host.closest?.('[hidden]'),disposed=false;
   function motion(){host.setAttribute?.('data-pc-motion',disposed||!visible||doc.hidden?'paused':'running');}
-  function focus(id){if(disposed||!itemsFor(lab).some(item=>item.id===id))return;selected=id;host.querySelectorAll('[data-foundation-item]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.foundationItem===id)));const portraitNode=host.querySelector('[data-foundation-part-portrait]');if(portraitNode)portraitNode.innerHTML=portrait(lab,id);}
+  function focus(id){if(disposed||!itemsFor(lab).some(item=>item.id===id))return;selected=id;host.querySelectorAll('[data-foundation-item]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.foundationItem===id)));host.querySelectorAll('[data-foundation-card-role]').forEach(node=>{node.hidden=node.dataset.foundationCardRole!==id;});const portraitNode=host.querySelector('[data-foundation-part-portrait]');if(portraitNode)portraitNode.innerHTML=portrait(lab,id);}
   function update(next){if(disposed)return;current=next;const statusOpen=host.querySelector('.foundation-pc-status')?.open===true;const active=doc.activeElement?.closest?.('[data-foundation-item]'),restore=active&&host.contains(active)?active.dataset.foundationItem:'';host.innerHTML=renderFoundationVisual(lab,current);if(statusOpen){const status=host.querySelector('.foundation-pc-status');if(status)status.open=true;}motion();if(selected)focus(selected);if(restore)[...host.querySelectorAll('[data-foundation-item]')].find(node=>node.dataset.foundationItem===restore)?.focus({preventScroll:true});}
   function inspect(event){if(disposed||!visible||doc.hidden)return;const node=event.target.closest?.('[data-foundation-item]');if(!node||!host.contains(node)||!itemsFor(lab).some(item=>item.id===node.dataset.foundationItem))return;focus(node.dataset.foundationItem);onInspect(node.dataset.foundationItem);}
   function key(event){if(event.key!=='Enter'&&event.key!==' ')return;const node=event.target.closest?.('[data-foundation-item]');if(!node||node.tagName?.toLowerCase()==='button')return;event.preventDefault();inspect(event);}
   host.addEventListener('click',inspect);host.addEventListener('keydown',key);doc.addEventListener?.('visibilitychange',motion);motion();
-  onStatus({kind:'ready',message:'Choose a component in the diagram or use the labeled part buttons.'});
+  onStatus({kind:'ready',message:'Choose a picture to learn about it.'});
   return {update,focus,setVisible(value){visible=!!value;motion();},setMode(){},camera(){},cancelInteraction(){},dispose(){if(disposed)return;disposed=true;motion();host.removeEventListener('click',inspect);host.removeEventListener('keydown',key);doc.removeEventListener?.('visibilitychange',motion);}};
 }
 

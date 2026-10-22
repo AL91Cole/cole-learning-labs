@@ -1,6 +1,6 @@
-import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261021-table27';
-import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261021-table27';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261021-table27';
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261022-learning';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261022-learning';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261022-learning';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });
@@ -12,12 +12,12 @@ export function initialWorkspaceState(id) {
   const code = normalize(id);
   const common = { tested: false, results: [], workspaceEdits: 0, checkRuns: 0 };
   const states = {
-    NET201: { ip:'192.168.1.25', mask:'255.255.255.0', gateway:'192.168.1.1', dns:'192.168.1.53' },
-    NET202: { network:'School-Guest', folder:'All folders', permission:'Full control' },
+    NET201: { ip:'192.168.1.25', mask:'255.255.255.0', gateway:'10.24.8.1', dns:'192.168.1.53' },
+    NET202: { network:'School-Guest', folder:'Project Materials', permission:'Read' },
     NET203: { recovery:'Keep current update', status:'Stopped', startup:'Disabled' },
     AI301: { prompt:'Explain networks to [student name]. Use their [student email] and [diagnosis] to personalize it.', audit:[] },
     AI302: { claims:['unreviewed','unreviewed','unreviewed'], ticketA:'unreviewed', ticketB:'unreviewed' },
-    AI303: { secret:'hardcoded', query:'concatenated', authorization:'signed-in' },
+    AI303: { secret:'environment', query:'parameterized', authorization:'signed-in' },
     SEC401: { message:'urgent', verdict:'unreviewed', flags:[], permission:'Administrator' },
     SEC402: { events:[], source:'', port:'', keepHttps:true },
     SEC403: { scope:false, patch:'none', requested:'101', response:null, observed:false, history:[] }
@@ -243,7 +243,7 @@ const WORKSPACE_GUIDES = {
   ],
   NET202: [
     ['Read', 'Find the requested folder and what the teacher needs to do.'],
-    ['Choose', 'Set the three menus, then choose “Save access settings”.'],
+    ['Choose', 'Review the three menus. Change only what needs fixing, then choose “Save access settings”.'],
     ['Test', 'Choose “Test teacher access” and read what the account can do.']
   ],
   NET203: [
@@ -263,7 +263,7 @@ const WORKSPACE_GUIDES = {
   ],
   AI303: [
     ['Read', 'Inspect the code preview. You do not need to type or run code.'],
-    ['Choose', 'Set the three menus, then choose “Save code choices”.'],
+    ['Choose', 'Review each menu. Keep safe choices and fix the unsafe choice, then choose “Save code choices”.'],
     ['Test', 'Choose “Test code choices”. Compare the results with the updated preview.']
   ],
   SEC401: [

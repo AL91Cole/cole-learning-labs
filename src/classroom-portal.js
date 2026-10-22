@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261021-table27';
+import { SCENARIOS } from './scenarios.js?release=20261022-learning';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';
@@ -194,7 +194,7 @@ function workEvidence(work,labId) {
   if(!work || typeof work!=='object') return '<p class="cp-muted">No work snapshot is available.</p>';
   const scenario=lab(labId);
   const evidence=Array.isArray(work.evidence)?work.evidence.map(value=>scenario?.clues.find(clue=>clue.id===value)?.text || value):work.evidence;
-  const fields=[['Evidence',evidence],['Working explanation',work.plan],['Tests & observations',work.notes],['Reflection',work.reflection]];
+  const fields=[['Evidence',evidence],['Symptoms',work.symptoms],['Working explanation',work.plan],['Tests & observations',work.notes],['Reflection',work.reflection]];
   return `<div class="cp-work-evidence">${fields.map(([title,value])=>`<section><h4>${title}</h4>${renderWorkValue(value)}</section>`).join('')}<div class="cp-inline-note"><b>Learner-reported state</b><p>Technical verification: ${work.verified===true?'reported complete':'not reported complete'} · Ticket delivery: ${work.closed===true?'reported complete':'not reported complete'}</p><span>These flags are not an automatic grade.</span></div>${work.events?`<details class="cp-details"><summary>Inspect recorded action log</summary>${renderWorkValue(work.events)}</details>`:''}<details class="cp-details"><summary>Inspect complete saved snapshot</summary><pre tabindex="0" role="region" aria-label="Complete saved work snapshot">${esc(JSON.stringify(work,null,2))}</pre></details></div>`;
 }
 function workPanel() {

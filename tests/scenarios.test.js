@@ -33,10 +33,10 @@ function workspaceFlow(id, actions) {
 const hardwareRepairs = {
   'INC-101': ['video-gpu'],
   'INC-107': ['input-hdmi'],
-  'INC-108': ['connect-signal'],
-  'INC-102': ['plug-in', 'boot'],
+  'INC-108': ['connect-signal', 'input-hdmi'],
+  'INC-102': ['connect-atx', 'plug-in', 'boot'],
   'INC-103': ['power-off', 'unplug', 'seat-ram', 'plug-in', 'boot'],
-  'INC-104': ['power-off', 'unplug', 'connect-sata', 'plug-in', 'boot'],
+  'INC-104': ['power-off', 'unplug', 'connect-sata', 'connect-sata-power', 'plug-in', 'boot'],
   'INC-105': ['power-off', 'unplug', 'install-original', 'connect-sata', 'connect-sata-power', 'plug-in', 'boot'],
   'INC-106': [
     'install-board', 'install-cpu', 'install-cooler', 'install-ram',
@@ -116,7 +116,8 @@ for (const [id, repair] of Object.entries(hardwareRepairs)) {
     assert.equal(fixed.documentOpened, false);
     const notDelivered = verifyHardware(id, fixed);
     assert.equal(notDelivered.ok, false);
-    assert.match(notDelivered.message, /fixed, but not yet delivered/i);
+    assert.equal(notDelivered.needsDocument, true);
+    assert.match(notDelivered.message, /Click Lesson_Practice_File\.docx on the monitor/i);
 
     const delivered = hardwareStep(id, fixed, 'open-document').state;
     assert.equal(delivered.documentOpened, true);
@@ -126,6 +127,28 @@ for (const [id, repair] of Object.entries(hardwareRepairs)) {
     assert.equal(verifyHardware(id, closedFile).ok, false, 'closing the requested file removes the acceptance evidence');
   });
 }
+
+test('INC-102 needs both AC and a safely reconnected motherboard power lead before startup and file delivery',()=>{
+  let state=initialHardwareState('INC-102');
+  assert.equal(state.acConnected,false);assert.equal(state.atxConnected,false);
+  state=hardwareStep('INC-102',state,'enable-assembly').state;
+  for(const action of ['plug-in','boot'])state=hardwareStep('INC-102',state,action).state;
+  assert.equal(state.booted,false,'Restoring AC alone cannot bypass the disconnected 24-pin lead.');
+  assert.equal(verifyHardware('INC-102',state).ok,false);
+  assert.match(verifyHardware('INC-102',state).message,/24.pin|motherboard.*power/i);
+  for(const step of [null,'power-off','unplug']){
+    if(step)state=hardwareStep('INC-102',state,step).state;
+    const before=structuredClone(state),blocked=hardwareStep('INC-102',state,'asm-connect-atx');
+    assert.equal(blocked.kind,'warning');assert.deepEqual(blocked.state,before,'Internal wiring needs PC off, AC disconnected and an open panel.');
+  }
+  for(const action of ['asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-connect-atx','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1','plug-in','boot']){
+    const result=hardwareStep('INC-102',state,action);assert.notEqual(result.kind,'warning',action+': '+result.message);state=result.state;
+  }
+  assert.equal(state.atxConnected,true);assert.equal(state.booted,true);assert.equal(state.documentOpened,false);
+  assert.equal(verifyHardware('INC-102',state).needsDocument,true);
+  state=hardwareStep('INC-102',state,'open-document').state;
+  assert.equal(verifyHardware('INC-102',state).ok,true);assert.equal(state.originalDriveInstalled,true);
+});
 
 for (const [id, repair] of Object.entries(workspaceRepairs)) {
   test(`${id}: the intended solution requires a fresh diagnostic run`, () => {
@@ -324,4 +347,32 @@ test('repairing one case preserves unrelated saved case states and nested eviden
   assert.deepEqual(saved, before);
   const independent = initialWorkspaceState('AI-302');
   assert.deepEqual(independent.claims, ['unreviewed','unreviewed','unreviewed']);
+});
+
+
+test('selected comparison cases offer two evidence-focused second-look prompts without requiring a partner',()=>{
+  const cases=SCENARIOS.filter(scenario=>scenario.secondLook);
+  assert.deepEqual(cases.map(scenario=>scenario.id).sort(),['AI-302','CODE-503','NET-205','SEC-405']);
+  for(const scenario of cases){
+    const {prompt,checks}=scenario.secondLook;
+    assert.ok(prompt.trim().length>12,scenario.id);
+    assert.equal(checks.length,2,scenario.id);
+    for(const check of checks)assert.ok(check.trim().endsWith('?'),scenario.id);
+    assert.deepEqual(Object.keys(scenario.secondLook).sort(),['checks','prompt'],'The optional comparison has no partner or failed-test completion requirement.');
+  }
+});
+
+test('INC104 needs both drive leads and keeps its original drive throughout a safe panel repair',()=>{
+  const id='INC-104';let state=hardwareStep(id,initialHardwareState(id),'enable-assembly').state;
+  assert.equal(state.sataDataConnected,false);assert.equal(state.sataPowerConnected,false);
+  for(const action of ['power-off','unplug','asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-connect-sata-data','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1','plug-in']){
+    const result=hardwareStep(id,state,action);assert.notEqual(result.kind,'warning',action+': '+result.message);state=result.state;
+  }
+  state=hardwareStep(id,state,'boot').state;
+  assert.equal(state.booted,false);assert.equal(verifyHardware(id,state).ok,false,'A data lead cannot supply drive power.');
+  for(const action of ['power-off','unplug','asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-connect-sata-power','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1','plug-in','boot','open-document']){
+    const result=hardwareStep(id,state,action);assert.notEqual(result.kind,'warning',action+': '+result.message);state=result.state;
+    assert.equal(state.originalDriveInstalled,true);
+  }
+  assert.equal(verifyHardware(id,state).ok,true);
 });

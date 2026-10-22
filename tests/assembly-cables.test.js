@@ -8,7 +8,7 @@ import { SCENARIOS } from '../src/scenarios.js';
 
 const step = (state, action) => applyHardwareAction(state.caseId, state, action);
 const detailed = id => step(initialHardwareState(id), 'enable-assembly').state;
-const connected = () => { const h = initialHardwareState('INC-108'); h.signalConnected = true; return { h, a: initialAssemblyState(h) }; };
+const connected = () => { const h = step(step(initialHardwareState('INC-108'), 'connect-signal').state, 'input-hdmi').state; return { h, a: initialAssemblyState(h) }; };
 const expectedActions = {
   ac: ['plug-in', 'unplug'], 'hdmi-pc': ['video-gpu', 'disconnect-video'], 'hdmi-monitor': ['connect-signal', 'disconnect-signal'],
   atx: ['asm-connect-atx', 'asm-disconnect-atx'], eps: ['asm-connect-eps', 'asm-disconnect-eps'],
@@ -72,6 +72,8 @@ test('connector state uses own strict booleans, with only absent legacy PC-end d
 
 test('PC and monitor HDMI ends change independently while the original operating system keeps running', () => {
   let state = step(initialHardwareState('INC-108'), 'connect-signal').state;
+  assert.equal(verifyHardware(state.caseId, state).ok, false, 'The monitor still has the wrong source after the cable is fitted.');
+  state = step(state, 'input-hdmi').state;
   state = step(state, 'open-document').state;
   assert.equal(verifyHardware(state.caseId, state).ok, true);
   const bootCount = state.bootCount;

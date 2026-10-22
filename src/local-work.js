@@ -1,4 +1,4 @@
-import {normalizeLabRecord} from './records.js?release=20261021-table27';
+import {normalizeLabRecord} from './records.js?release=20261022-learning';
 
 export const WORK_PREFIX = 'cole-learning-labs:v2';
 export const CLEAR_WORK_KEY = 'cole-learning-labs:clear-local-work';
@@ -9,7 +9,7 @@ const ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
 export function hasPrivateWork(record) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) return false;
   if (record.verified === true || record.closed === true) return true;
-  if (['plan', 'notes', 'reflection'].some(field => typeof record[field] === 'string' && record[field].trim().length > 0)) return true;
+  if (['symptoms', 'plan', 'notes', 'reflection'].some(field => typeof record[field] === 'string' && record[field].trim().length > 0)) return true;
   if (Array.isArray(record.evidence) && record.evidence.some(value => typeof value === 'string' && value.trim().length > 0)) return true;
   if (Array.isArray(record.questions) && record.questions.some(value => Number.isInteger(value) && value >= 0)) return true;
   return Array.isArray(record.events) && record.events.some(event => typeof event?.message === 'string' && event.message.trim().length > 0);

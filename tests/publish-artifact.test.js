@@ -97,7 +97,7 @@ test('symlinked public trees and output folders never expose or remove an outsid
   await writeFile(path.join(outside, 'keep.txt'), 'Outside data must survive.');
   const link = path.join(root, 'dist');
   try { await symlink(outside, link, process.platform === 'win32' ? 'junction' : 'dir'); }
-  catch (error) { if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) { t.skip('This host cannot create directory links.'); return; } throw error; }
+  catch (error) { if (process.env.CLL_REQUIRE_LINK_TESTS !== '1' && ['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) { t.skip('This host cannot create directory links.'); return; } throw error; }
   await assert.rejects(buildSite({ sourceRoot: root }), /real directory/);
   assert.equal(await readFile(path.join(outside, 'keep.txt'), 'utf8'), 'Outside data must survive.');
   await rm(link);
@@ -113,7 +113,7 @@ test('a symbolic link cannot replace a required public file', async t => {
   await writeFile(outside, 'PRIVATE_OUTSIDE_SOURCE');
   await rm(path.join(root, 'index.html'));
   try { await symlink(outside, path.join(root, 'index.html'), 'file'); }
-  catch (error) { if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) { t.skip('This host cannot create file links.'); return; } throw error; }
+  catch (error) { if (process.env.CLL_REQUIRE_LINK_TESTS !== '1' && ['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) { t.skip('This host cannot create file links.'); return; } throw error; }
   await assert.rejects(buildSite({ sourceRoot: root }), /regular public file/);
   await assert.rejects(lstat(path.join(root, 'dist')), { code: 'ENOENT' });
   assert.equal(await readFile(outside, 'utf8'), 'PRIVATE_OUTSIDE_SOURCE');

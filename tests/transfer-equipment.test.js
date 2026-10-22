@@ -12,9 +12,10 @@ function step(id, state, action) {
   assert.deepEqual(state,before,'An experiment must not mutate its previous snapshot.');
   return result.state;
 }
-const fixes = {'INC-101':'video-gpu','INC-107':'input-hdmi','INC-108':'connect-signal'};
+const fixes = {'INC-101':['video-gpu'],'INC-107':['input-hdmi'],'INC-108':['connect-signal','input-hdmi']};
+const repair = (id,state) => fixes[id].reduce((current,action)=>step(id,current,action),state);
 
-test('display transfer cases share a symptom but have three distinct modeled causes',()=>{
+test('display transfer cases share a symptom with different one- and two-fault diagnoses',()=>{
   assert.deepEqual(TRANSFER_CASES,['INC-101','INC-107','INC-108']);
   assert.equal(transferCaseFor('INC-101'),'INC-107');
   assert.equal(transferCaseFor('INC-107'),'INC-108');
@@ -23,15 +24,16 @@ test('display transfer cases share a symptom but have three distinct modeled cau
   assert.equal(initialHardwareState('INC-101').videoPort,'board');
   assert.equal(initialHardwareState('INC-107').monitorInput,'displayport');
   assert.equal(initialHardwareState('INC-108').signalConnected,false);
+  assert.equal(initialHardwareState('INC-108').monitorInput,'displayport');
   for(const id of TRANSFER_CASES) {
     const initial = initialHardwareState(id);
     assert.equal(initial.caseId,id,'An implemented case must never fall back to INC-101.');
     assert.equal(verifyHardware(id,initial).ok,false);
     assert.equal(initial.booted,true,'These cases start with a working OS and an absent picture.');
-    for(const [otherId,fix] of Object.entries(fixes)) {
-      if(otherId === id)continue;
-      const wrongFix=step(id,initial,fix);
-      assert.equal(verifyHardware(id,step(id,wrongFix,'open-document')).ok,false,`${id} must not accept ${otherId}'s memorized repair.`);
+    const unrelated=id==='INC-101'?['input-hdmi','connect-signal']:id==='INC-107'?['video-gpu','connect-signal']:['connect-signal','input-hdmi'];
+    for(const action of unrelated) {
+      const oneChange=step(id,initial,action);
+      assert.equal(verifyHardware(id,step(id,oneChange,'open-document')).ok,false,`${id} cannot be delivered by ${action} alone.`);
     }
   }
 });
@@ -39,7 +41,7 @@ test('display transfer cases share a symptom but have three distinct modeled cau
 for(const id of TRANSFER_CASES) {
   test(`${id}: repair must restore the picture, then deliver the original file`,()=>{
     let state=initialHardwareState(id);
-    const repaired=step(id,state,fixes[id]);
+    const repaired=repair(id,state);
     assert.equal(repaired.pcOn,true,'An external display repair need not shut down the healthy PC.');
     assert.equal(repaired.acConnected,true);
     assert.equal(repaired.bootCount,0,'Changing the picture path does not invent a fresh startup test.');
@@ -65,7 +67,9 @@ test('source selection cannot replace a physical signal connection and vice vers
   const connectorOnly=step('INC-107',input,'connect-signal');
   assert.equal(getHardwareReadouts('INC-107',connectorOnly).display.value,'Wrong source · DisplayPort');
   assert.match(applyHardwareAction('INC-107',input,'input-hdmi').message,/without restarting/);
-  const desktop=step('INC-108',cable,'connect-signal');
+  const cableOnly=step('INC-108',cable,'connect-signal');
+  assert.equal(getHardwareReadouts('INC-108',cableOnly).display.value,'Wrong source · DisplayPort');
+  const desktop=step('INC-108',cableOnly,'input-hdmi');
   const disconnected=step('INC-108',desktop,'disconnect-signal');
   assert.equal(disconnected.booted,true);
   assert.equal(disconnected.pcOn,true);
@@ -104,7 +108,7 @@ test('requester observations follow source and cable changes, including natural 
     const first=answerQuestion(entry,'Can you describe the picture now?',initial);
     assert.equal(first.topic,'current-state');
     assert.match(first.answer,/no usable signal/);
-    const repaired=step(id,initial,fixes[id]);
+    const repaired=repair(id,initial);
     const next=answerQuestion(entry,'What about now?',repaired,[{question:'Can you describe the picture now?',answer:first.answer}]);
     assert.match(next.answer,/desktop is visible/);
     assert.equal(next.topic,'current-state');
@@ -128,7 +132,7 @@ test('the incomplete moved-desk ticket requires recorded history without blockin
   const event=questionEvent('Did anything change before this started?',reply);
   assert.ok(event);
   assert.equal(inquiryProgress(entry,[event]).complete,true);
-  assert.equal(verifyHardware(entry.id,step(entry.id,step(entry.id,initialHardwareState(entry.id),'connect-signal'),'open-document')).ok,true,'Technical verification remains independent of requester discovery.');
+  assert.equal(verifyHardware(entry.id,step(entry.id,repair(entry.id,initialHardwareState(entry.id)),'open-document')).ok,true,'Technical verification remains independent of requester discovery.');
 });
 
 test('source and cable controls render as labeled native buttons without changing saved work',()=>{

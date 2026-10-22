@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js';
 import { ASSEMBLY_TOOLS, assemblyToolAction } from '../src/assembly-tools.js';
 import { ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure } from '../src/assembly-model.js';
-import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
+import { initialHardwareState, applyHardwareAction,verifyHardware } from '../src/hardware.js';
 import { workbenchGuidance } from '../src/workbench-guidance.js';
 import { pcActivity } from '../src/pc-activity.js';
 const detailed=id=>applyHardwareAction(id,initialHardwareState(id),'enable-assembly').state;
@@ -23,11 +23,11 @@ function cableBench(id = 'INC-106') {
   function parse(html) {
     return [...html.matchAll(/<button\b([^>]*)>/g)].map(([, attrs]) => element(Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([, name, value]) => [name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), value]))));
   }
-  for (const name of ['monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'power-state', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer', 'view-drawer', 'loading-title', 'loading-text', 'fastener', 'cable', 'cable-target', 'cable-state']) fields.set(`[data-asm-${name}]`, element());
+  for (const name of ['on','ac-label','monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene', 'view-status', 'select', 'part-title', 'part-state', 'actions', 'feedback', 'power', 'next', 'delivery', 'loading', 'tool-help', 'tool-controls', 'tool-drawer', 'tool-summary', 'component-drawer','power-reference', 'view-drawer', 'loading-title', 'loading-text', 'fastener', 'cable', 'cable-target', 'cable-state']) fields.set(`[data-asm-${name}]`, element());
   for (const name of ['actions', 'tool-controls']) Object.defineProperty(fields.get(`[data-asm-${name}]`), 'innerHTML', { set(html) { this.markup=html;dynamic.set(name, parse(html)); }, get() { return this.markup || ''; } });
   const allButtons = () => [...buttons, ...[...dynamic.values()].flat()];
   const root = { ownerDocument: doc, closest: () => null, contains: target => allButtons().includes(target) || [...fields.values()].includes(target),
-    querySelector: selector => selector === '[data-asm-actions] button' ? dynamic.get('actions')?.[0] : fields.get(selector) || null,
+    querySelector(selector) {if(selector === '[data-asm-actions] button')return dynamic.get('actions')?.[0];const toggle=/^\[data-asm-toggle="(power|ac)"\]$/.exec(selector);return toggle?buttons.find(item=>item.dataset.asmToggle===toggle[1])||null:fields.get(selector)||null;},
     querySelectorAll: selector => allButtons().filter(item => selector === '[data-asm-tool]' ? item.dataset.asmTool : selector === '[data-asm-part]' ? item.dataset.asmPart : selector === '[data-assembly-action]' ? item.dataset.assemblyAction : false),
     addEventListener(name, handler) { listeners.set(name, handler); }, removeEventListener(name, handler) { if (listeners.get(name) === handler) listeners.delete(name); } };
   Object.defineProperty(root, 'innerHTML', { set(html) { writes++; buttons = parse(html); } });
@@ -70,7 +70,7 @@ test('large HDMI controls preserve independent PC and monitor ends and leave the
   assert.equal(bench.state.videoPort,'gpu');assert.equal(bench.state.pcVideoConnected,true);
   bench.click('asmCableAction','disconnect');
   assert.equal(bench.state.pcVideoConnected,false);assert.equal(bench.state.signalConnected,true);assert.equal(bench.state.booted,true);
-  assert.match(bench.fields.get('[data-asm-cable-state]').textContent,/disconnected.*parked/);
+  assert.match(bench.fields.get('[data-asm-cable-state]').textContent,/PC end: disconnected\./);
   bench.click('asmCableAction','connect');assert.equal(bench.state.pcVideoConnected,true);
   bench.choose('[data-asm-cable]','hdmi-monitor');bench.click('asmCableAction','disconnect');
   assert.equal(bench.state.signalConnected,false);assert.equal(bench.state.pcVideoConnected,true);assert.equal(bench.state.booted,true);
@@ -83,13 +83,35 @@ test('large HDMI controls preserve independent PC and monitor ends and leave the
 test('internal cable controls cannot bypass PC, AC or case-panel safety checks',()=>{
   const bench=cableBench('INC-101');bench.complete();bench.click('asmTool','cables');bench.choose('[data-asm-cable]','atx');
   const before=structuredClone(bench.state);bench.click('asmCableAction','disconnect');assert.deepEqual(bench.state,before);
-  bench.click('assemblyAction','power');bench.click('asmCableAction','disconnect');assert.equal(bench.state.atxConnected,true);
+  bench.click('asmToggle','power');bench.click('asmCableAction','disconnect');assert.equal(bench.state.atxConnected,true);
   bench.click('assemblyAction','unplug');bench.click('asmCableAction','disconnect');assert.equal(bench.state.atxConnected,true);
   bench.click('asmPart','panel');
   for(const action of ['asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel'])bench.click('assemblyAction',action);
   bench.click('asmCableAction','disconnect');assert.equal(bench.state.atxConnected,false);
   assert.match(bench.fields.get('[data-asm-cable-state]').textContent,/disconnected/);
   bench.controller.dispose();
+});
+
+test('INC-102 exposes the motherboard cable without extra tools and requires a safe internal repair after AC alone fails',()=>{
+  const bench=cableBench('INC-102');assert.equal(bench.state.acConnected,false);assert.equal(bench.state.atxConnected,false);
+  bench.click('asmTool','cables');const choices=bench.fields.get('[data-asm-tool-controls]').innerHTML;
+  assert.match(choices,/value="ac"/);assert.match(choices,/value="atx"/);assert.doesNotMatch(choices,/value="(?:eps|gpu-power|sata-data)"/);
+  bench.choose('[data-asm-cable]','atx');bench.choose('[data-asm-cable-target]','atx-header');
+  bench.click('asmCableAction','connect');assert.equal(bench.state.atxConnected,false,'The closed panel blocks an internal connection.');
+  bench.click('asmToggle','ac');bench.click('asmToggle','power');
+  assert.equal(bench.state.booted,false);assert.equal(verifyHardware('INC-102',bench.state).ok,false);
+  for(const action of [null,'power','ac']){
+    if(action)bench.click('asmToggle',action);
+    bench.click('asmCableAction','connect');assert.equal(bench.state.atxConnected,false,'Power off, unplug and panel access are all required.');
+  }
+  bench.click('asmPart','panel');
+  for(const action of ['asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel'])bench.click('assemblyAction',action);
+  bench.click('asmCableAction','connect');assert.equal(bench.state.atxConnected,true);
+  for(const action of ['asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1'])bench.click('assemblyAction',action);
+  bench.click('asmToggle','ac');bench.click('asmToggle','power');assert.equal(bench.state.booted,true);
+  assert.equal(verifyHardware('INC-102',bench.state).needsDocument,true);
+  bench.fields.get('[data-asm-power-reference]').open=true;bench.click('assemblyAction','open-document');
+  assert.equal(verifyHardware('INC-102',bench.state).ok,true);assert.equal(bench.state.originalDriveInstalled,true);bench.controller.dispose();
 });
 
 test('malformed native picker values and forged button commands do not become equipment actions',()=>{

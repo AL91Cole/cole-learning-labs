@@ -1,7 +1,7 @@
 /* Optional sharing only after an explicit classroom join. No live AI or device surveillance. */
-import { SCENARIOS } from './scenarios.js?release=20261021-table27';
-import { inquiryProtectedEvents } from './interview.js?release=20261021-table27';
-import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261021-table27';
+import { SCENARIOS } from './scenarios.js?release=20261022-learning';
+import { inquiryProtectedEvents } from './interview.js?release=20261022-learning';
+import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261022-learning';
 export const CLASSROOM_ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
@@ -23,9 +23,11 @@ export function progressSnapshot(record, scenarioId) {
   const work = JSON.parse(JSON.stringify({
     state: value.state && typeof value.state === 'object' && !Array.isArray(value.state) ? value.state : {},
     evidence: Array.isArray(value.evidence) ? value.evidence : [], questions: Array.isArray(value.questions) ? value.questions : [],
-    plan: typeof value.plan === 'string' ? value.plan : '', notes: typeof value.notes === 'string' ? value.notes : '', reflection: typeof value.reflection === 'string' ? value.reflection : '',
+    symptoms: typeof value.symptoms === 'string' ? value.symptoms : '', plan: typeof value.plan === 'string' ? value.plan : '', notes: typeof value.notes === 'string' ? value.notes : '', reflection: typeof value.reflection === 'string' ? value.reflection : '',
+    ideaSaved: value.ideaSaved === true && typeof value.symptoms === 'string' && value.symptoms.trim().length >= 12 && typeof value.plan === 'string' && value.plan.trim().length >= 12,
     events: retainExperimentEvents(scenario,value.events), verified: value.verified === true, closed: value.closed === true
   }));
+  if (!work.ideaSaved) work.closed = false;
   const protectedEvents = new Set([...inquiryProtectedEvents(scenario,work.events),...work.events.filter(event=>experimentEventText(event)!==null||/^Capstone handoff \/ (?:works|evidence|connection|uncertain): /.test(event.message))]);
   while (new TextEncoder().encode(JSON.stringify(work)).byteLength > 60000 && work.events.length) {
     const removable = work.events.findIndex(event => !protectedEvents.has(event));

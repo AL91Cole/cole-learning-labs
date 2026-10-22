@@ -15,7 +15,7 @@ test('mechanical-only experiments preserve distinct before/after rows through ev
   let state=initialHardwareState(s.id);
   for(const action of ['enable-assembly','power-off','unplug'])state=applyHardwareAction(s.id,state,action).state;
   const record=normalizeLabRecord(s,{state});
-  setExperimentDraft(s,record,{predict:'Removing one panel screw should change its secured position.'});
+  setExperimentDraft(s,record,{predict:'Removing one panel screw should change its secured position.',evidence:'The parts view shows both panel screws are secured.'});
   assert.equal(startExperiment(s,record,state).ok,true);
   const before=observationSnapshot(s,state);
   state=applyHardwareAction(s.id,state,'asm-loosen-panel-0').state;
@@ -43,7 +43,7 @@ test('both HDMI ends produce separate bounded experiment evidence and survive re
   let state=initialHardwareState(s.id);
   for(const action of ['enable-assembly','video-gpu','open-document'])state=applyHardwareAction(s.id,state,action).state;
   const record=normalizeLabRecord(s,{state});
-  setExperimentDraft(s,record,{predict:'Disconnecting the PC end will remove the picture while the monitor end remains fitted.'});
+  setExperimentDraft(s,record,{predict:'Disconnecting the PC end will remove the picture while the monitor end remains fitted.',evidence:'The monitor has a picture while both signal cable ends are connected.'});
   assert.equal(startExperiment(s,record,state).ok,true);
   const before=observationSnapshot(s,state);
   state=applyHardwareAction(s.id,state,'disconnect-video').state;

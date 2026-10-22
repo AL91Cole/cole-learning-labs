@@ -27,10 +27,11 @@ test('bounded handoff follows the existing coding record and preserves unrelated
 function fullCodingRecord() {
   const scenario=SCENARIOS.find(item=>item.id==='CODE-503'),record=normalizeLabRecord(scenario);
   for(let index=0;index<8;index++) {
-    setExperimentDraft(scenario,record,{predict:`Prediction ${index}: the counter may be off by one.`});
+    setExperimentDraft(scenario,record,{predict:`Prediction ${index}: the counter may be off by one.`,evidence:'The printed list starts at zero and includes an extra line.'});
     assert.equal(startExperiment(scenario,record,record.state).ok,true);
-    setExperimentDraft(scenario,record,{changed:`Attempt ${index}: inspected the first counter value.`,observed:'The supplied output still has an extra line.',explain:'An unchanged result means this hypothesis needs another test.'});
+    setExperimentDraft(scenario,record,{changed:`Attempt ${index}: inspected the first counter value.`});
     assert.equal(captureExperimentResult(scenario,record,record.state).ok,true);
+    setExperimentDraft(scenario,record,{observed:'The supplied output still has an extra line.',explain:'An unchanged result means this hypothesis needs another test.'});
     assert.equal(saveExperiment(scenario,record).ok,true);
   }
   for(let index=0;index<100;index++)record.events=retainExperimentEvents(scenario,[...record.events,{time:'2026-10-16T12:00:00Z',kind:'info',message:'Later inspection '+index}]);

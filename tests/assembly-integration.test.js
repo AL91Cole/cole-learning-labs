@@ -189,6 +189,8 @@ test('detailed monitor connections preserve a healthy running OS and require fre
   assert.equal(state.booted, true);
   state = step('INC-108', state, 'asm-connect-display').state;
   assert.equal(state.booted, true);
+  assert.equal(verifyHardware('INC-108', state).ok, false, 'A fitted cable does not correct the monitor source.');
+  state = step('INC-108', state, 'input-hdmi').state;
   state = step('INC-108', state, 'open-document').state;
   assert.equal(verifyHardware('INC-108', state).ok, true);
   state = step('INC-108', state, 'asm-disconnect-display').state;

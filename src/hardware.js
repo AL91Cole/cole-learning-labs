@@ -1,6 +1,6 @@
-import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261021-table27';
-import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261021-table27';
-import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261021-table27';
+import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261022-learning';
+import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261022-learning';
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261022-learning';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },
@@ -62,12 +62,12 @@ export function initialHardwareState(caseId = 'INC-101') {
     caseId: id, pcOn: !build && id !== 'INC-102', acConnected: !build && id !== 'INC-102',
     boardInstalled: !build, cpuInstalled: !build, coolerInstalled: !build,
     ramSeated: !build && id !== 'INC-103', gpuInstalled: !build,
-    atxConnected: !build, cpuPowerConnected: !build, gpuPowerConnected: !build,
+    atxConnected: !build && id !== 'INC-102', cpuPowerConnected: !build, gpuPowerConnected: !build,
     frontPanelConnected: !build,
     originalDriveInstalled: !build && id !== 'INC-105',
-    sataDataConnected: !build && !['INC-104', 'INC-105'].includes(id), sataPowerConnected: !build && id !== 'INC-105',
+    sataDataConnected: !build && !['INC-104', 'INC-105'].includes(id), sataPowerConnected: !build && !['INC-104', 'INC-105'].includes(id),
     videoPort: id === 'INC-101' || build ? 'board' : 'gpu',
-    monitorInput: id === 'INC-107' ? 'displayport' : 'hdmi',
+    monitorInput: ['INC-107','INC-108'].includes(id) ? 'displayport' : 'hdmi',
     pcVideoConnected: true, signalConnected: id !== 'INC-108',
     selectedDrive: id === 'INC-105' ? 'nvme' : 'sata',
     booted: ['INC-101','INC-107','INC-108'].includes(id), documentOpened: false,
@@ -108,7 +108,8 @@ export function normalizeHardwareState(caseId, savedState) {
 function failureReason(s) {
   if(s.assemblyEnabled) { const reason=assemblyFailure(s,s.assembly); if(reason)return reason; }
   if (!s.boardInstalled) return 'No motherboard is installed. Fit the board to the case standoffs first.';
-  if (!s.atxConnected || !s.cpuPowerConnected) return 'No POST: the motherboard needs both 24-pin ATX power and 8-pin CPU power.';
+  if (!s.atxConnected) return 'The wide 24-pin motherboard power cable is disconnected. Power off and unplug the PC before checking inside.';
+  if (!s.cpuPowerConnected) return 'The processor power cable is disconnected. Power off and unplug the PC before checking inside.';
   if (!s.frontPanelConnected) return 'The case power switch is not connected to the F_PANEL header.';
   if (!s.cpuInstalled || !s.coolerInstalled) return 'CPU check failed. Install the processor and its cooler before starting.';
   if (!s.ramSeated) return 'POST stopped: memory not detected. Check the DDR4 DIMM seating and retention clips.';
@@ -129,7 +130,7 @@ const INSPECTIONS = {
   gpu: s => s.gpuInstalled ? `The graphics card occupies PCIe x16. Its dedicated power lead is ${s.gpuPowerConnected ? 'connected' : 'missing'}. Use this card’s rear video outputs.` : 'The PCIe x16 slot is empty. Seat the graphics card, secure the bracket, and connect its dedicated PSU lead.',
   storage: s => `${s.originalDriveInstalled ? 'Original 256 GB SATA SSD is installed; its classroom OS and files are retained.' : 'Original SATA SSD is safely set aside. Do not erase it or install a new OS.'} SATA data: ${s.sataDataConnected ? 'connected' : 'missing'}. SATA power: ${s.sataPowerConnected ? 'connected' : 'missing'}. A 2.5-inch SATA drive and an M.2 NVMe module use different connectors.`,
   sata: s => `The narrow SATA data cable links motherboard SATA_1 to the SSD. It is ${s.sataDataConnected ? 'connected at both ends' : 'disconnected'}. The wider SATA power lead comes from the PSU, not the motherboard.`,
-  atx: s => `24-pin ATX motherboard power is ${s.atxConnected ? 'connected' : 'not connected'}. The separate 8-pin EPS connector powers the CPU.`,
+  atx: s => `The wide 24-pin motherboard power cable is ${s.atxConnected ? 'connected' : 'not connected'}. It carries power from the power supply to the main board. Power off and unplug the PC before changing it.`,
   eps: s => `8-pin EPS CPU power is ${s.cpuPowerConnected ? 'connected' : 'not connected'}. This is not interchangeable with a graphics-card power plug.`,
   'gpu-power': s => `6-pin GPU power is ${s.gpuPowerConnected ? 'connected' : 'not connected'}. Match the keyed plug to the graphics card.`,
   'sata-power': s => `The PSU’s wide SATA power plug is ${s.sataPowerConnected ? 'connected to the SSD' : 'not connected'}. The SSD also needs its separate SATA data cable.`,
@@ -250,7 +251,7 @@ export function applyHardwareAction(caseId, state, action) {
 export function verifyHardware(caseId, state) {
   state = normalizeHardwareState(caseId, state);
   if (!hardwareReady(state) || !displayReady(state)) return { ok: false, message: !state.acConnected ? 'AC is disconnected. Reconnect power and test startup.' : !state.pcOn ? 'The PC is off. Start it and verify the desktop.' : failureReason(state) || (!state.pcVideoConnected ? 'The PC end of the HDMI cable is disconnected. Fit it to the graphics-card output, then check the display.' : !state.signalConnected ? 'The monitor HDMI end is disconnected. Complete the signal path and check the display.' : state.monitorInput !== 'hdmi' ? 'The monitor is listening to DisplayPort, but the cable uses HDMI. Compare the source selector with the fitted cable.' : 'The PC is running, but the display connection still needs attention.') };
-  if (!state.documentOpened) return { ok: false, message: 'Fixed, but not yet delivered: the desktop is restored. Open Lesson_Practice_File.docx to confirm the original classroom task.' };
+  if (!state.documentOpened) return { ok: false, needsDocument: true, message: 'The PC is running. Click Lesson_Practice_File.docx on the monitor to check your fix.' };
   return { ok: true, message: 'Fixed and delivered: the PC starts, the monitor works, and the original lesson document opens with the classroom files preserved.' };
 }
 

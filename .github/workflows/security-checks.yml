@@ -40,6 +40,8 @@ jobs:
         run: npm run check
       - name: Verify privacy lock, security boundaries, and lab behavior
         run: npm test
+        env:
+          CLL_REQUIRE_LINK_TESTS: '1'
       - name: Build the public-only deployment artifact
         run: npm run build
 

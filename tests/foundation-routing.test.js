@@ -26,6 +26,17 @@ function fixture(){
   vm.runInContext(source.split('\n').find(line=>line.startsWith("window.addEventListener('pagehide'")),context);
   return {context,calls,events,elements,render(id){context.location.hash='#learn/'+id;context.renderRoute();return calls.mounts.at(-1);}};
 }
+function finishPractice(id,record){
+  const lab=getFoundation(id),apply=action=>{record=applyFoundationAction(id,record,action).state;};
+  for(const item of lab.items)apply({type:'inspect',item:item.id});
+  for(const check of lab.checks)apply({type:'answer',check:check.id,value:check.answer});
+  if(lab.track==='coding'){apply({type:'code',source:'print(quantity * 3);'});apply({type:'run-code'});}
+  else for(const job of lab.jobs)apply({type:'practice',action:job.action});
+  assert.equal(foundationSummary(id,record).practiceComplete,true);
+  apply({type:'explain',notes:'I completed the task and checked the actual result.',reflection:'I learned how each step helps the original task work.'});
+  apply({type:'save-explanation'});assert.equal(foundationSummary(id,record).complete,true);
+  return record;
+}
 
 test('five beginner routes keep the established investigation catalog and next tickets intact',()=>{
   assert.equal(SCENARIOS.length,32);
@@ -47,11 +58,22 @@ test('foundation progress survives site routes and code aliases use the same pag
   assert.deepEqual(Object.keys(f.context.store.labs),[],'Beginner work must not enter the assignment or device-saving collection.');
 });
 
-test('foundation reports use the existing reviewed export handoff with the latest work',()=>{
+test('foundation report handoff rejects unfinished work and exports the latest complete practice and explanation',()=>{
   const f=fixture(),options=f.render('network');
   options.onChange(applyFoundationAction('network',options.record,{type:'inspect',item:'switch'}).state);options.onReport();
-  const [meta,,content]=f.calls.reports[0];assert.equal(meta.id,'NET-200');assert.match(content,/Network switch/);assert.match(content,/IN PROGRESS/);
+  assert.equal(f.calls.reports.length,0,'Calling the route callback directly cannot bypass the finish gate.');
+  options.onChange(finishPractice('network',f.context.foundationRecords.network));options.onReport();
+  const [meta,,content]=f.calls.reports[0];assert.equal(meta.id,'NET-200');assert.match(content,/Network switch/);assert.match(content,/COMPLETE/);
+  assert.match(content,/I completed the task and checked the actual result/);assert.match(content,/I learned how each step/);
   assert.ok(content.includes(foundationReport('network',f.context.foundationRecords.network)));
+});
+
+test('returning through a coding alias retains drafts but cannot export an outdated successful program',()=>{
+  const f=fixture(),options=f.render('coding'),complete=finishPractice('coding',options.record);options.onChange(complete);options.onReport();assert.equal(f.calls.reports.length,1);
+  const edited=applyFoundationAction('coding',complete,{type:'code',source:'print(6);'}).state;options.onChange(edited);f.render('network');const returned=f.render('CODE-500');
+  assert.equal(returned.record,edited);assert.equal(returned.record.code,'print(6);');assert.equal(returned.record.notes,complete.notes);assert.equal(returned.record.reflection,complete.reflection);
+  assert.equal(foundationSummary('coding',returned.record).practiceComplete,false);assert.equal(foundationSummary('coding',returned.record).complete,false);
+  returned.onReport();assert.equal(f.calls.reports.length,1,'Earlier passing results cannot authorize a report for changed code.');assert.deepEqual(Object.keys(f.context.store.labs),[]);
 });
 
 test('private beginner work gets an unload warning even when investigation device saving is enabled',()=>{

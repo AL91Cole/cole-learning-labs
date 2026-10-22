@@ -30,9 +30,10 @@ test('display transfer tickets share the same small control set and do not ident
 });
 
 test('power, memory and storage tickets expose their relevant tools and fastener groups',()=>{
-  const power=workbenchGuidance(base('INC-102'));assert.deepEqual(power.tools,['inspect','cables']);assert.deepEqual(power.cables,['ac']);assert.deepEqual(power.screws,[]);assert.equal(power.initialPart,'psu');
+  const power=workbenchGuidance(base('INC-102'));assert.deepEqual(power.tools,['inspect','move','cables','screwdriver']);assert.deepEqual(power.groups,['panel','cables','display']);assert.deepEqual(power.cables,['ac','atx']);assert.deepEqual(power.screws,['panel']);assert.equal(power.initialPart,'cables');
   const memory=workbenchGuidance(base('INC-103'));assert.deepEqual(memory.tools,['inspect','move','cables','screwdriver']);assert.deepEqual(memory.groups,['panel','ram','cables','display']);assert.deepEqual(memory.screws,['panel']);
-  for(const id of ['INC-104','INC-105']){const storage=workbenchGuidance(base(id));assert.deepEqual(storage.tools,memory.tools);assert.deepEqual(storage.groups,['panel','ssd','cables','display']);assert.deepEqual(storage.cables,['ac','sata-data','sata-power']);assert.deepEqual(storage.screws,['panel','ssd']);assert.equal(storage.initialPart,'ssd');}
+  const driveCables=workbenchGuidance(base('INC-104'));assert.deepEqual(driveCables.tools,memory.tools);assert.deepEqual(driveCables.groups,['panel','cables','display']);assert.deepEqual(driveCables.cables,['ac','sata-data','sata-power']);assert.deepEqual(driveCables.screws,['panel']);assert.equal(driveCables.initialPart,'cables');
+  const storage=workbenchGuidance(base('INC-105'));assert.deepEqual(storage.tools,memory.tools);assert.deepEqual(storage.groups,['panel','ssd','cables','display']);assert.deepEqual(storage.cables,['ac','sata-data','sata-power']);assert.deepEqual(storage.screws,['panel','ssd']);assert.equal(storage.initialPart,'ssd');
 });
 
 test('the complete build retains all six tools, every part group, ten cables and all screw groups',()=>{
@@ -42,8 +43,8 @@ test('the complete build retains all six tools, every part group, ten cables and
 test('internal-work instructions follow actual power and case access without choosing a repair',()=>{
   for(const caseId of ['INC-103','INC-104','INC-105','INC-106']){
     const running={...base(caseId),pcOn:true,acConnected:true};assert.match(workbenchGuidance(running).instruction,/Power off.*disconnect AC/);
-    const off=applyHardwareAction(caseId,running,'power-off').state;assert.match(workbenchGuidance(off).instruction,/PC is off.*Disconnect virtual AC/);
-    const unplugged=applyHardwareAction(caseId,off,'unplug').state;const closed={...unplugged,assembly:{panelInstalled:true}};assert.match(workbenchGuidance(closed).instruction,/Open the case only.*secure the panel/);
+    const off=applyHardwareAction(caseId,running,'power-off').state;assert.match(workbenchGuidance(off).instruction,/PC is off.*Disconnect AC/);
+    const unplugged=applyHardwareAction(caseId,off,'unplug').state;const closed={...unplugged,assembly:{panelInstalled:true}};assert.match(workbenchGuidance(closed).instruction,/Open the case only.*Secure the panel/);
     const open={...unplugged,assembly:{panelInstalled:false}};assert.doesNotMatch(workbenchGuidance(open).instruction,/remove.*panel|Power off|Disconnect virtual AC/);
     assert.doesNotMatch(workbenchGuidance(open).instruction,/reseat|reinstall|replace|disconnected data|wrong drive|connect SATA/i);
     const unsafe={...running,assembly:{panelInstalled:false}};assert.match(workbenchGuidance(unsafe).instruction,/case is open.*Power off/);
@@ -82,7 +83,7 @@ test('unknown or malformed identities use a conservative fixed fallback and igno
 test('inherited fields and accessors are never read, while own null-prototype data is supported',()=>{
   let getters=0;const inherited=Object.create({caseId:'INC-106',pcOn:false,acConnected:false});assert.deepEqual(workbenchGuidance(inherited),workbenchGuidance(undefined));
   const accessor={};for(const key of ['caseId','pcOn','acConnected','documentOpened','booted','assembly'])Object.defineProperty(accessor,key,{get(){getters++;throw new Error('getter ran');}});assert.deepEqual(workbenchGuidance(accessor),workbenchGuidance(undefined));assert.equal(getters,0);
-  const nullData=Object.assign(Object.create(null),{caseId:'INC-103',pcOn:false,acConnected:false,assembly:Object.assign(Object.create(null),{panelInstalled:true})});assert.match(workbenchGuidance(nullData).instruction,/secure the panel/);
+  const nullData=Object.assign(Object.create(null),{caseId:'INC-103',pcOn:false,acConnected:false,assembly:Object.assign(Object.create(null),{panelInstalled:true})});assert.match(workbenchGuidance(nullData).instruction,/Secure the panel/);
   const nested={caseId:'INC-103',pcOn:false,acConnected:false,assembly:{}};Object.defineProperty(nested.assembly,'panelInstalled',{get(){getters++;throw new Error('nested getter ran');}});assert.doesNotThrow(()=>workbenchGuidance(nested));assert.equal(getters,0);
 });
 

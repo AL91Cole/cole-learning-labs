@@ -38,10 +38,10 @@ function passingState(scenario,language='javascript'){
 }
 function savedRecord(scenario,state){return {
   state,evidence:scenario.clues.slice(0,2).map(clue=>clue.id),questions:[0],events:[{time:'2026-10-21T05:00:00.000Z',kind:'info',message:'A recorded local practice action.'}],
-  plan:'Compare the changing fixture inputs and test the expression.',notes:'I ran the current source against all the fixture inputs.',reflection:'A changing input needs a general rule rather than one fixed answer.',verified:true,closed:true
+  symptoms:'The program output does not match the expected result.',ideaSaved:true,plan:'Compare the changing fixture inputs and test the expression.',notes:'I ran the current source against all the fixture inputs.',reflection:'A changing input needs a general rule rather than one fixed answer.',verified:true,closed:true
 };}
 function assertWrittenWorkRetained(restored,before){
-  for(const field of ['evidence','questions','events','plan','notes','reflection'])assert.deepEqual(restored[field],before[field],field);
+  for(const field of ['evidence','questions','events','symptoms','ideaSaved','plan','notes','reflection'])assert.deepEqual(restored[field],before[field],field);
 }
 
 test('completed coding records restore only after the current JavaScript or Python source passes its fixtures',()=>{

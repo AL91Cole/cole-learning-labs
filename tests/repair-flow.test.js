@@ -9,6 +9,7 @@ import {FOUNDATION_LABS} from '../src/foundation-model.js';
 import {normalizeLabRecord} from '../src/records.js';
 import {inquiryProgress} from '../src/interview.js';
 import {renderLabLearning} from '../src/teaching.js';
+import {renderExperiments} from '../src/experiments.js';
 
 const appUrl=new URL('../src/app.js',import.meta.url);
 const source=await readFile(appUrl,'utf8');
@@ -65,24 +66,59 @@ test('the initial application module graph does not download a 3D engine or scen
   assert.doesNotMatch([...seen].join('\n'),/\/(?:virtual-lab-scene|assembly-scene|babylon|three\.(?:module|core)(?:\.min)?)\.js(?:$|\n)/);
 });
 
-test('every investigation begins with the ticket, exposes its core tasks, and leaves optional help closed',()=>{
+test('every investigation puts required first-page work before its single Next button',()=>{
   const rendered=pages();
   for(const scenario of SCENARIOS) {
     rendered.labView=null;
     const html=rendered.labPage(scenario),request=html.indexOf('id="lab-problem"'),bench=html.indexOf('id="lab-workbench"');
     assert.ok(request>=0&&bench>request,scenario.id);
     assert.ok(html.indexOf(esc(scenario.brief),request)<bench,scenario.id+' must present the actual ticket before repair');
-    const firstRepairLink=html.indexOf('data-jump-section="2"',request);
-    assert.ok(firstRepairLink>request&&firstRepairLink<html.indexOf('id="lab-learning"'),scenario.id+' needs a clear repair entry beside the ticket');
-    for(const name of ['lab-options','intake-questions','bench-log'])assert.doesNotMatch(detailTag(html,name),/\bopen(?:\s|=|>)/,scenario.id+' '+name);
-    for(const name of ['repair-notes','guide-plan','hypothesis-test'])assert.match(detailTag(html,name),/\bopen(?:\s|=|>)/,scenario.id+' '+name);
-    assert.doesNotMatch(html,/<details\b[^>]*class="conversation-history"/u);
-    assert.ok(html.indexOf('id="interview-history"')<html.indexOf('id="question-form"'),scenario.id+' conversation must be visible above the composer');
-    const modeHelp=enclosingDetails(html,'learning-mode');
-    assert.equal(modeHelp.length,1,scenario.id+' practice settings belong in optional help');
-    assert.doesNotMatch(modeHelp[0],/\bopen(?:\s|=|>)/,scenario.id);
-    assert.equal(enclosingDetails(html,'student-question').length,0,scenario.id+' own-word questions must be immediately usable');
+    const firstPage=html.slice(request,bench),next=firstPage.indexOf('id="page-one-next"');
+    assert.ok(next>firstPage.indexOf('id="idea-form"'),scenario.id+' Next must follow the first-idea answers');
+    assert.equal((firstPage.match(/data-jump-section="2"/g)||[]).length,1,scenario.id+' must not offer a shortcut above the required work');
+    assert.match(firstPage,/<button[^>]*id="page-one-next"[^>]*\bdisabled\b/,scenario.id+' starts with the next page locked');
+    assert.ok(firstPage.indexOf('id="student-question"')<firstPage.indexOf('id="interview-history"'),scenario.id+' question box must precede conversation history');
+    assert.match(firstPage,/Conversation history/);
+    assert.match(firstPage,/at least two clues/);
+    assert.doesNotMatch(detailTag(html,'intake-questions'),/\bopen(?:\s|=|>)/,scenario.id+' question starters stay optional');
+    for(const control of ['run-hypothesis-test','experiment-hypothesis','experiment-symptoms','experiment-result','bench-log'])assert.equal(enclosingDetails(html,control).length,0,scenario.id+' required workbench tools stay visible');
+    assert.match(html,/<button\b[^>]*id="run-hypothesis-test"[^>]*>Test my idea<\/button>/,scenario.id+' names the action directly');
+    for(const id of ['first-idea-evidence','first-idea-questions','workbench-test-status'])assert.ok(html.includes('id="'+id+'"'),scenario.id+' includes '+id);
+    assert.doesNotMatch(html,/class="lab-options"|id="learning-mode"|Reply privacy|AI replies on/);
+    assert.match(html,/<div id="work-privacy" hidden>/);
+    assert.match(html,/<button\b[^>]*id="workbench-next"[^>]*\bdisabled\b/,scenario.id+' starts page three locked until the saved test is complete');
+    for(const control of ['student-question','interview-history','symptoms','plan','save-idea'])assert.equal(enclosingDetails(html,control).length,0,scenario.id+' required first-page work must be immediately available');
     for(const control of ['verify-task','close-ticket'])assert.equal(enclosingDetails(html,control).length,0,scenario.id+' final test/handoff must not be hidden in optional help');
+  }
+});
+
+test('the next-idea notebook keeps every writing and test control available without an optional disclosure',()=>{
+  for(const scenario of SCENARIOS){
+    const html=renderExperiments(scenario,normalizeLabRecord(scenario,{}));
+    for(const id of ['experiment-predict','experiment-evidence','experiment-changed','experiment-observed','experiment-explain'])assert.equal(enclosingDetails(html,id).length,0,scenario.id+' '+id+' stays visible');
+    for(const name of ['data-experiment-start','data-experiment-capture','data-experiment-save']){
+      assert.match(html,new RegExp('<button\\b[^>]*\\b'+name+'(?:\\s|>)'),scenario.id+' exposes '+name);
+    }
+    assert.doesNotMatch(html,/<details[^>]*class="[^"]*experiment-workspace|optional experiment|optional notebook/i);
+  }
+});
+
+test('the composed lab and notebook have unique IDs and each notebook label names its own textarea',()=>{
+  const rendered=pages();
+  for(const scenario of SCENARIOS){
+    const notebook=renderExperiments(scenario,normalizeLabRecord(scenario,{}));
+    const html=rendered.labPage(scenario).replace('<div id="experiment-tools"></div>','<div id="experiment-tools">'+notebook+'</div>');
+    assert.ok(html.includes(notebook),scenario.id+' includes the mounted notebook');
+    const counts=new Map();
+    for(const [,id] of html.matchAll(/\sid="([^"]+)"/g))counts.set(id,(counts.get(id)||0)+1);
+    assert.deepEqual([...counts].filter(([,count])=>count!==1),[],scenario.id+' must not repeat an element ID when the notebook mounts');
+    for(const part of ['predict','evidence','changed','observed','explain']){
+      const id='experiment-'+part;
+      assert.equal(counts.get(id),1,scenario.id+' has one '+id);
+      assert.match(html,new RegExp('<label\\b[^>]*\\bfor="'+id+'"'),scenario.id+' provides the '+part+' label');
+      assert.match(html,new RegExp('<textarea\\b[^>]*\\bid="'+id+'"'),scenario.id+' label points to its textarea');
+    }
+    for(const id of ['first-idea-evidence','first-idea-questions'])assert.equal(counts.get(id),1,scenario.id+' keeps first-idea context distinct');
   }
 });
 
