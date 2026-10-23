@@ -1,6 +1,6 @@
-import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261023-workbench';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261023-workbench';
-import {createTextReport,createReportURLs} from './report-downloads.js?release=20261023-workbench';
+import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261023-monitor';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261023-monitor';
+import {createTextReport,createReportURLs} from './report-downloads.js?release=20261023-monitor';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const drafts=new Map();

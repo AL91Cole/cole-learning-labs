@@ -1,5 +1,5 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261023-workbench';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261023-workbench';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261023-monitor';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261023-monitor';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 

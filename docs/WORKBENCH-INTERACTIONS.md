@@ -6,6 +6,8 @@ Selecting a part shows its current state and named actions beside the picture. T
 
 The diagram includes all ten cable choices, direct connection markers, a CPU_FAN lead and connection state, CPU retention, RAM clips, the PCIe latch, and an empty cooler mount for refitting. Component actions support click and keyboard activation, with dragging optional. The Monitor group in Part controls includes both HDMI ends, output and input selection, and opening the original lesson file. Actions retain the existing model's power, case access, fastener order, thermal paste and compatibility checks.
 
+The monitor HDMI connector sits beneath the left side of the monitor, with an HDMI IN label and cable path below the bezel. Input remains on the right bezel. Their targets stay separate in the normal and expanded views; moving or reconnecting the cable does not change the selected input.
+
 ## Verification
 
 - Controller regressions independently build, fully dismantle, and rebuild the PC through the visual interface and through native Part controls. Each path reaches startup and original lesson-file delivery, with the same equipment result as the model.
@@ -15,5 +17,6 @@ The diagram includes all ten cable choices, direct connection markers, a CPU_FAN
 - Independent source review checks fixed action mappings, escaped labels, hidden internal targets and preserved power/AC/panel interlocks.
 - `npm run check` passes, the build prepares 74 public files, and Windows runs 1,125 tests: 1,123 passed, two platform-specific symbolic-link tests skipped, no failures. Linux CI must run those link tests with `CLL_REQUIRE_LINK_TESTS=1`.
 - At a 1,536px Chrome viewport, the equipment canvas measures about 1,018px beside the 250px assistant, with no page-level horizontal overflow. The panel instruction banner is absent. Larger equipment may require normal vertical scrolling; Expand picture remains available.
+- The monitor connector follow-up passes all 56 workbench/cable tests. Chrome confirms the monitor-end target and Input button have disjoint bounds in both normal and expanded views, and hit testing reaches the HDMI target. Disconnecting keeps DisplayPort selected; switching Input while unplugged leaves the cable unplugged; reconnecting then restores the desktop without restarting the PC.
 
 These checks use the authored virtual equipment. They do not establish physical hardware accuracy or completed Chromebook, touch-device, NVDA or ChromeVox acceptance. Those checks remain part of school-device review. This document does not establish production publication; verify the merged revision and deployment separately.

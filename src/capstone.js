@@ -1,5 +1,5 @@
 /** A local learning sequence over the existing simulations. No new record service. */
-import {retainExperimentEvents} from './experiments.js?release=20261023-workbench';
+import {retainExperimentEvents} from './experiments.js?release=20261023-monitor';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const CAPSTONE_STAGES = Object.freeze([
   {id:'INC-106',title:'Build the workstation',role:'Hardware technician',task:'Assemble the fictional classroom PC, start it, and open the lesson file.',handoff:'Which connections are needed for a working system, and which test shows it is ready?'},

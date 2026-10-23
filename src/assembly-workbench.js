@@ -1,8 +1,8 @@
-import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261023-workbench';
-import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261023-workbench';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261023-workbench';
-import { workbenchGuidance } from './workbench-guidance.js?release=20261023-workbench';
-import { pcActivity } from './pc-activity.js?release=20261023-workbench';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261023-monitor';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261023-monitor';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261023-monitor';
+import { workbenchGuidance } from './workbench-guidance.js?release=20261023-monitor';
+import { pcActivity } from './pc-activity.js?release=20261023-monitor';
 
 const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
 const NAMES = Object.fromEntries(GROUPS);
@@ -247,11 +247,13 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     const a=current.assembly;
     const point=(id,x,y,label,body='',extra='')=>!allowedPicture(id)?`<g>${body}</g>`:`<g role="button" tabindex="0" class="asm-svg-target ${selected===id?'asm-svg-selected':''}" aria-label="${escape(label)}" data-asm-picture="${escape(id)}" data-asm-drop="${escape(id)}" ${extra}><title>${escape(label)}</title><rect x="${x-15}" y="${y-15}" width="30" height="30" rx="4" fill="transparent"/>${body||`<circle cx="${x}" cy="${y}" r="8" fill="#203248" stroke="#68dbc4"/><path d="M${x-4} ${y}h8M${x} ${y-4}v8" stroke="#c1d5de"/>`}</g>`;
     const videoY=s.videoPort==='gpu'?351:221;
-    const monitorEnd=s.signalConnected?'M340 328':'M314 355';
+    const monitorEnd=s.signalConnected?'M90 356':'M120 375';
     const pcCableMounted=s.pcVideoConnected&&(s.videoPort==='gpu'?s.gpuInstalled:s.boardInstalled);
     const pcEnd=pcCableMounted?`L450 ${videoY}`:'L390 365';
     let foreground='';
-    let overlay=`<g pointer-events="none" class="asm-full-cable-path" data-video-pc-connected="${s.pcVideoConnected}" data-video-monitor-connected="${s.signalConnected}"><path d="${monitorEnd} C383 335 386 ${videoY} 415 ${videoY} ${pcEnd}" fill="none" stroke="#d3ac60" stroke-width="7"/><path d="${monitorEnd} C383 335 386 ${videoY} 415 ${videoY} ${pcEnd}" fill="none" stroke="#5b482b" stroke-width="2"/>${!s.signalConnected?'<text x="35" y="368" fill="#e5b768" font-size="11">Monitor HDMI end disconnected</text>':''}${!s.pcVideoConnected?'<text x="35" y="385" fill="#e5b768" font-size="11">PC HDMI end disconnected</text>':''}</g>`;
+    const videoPath=`${monitorEnd} C145 382 386 ${videoY} 415 ${videoY} ${pcEnd}`;
+    const looseVideo=!s.signalConnected&&!s.pcVideoConnected?'Both HDMI ends disconnected':!s.signalConnected?'Monitor HDMI end disconnected':!s.pcVideoConnected?'PC HDMI end disconnected':'';
+    let overlay=`<g pointer-events="none" class="asm-full-cable-path" data-video-pc-connected="${s.pcVideoConnected}" data-video-monitor-connected="${s.signalConnected}"><path d="${videoPath}" fill="none" stroke="#d3ac60" stroke-width="7"/><path d="${videoPath}" fill="none" stroke="#5b482b" stroke-width="2"/>${looseVideo?`<text x="145" y="383" fill="#e5b768" font-size="10">${looseVideo}</text>`:''}</g>`;
     if(s.acConnected&&a.psuInstalled)overlay+='<path pointer-events="none" class="asm-full-ac-path" d="M764 240V279Q764 298 791 298H849V603H785" fill="none" stroke="#89969f" stroke-width="7"/>';
     {
       const screwPositions={panel:[[422,95],[821,563]],psu:[[718,113],[808,113],[718,247],[808,247]],board:[[445,119],[681,119],[445,444],[681,444]],cooler:[[488,169],[583,169],[488,264],[583,264]],gpu:[[435,321],[435,389]],ssd:[[723,378],[801,489]]};
@@ -263,7 +265,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
         overlay+=`<g data-asm-drop="tray" class="asm-svg-tray"><rect x="27" y="390" width="340" height="165" rx="8" fill="#121f2d" stroke="#5b8a95" stroke-dasharray="6 4"/><text x="44" y="414" fill="#9de5d5" font-size="12">PARTS TRAY · DROP A REMOVED PART HERE</text>${loose.map(([id],i)=>point(id,61+(i%3)*108,450+Math.floor(i/3)*35,NAMES[id]+': in parts tray',`<rect x="${38+(i%3)*108}" y="${434+Math.floor(i/3)*35}" width="99" height="28" rx="3" fill="#203248" stroke="#3d7d7b"/><text x="${87+(i%3)*108}" y="${452+Math.floor(i/3)*35}" text-anchor="middle" fill="#cbe5eb" font-size="10">${escape({panel:'Side panel',psu:'PSU',board:'Motherboard',cpu:'CPU',cooler:'Cooler',ram:'RAM',gpu:'Graphics',ssd:'SSD'}[id])}</text>`).replace(`data-asm-drop="${id}"`,'data-asm-drop="tray"')).join('')}</g>`;
       }
     }
-    const coords={ 'ac-inlet':[764,240],'hdmi-gpu':[450,351],'hdmi-board':[449,221],'monitor-hdmi':[340,328],'atx-header':[691,204],'eps-header':[484,117],'gpu-power-header':[660,328],'ssd-data':[739,480],'ssd-power':[771,480],'front-panel-header':[591,439],'cpu-fan-header':[610,181]};
+    const coords={ 'ac-inlet':[764,240],'hdmi-gpu':[450,351],'hdmi-board':[449,221],'monitor-hdmi':[90,356],'atx-header':[691,204],'eps-header':[484,117],'gpu-power-header':[660,328],'ssd-data':[739,480],'ssd-power':[771,480],'front-panel-header':[591,439],'cpu-fan-header':[610,181]};
     const cableVisible=cable=>allowed('cables',cable.id)&&(!cable.internal||!a.panelInstalled);
     if(!a.panelInstalled&&current.boardInstalled){
       if(activeTool==='move'){
@@ -278,14 +280,14 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
       if(cable.id==='cpu-fan'&&!current.coolerInstalled||cable.id==='gpu-power'&&!current.gpuInstalled||['sata-data','sata-power'].includes(cable.id)&&!current.originalDriveInstalled||cable.id==='ac'&&!a.psuInstalled)continue;
       const connection=cableConnection(current,a,cable.id),socket=cable.id==='hdmi-pc'?(connection||'hdmi-gpu'):cable.sockets[0].id,[x,y]=coords[socket];
       const name=cable.id==='cpu-fan'?'CPU_FAN':cable.label;
-      foreground+=point('lead-'+cable.id,x,y,name+': '+(connection?'connected; click to disconnect':'disconnected; click to connect'),`<rect x="${x-12}" y="${y-12}" width="24" height="24" rx="4" fill="${connection?'#145d50':'#4b3d26'}" stroke="${connection?'#86efd1':'#edc680'}" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" fill="#fff" font-size="12">${connection?'−':'+'}</text>${cable.id==='cpu-fan'?`<text x="${x}" y="${y-19}" text-anchor="middle" fill="#ccebdc" font-size="11">CPU_FAN</text>`:''}`);
+      foreground+=point('lead-'+cable.id,x,y,name+': '+(connection?'connected; click to disconnect':'disconnected; click to connect'),`<rect x="${x-12}" y="${y-12}" width="24" height="24" rx="4" fill="${connection?'#145d50':'#4b3d26'}" stroke="${connection?'#86efd1':'#edc680'}" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" fill="#fff" font-size="12">${connection?'−':'+'}</text>${cable.id==='cpu-fan'?`<text x="${x}" y="${y-19}" text-anchor="middle" fill="#ccebdc" font-size="11">CPU_FAN</text>`:cable.id==='hdmi-monitor'?`<text x="${x}" y="${y+27}" text-anchor="middle" fill="#ccebdc" font-size="10">HDMI IN</text>`:''}`);
     }
     if(activeTool==='cables'){
       const cable=ASSEMBLY_CABLES.find(item=>item.id===selectedCable),sockets=cable.sockets,available=ASSEMBLY_CABLES.filter(cableVisible);
       overlay+=`<g class="asm-svg-cable-key"><rect x="27" y="390" width="340" height="208" rx="6" fill="#10242d" stroke="#49bfa9"/><text x="43" y="414" fill="#c6f2e5" font-size="12">CHOOSE A CABLE END</text>${available.map((item,i)=>{const x=111+(i%2)*166,y=440+Math.floor(i/2)*30,connected=cableConnection(current,a,item.id);return point('cable-'+item.id,x,y,item.label+': '+(connected?'connected':'disconnected'),`<rect x="${x-77}" y="${y-13}" width="154" height="26" rx="4" fill="${item.id===selectedCable?'#1b5c53':'#203248'}" stroke="#65bda9"/><text x="${x}" y="${y+4}" text-anchor="middle" fill="#e1f5ed" font-size="9">${escape(item.label.replace(' cable — ',' · ').replace('motherboard','board'))}</text>`);}).join('')}</g>`;
       if(cableVisible(cable)){
         overlay+=`<g role="button" tabindex="0" data-asm-picture="cable-rest" data-asm-drop="tray" aria-label="Disconnect selected cable into the cable rest"><rect x="30" y="576" width="334" height="25" rx="4" fill="#283046" stroke="#9f9da6"/><text x="197" y="593" text-anchor="middle" fill="#d6dce5" font-size="11">DISCONNECT SELECTED END</text></g>`;
-        for(const socket of sockets){if(socket.id==='ac-inlet'&&!a.psuInstalled)continue;const[x,y]=coords[socket.id];overlay+=point('port-'+socket.id,x,y,socket.label,`<rect x="${x-17}" y="${y-17}" width="34" height="34" rx="4" fill="transparent" stroke="#8dffe3" stroke-width="2"/><text x="${x}" y="${y-26}" text-anchor="middle" fill="#a9f8e6" font-size="10">${socket.id==='cpu-fan-header'?'':escape(socket.label)}</text>`);}
+        for(const socket of sockets){if(socket.id==='ac-inlet'&&!a.psuInstalled)continue;const[x,y]=coords[socket.id];overlay+=point('port-'+socket.id,x,y,socket.label,`<rect x="${x-17}" y="${y-17}" width="34" height="34" rx="4" fill="transparent" stroke="#8dffe3" stroke-width="2"/><text x="${x}" y="${y-26}" text-anchor="middle" fill="#a9f8e6" font-size="10">${['cpu-fan-header','monitor-hdmi'].includes(socket.id)?'':escape(socket.label)}</text>`);}
       }
     }
     markup=markup.replace('</svg>',overlay+foreground+'</svg>');sceneHost.innerHTML='<div class="asm-picture-workspace"><div class="asm-schematic-canvas">'+markup+`<div class="asm-monitor-controls" role="group" aria-label="Monitor bezel controls"><button type="button" class="asm-monitor-input" data-asm-toggle="input" aria-label="Monitor input: ${s.monitorInput==='hdmi'?'HDMI. Switch to DisplayPort':'DisplayPort. Switch to HDMI'}" title="Change monitor input"><span class="asm-monitor-input-face" aria-hidden="true"><span>Input</span><strong>${s.monitorInput==='hdmi'?'HDMI':'DisplayPort'}</strong></span></button></div></div>`+pictureContext()+'</div>';sceneHost.style&&(sceneHost.style.touchAction=['move','cables'].includes(activeTool)?'none':sceneHost.dataset.expanded==='true'?'auto':'pan-y');
