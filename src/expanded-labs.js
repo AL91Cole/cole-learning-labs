@@ -1,5 +1,5 @@
 /** Local, fictional equipment and decision models. No service, shell, or AI calls. */
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261022-learning';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261022-controls';
 
 const code = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));

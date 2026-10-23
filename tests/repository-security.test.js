@@ -43,6 +43,7 @@ test('public browser security limits scripts, connections, forms, and embedded c
   assert.ok(publicHeaders, 'public security headers must cover every static route');
   assert.equal(publicHeaders.get('x-content-type-options'), 'nosniff');
   assert.equal(publicHeaders.get('referrer-policy'), 'no-referrer');
+  assert.equal(publicHeaders.get('x-frame-options'), 'DENY', 'all public pages must deny clickjacking frames');
   assert.match(publicHeaders.get('strict-transport-security') || '', /^max-age=(\d+)(?:;|$)/);
   const age = Number(publicHeaders.get('strict-transport-security').match(/max-age=(\d+)/)[1]);
   assert.ok(age >= 15552000, 'HTTPS must remain required for at least 180 days');
@@ -60,7 +61,7 @@ test('public browser security limits scripts, connections, forms, and embedded c
     assert.deepEqual(csp.get('connect-src'),connections,`${route}: connections must match the reviewed topic-only requester boundary`);
     assert.deepEqual(csp.get('form-action'),localOnly?["'none'"]:["'self'"],`${route}: forms must match the reviewed local boundary`);
     assert.deepEqual(csp.get('style-src'), localReport ? ["'self'"] : ["'self'", "'unsafe-inline'"], `${route}: unexpected stylesheet policy`);
-    for (const name of ['object-src', 'base-uri', 'frame-src']) {
+    for (const name of ['object-src', 'base-uri', 'frame-src', 'frame-ancestors']) {
       assert.deepEqual(csp.get(name), ["'none'"], `${route}: ${name} must remain disabled`);
     }
     assert.deepEqual(csp.get('img-src'), worksheet ? ["'self'"] : ["'self'", 'data:'], `${route}: unexpected image provider`);

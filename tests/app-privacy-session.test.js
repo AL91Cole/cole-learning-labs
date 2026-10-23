@@ -33,7 +33,7 @@ class DeviceStorage {
 function harness() {
   const storage = new DeviceStorage();
   const initialStore = record('Earlier fictional classroom draft.');
-  const events = new Map(), notices = [], calls = { disposed: 0, scheduled: 0, rendered: 0 };
+  const events = new Map(), notices = [], calls = { disposed: 0, scheduled: 0, rendered: 0, sandboxCleared: 0 };
   const status = { textContent: '' };
   let mounted;
   const context = vm.createContext({
@@ -44,6 +44,7 @@ function harness() {
     $: selector => selector === '#work-privacy' ? {} : selector === '.save-status' ? status : null,
     workStatus: currentRecord => currentRecord.notes || '',
     mountWorkControls(options) { mounted = options; },
+    clearCodingSandboxWork() { calls.sandboxCleared++; },
     renderRoute() { calls.rendered++; }, showNotice(message) { notices.push(message); }
   });
   // Use the production lifecycle functions with the real storage manager. Only
@@ -79,6 +80,7 @@ function assertReset(h) {
   assert.equal(state.classroomConnection, null);
   assert.deepEqual(JSON.parse(JSON.stringify(state.store)), { version: 2, labs: {} });
   assert.equal(h.calls.disposed, 1); assert.equal(h.calls.rendered, 1);
+  assert.equal(h.calls.sandboxCleared, 1);
 }
 
 function saveAndResumeIndependent(h) {

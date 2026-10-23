@@ -1,4 +1,4 @@
-import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261022-learning';
+import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261022-controls';
 
 /** Read-only teaching indicators. They never start a device or change saved work. */
 const plain = value => {
@@ -53,6 +53,8 @@ export function pcActivity(hardware) {
   const h = Object.fromEntries(FLAGS.map(key => [key, flag(hardware, key)]));
   h.videoPort = own(hardware, 'videoPort');
   h.monitorInput = own(hardware, 'monitorInput');
+  // Older supported saves predate the monitor's separate power switch.
+  h.monitorOn = own(hardware, 'monitorOn') !== false;
   const assemblyMode = own(hardware, 'assemblyEnabled');
   const modeKnown = assemblyMode === true || assemblyMode === false;
   const detailed = assemblyMode === true;
@@ -82,7 +84,7 @@ export function pcActivity(hardware) {
   const memoryReady=ramPowered&&(!detailed||!a.ramClipsOpen);
   const videoInitialized=processorReady&&memoryReady&&gpuPowered;
   const linkReady=h.pcVideoConnected&&h.signalConnected&&h.videoPort==='gpu'&&h.monitorInput==='hdmi';
-  const signal=powered&&videoInitialized&&linkReady;
+  const signal=h.monitorOn&&powered&&videoInitialized&&linkReady;
   const desktop=signal&&booted;
   const documentOpened=desktop&&h.documentOpened;
   const detectedStorage=powered&&h.originalDriveInstalled&&h.sataPowerConnected&&h.sataDataConnected;
@@ -91,7 +93,10 @@ export function pcActivity(hardware) {
   const display={state:'off',label:'MONITOR STANDBY',detail:'',signal,desktop,documentOpened};
   let stage='monitor',code='MONITOR_STANDBY',brand='CLASSROOM DISPLAY';
   let lines=['Selected input has no active video.','Monitor power is available separately.','The PC is not supplying a picture.'];
-  if(powered&&!signal){
+  if(!h.monitorOn){
+    display.label='MONITOR OFF';code='MONITOR_OFF';
+    lines=['Use the Power button on the monitor.','The PC has a separate power button.'];
+  }else if(powered&&!signal){
     display.state='no-signal';display.label=source==='DISPLAYPORT'?'NO SIGNAL · DISPLAYPORT':'NO SIGNAL';
     code=videoInitialized?'INPUT_NO_SIGNAL':'PRE_VIDEO_POST';
     // Monitor messages cannot diagnose the unseen cable end, socket or RAM.

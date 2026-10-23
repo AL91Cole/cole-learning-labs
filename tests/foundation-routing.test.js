@@ -16,7 +16,7 @@ function fixture(){
   const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport,learningRoute,
     foundationRecords:Object.create(null),location:{hash:'#learn/hardware'},currentLab:null,labNavigation:null,routeCleanup:null,reportCleanup:null,classroomConnection:null,
     document:{body:{classList:{add(){},remove(){}}},title:''},window:{scrollTo(){},addEventListener(name,fn){events.set(name,fn);}},
-    $,$$:()=>[],disposeHardware(){},preserveCodeDraft(){},hasCodeDraft:()=>false,workStorage:{persistent:true},store:{labs:{}},
+    $,$$:()=>[],disposeHardware(){},preserveCodeDraft(){},hasCodeDraft:()=>false,hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},workStorage:{persistent:true},store:{labs:{}},
     renderFoundationLab:(lab,record)=>`<section>${lab.code} ${record.labId}</section>`,
     mountFoundationLab(root,options){calls.mounts.push(options);return {dispose(){calls.disposals++;},cancelInteraction(){}};},
     openReport(...args){calls.reports.push(args);},routeLink:(route,label)=>`<a href="#${route}">${label}</a>`});

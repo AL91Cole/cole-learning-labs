@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {pcActivity} from '../src/pc-activity.js';
 import {initialHardwareState,applyHardwareAction} from '../src/hardware.js';
+import {normalizeHardwareState,verifyHardware,getHardwareReadouts} from '../src/hardware.js';
 import {SCENARIOS} from '../src/scenarios.js';
 
 const detailed = (id='INC-101') => applyHardwareAction(id,initialHardwareState(id),'enable-assembly').state;
@@ -17,6 +18,17 @@ function steps(id,state,actions) {
 const fixed = () => steps('INC-101',detailed(),['video-gpu']);
 const freeze = value => {if(value&&typeof value==='object'){for(const entry of Object.values(value))freeze(entry);Object.freeze(value);}return value;};
 const assertStopped = activity => {for(const key of ['powered','cpuFan','psuFan','gpuFan','boardPowered','cpuPowered','ramPowered','gpuPowered','ssdPowered','booted','documentOpened'])assert.equal(activity[key],false,key);};
+
+test('monitor power is independent of PC power, blocks delivery while off, and migrates older saves as on',()=>{
+  let state=steps('INC-101',fixed(),['open-document','monitor-off']);
+  assert.equal(state.pcOn,true);assert.equal(state.booted,true);assert.equal(state.monitorOn,false);assert.equal(state.documentOpened,false);
+  const activity=pcActivity(state);assert.equal(activity.powered,true);assert.equal(activity.booted,true);assert.equal(activity.display.screen.code,'MONITOR_OFF');assert.equal(activity.display.signal,false);assert.equal(activity.display.desktop,false);
+  assert.equal(verifyHardware('INC-101',state).ok,false);assert.match(verifyHardware('INC-101',state).message,/monitor is off/i);assert.equal(applyHardwareAction('INC-101',state,'open-document').kind,'warning');
+  assert.match(getHardwareReadouts('INC-101',state).display.value,/Monitor switched off/);
+  state=steps('INC-101',state,['monitor-on']);assert.equal(pcActivity(state).display.desktop,true);assert.equal(state.documentOpened,false);
+  const old={...state};delete old.monitorOn;assert.equal(normalizeHardwareState('INC-101',old).monitorOn,true);
+  for(const value of ['false',0,{},null])assert.equal(normalizeHardwareState('INC-101',{...state,monitorOn:value}).monitorOn,true);
+});
 
 test('all eight current hardware faults have distinct honest power/startup/display activity',()=>{
   const expected={

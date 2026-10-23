@@ -2,6 +2,10 @@
 
 The filename is retained for existing documentation links. The current interface restores the simpler PR #6 visual style and removes the 3D renderer. Equipment is an original, labeled 2D SVG diagram with ordinary HTML controls. There is no WebGL requirement, camera movement, graphics download or decorative pathway station.
 
+## Case access and controls
+
+A fitted opaque side panel carries the Cole Learning Labs logo and hides the internal drawing and targets. The visible Side panel button guides removal of each screw, removal of the cover, refitting, and tightening. All internal model changes still require PC off, AC disconnected, and panel removed. A small illuminated monitor Power button and a compact Input button sit on the bezel; their padded targets preserve keyboard and touch access. The monitor switch does not switch the PC. Cable controls number the cable-end, socket, and connect steps, describe the lead, and offer a direct Disconnect button. Dragging remains optional.
+
 ## What is retained
 
 All eight hardware investigations and the beginner hardware lesson use the current models. Opening an investigation workbench adopts detailed checks once without repairing its fault or discarding notes, conversation, evidence or progress. Existing detailed saves retain their equipment and mechanical state. The other four pathways keep their actual software workspaces, tests and report flows.
@@ -18,7 +22,7 @@ The closed **All workbench tools (optional)** disclosure contains **Show complet
 
 Main power, installed components and actual leads determine CPU, graphics and PSU fan activity. Only the blades rotate. Case power, component and storage labels distinguish standby, powered hardware, startup failure, loaded OS and the original lesson file. Fans can run while memory or storage prevents boot; moving fans never award progress. The SSD has no moving disk, and the diagram does not pretend to measure electrical or thermal behavior.
 
-Power off or a lost power path stops the corresponding fans. Hidden sections, background pages and disposed workbenches pause visual motion; reduced-motion preferences retain text indicators without spinning animation. The beginner hardware lesson uses the same derived activity model. No animation loop, timer, remote asset, device permission or saved-state field is added.
+Power off or a lost power path stops the corresponding fans. Hidden sections, background pages and disposed workbenches pause visual motion; reduced-motion preferences retain text indicators without spinning animation. The beginner hardware lesson uses the same derived activity model. No animation loop, remote asset or device permission is added. Monitor power is a normalized boolean field; older saves default to monitor on.
 
 ## Connections
 
@@ -30,7 +34,7 @@ The original classroom SSD and files are preserved. A successful startup alone d
 
 The workbench uses the PR #6 dark teal/navy schematic style. Choose a component, read its state and use a labeled control. Part, tool and extended-help disclosures keep the main view compact. Keyboard and touch controls provide alternatives to precise diagram targets or dragging. Escape, opening a report, hiding the workbench and replacing the route cancel unfinished interactions without changing accepted model state. A section return preserves existing equipment and notes.
 
-These are authored teaching checks, not physical collision, screw torque, measured paste spread, electrical behavior or heat simulation. Teacher answer keys and assessment rubrics remain outside the public repository. Student reports are reviewed before local export; live AI and connected classroom collection remain unavailable pending review.
+These are authored teaching checks, not physical collision, screw torque, measured paste spread, electrical behavior or heat simulation. Teacher answer keys and assessment rubrics remain outside the public repository. Student reports are reviewed before local export; connected classroom collection remains unavailable pending review. The separate optional requester service uses the existing fixed-topic/privacy and budget boundaries.
 
 ## Verification
 

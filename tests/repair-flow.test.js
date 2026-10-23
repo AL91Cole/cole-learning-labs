@@ -1,3 +1,4 @@
+import {SANDBOX_STARTERS} from '../src/coding-sandbox.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -22,7 +23,7 @@ function extract(start,end) {
   return source.slice(first,last);
 }
 function pages() {
-  const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryMinutes:'all',libraryQuery:'',
+  const context=vm.createContext({SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryMinutes:'all',libraryQuery:'',
     currentLab:null,labView:null,workStorage:{},recordFor:normalizeLabRecord,inquiryProgress,labLanguage,requesterPersona,
     workStatus:()=> 'Private session',eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',
     renderVirtualLabHubMarkup(){assert.fail('Choosing a lab must not create a 3D classroom hub.');}});

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SCENARIOS } from '../src/scenarios.js';
 import { initialHardwareState, applyHardwareAction, normalizeHardwareState, verifyHardware } from '../src/hardware.js';
-import { observationSnapshot, setExperimentDraft, startExperiment, captureExperimentResult, readExperiments, saveExperiment, experimentReport } from '../src/experiments.js';
-import { normalizeLabRecord } from '../src/records.js';
+import { observationSnapshot, formatExperimentObservations, setExperimentDraft, startExperiment, captureExperimentResult, readExperiments, saveExperiment, experimentReport } from '../src/experiments.js';
+import { normalizeLabRecord, workbenchProgress } from '../src/records.js';
 const scenario=SCENARIOS.find(s=>s.id==='INC-106');
 test('every mechanical build step changes bounded observation evidence, including individual screw positions',()=>{
   let state=applyHardwareAction(scenario.id,initialHardwareState(scenario.id),'enable-assembly').state;
@@ -65,4 +65,46 @@ test('both HDMI ends produce separate bounded experiment evidence and survive re
   const ordinary=observationSnapshot(s,{...initialHardwareState(s.id),videoPort:'gpu',pcVideoConnected:false,documentOpened:true});
   assert.match(ordinary.find(([label])=>label==='Display signal path')[1],/PC out \/ MON in/);
   assert.match(ordinary.find(([label])=>label==='Startup and document')[1],/document closed/);
+});
+
+test('separate monitor power creates bounded before and after evidence and survives saved experiment packing',()=>{
+  const s=SCENARIOS.find(item=>item.id==='INC-102');
+  for(const detailed of [false,true]){
+    let state=initialHardwareState(s.id);
+    if(detailed)state=applyHardwareAction(s.id,state,'enable-assembly').state;
+    const record=normalizeLabRecord(s,{state});
+    setExperimentDraft(s,record,{predict:'Switching off the monitor should leave PC power unchanged.',evidence:'The monitor has its own separate power control.'});
+    assert.equal(startExperiment(s,record,state).ok,true);
+    const before=observationSnapshot(s,state);
+    state=applyHardwareAction(s.id,state,'monitor-off').state;
+    const after=observationSnapshot(s,state);
+    assert.notDeepEqual(after,before,'The only changed modeled value is monitor power.');
+    assert.equal(new Map(formatExperimentObservations(before)).get('Monitor power'),'On');
+    assert.equal(new Map(formatExperimentObservations(after)).get('Monitor power'),'Off');
+    assert.equal(captureExperimentResult(s,record,state).ok,true);
+    const restored=normalizeLabRecord(s,JSON.parse(JSON.stringify({...record,state})));
+    assert.deepEqual(readExperiments(restored).draft.before,before);assert.deepEqual(readExperiments(restored).draft.after,after);
+    assert.equal(after.length,6);assert.ok(after.every(([label,value])=>label.length<=32&&value.length<=40));assert.ok(restored.events.every(event=>event.message.length<=600));
+    state=applyHardwareAction(s.id,state,'monitor-on').state;assert.deepEqual(observationSnapshot(s,state),before);
+  }
+});
+
+test('older on-monitor snapshots keep current-test credit and legacy display rows remain readable',()=>{
+  const s=SCENARIOS.find(item=>item.id==='INC-107');
+  for(const detailed of [false,true]){
+    let state=initialHardwareState(s.id);
+    for(const action of [...(detailed?['enable-assembly']:[]),'input-hdmi','open-document'])state=applyHardwareAction(s.id,state,action).state;
+    const oldState={...state};delete oldState.monitorOn;
+    const record=normalizeLabRecord(s,{state:oldState,verified:true});
+    setExperimentDraft(s,record,{predict:'Selecting HDMI should restore the desktop picture.',evidence:'The cable is attached to the monitor HDMI socket.'});
+    startExperiment(s,record,oldState);captureExperimentResult(s,record,oldState);
+    setExperimentDraft(s,record,{changed:'I selected HDMI.',observed:'The original lesson file opened.',explain:'The selected input now matches the fitted cable.'});
+    assert.equal(saveExperiment(s,record).ok,true);
+    const latest=readExperiments(record).attempts.at(-1);
+    assert.doesNotMatch(JSON.stringify(latest.after),/MOn|MOff/,'Default-On records preserve the earlier exact snapshot format.');
+    assert.equal(workbenchProgress(s,record,verifyHardware(s.id,record.state)).ready,true);
+    const restored=normalizeLabRecord(s,JSON.parse(JSON.stringify({...record,state:oldState})));
+    assert.equal(restored.state.monitorOn,true);assert.equal(workbenchProgress(s,restored,verifyHardware(s.id,restored.state)).ready,true);
+    assert.equal(new Map(formatExperimentObservations(latest.after)).get('Monitor power'),'On');
+  }
 });
