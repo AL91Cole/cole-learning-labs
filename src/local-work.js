@@ -1,4 +1,4 @@
-import {normalizeLabRecord} from './records.js?release=20261022-controls';
+import {normalizeLabRecord} from './records.js?release=20261023-workbench';
 
 export const WORK_PREFIX = 'cole-learning-labs:v2';
 export const CLEAR_WORK_KEY = 'cole-learning-labs:clear-local-work';

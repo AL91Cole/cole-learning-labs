@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from '../src/assembly-model.js';
 import { ASSEMBLY_TOOLS, assemblyToolAction } from '../src/assembly-tools.js';
-import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
+import { initialHardwareState, applyHardwareAction, verifyHardware } from '../src/hardware.js';
 import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js';
 import { workbenchGuidance } from '../src/workbench-guidance.js';
 import { pcActivity } from '../src/pc-activity.js';
@@ -25,7 +25,7 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
     };
     Object.defineProperty(element,'hidden',{get:()=>hidden,set(value){hidden=!!value;if(hidden&&doc.activeElement===element)doc.activeElement=null;}});return element;
   }
-  function parse(html){return [...html.matchAll(/<(button|g)\b([^>]*)>/g)].map(([,tag,attrs])=>{const data=Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([,key,value])=>[key.replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));const element=node(data,tag);for(const[,name,value]of attrs.matchAll(/\s([\w:-]+)="([^"]*)"/g))element.setAttribute(name,value);return element;});}
+  function parse(html){return [...html.matchAll(/<(button|g)\b([^>]*)>/g)].map(([,tag,attrs])=>{const data=Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([,key,value])=>[key.replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));const element=node(data,tag);element.disabled=/\bdisabled(?:\s|$)/.test(attrs);for(const[,name,value]of attrs.matchAll(/\s([\w:-]+)="([^"]*)"/g))element.setAttribute(name,value);return element;});}
   for(const key of ['on','ac-label','monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-title','part-state','actions','feedback','power','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','power-reference','fastener','cable','cable-target','cable-state'])fields.set(`[data-asm-${key}]`,node({},'div'));
   fields.get('[data-asm-select]').drawer=fields.get('[data-asm-component-drawer]');
   Object.defineProperty(fields.get('[data-asm-actions]'),'innerHTML',{set(html){actions=parse(html);actions.forEach(button=>button.drawer=fields.get('[data-asm-component-drawer]'));},get(){return'';}});
@@ -48,7 +48,7 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
   function complete(value=true){const target=fields.get('[data-asm-all]');target.checked=value;target.focus();listeners.get('change')({target});}
   function begin(id){const target=pictures.findLast(item=>item.dataset.asmPicture===id);assert.ok(target,`Missing draggable ${id}`);listeners.get('pointerdown')({target,button:0,pointerId:1,clientX:10,clientY:10});listeners.get('pointermove')({target,pointerId:1,clientX:30,clientY:30,preventDefault(){}});}
   function release(destination){dropTarget=pictures.find(item=>item.dataset.asmDrop===destination)||null;listeners.get('pointerup')({target:root,pointerId:1,clientX:40,clientY:40});}
-  return{root,controller,fields,doc,listeners,docListeners,viewListeners,captures,committed,click,choose,complete,begin,release,get state(){return state;},get writes(){return writes;},get markup(){return markup;},get picture(){return pictureMarkup;},pictures:()=>pictures};
+  return{root,controller,fields,doc,listeners,docListeners,viewListeners,captures,committed,click,choose,complete,begin,release,get state(){return state;},get writes(){return writes;},get markup(){return markup;},get picture(){return pictureMarkup;},pictures:()=>pictures,partAction(action){const target=actions.find(node=>node.dataset.assemblyAction===action);assert.ok(target,'Missing part-control action '+action);target.focus();listeners.get('click')({target});}};
 }
 
 function reconnectMotherboardPower(bench){
@@ -63,7 +63,7 @@ function reconnectMotherboardPower(bench){
   assert.equal(bench.state.assembly.panelInstalled,true);assert.ok(bench.state.assembly.panelScrews.every(Boolean));
 }
 
-test('the branded side panel fully covers internal parts and the explicit control follows the safe opening and refitting sequence',()=>{
+test('the branded side panel covers internal parts and picture context follows the safe opening and refitting sequence',()=>{
   const bench=fixture({caseId:'INC-102'});
   assert.match(bench.picture,/data-asm-panel-cover/);assert.match(bench.picture,/assets\/favicon\.svg/);
   const cover=bench.picture.slice(bench.picture.indexOf('<g class="asm-solid-panel"'),bench.picture.indexOf('<g class="hw-bench-annotation"'));
@@ -76,16 +76,17 @@ test('the branded side panel fully covers internal parts and the explicit contro
   assert.doesNotMatch(bench.picture,/data-asm-picture="port-atx-header"/);
   assert.doesNotMatch(bench.picture,/data-asm-picture="(?:cable-atx|cable-rest)"/);
   bench.click('asmCableAction','connect');assert.equal(bench.state.atxConnected,false,'The action boundary still guards the covered socket.');
-  for(const screws of [[false,true],[false,false]]){bench.click('asmToggle','panel');assert.deepEqual(bench.state.assembly.panelScrews,screws);assert.equal(bench.state.assembly.panelInstalled,true);assert.match(bench.picture,/data-asm-panel-cover/);}
-  bench.click('asmToggle','panel');assert.equal(bench.state.assembly.panelInstalled,false);
+  assert.doesNotMatch(bench.markup,/asm-case-access|data-asm-toggle="panel"/);
+  bench.click('asmTool','screwdriver');for(const [i,screws]of [[0,[false,true]],[1,[false,false]]]){bench.click('asmPicture','panel-'+i);assert.deepEqual(bench.state.assembly.panelScrews,screws);assert.equal(bench.state.assembly.panelInstalled,true);assert.match(bench.picture,/data-asm-panel-cover/);}
+  bench.click('asmTool','move');bench.click('asmPicture','panel');bench.click('asmContextAction','asm-remove-panel');assert.equal(bench.state.assembly.panelInstalled,false);bench.click('asmTool','cables');
   assert.doesNotMatch(bench.picture,/data-asm-panel-cover/);assert.match(bench.picture,/data-asm-interior/);assert.match(bench.picture,/data-asm-picture="port-atx-header"/);
   assert.match(bench.picture,/data-asm-picture="cable-atx"/);assert.match(bench.picture,/data-asm-picture="cable-rest"/);
   bench.click('asmCableAction','connect');assert.equal(bench.state.atxConnected,true);
-  for(let i=0;i<3;i++)bench.click('asmToggle','panel');
+  bench.click('asmTool','move');bench.click('asmPicture','panel');bench.click('asmContextAction','asm-fit-panel');bench.click('asmTool','screwdriver');for(const i of [0,1])bench.click('asmPicture','panel-'+i);bench.click('asmTool','cables');
   assert.equal(bench.state.assembly.panelInstalled,true);assert.deepEqual(bench.state.assembly.panelScrews,[true,true]);assert.match(bench.picture,/data-asm-panel-cover/);
   assert.doesNotMatch(bench.picture,/data-asm-picture="(?:cable-atx|cable-rest|port-atx-header)"/);
   bench.choose('[data-asm-cable]','ac');assert.match(bench.picture,/data-asm-picture="cable-ac"/);assert.match(bench.picture,/data-asm-picture="cable-rest"/);
-  bench.click('asmToggle','ac');const before=structuredClone(bench.state);bench.click('asmToggle','panel');assert.deepEqual(bench.state,before,'Connected AC still blocks opening with the new control.');
+  bench.click('asmToggle','ac');const before=structuredClone(bench.state);bench.click('asmTool','screwdriver');bench.click('asmPicture','panel-0');assert.deepEqual(bench.state,before,'Connected AC still blocks opening through the picture.');
   bench.controller.dispose();
 });
 
@@ -111,7 +112,7 @@ test('expanded equipment keeps the compact Input button inside the scaled pictur
   for(let i=0;i<3;i++){
     bench.click('asmToggle','input');
     assert.equal(host.dataset.expanded,'true');
-    assert.match(bench.picture,/^<div class="asm-schematic-canvas"><svg[\s\S]*<\/svg><div class="asm-monitor-controls"[\s\S]*<\/div><\/div>$/);
+    assert.match(bench.picture,/<div class="asm-schematic-canvas"><svg[\s\S]*<\/svg><div class="asm-monitor-controls"/);
     assert.equal(bench.doc.activeElement.dataset.asmToggle,'input');
   }
   assert.equal(bench.state.monitorInput,'hdmi');assert.equal(bench.state.booted,true);
@@ -181,7 +182,7 @@ test('full PC X-ray and inspection are ephemeral and retain explicit focus and c
   assert.doesNotMatch(bench.markup,/data-asm-picture-view|Equipment picture views/);
   assert.match(bench.picture,/data-asm-view="full-xray"/);
   assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);
-  bench.click('asmPicture','ram');assert.equal(bench.fields.get('[data-asm-select]').value,'ram');assert.equal(bench.fields.get('[data-asm-component-drawer]').open,true);
+  bench.click('asmPicture','ram');assert.equal(bench.fields.get('[data-asm-select]').value,'ram');assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
@@ -296,7 +297,7 @@ test('only a working desktop offers the monitor file link and its keyboard actio
 });
 
 test('tool drawers retain user disclosure and picker focus across equipment updates',()=>{
-  const bench=fixture();bench.click('asmTool','cables');assert.equal(bench.fields.get('[data-asm-tool-drawer]').open,true);
+  const bench=fixture();bench.click('asmTool','cables');assert.equal(bench.fields.get('[data-asm-tool-drawer]').open,false);
   bench.fields.get('[data-asm-tool-drawer]').open=false;bench.choose('[data-asm-cable]','sata-data');const focused=bench.doc.activeElement;bench.controller.update(bench.state);
   assert.equal(bench.doc.activeElement,focused);assert.equal(bench.fields.get('[data-asm-tool-drawer]').open,false);
   bench.click('asmTool','inspect');assert.equal(bench.fields.get('[data-asm-tool-drawer]').hidden,true);bench.controller.dispose();
@@ -309,7 +310,7 @@ test('only the panel screws are exposed until removal, and every internal screw 
   bench.click('asmPicture','panel-0');assert.equal(bench.committed.at(-1),'asm-loosen-panel-0');assert.deepEqual(bench.state,before);
   bench.click('asmToggle','power');bench.click('assemblyAction','unplug');
   for(const id of ['panel-0','panel-1'])bench.click('asmPicture',id);
-  bench.click('asmToggle','panel');assert.equal(bench.state.assembly.panelInstalled,false);
+  bench.click('asmTool','move');bench.click('asmPicture','panel');bench.click('asmContextAction','asm-remove-panel');bench.click('asmTool','screwdriver');assert.equal(bench.state.assembly.panelInstalled,false);
   for(const[group,spec]of Object.entries(ASSEMBLY_FASTENERS))for(let i=0;i<spec.count;i++)assert.ok(bench.picture.includes('data-asm-picture="'+group+'-'+i+'"'));
   bench.controller.dispose();
 });
@@ -547,4 +548,62 @@ test('explicit power and original-file actions update the monitor snapshot witho
   bench.click('assemblyAction','power-off');assert.match(bench.picture,/MONITOR STANDBY/);assert.doesNotMatch(bench.picture,/Original file opened|Classroom Desktop/);
   assert.deepEqual(bench.committed.slice(-4),['plug-in','boot','open-document','power-off']);
   assert.doesNotMatch(source,/requestAnimationFrame|setInterval|setTimeout/);bench.controller.dispose();
+});
+
+function parityGroup(action){
+  const screw=/^asm-(?:tighten|loosen)-(panel|psu|board|cooler|gpu|ssd)-/.exec(action);if(screw)return screw[1];
+  const part=/^asm-(?:fit|remove)-(panel|psu|board|cpu|cooler|ram|gpu|ssd)$/.exec(action);if(part)return part[1];
+  if(action.includes('paste'))return 'paste';if(action.includes('retention'))return 'cpu';if(action.includes('ram-clips'))return 'ram';if(action.includes('pcie-latch')||action.includes('gpu-power'))return 'gpu';if(action.includes('cpu-fan'))return 'cooler';if(action.includes('sata-'))return 'ssd';if(action.includes('display')||['video-gpu','video-board','disconnect-video','connect-signal','disconnect-signal','input-hdmi','input-displayport','open-document'].includes(action))return 'display';if(['power-off','unplug','plug-in','boot'].includes(action))return 'psu';return 'cables';
+}
+function parityStep(bench,mode,action){
+  const expected=applyHardwareAction('INC-106',bench.state,action);assert.notEqual(expected.kind,'warning',action+': '+expected.message);
+  const group=parityGroup(action);
+  if(mode==='controls'){bench.choose('[data-asm-select]',group);bench.partAction(action);}
+  else{
+    const screw=/^asm-(?:tighten|loosen)-(.+)$/.exec(action),clip=/^asm-(?:open|close)-(retention|ram-clips|pcie-latch)$/.exec(action),lead=/^asm-(?:connect|disconnect)-(.+)$/.exec(action);
+    if(screw){bench.click('asmTool','screwdriver');bench.click('asmPicture',screw[1]);}
+    else if(clip){bench.click('asmTool','move');bench.click('asmPicture',clip[1]);}
+    else if(action.includes('paste')){bench.click('asmTool',action==='asm-clean-paste'?'clean':'paste');if(action==='asm-excess-paste')bench.click('asmContextAction',action);else bench.click('asmPicture','cpu');}
+    else if(lead){bench.click('asmTool','cables');bench.click('asmPicture','lead-'+(lead[1]==='display'?'hdmi-monitor':lead[1]));}
+    else if(action==='video-gpu'||action==='video-board'){bench.click('asmTool','cables');bench.click('asmPicture','cable-hdmi-pc');bench.click('asmPicture','port-'+(action==='video-gpu'?'hdmi-gpu':'hdmi-board'));}
+    else if(action==='disconnect-video'||action==='disconnect-signal'){bench.click('asmTool','cables');bench.click('asmPicture','lead-'+(action==='disconnect-video'?'hdmi-pc':'hdmi-monitor'));}
+    else if(action==='input-hdmi'||action==='input-displayport')bench.click('asmToggle','input');
+    else if(action==='power-off'||action==='boot')bench.click('asmToggle','power');
+    else if(action==='unplug'||action==='plug-in')bench.click('asmToggle','ac');
+    else if(action==='open-document')bench.click('asmPicture','open-document');
+    else{bench.click('asmTool','move');bench.click('asmPicture',group);bench.click('asmContextAction',action);}
+    assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false,'Visual work never opens the separate Part controls drawer.');
+  }
+  const actual=structuredClone(bench.state),wanted=structuredClone(expected.state);delete actual.actions;delete wanted.actions;assert.deepEqual(actual,wanted,mode+' '+action);
+}
+const buildSteps=['asm-fit-psu',...[0,1,2,3].map(i=>'asm-tighten-psu-'+i),'asm-fit-board',...[0,1,2,3].map(i=>'asm-tighten-board-'+i),'asm-fit-cpu','asm-close-retention','asm-apply-paste','asm-fit-cooler',...[0,3,1,2].map(i=>'asm-tighten-cooler-'+i),'asm-connect-cpu-fan','asm-fit-ram','asm-close-ram-clips','asm-fit-gpu','asm-close-pcie-latch','asm-tighten-gpu-0','asm-tighten-gpu-1','asm-fit-ssd','asm-tighten-ssd-0','asm-tighten-ssd-1','asm-connect-atx','asm-connect-eps','asm-connect-gpu-power','asm-connect-sata-data','asm-connect-sata-power','asm-connect-front-panel','video-gpu','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1'];
+const teardownSteps=['power-off','unplug','asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-disconnect-cpu-fan','asm-disconnect-atx','asm-disconnect-eps','asm-disconnect-gpu-power','asm-disconnect-sata-data','asm-disconnect-sata-power','asm-disconnect-front-panel','disconnect-video','asm-disconnect-display','asm-loosen-ssd-0','asm-loosen-ssd-1','asm-remove-ssd','asm-loosen-gpu-0','asm-loosen-gpu-1','asm-open-pcie-latch','asm-remove-gpu','asm-open-ram-clips','asm-remove-ram',...[2,1,3,0].map(i=>'asm-loosen-cooler-'+i),'asm-remove-cooler','asm-clean-paste','asm-open-retention','asm-remove-cpu',...[0,1,2,3].map(i=>'asm-loosen-board-'+i),'asm-remove-board',...[0,1,2,3].map(i=>'asm-loosen-psu-'+i),'asm-remove-psu'];
+for(const mode of ['visual','controls'])test(mode+' interface independently builds, tears down, and rebuilds the complete guarded PC',()=>{
+  const bench=fixture();bench.click('asmComplete','toggle');
+  const build=()=>{for(const action of buildSteps)parityStep(bench,mode,action);if(!bench.state.signalConnected)parityStep(bench,mode,'asm-connect-display');if(bench.state.monitorInput!=='hdmi')parityStep(bench,mode,'input-hdmi');for(const action of ['plug-in','boot','open-document'])parityStep(bench,mode,action);assert.equal(verifyHardware('INC-106',bench.state).ok,true);};
+  build();for(const action of teardownSteps)parityStep(bench,mode,action);assert.equal(bench.state.boardInstalled,false);assert.equal(bench.state.assembly.psuInstalled,false);build();bench.controller.dispose();
+});
+
+test('screw centers remain above the fitted panel hit target and decorative wires never take pointer hits',()=>{
+  const bench=fixture({caseId:'INC-101'});bench.click('asmComplete','toggle');bench.click('asmTool','screwdriver');
+  const panel=bench.picture.indexOf('data-asm-picture="panel"');for(const id of ['panel-0','panel-1'])assert.ok(bench.picture.indexOf('data-asm-picture="'+id+'"')>panel);
+  assert.match(bench.picture,/<g pointer-events="none" class="asm-full-cable-path"/);bench.click('asmToggle','power');bench.click('asmToggle','ac');for(const id of ['panel-0','panel-1'])bench.click('asmPicture',id);bench.click('asmTool','move');bench.click('asmPicture','panel');bench.click('asmContextAction','asm-remove-panel');
+  assert.match(bench.picture,/<g class="asm-interior-wires" pointer-events="none">/);assert.match(bench.picture,/data-asm-picture="lead-cpu-fan"/);assert.match(bench.picture,/CPU_FAN/);bench.click('asmPicture','lead-cpu-fan');assert.equal(bench.state.assembly.cpuFanConnected,false);bench.click('asmPicture','lead-cpu-fan');assert.equal(bench.state.assembly.cpuFanConnected,true);bench.controller.dispose();
+});
+
+test('visual cable context retains keyboard focus on enabled next actions and switches back to selected part actions',()=>{
+  const bench=fixture({caseId:'INC-101',stateOverride:state=>({...state,pcOn:false,acConnected:false,assembly:{...state.assembly,panelInstalled:false,panelScrews:[false,false]}})});bench.click('asmComplete','toggle');bench.click('asmTool','cables');bench.click('asmPicture','cable-hdmi-pc');
+  bench.click('asmContextCable','hdmi-gpu');assert.equal(bench.state.videoPort,'gpu');assert.equal(bench.doc.activeElement.dataset.asmContextCable,'cable-rest');assert.equal(bench.doc.activeElement.disabled,false);
+  bench.click('asmContextCable','cable-rest');assert.equal(bench.state.pcVideoConnected,false);assert.equal(bench.doc.activeElement.dataset.asmContextCable,'hdmi-gpu');assert.equal(bench.doc.activeElement.disabled,false);
+  bench.click('asmPicture','cooler');assert.match(bench.picture,/<h4>Cooler &amp; fan<\/h4>/);assert.match(bench.picture,/data-asm-context-action="asm-disconnect-cpu-fan"/);assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);bench.controller.dispose();
+});
+
+test('new visual lead, clip and context controls retain power and covered-case safety',()=>{
+  const covered=fixture({caseId:'INC-101'});covered.click('asmComplete','toggle');covered.click('asmTool','cables');
+  for(const cable of ASSEMBLY_CABLES.filter(item=>item.internal))assert.ok(!covered.picture.includes('data-asm-picture="lead-'+cable.id+'"')&&!covered.picture.includes('data-asm-picture="cable-'+cable.id+'"'));
+  covered.controller.dispose();
+  const bench=fixture({caseId:'INC-101',stateOverride:state=>({...state,booted:false,assembly:{...state.assembly,panelInstalled:false,panelScrews:[false,false]}})});bench.click('asmComplete','toggle');const before=structuredClone(bench.state);
+  bench.click('asmPicture','lead-cpu-fan');assert.deepEqual(bench.state,before);assert.match(bench.fields.get('[data-asm-feedback]').textContent,/power off.*disconnect/i);
+  bench.click('asmTool','move');bench.click('asmPicture','ram-clips');assert.deepEqual(bench.state,before);
+  bench.click('asmPicture','cooler');bench.click('asmContextAction','asm-remove-cooler');assert.deepEqual(bench.state,before);bench.controller.dispose();
 });

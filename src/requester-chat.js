@@ -1,6 +1,6 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261022-controls';
-import {requesterTopic} from './requester-topics.js?release=20261022-controls';
-import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261022-controls';
+import {requesterTextIsPrivate} from './interview.js?release=20261023-workbench';
+import {requesterTopic} from './requester-topics.js?release=20261023-workbench';
+import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261023-workbench';
 
 // Page memory only: an off choice or automatic fallback survives lab changes.
 const pagePreference={enabled:true};
