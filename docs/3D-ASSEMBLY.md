@@ -4,7 +4,7 @@ The filename is retained for existing documentation links. The current interface
 
 ## Case access and controls
 
-A fitted opaque side panel has a small centered Cole Learning Labs logo icon, metal seams, and ventilation. Status and instructions sit outside the cover. It hides the internal drawing and targets. The visible Side panel button guides removal of each screw, removal of the cover, refitting, and tightening. All internal model changes still require PC off, AC disconnected, and panel removed. A compact Input button sits on the monitor bezel, with a padded target for keyboard and touch access. Cable controls number the cable-end, socket, and connect steps, describe the lead, and offer a direct Disconnect button. Dragging remains optional.
+A fitted opaque side panel has a small centered Cole Learning Labs logo icon, metal seams, and ventilation. It hides the internal drawing and targets. Select the panel or its numbered screws to use the actions beside the picture; the same actions are in Part controls. There is no separate panel instruction banner above the equipment. All internal model changes still require PC off, AC disconnected, and panel removed. A compact Input button sits on the monitor bezel, with a padded target for keyboard and touch access. Cable controls number the cable-end, socket, and connect steps, describe the lead, and offer a direct Disconnect button. Dragging remains optional.
 
 ## What is retained
 
@@ -16,7 +16,7 @@ The model retains eight removable parts, 18 screws, case access, CPU retention, 
 
 Each hardware ticket selects a fixed relevant set of tools, part groups, cable ends, screws and picture views. The short current instruction follows actual power, case access and original-task progress. It does not select a repair or change equipment. Display tickets share the same initial choices so differing faults are not revealed by the toolbar.
 
-The closed **All workbench tools (optional)** disclosure contains **Show complete controls**. Choosing it reveals the full existing guarded toolset for wider practice or a saved repair involving other parts. Choosing a tool or inspecting another picture does not silently enable that option. Native selectors and buttons remain alternatives to dragging. All saved-state and model interlocks still apply.
+The **All parts & tools** control beside the picture reveals the full guarded toolset for wider practice or a saved repair involving other parts. The matching option in More tools uses the same setting. Choosing a tool or inspecting another picture does not silently enable it. All saved-state and model interlocks still apply.
 
 ## Powered equipment
 
@@ -32,13 +32,15 @@ The original classroom SSD and files are preserved. A successful startup alone d
 
 ## Interaction and accessibility
 
-The workbench uses the PR #6 dark teal/navy schematic style. Choose a component, read its state and use a labeled control. Part, tool and extended-help disclosures keep the main view compact. Keyboard and touch controls provide alternatives to precise diagram targets or dragging. Escape, opening a report, hiding the workbench and replacing the route cancel unfinished interactions without changing accepted model state. A section return preserves existing equipment and notes.
+The workbench uses the PR #6 dark teal/navy schematic style. The picture and Part controls are two interfaces to the same equipment. Selecting a pictured part exposes its state and actions beside the picture, without requiring the Part controls disclosure. Empty mounts remain selectable for refitting. Numbered screws, CPU retention, RAM clips, the PCIe latch and the CPU_FAN lead have their own targets. Decorative wires do not intercept clicks, and screw targets sit above the fitted side panel target.
+
+Part controls provide the same fixed component, screw, latch, paste and cable actions through native menus and buttons. The Monitor group includes both HDMI ends, the PC video output and input selection. Neither interface needs the other for a complete teardown and rebuild. Dragging is optional; picture actions also support click, Enter and Space. Escape, opening a report, hiding the workbench and replacing the route cancel unfinished interactions without changing accepted model state. A section return preserves existing equipment and notes.
 
 These are authored teaching checks, not physical collision, screw torque, measured paste spread, electrical behavior or heat simulation. Teacher answer keys and assessment rubrics remain outside the public repository. Student reports are reviewed before local export; connected classroom collection remains unavailable pending review. The separate optional requester service uses the existing fixed-topic/privacy and budget boundaries.
 
 ## Verification
 
-Retain model, complete-build/teardown, screw-order, safe-power, paste-rework, malformed-save, schema, experiment and report regressions. Diagram/controller tests cover state-driven equipment, native tool/cable controls, wrong selections, cancellation, focus and disposal. Packaging tests ensure neither static nor dynamic runtime imports reach an engine or obsolete scene, and no vendor engine is shipped.
+Retain model, complete-build/teardown, screw-order, safe-power, paste-rework, malformed-save, schema, experiment and report regressions. Diagram/controller tests cover state-driven equipment, both independent control paths, wrong selections, cancellation, focus and disposal. Browser hit testing checks the centers of panel screws rather than relying only on markup order. Packaging tests ensure neither static nor dynamic runtime imports reach an engine or obsolete scene, and no vendor engine is shipped. See [Workbench interaction review](WORKBENCH-INTERACTIONS.md) for this follow-up's evidence and limits.
 
 Responsive browser checks are useful but do not establish physical Chromebook, tablet, Edge or assistive-technology performance. Record release-specific evidence and school-device acceptance checks in [Device checks](DEVICE-CHECKS.md).
 

@@ -1,8 +1,8 @@
-import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261022-controls';
-import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261022-controls';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261022-controls';
-import { workbenchGuidance } from './workbench-guidance.js?release=20261022-controls';
-import { pcActivity } from './pc-activity.js?release=20261022-controls';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261023-monitor';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261023-monitor';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261023-monitor';
+import { workbenchGuidance } from './workbench-guidance.js?release=20261023-monitor';
+import { pcActivity } from './pc-activity.js?release=20261023-monitor';
 
 const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
 const NAMES = Object.fromEntries(GROUPS);
@@ -25,7 +25,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
   let current=state,guidance=workbenchGuidance(state),activity=pcActivity(state),allTools=false,disposed=false,visible=!root.closest?.('[hidden]'),drag=null,suppressClick=false;
   let selected=guidance.initialPart,activeTool='inspect',selectedScrew=(guidance.screws[0]||'panel')+'-0',selectedCable=guidance.initialCable;
   let pictureExpanded=false,pictureButton=null;
-  let panelTask=state.assembly.panelInstalled?'open':'close';
+  let selectedActions=[],selectedState='',lastFeedback='Choose a part or cable in the picture to see its controls here.';
   let selectedSocket=ASSEMBLY_CABLES.find(cable=>cable.id===selectedCable).sockets[0].id;
   const doc=root.ownerDocument;
   root.onclick=null;root.onkeydown=null;root.onchange=null;
@@ -33,8 +33,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     <header class="asm-ticket-guide"><h3 data-asm-ticket-title></h3><p data-asm-instruction></p></header>
     <div class="asm-power" role="group" aria-label="Virtual PC power controls"><div class="asm-power-pair"><div class="asm-power-switch"><button type="button" class="asm-round-power" data-asm-toggle="power" aria-label="Power on and test startup" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v9m-5-7a8 8 0 1 0 10 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><span>Power ·<strong data-asm-on>Off</strong></span></div><button type="button" class="asm-ac-toggle" data-asm-toggle="ac" aria-label="Connect AC"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 3v5m8-5v5M5 8h14v4a7 7 0 0 1-14 0V8Zm7 11v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-asm-ac-label>Connect AC</span></button></div><div class="asm-machine-status"><strong data-asm-power></strong><span data-asm-next></span></div></div>
     <div class="asm-top-controls"><section class="asm-toolbox" aria-label="Workbench tools"><div class="asm-tool-buttons" role="group" aria-label="Choose a workbench tool">${ASSEMBLY_TOOLS.map(tool=>`<button type="button" data-asm-tool="${tool.id}" aria-pressed="${tool.id==='inspect'}">${escape(tool.label)}</button>`).join('')}</div></section>
-    <div class="asm-picture-tabs" aria-label="Equipment picture"><strong>Virtual PC</strong><button type="button" data-asm-expand="picture" data-asm-expand-picture="toggle" aria-expanded="false">Expand picture</button></div></div>
-    <section class="asm-case-access" aria-label="Side panel access"><div><strong>Side panel</strong><p>Power off the PC and disconnect AC. Remove both panel screws, then lift off the cover to reach internal parts.</p></div><button type="button" data-asm-toggle="panel">Remove or fit side panel</button></section>
+    <div class="asm-picture-tabs" aria-label="Equipment picture"><strong>Virtual PC</strong><button type="button" data-asm-complete="toggle" aria-pressed="false">All parts &amp; tools</button><button type="button" data-asm-expand="picture" data-asm-expand-picture="toggle" aria-expanded="false">Expand picture</button></div></div>
     <div class="asm-layout"><div class="asm-visual"><div class="asm-schematic" data-asm-scene aria-label="Labeled virtual PC schematic"></div></div></div>
     <p class="asm-activity" role="status"><strong data-asm-activity-label></strong><span data-asm-activity-detail></span></p>
     <details class="asm-monitor-readout"><summary>Read monitor text</summary><p data-asm-monitor-readout role="status" aria-live="polite"></p><p class="asm-monitor-note">Startup messages can differ on other PCs.</p></details>
@@ -52,7 +51,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
   const sceneHost=$('[data-asm-scene]');
   const toolHelp={inspect:'Click a labeled part to inspect it.',move:'Choose a part, then select Fit or Return. You can also drag it to its mount or the tray.',screwdriver:'Click a numbered screw to turn it, or choose a screw below.',paste:'Remove the cooler. Click the CPU to apply a pea-sized dot, or select Apply below.',clean:'Remove the cooler. Click the CPU to clean its surfaces, or select Clean below.',cables:'Choose a cable and matching socket, then select Connect. You can also drag the plug. Power off and disconnect AC before internal work.'};
   const toolHint={inspect:toolHelp.inspect,move:toolHelp.move,cables:toolHelp.cables,screwdriver:toolHelp.screwdriver,paste:toolHelp.paste,clean:toolHelp.clean};
-  function feedback(message){const element=$('[data-asm-feedback]');if(typeof message==='string'&&element.textContent!==message)element.textContent=message;}
+  function feedback(message){if(typeof message!=='string')return;lastFeedback=message;for(const selector of ['[data-asm-feedback]','[data-asm-picture-feedback]']){const element=$(selector);if(element&&element.textContent!==message)element.textContent=message;}}
   function dispatch(action){cancel();if(disposed||!visible||doc.hidden||typeof action!=='string'||action.startsWith('asm-')&&!relevantAction(action))return;const response=onAction(action);if(!disposed&&response)feedback(response.message);return response;}
   function allowed(kind,id){return allTools||(['groups','screws'].includes(kind)&&id==='panel')||guidance[kind].includes(id);}
   function relevantAction(id){
@@ -73,7 +72,9 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
   function allowedPicture(id){
     if(id==='open-document'||id==='panel')return true;
     if(id==='cable-rest')return activeTool==='cables';
+    if(Object.hasOwn({retention:'cpu','ram-clips':'ram','pcie-latch':'gpu'},id))return allowed('tools','move')&&allowed('groups',{retention:'cpu','ram-clips':'ram','pcie-latch':'gpu'}[id]);
     if(id.startsWith('cable-'))return allowed('cables',id.slice(6));
+    if(id.startsWith('lead-'))return ASSEMBLY_CABLES.some(cable=>cable.id===id.slice(5))&&allowed('cables',id.slice(5));
     if(id.startsWith('port-'))return allowed('tools','cables')&&ASSEMBLY_CABLES.filter(item=>allowed('cables',item.id)).some(item=>item.sockets.some(socket=>'port-'+socket.id===id));
     const fastener=/^(panel|psu|board|cooler|gpu|ssd)-[0-3]$/.exec(id);
     return fastener?allowed('screws',fastener[1]):allowed('groups',id);
@@ -84,6 +85,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     root.querySelectorAll('[data-asm-tool]').forEach(element=>{element.hidden=!allowed('tools',element.dataset.asmTool);});
     root.querySelectorAll('[data-asm-part]').forEach(element=>{element.hidden=!allowed('groups',element.dataset.asmPart);});
     $('[data-asm-build-help]').hidden=!allTools&&!guidance.groups.includes('panel');
+    $('[data-asm-complete="toggle"]')?.setAttribute('aria-pressed',String(allTools));
     const picker=$('[data-asm-select]');picker.innerHTML=GROUPS.filter(([key])=>allowed('groups',key)).map(([key,label])=>`<option value="${key}">${escape(label)}</option>`).join('');picker.value=selected;
   }
   function syncActivity(){sceneHost.setAttribute('data-asm-active',String(visible&&!doc.hidden&&!disposed));}
@@ -123,7 +125,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
   }
   function cableHelp(){const cable=ASSEMBLY_CABLES.find(item=>item.id===selectedCable);return '1. Choose a cable end. 2. Match its labeled socket. 3. Select Connect, or click the highlighted socket. Use Disconnect to remove it.'+(cable.internal?' Power off, disconnect AC and remove the side panel first.':cable.id==='ac'?' Power off the PC before unplugging AC.':' HDMI has two ends; both must be connected. Selecting an input does not move the cable.');}
   function chooseCable(id){const cable=ASSEMBLY_CABLES.find(item=>item.id===id);if(!cable||!allowed('cables',id))return;const restoreFocus=doc.activeElement===$('[data-asm-cable]');cancel();selectedCable=id;selectedSocket=cable.sockets[0].id;renderTools();if(restoreFocus)$('[data-asm-cable]')?.focus({preventScroll:true});}
-  function chooseTool(id){if(!ASSEMBLY_TOOLS.some(tool=>tool.id===id)||!allowed('tools',id))return;cancel();activeTool=id;if(id==='paste'||id==='clean')select('paste',false);renderTools();renderPicture();if(id!=='inspect')$('[data-asm-tool-drawer]').open=true;feedback(id==='cables'?cableHelp():toolHint[id]);}
+  function chooseTool(id){if(!ASSEMBLY_TOOLS.some(tool=>tool.id===id)||!allowed('tools',id))return;cancel();activeTool=id;if(id==='paste'||id==='clean')select('paste',false);renderTools();renderControls();renderPicture();feedback(id==='cables'?cableHelp():toolHint[id]);}
   function select(id,reveal=true) {
     if(typeof id!=='string'||!allowedPicture(id))return;
     if(id.startsWith('cable-')){chooseCable(id.slice(6));return;}
@@ -136,7 +138,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     $('[data-asm-select]').value=key;
 
     renderControls();renderPicture();
-    if(reveal){$('[data-asm-component-drawer]').open=true;feedback(`${NAMES[key]} selected. Choose a change below.`);}
+    if(reveal){$('[data-asm-component-drawer]').open=true;feedback(`${NAMES[key]} selected. Choose a change in Part controls.`);}
   }
   function renderControls(focusAction) {
     const active=focusAction||(root.contains(doc.activeElement)?doc.activeElement?.dataset?.assemblyAction:null);
@@ -144,7 +146,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     $('[data-asm-part-title]').textContent=NAMES[selected];
     const partStates={panel:`Side panel ${a.panelInstalled?'fitted':'set aside'}. ${a.panelScrews.filter(Boolean).length}/2 screws secured.`,board:`Motherboard ${current.boardInstalled?'on its standoffs':'in the tray'}. ${a.boardScrews.filter(Boolean).length}/4 screws secured.`,cpu:`CPU ${current.cpuInstalled?'seated':'in the tray'}. Retention ${a.retentionOpen?'open':'closed'}.`,paste:`Thermal interface: ${a.paste==='pea'?'fresh pea-sized paste':a.paste==='clean'?'clean surfaces':a.paste==='excess'?'too much paste':'used paste — clean and reapply'}.`,cooler:`Cooler ${current.coolerInstalled?'fitted':'in the tray'}. ${a.coolerScrews.filter(Boolean).length}/4 screws secured. Fan lead ${a.cpuFanConnected?'connected':'disconnected'}.`,ram:`Memory ${current.ramSeated?'seated':'in the tray / not fully seated'}. Clips ${a.ramClipsOpen?'open':'closed'}.`,gpu:`Graphics card ${current.gpuInstalled?'fitted':'in the tray'}. ${a.gpuScrews.filter(Boolean).length}/2 bracket screws. Latch ${a.pcieLatchOpen?'open':'closed'}.`,ssd:`Original SSD ${current.originalDriveInstalled?'in its bay':'safely in the tray'}. ${a.ssdScrews.filter(Boolean).length}/2 screws. OS and files preserved.`,cables:`ATX ${current.atxConnected?'✓':'○'} · CPU ${current.cpuPowerConnected?'✓':'○'} · GPU ${current.gpuPowerConnected?'✓':'○'} · SATA data ${current.sataDataConnected?'✓':'○'} · SATA power ${current.sataPowerConnected?'✓':'○'} · Front panel ${current.frontPanelConnected?'✓':'○'}`,display:`HDMI PC end ${current.pcVideoConnected!==false?'connected':'disconnected'}; monitor end ${current.signalConnected?'connected':'disconnected'}. PC output: ${current.videoPort}. Monitor source: ${current.monitorInput}.`};
     partStates.psu=`Power supply ${a.psuInstalled?'fitted':'in the tray'}. ${a.psuScrews.filter(Boolean).length}/4 mounting screws. Disconnect all PSU power leads before removal.`;
-    $('[data-asm-part-state]').textContent=partStates[selected];
+    selectedState=partStates[selected];$('[data-asm-part-state]').textContent=selectedState;
     const currentOperation = id => {
       const screw=/^asm-(tighten|loosen)-(panel|psu|board|cooler|gpu|ssd)-(\d)$/.exec(id);
       if(screw)return (screw[1]==='loosen')===a[screw[2]+'Screws'][Number(screw[3])];
@@ -156,7 +158,13 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
       if(cable){const fitted=cable[2]==='cpu-fan'?a.cpuFanConnected:current[{'atx':'atxConnected','eps':'cpuPowerConnected','gpu-power':'gpuPowerConnected','sata-data':'sataDataConnected','sata-power':'sataPowerConnected','front-panel':'frontPanelConnected','display':'signalConnected'}[cable[2]]];return (cable[1]==='disconnect')===fitted;}
       return true;
     };
-    const actions=assemblyActions(current,a).filter(item=>groupFor(item.id)===selected&&currentOperation(item.id)&&relevantAction(item.id));
+    const related={psu:['atx','eps','gpu-power','sata-power'],gpu:['gpu-power'],ssd:['sata-data','sata-power']}[selected]||[];
+    const actions=assemblyActions(current,a).filter(item=>(groupFor(item.id)===selected||related.some(id=>item.id.endsWith('-'+id)))&&currentOperation(item.id)&&relevantAction(item.id));
+    if(selected==='display'){
+      for(const [id,label,show]of [['video-gpu','Connect PC HDMI to graphics card',!current.pcVideoConnected||current.videoPort!=='gpu'],['video-board','Connect PC HDMI to motherboard',!current.pcVideoConnected||current.videoPort!=='board'],['disconnect-video','Disconnect PC HDMI end',current.pcVideoConnected],['input-hdmi','Select monitor HDMI input',current.monitorInput!=='hdmi'],['input-displayport','Select monitor DisplayPort input',current.monitorInput!=='displayport'],['open-document','Open original lesson file',true]])if(show)actions.push({id,label});
+    }
+    if(selected==='psu')for(const [id,label,show]of [['power-off','Power off PC',current.pcOn],['unplug','Disconnect PC AC',current.acConnected],['plug-in','Connect PC AC',!current.acConnected],['boot','Power on and test PC',true]])if(show)actions.push({id,label});
+    selectedActions=actions;
     $('[data-asm-actions]').innerHTML=actions.map(item=>`<button type="button" data-assembly-action="${escape(item.id)}" class="${item.disabled?'asm-action-wait':'asm-action-ready'}" title="${escape(item.reason||'Ready to do')}">${escape(item.label)}</button>`).join('');
     root.querySelectorAll('[data-asm-part]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.asmPart===selected)));
     const focusable=el=>!!el&&!el.hidden&&!el.disabled&&!el.closest?.('[hidden]')&&!el.closest?.('details:not([open])');
@@ -188,9 +196,6 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     $('[data-asm-power]').textContent=activity.power.label;
     const reason=assemblyFailure(current,current.assembly);
     $('[data-asm-next]').textContent=current.pcOn?'Power off before internal work.':current.acConnected?'Disconnect AC before internal work.':current.assembly.panelInstalled?'Remove the side panel to reach internal parts.':'Case open · safe for internal work.';
-    const panelToggle=$('[data-asm-toggle="panel"]');
-    if(panelTask==='close'&&current.assembly.panelInstalled&&current.assembly.panelScrews.every(Boolean))panelTask='open';
-    if(panelToggle)panelToggle.textContent=!current.assembly.panelInstalled?'Fit side panel':panelTask==='close'?'Secure next panel screw':current.assembly.panelScrews.some(Boolean)?'Remove next panel screw':'Lift off side panel';
     root.querySelectorAll('[data-assembly-action]').forEach(el=>{if(el.dataset.assemblyAction==='power-off')el.hidden=!current.pcOn;if(el.dataset.assemblyAction==='unplug')el.hidden=!current.acConnected;if(el.dataset.assemblyAction==='plug-in')el.hidden=current.acConnected;});
     $('[data-asm-delivery]').textContent=activity.documentOpened?'Original lesson file opened. Explain what your tests showed.':activity.display.desktop?'Click Lesson_Practice_File.docx on the monitor to check your fix.':activity.booted?'The PC started. Check the monitor connection and source.':reason?'Test PC checks your parts, screws and cables.':'Connect AC, then start the PC.';
     renderControls(focusAction);renderCableStatus();renderPicture();
@@ -203,15 +208,12 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     if(target.dataset.asmToggle==='power'){dispatch(current.pcOn?'power-off':'boot');return;}
     if(target.dataset.asmToggle==='ac'){dispatch(current.acConnected?'unplug':'plug-in');return;}
     if(target.dataset.asmToggle==='input'){dispatch(current.monitorInput==='hdmi'?'input-displayport':'input-hdmi');return;}
-    if(target.dataset.asmToggle==='panel'){
-      const a=current.assembly;
-      if(!a.panelInstalled){panelTask='close';dispatch('asm-fit-panel');return;}
-      const tightening=panelTask==='close',screw=a.panelScrews.findIndex(value=>value!==tightening);
-      dispatch(screw>=0?`asm-${tightening?'tighten':'loosen'}-panel-${screw}`:'asm-remove-panel');return;
-    }
     if(target.dataset.asmExpand){pictureButton=target;fitPicture(!pictureExpanded);return;}
+    if(target.dataset.asmComplete){setComplete(!allTools);return;}
     if(target.dataset.asmReveal){$('[data-asm-component-drawer]').open=true;$('[data-asm-select]').focus({preventScroll:true});return;}
     if(target.dataset.assemblyAction){dispatch(target.dataset.assemblyAction==='power'?(current.pcOn?'power-off':'boot'):target.dataset.assemblyAction);return;}
+    if(target.dataset.asmContextAction){dispatch(target.dataset.asmContextAction);return;}
+    if(target.dataset.asmContextCable){const mapped=assemblyCableAction(current,current.assembly,selectedCable,target.dataset.asmContextCable);if(mapped.action)dispatch(mapped.action);else feedback(mapped.message);return;}
     if(target.dataset.asmTool){chooseTool(target.dataset.asmTool);return;}
     if(target.dataset.asmCableAction){if(!['connect','disconnect'].includes(target.dataset.asmCableAction))return;const mapped=assemblyCableAction(current,current.assembly,selectedCable,target.dataset.asmCableAction==='disconnect'?'cable-rest':selectedSocket);if(mapped.action)dispatch(mapped.action);else feedback(mapped.message);return;}
     if(target.dataset.asmUseTool){
@@ -221,41 +223,79 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     }
     if(target.dataset.asmPart){select(target.dataset.asmPart);return;}
   }
+  function setComplete(value){cancel();allTools=!!value;const checkbox=$('[data-asm-all]');if(checkbox)checkbox.checked=allTools;if(!allowed('groups',selected))selected=guidance.initialPart;if(!allowed('tools',activeTool))activeTool='inspect';if(!allowed('cables',selectedCable)){selectedCable=guidance.initialCable;selectedSocket=ASSEMBLY_CABLES.find(item=>item.id===selectedCable).sockets[0].id;}if(!allowed('screws',selectedScrew.split('-')[0]))selectedScrew=(guidance.screws[0]||'panel')+'-0';syncContext();renderTools();renderControls();renderPicture();}
   function change(event){if(disposed||!visible)return;if(event.target.matches('[data-asm-all]')){cancel();allTools=event.target.checked===true;if(!allowed('groups',selected))selected=guidance.initialPart;if(!allowed('tools',activeTool))activeTool='inspect';if(!allowed('cables',selectedCable)){selectedCable=guidance.initialCable;selectedSocket=ASSEMBLY_CABLES.find(item=>item.id===selectedCable).sockets[0].id;}if(!allowed('screws',selectedScrew.split('-')[0]))selectedScrew=(guidance.screws[0]||'panel')+'-0';syncContext();renderTools();renderControls();renderPicture();return;}if(event.target.matches('[data-asm-select]')){if(Object.hasOwn(NAMES,event.target.value)&&allowed('groups',event.target.value))select(event.target.value);}else if(event.target.matches('[data-asm-fastener]')){if(/^(panel|psu|board|cooler|gpu|ssd)-[0-3]$/.test(event.target.value)&&allowed('screws',event.target.value.split('-')[0])&&Number(event.target.value.split('-').at(-1))<ASSEMBLY_FASTENERS[event.target.value.split('-')[0]].count){selectedScrew=event.target.value;renderPicture();}}else if(event.target.matches('[data-asm-cable]')){chooseCable(event.target.value);renderPicture();}else if(event.target.matches('[data-asm-cable-target]')){if(ASSEMBLY_CABLES.find(item=>item.id===selectedCable).sockets.some(socket=>socket.id===event.target.value)){cancel();selectedSocket=event.target.value;renderCableStatus();renderPicture();}}}
+  function pictureContext(){
+    const cable=ASSEMBLY_CABLES.find(item=>item.id===selectedCable),connection=cableConnection(current,current.assembly,selectedCable);
+    const covered=current.assembly.panelInstalled;
+    let title=NAMES[selected],description=selectedState,actions='';
+    if(activeTool==='cables'){
+      title=cable.label;description=(connection?'Connected at '+(cable.sockets.find(socket=>socket.id===connection)?.label||'its socket'):'Disconnected')+'. '+cable.description;
+      if(!cable.internal||!covered)actions=cable.sockets.map(socket=>`<button type="button" data-asm-context-cable="${socket.id}" ${socket.id===connection?'disabled':''}>${socket.id===connection?'Connected: ':'Connect: '}${escape(socket.label)}</button>`).join('')+(connection?'<button type="button" data-asm-context-cable="cable-rest">Disconnect this end</button>':'');
+      else description='Remove the side panel before reaching this internal cable.';
+    }else if(!covered||['panel','display'].includes(selected))actions=selectedActions.map(item=>`<button type="button" data-asm-context-action="${escape(item.id)}" class="${item.disabled?'asm-action-wait':'asm-action-ready'}" title="${escape(item.reason||'Try this action')}">${escape(item.label)}</button>`).join('');
+    else description='The side panel covers this part. Power off, disconnect AC, and remove the panel first.';
+    return `<aside class="asm-picture-context" aria-label="Actions beside the equipment picture"><h4>${escape(title)}</h4><p>${escape(description)}</p><div class="asm-picture-action-list">${actions||'<p>Select a part, screw, clip, or cable in the picture.</p>'}</div><p class="asm-picture-feedback" data-asm-picture-feedback role="status" aria-live="polite">${escape(lastFeedback)}</p></aside>`;
+  }
   function renderPicture(){
     const focused=root.contains(doc.activeElement)?doc.activeElement?.dataset?.asmPicture:null;
     const focusedToggle=root.contains(doc.activeElement)?doc.activeElement?.dataset?.asmToggle:null;
+    const focusedContext=root.contains(doc.activeElement)?doc.activeElement?.dataset?.asmContextAction:null;
+    const focusedCable=root.contains(doc.activeElement)?doc.activeElement?.dataset?.asmContextCable:null;
     const s={...current,selectedPart:({psu:'power',ssd:'storage',cables:'sata'})[selected]||selected};
     let markup=benchSvg(s);
     const a=current.assembly;
     const point=(id,x,y,label,body='',extra='')=>!allowedPicture(id)?`<g>${body}</g>`:`<g role="button" tabindex="0" class="asm-svg-target ${selected===id?'asm-svg-selected':''}" aria-label="${escape(label)}" data-asm-picture="${escape(id)}" data-asm-drop="${escape(id)}" ${extra}><title>${escape(label)}</title><rect x="${x-15}" y="${y-15}" width="30" height="30" rx="4" fill="transparent"/>${body||`<circle cx="${x}" cy="${y}" r="8" fill="#203248" stroke="#68dbc4"/><path d="M${x-4} ${y}h8M${x} ${y-4}v8" stroke="#c1d5de"/>`}</g>`;
     const videoY=s.videoPort==='gpu'?351:221;
-    const monitorEnd=s.signalConnected?'M340 328':'M314 355';
+    const monitorEnd=s.signalConnected?'M90 356':'M120 375';
     const pcCableMounted=s.pcVideoConnected&&(s.videoPort==='gpu'?s.gpuInstalled:s.boardInstalled);
     const pcEnd=pcCableMounted?`L450 ${videoY}`:'L390 365';
-    let overlay=`<g class="asm-full-cable-path" data-video-pc-connected="${s.pcVideoConnected}" data-video-monitor-connected="${s.signalConnected}"><path d="${monitorEnd} C383 335 386 ${videoY} 415 ${videoY} ${pcEnd}" fill="none" stroke="#d3ac60" stroke-width="7"/><path d="${monitorEnd} C383 335 386 ${videoY} 415 ${videoY} ${pcEnd}" fill="none" stroke="#5b482b" stroke-width="2"/>${!s.signalConnected?'<text x="35" y="368" fill="#e5b768" font-size="11">Monitor HDMI end disconnected</text>':''}${!s.pcVideoConnected?'<text x="35" y="385" fill="#e5b768" font-size="11">PC HDMI end disconnected</text>':''}</g>`;
-    if(s.acConnected&&a.psuInstalled)overlay+='<path class="asm-full-ac-path" d="M764 240V279Q764 298 791 298H849V603H785" fill="none" stroke="#89969f" stroke-width="7"/>';
+    let foreground='';
+    const videoPath=`${monitorEnd} C145 382 386 ${videoY} 415 ${videoY} ${pcEnd}`;
+    const looseVideo=!s.signalConnected&&!s.pcVideoConnected?'Both HDMI ends disconnected':!s.signalConnected?'Monitor HDMI end disconnected':!s.pcVideoConnected?'PC HDMI end disconnected':'';
+    let overlay=`<g pointer-events="none" class="asm-full-cable-path" data-video-pc-connected="${s.pcVideoConnected}" data-video-monitor-connected="${s.signalConnected}"><path d="${videoPath}" fill="none" stroke="#d3ac60" stroke-width="7"/><path d="${videoPath}" fill="none" stroke="#5b482b" stroke-width="2"/>${looseVideo?`<text x="145" y="383" fill="#e5b768" font-size="10">${looseVideo}</text>`:''}</g>`;
+    if(s.acConnected&&a.psuInstalled)overlay+='<path pointer-events="none" class="asm-full-ac-path" d="M764 240V279Q764 298 791 298H849V603H785" fill="none" stroke="#89969f" stroke-width="7"/>';
     {
       const screwPositions={panel:[[422,95],[821,563]],psu:[[718,113],[808,113],[718,247],[808,247]],board:[[445,119],[681,119],[445,444],[681,444]],cooler:[[488,169],[583,169],[488,264],[583,264]],gpu:[[435,321],[435,389]],ssd:[[723,378],[801,489]]};
+      overlay+=point('panel',617,72,'Case side panel: '+(a.panelInstalled?'fitted; select to see removal controls':'set aside'),a.panelInstalled?'<rect x="415" y="85" width="414" height="487" rx="5" fill="transparent"/>':`<rect x="489" y="57" width="260" height="25" rx="4" fill="#122632" stroke="#496779"/><text x="619" y="74" text-anchor="middle" fill="#b7d7e3" font-size="11">SIDE PANEL REMOVED · INTERIOR ACCESSIBLE</text>`);
       if(activeTool==='screwdriver')for(const[group,points]of Object.entries(screwPositions).filter(([group])=>allowed('screws',group)&&(!a.panelInstalled||group==='panel')))points.forEach(([x,y],i)=>{const secured=a[group+'Screws'][i];overlay+=point(group+'-'+i,x,y,`${NAMES[group]} screw ${i+1}: ${secured?'secured; loosen':'loose; tighten'}`,`<circle cx="${x}" cy="${y}" r="15" fill="${secured?'#136259':'#253248'}" stroke="#85e9d1" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" fill="#fff" font-size="13">${i+1}</text>`);});
       if(!a.panelInstalled&&a.paste!=='clean'&&current.cpuInstalled&&!current.coolerInstalled)overlay+=`<circle cx="535" cy="216" r="${a.paste==='excess'?20:a.paste==='pea'?8:15}" fill="${a.paste==='dry'?'#8c9296':'#c9d3d8'}" pointer-events="none"/>`;
-      overlay+=point('panel',617,72,'Case side panel: '+(a.panelInstalled?'fitted; select to see removal controls':'set aside'),a.panelInstalled?'<rect x="415" y="85" width="414" height="487" rx="5" fill="transparent"/>':`<rect x="489" y="57" width="260" height="25" rx="4" fill="#122632" stroke="#496779"/><text x="619" y="74" text-anchor="middle" fill="#b7d7e3" font-size="11">SIDE PANEL REMOVED · INTERIOR ACCESSIBLE</text>`);
       {
         const loose=[['panel',!a.panelInstalled],['psu',!a.psuInstalled],['board',!current.boardInstalled],['cpu',!current.cpuInstalled],['cooler',!current.coolerInstalled],['ram',!current.ramSeated],['gpu',!current.gpuInstalled],['ssd',!current.originalDriveInstalled]].filter(([id,missing])=>missing&&allowed('groups',id));
         overlay+=`<g data-asm-drop="tray" class="asm-svg-tray"><rect x="27" y="390" width="340" height="165" rx="8" fill="#121f2d" stroke="#5b8a95" stroke-dasharray="6 4"/><text x="44" y="414" fill="#9de5d5" font-size="12">PARTS TRAY · DROP A REMOVED PART HERE</text>${loose.map(([id],i)=>point(id,61+(i%3)*108,450+Math.floor(i/3)*35,NAMES[id]+': in parts tray',`<rect x="${38+(i%3)*108}" y="${434+Math.floor(i/3)*35}" width="99" height="28" rx="3" fill="#203248" stroke="#3d7d7b"/><text x="${87+(i%3)*108}" y="${452+Math.floor(i/3)*35}" text-anchor="middle" fill="#cbe5eb" font-size="10">${escape({panel:'Side panel',psu:'PSU',board:'Motherboard',cpu:'CPU',cooler:'Cooler',ram:'RAM',gpu:'Graphics',ssd:'SSD'}[id])}</text>`).replace(`data-asm-drop="${id}"`,'data-asm-drop="tray"')).join('')}</g>`;
       }
     }
-    if(activeTool==='cables'){
-      const cable=ASSEMBLY_CABLES.find(item=>item.id===selectedCable),sockets=cable.sockets;
-      if(!cable.internal||!a.panelInstalled)overlay+=`<g class="asm-svg-cable-key"><rect x="30" y="470" width="337" height="90" rx="6" fill="#102d32" stroke="#49bfa9"/>${point('cable-'+selectedCable,70,501,cable.label+': movable plug',`<rect x="45" y="485" width="50" height="28" rx="4" fill="#1b4e50" stroke="#76edcf"/><text x="105" y="501" fill="#e0f7f2" font-size="12">${escape(cable.label)}</text><text x="48" y="540" fill="#9ac5ca" font-size="11">Click a matching socket · dragging is optional</text>`)}<g role="button" tabindex="0" data-asm-picture="cable-rest" data-asm-drop="tray" aria-label="Disconnect selected cable into the cable rest"><rect x="30" y="563" width="337" height="34" rx="4" fill="#283046" stroke="#9f9da6"/><text x="198" y="585" text-anchor="middle" fill="#d6dce5" font-size="12">CABLE REST · CLICK TO DISCONNECT</text></g></g>`;
-      const coords={ 'ac-inlet':[764,240],'hdmi-gpu':[450,351],'hdmi-board':[449,221],'monitor-hdmi':[340,328],'atx-header':[691,204],'eps-header':[484,117],'gpu-power-header':[660,328],'ssd-data':[739,480],'ssd-power':[771,480],'front-panel-header':[591,439],'cpu-fan-header':[610,181]};
-      if(cable.internal&&a.panelInstalled)overlay+='<text x="619" y="480" text-anchor="middle" fill="#a9f8e6" font-size="13">Remove the side panel to reach this socket.</text>';
-      else for(const socket of sockets){if(socket.id==='ac-inlet'&&!a.psuInstalled)continue;const [x,y]=coords[socket.id]||[790,480];overlay+=point('port-'+socket.id,x,y,socket.label,`<rect x="${x-17}" y="${y-17}" width="34" height="34" rx="4" fill="#103d3a" stroke="#8dffe3" stroke-width="2"/><text x="${x}" y="${y-23}" text-anchor="middle" fill="#a9f8e6" font-size="11">${escape(socket.label)}</text>`);}
+    const coords={ 'ac-inlet':[764,240],'hdmi-gpu':[450,351],'hdmi-board':[449,221],'monitor-hdmi':[90,356],'atx-header':[691,204],'eps-header':[484,117],'gpu-power-header':[660,328],'ssd-data':[739,480],'ssd-power':[771,480],'front-panel-header':[591,439],'cpu-fan-header':[610,181]};
+    const cableVisible=cable=>allowed('cables',cable.id)&&(!cable.internal||!a.panelInstalled);
+    if(!a.panelInstalled&&current.boardInstalled){
+      if(activeTool==='move'){
+        for(const [id,x,y,label,key]of [['retention',599,269,'CPU retention arm','retentionOpen'],['ram-clips',674,301,'RAM clips','ramClipsOpen'],['pcie-latch',686,353,'PCIe latch','pcieLatchOpen']])if(allowedPicture(id))overlay+=point(id,x,y,label+': '+(a[key]?'open; click to close':'closed; click to open'),`<rect x="${x-13}" y="${y-12}" width="26" height="24" rx="4" fill="#25384a" stroke="#e0ba71" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" fill="#fff" font-size="12">${a[key]?'−':'+'}</text>`);
+        if(current.cpuInstalled&&!current.coolerInstalled)overlay+=point('cooler',535,215,'Empty CPU cooler mount', '<rect x="480" y="161" width="111" height="111" rx="8" fill="transparent" stroke="#92bbb4" stroke-dasharray="6 4"/><text x="535" y="280" text-anchor="middle" fill="#bce3d9" font-size="10">COOLER MOUNT</text>');
+      }
+      if(current.coolerInstalled)overlay+=`<path class="asm-cpu-fan-lead" data-connected="${a.cpuFanConnected}" pointer-events="none" d="M580 195Q596 190 610 ${a.cpuFanConnected?181:212}" fill="none" stroke="${a.cpuFanConnected?'#e2bd5f':'#7f919f'}" stroke-width="4"/>`;
     }
-    markup=markup.replace('</svg>',overlay+'</svg>');sceneHost.innerHTML='<div class="asm-schematic-canvas">'+markup+`<div class="asm-monitor-controls" role="group" aria-label="Monitor bezel controls"><button type="button" class="asm-monitor-input" data-asm-toggle="input" aria-label="Monitor input: ${s.monitorInput==='hdmi'?'HDMI. Switch to DisplayPort':'DisplayPort. Switch to HDMI'}" title="Change monitor input"><span class="asm-monitor-input-face" aria-hidden="true"><span>Input</span><strong>${s.monitorInput==='hdmi'?'HDMI':'DisplayPort'}</strong></span></button></div></div>`;sceneHost.style&&(sceneHost.style.touchAction=['move','cables'].includes(activeTool)?'none':sceneHost.dataset.expanded==='true'?'auto':'pan-y');
+    for(const cable of ASSEMBLY_CABLES.filter(cableVisible)){
+      if(activeTool!=='cables'&&cable.id!=='cpu-fan')continue;
+      if(cable.internal&&!current.boardInstalled)continue;
+      if(cable.id==='cpu-fan'&&!current.coolerInstalled||cable.id==='gpu-power'&&!current.gpuInstalled||['sata-data','sata-power'].includes(cable.id)&&!current.originalDriveInstalled||cable.id==='ac'&&!a.psuInstalled)continue;
+      const connection=cableConnection(current,a,cable.id),socket=cable.id==='hdmi-pc'?(connection||'hdmi-gpu'):cable.sockets[0].id,[x,y]=coords[socket];
+      const name=cable.id==='cpu-fan'?'CPU_FAN':cable.label;
+      foreground+=point('lead-'+cable.id,x,y,name+': '+(connection?'connected; click to disconnect':'disconnected; click to connect'),`<rect x="${x-12}" y="${y-12}" width="24" height="24" rx="4" fill="${connection?'#145d50':'#4b3d26'}" stroke="${connection?'#86efd1':'#edc680'}" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" fill="#fff" font-size="12">${connection?'−':'+'}</text>${cable.id==='cpu-fan'?`<text x="${x}" y="${y-19}" text-anchor="middle" fill="#ccebdc" font-size="11">CPU_FAN</text>`:cable.id==='hdmi-monitor'?`<text x="${x}" y="${y+27}" text-anchor="middle" fill="#ccebdc" font-size="10">HDMI IN</text>`:''}`);
+    }
+    if(activeTool==='cables'){
+      const cable=ASSEMBLY_CABLES.find(item=>item.id===selectedCable),sockets=cable.sockets,available=ASSEMBLY_CABLES.filter(cableVisible);
+      overlay+=`<g class="asm-svg-cable-key"><rect x="27" y="390" width="340" height="208" rx="6" fill="#10242d" stroke="#49bfa9"/><text x="43" y="414" fill="#c6f2e5" font-size="12">CHOOSE A CABLE END</text>${available.map((item,i)=>{const x=111+(i%2)*166,y=440+Math.floor(i/2)*30,connected=cableConnection(current,a,item.id);return point('cable-'+item.id,x,y,item.label+': '+(connected?'connected':'disconnected'),`<rect x="${x-77}" y="${y-13}" width="154" height="26" rx="4" fill="${item.id===selectedCable?'#1b5c53':'#203248'}" stroke="#65bda9"/><text x="${x}" y="${y+4}" text-anchor="middle" fill="#e1f5ed" font-size="9">${escape(item.label.replace(' cable — ',' · ').replace('motherboard','board'))}</text>`);}).join('')}</g>`;
+      if(cableVisible(cable)){
+        overlay+=`<g role="button" tabindex="0" data-asm-picture="cable-rest" data-asm-drop="tray" aria-label="Disconnect selected cable into the cable rest"><rect x="30" y="576" width="334" height="25" rx="4" fill="#283046" stroke="#9f9da6"/><text x="197" y="593" text-anchor="middle" fill="#d6dce5" font-size="11">DISCONNECT SELECTED END</text></g>`;
+        for(const socket of sockets){if(socket.id==='ac-inlet'&&!a.psuInstalled)continue;const[x,y]=coords[socket.id];overlay+=point('port-'+socket.id,x,y,socket.label,`<rect x="${x-17}" y="${y-17}" width="34" height="34" rx="4" fill="transparent" stroke="#8dffe3" stroke-width="2"/><text x="${x}" y="${y-26}" text-anchor="middle" fill="#a9f8e6" font-size="10">${['cpu-fan-header','monitor-hdmi'].includes(socket.id)?'':escape(socket.label)}</text>`);}
+      }
+    }
+    markup=markup.replace('</svg>',overlay+foreground+'</svg>');sceneHost.innerHTML='<div class="asm-picture-workspace"><div class="asm-schematic-canvas">'+markup+`<div class="asm-monitor-controls" role="group" aria-label="Monitor bezel controls"><button type="button" class="asm-monitor-input" data-asm-toggle="input" aria-label="Monitor input: ${s.monitorInput==='hdmi'?'HDMI. Switch to DisplayPort':'DisplayPort. Switch to HDMI'}" title="Change monitor input"><span class="asm-monitor-input-face" aria-hidden="true"><span>Input</span><strong>${s.monitorInput==='hdmi'?'HDMI':'DisplayPort'}</strong></span></button></div></div>`+pictureContext()+'</div>';sceneHost.style&&(sceneHost.style.touchAction=['move','cables'].includes(activeTool)?'none':sceneHost.dataset.expanded==='true'?'auto':'pan-y');
     syncActivity();
     if(focused){const target=root.querySelector(`[data-asm-picture="${focused}"]`)||(focused==='open-document'?$('[data-asm-toggle="power"]'):null);target?.focus({preventScroll:true});}
     else if(focusedToggle)$(`[data-asm-toggle="${focusedToggle}"]`)?.focus({preventScroll:true});
+    else if(focusedContext)($(`[data-asm-context-action="${focusedContext}"]`)||sceneHost.querySelector?.('[data-asm-context-action]'))?.focus({preventScroll:true});
+    else if(focusedCable){const target=$(`[data-asm-context-cable="${focusedCable}"]`);(target&&!target.disabled?target:$('[data-asm-context-cable="cable-rest"]')||$(`[data-asm-context-cable="${ASSEMBLY_CABLES.find(item=>item.id===selectedCable).sockets[0].id}"]`))?.focus({preventScroll:true});}
   }
 
 function svgDefs() {
@@ -314,7 +354,7 @@ function benchSvg(s) {
   ${interactive('power','power supply',`<rect x="309" y="55" width="105" height="149" rx="4" fill="#151e2b" stroke="#7b8794" stroke-width="2"/><text x="362" y="75" text-anchor="middle" fill="#b4c3cf" font-size="12" font-weight="700">POWER SUPPLY</text><circle cx="362" cy="122" r="33" fill="url(#hw-vents)" stroke="#627387"/><circle cx="362" cy="122" r="10" fill="#263342"/>${fanRotor('psu',362,122,25,activity.psuFan)}<path class="asm-fixed-grille" d="M338 99l48 46m-48 0l48-46m-24-9v66m-33-33h66" stroke="#465a6b" stroke-width="2"/><text x="362" y="177" text-anchor="middle" fill="#7e93a6" font-size="8">ATX · 400 W</text><text x="362" y="191" text-anchor="middle" fill="${s.acConnected?'#edbd71':'#6fddbb'}" font-size="8">${s.acConnected?'AC CONNECTED':'AC DISCONNECTED'}</text>`,selected)}
   ${interactive('storage','original 2.5-inch SATA SSD',`<rect x="308" y="316" width="107" height="132" rx="6" fill="#18232f" stroke="#7d8c9e" stroke-width="2"/>${s.originalDriveInstalled?`<rect x="317" y="325" width="89" height="111" rx="4" fill="url(#hw-metal)"/><rect x="325" y="336" width="73" height="64" rx="2" fill="#142430"/><text x="361" y="354" text-anchor="middle" fill="#d3e3ea" font-size="13" font-weight="700">256 GB SSD</text><text x="361" y="372" text-anchor="middle" fill="#8eb3bd" font-size="11">ORIGINAL SSD</text><text x="361" y="388" text-anchor="middle" fill="#7f9baf" font-size="7">OS + CLASSROOM FILES</text><rect x="327" y="421" width="18" height="10" fill="#171e1f" stroke="#e2bb56"/><rect x="350" y="421" width="34" height="10" fill="#171e1f" stroke="#e2bb56"/>`:'<rect x="317" y="325" width="89" height="111" rx="4" fill="none" stroke="#40556b" stroke-dasharray="5 5"/><text x="361" y="375" text-anchor="middle" fill="#74889e" font-size="10">EMPTY BAY</text>'}<text x="360" y="465" text-anchor="middle" fill="#8aa2b5" font-size="8">2.5-INCH SATA DRIVE BAY</text>`,selected)}
   ${pcb?`${interactive('atx','24-pin motherboard power',`<rect x="282" y="125" width="13" height="64" rx="2" fill="#161c1f" stroke="${s.atxConnected?'#c6aa62':'#5a6e76'}"/><path d="M286 131v52m4-52v52" stroke="#9a9c86" stroke-dasharray="2 2"/>`,selected)}${interactive('eps','8-pin CPU power',`<rect x="65" y="60" width="35" height="12" fill="#14201f" stroke="${s.cpuPowerConnected?'#d4ba71':'#6a807d'}"/>`,selected)}${interactive('front','front panel header',`<rect x="173" y="380" width="35" height="12" fill="#14201f" stroke="${s.frontPanelConnected?'#a3cbd2':'#6a807d'}"/><text x="189" y="374" text-anchor="middle" fill="#83a199" font-size="10">F_PANEL</text>`,selected)}`:''}
-  ${s.atxConnected&&pcb?'<path d="M315 156C301 153 309 150 296 151" fill="none" stroke="#b58b46" stroke-width="9"/><path d="M315 156C301 153 309 150 296 151" fill="none" stroke="#e3c56f" stroke-width="2"/>':''}${s.cpuPowerConnected&&pcb?'<path d="M315 108C300 38 158 38 83 59" fill="none" stroke="#1b1820" stroke-width="9"/><path d="M315 108C300 38 158 38 83 59" fill="none" stroke="#b39755" stroke-width="2"/>':''}${s.gpuPowerConnected&&s.gpuInstalled?'<path d="M315 183C299 215 302 247 264 275" fill="none" stroke="#22232a" stroke-width="8"/><path d="M315 183C299 215 302 247 264 275" fill="none" stroke="#c6a04a" stroke-width="2"/>':''}${s.sataDataConnected&&s.originalDriveInstalled&&pcb?'<path d="M250 368C285 368 279 429 330 429" fill="none" stroke="#e5a343" stroke-width="7"/><path d="M250 368C285 368 279 429 330 429" fill="none" stroke="#ffd27a" stroke-width="1.5"/>':''}${s.sataPowerConnected&&s.originalDriveInstalled?'<path d="M378 203V295Q378 307 394 307H418V425H378" fill="none" stroke="#0b1018" stroke-width="10"/><path d="M378 203V295Q378 307 394 307H418V425H378" fill="none" stroke="#5b7081" stroke-width="2"/>':''}${s.frontPanelConnected&&pcb?'<path d="M190 386V480H290" fill="none" stroke="#57909a" stroke-width="3"/>':''}
+  <g class="asm-interior-wires" pointer-events="none">${s.atxConnected&&pcb?'<path d="M315 156C301 153 309 150 296 151" fill="none" stroke="#b58b46" stroke-width="9"/><path d="M315 156C301 153 309 150 296 151" fill="none" stroke="#e3c56f" stroke-width="2"/>':''}${s.cpuPowerConnected&&pcb?'<path d="M315 108C300 38 158 38 83 59" fill="none" stroke="#1b1820" stroke-width="9"/><path d="M315 108C300 38 158 38 83 59" fill="none" stroke="#b39755" stroke-width="2"/>':''}${s.gpuPowerConnected&&s.gpuInstalled?'<path d="M315 183C299 215 302 247 264 275" fill="none" stroke="#22232a" stroke-width="8"/><path d="M315 183C299 215 302 247 264 275" fill="none" stroke="#c6a04a" stroke-width="2"/>':''}${s.sataDataConnected&&s.originalDriveInstalled&&pcb?'<path d="M250 368C285 368 279 429 330 429" fill="none" stroke="#e5a343" stroke-width="7"/><path d="M250 368C285 368 279 429 330 429" fill="none" stroke="#ffd27a" stroke-width="1.5"/>':''}${s.sataPowerConnected&&s.originalDriveInstalled?'<path d="M378 203V295Q378 307 394 307H418V425H378" fill="none" stroke="#0b1018" stroke-width="10"/><path d="M378 203V295Q378 307 394 307H418V425H378" fill="none" stroke="#5b7081" stroke-width="2"/>':''}${s.frontPanelConnected&&pcb?'<path d="M190 386V480H290" fill="none" stroke="#57909a" stroke-width="3"/>':''}</g>
   </g>`:`<g class="asm-solid-panel" data-asm-panel-cover aria-label="Metal side panel with ventilation and Cole Learning Labs icon"><rect x="13" y="32" width="414" height="487" rx="5" fill="url(#hw-panel-metal)" stroke="#71808a" stroke-width="2"/><path d="M27 46h386v459H27z" fill="none" stroke="#17232d" stroke-width="2"/><path d="M29 48h382M29 48v455" fill="none" stroke="#83909a" stroke-opacity=".3"/><g class="asm-panel-vents" aria-hidden="true" fill="none" stroke="#101922" stroke-width="5" stroke-linecap="round">${panelVents}</g><rect x="184" y="239" width="72" height="72" rx="9" fill="#1b2935" stroke="#485b69"/><image href="./assets/favicon.svg" x="188" y="243" width="64" height="64" preserveAspectRatio="xMidYMid meet" aria-label="Cole Learning Labs icon"/><rect x="383" y="224" width="18" height="96" rx="4" fill="#17222c" stroke="#5d6d79"/><path d="M389 237v70" stroke="#8b98a2" stroke-opacity=".6" stroke-width="2" stroke-linecap="round"/>${screw(23,43)}${screw(416,507)}</g>`}${!s.assembly.panelInstalled?'<rect x="29" y="484" width="257" height="18" fill="url(#hw-vents)"/><text x="31" y="478" fill="#6c8196" font-size="10">CASE VENTILATION / KEEP CLEAR</text>':''}</g>
   <g class="hw-bench-annotation" transform="translate(28 392)"><rect width="335" height="155" rx="8" fill="#121f2d" stroke="#30475b"/><text x="17" y="25" fill="#a4b9cb" font-size="10" font-weight="700">COMPATIBILITY LABEL</text><text x="17" y="49" fill="#6f8ca1" font-size="10">MEMORY</text><text x="122" y="49" fill="#d4e3ec" font-size="11">DDR4 · 288-pin DIMM</text><text x="17" y="73" fill="#6f8ca1" font-size="10">STORAGE</text><text x="122" y="73" fill="#d4e3ec" font-size="11">2.5-inch SATA · 6 Gb/s</text><text x="17" y="97" fill="#6f8ca1" font-size="10">GRAPHICS</text><text x="122" y="97" fill="#d4e3ec" font-size="11">PCIe x16 · dedicated output</text><path d="M17 111h299" stroke="#2d4355"/><text x="17" y="134" fill="#6fdac4" font-size="9">Your real device is never accessed or changed.</text></g></svg>`;
 }
@@ -323,10 +363,23 @@ function benchSvg(s) {
     if(typeof id!=='string'||!allowedPicture(id))return;
     cancel();
     if(id==='open-document'){dispatch(id);return;}
+    if(id.startsWith('lead-')){
+      const cable=ASSEMBLY_CABLES.find(item=>item.id===id.slice(5));if(!cable)return;
+      const connection=cableConnection(current,current.assembly,cable.id);activeTool='cables';chooseCable(cable.id);renderControls();renderPicture();
+      if(connection||cable.sockets.length===1){const mapped=assemblyCableAction(current,current.assembly,cable.id,connection?'cable-rest':cable.sockets[0].id);if(mapped.action)dispatch(mapped.action);else feedback(mapped.message);}
+      else feedback('Choose the graphics-card or motherboard HDMI socket in the picture.');return;
+    }
+    if(Object.hasOwn({retention:'retentionOpen','ram-clips':'ramClipsOpen','pcie-latch':'pcieLatchOpen'},id)){
+      if(activeTool!=='move')return;
+      const key={retention:'retentionOpen','ram-clips':'ramClipsOpen','pcie-latch':'pcieLatchOpen'}[id];
+      select({retention:'cpu','ram-clips':'ram','pcie-latch':'gpu'}[id],false);dispatch(`asm-${current.assembly[key]?'close':'open'}-${id}`);return;
+    }
     if(id==='cable-rest'){const mapped=assemblyCableAction(current,current.assembly,selectedCable,'cable-rest');if(mapped.action)dispatch(mapped.action);else feedback(mapped.message);return;}
     if(id.startsWith('port-')){if(activeTool==='cables'){const mapped=assemblyCableAction(current,current.assembly,selectedCable,id.slice(5));if(mapped.action)dispatch(mapped.action);else feedback(mapped.message);}return;}
     if(id.startsWith('cable-')){if(!ASSEMBLY_CABLES.some(cable=>cable.id===id.slice(6)))return;chooseTool('cables');chooseCable(id.slice(6));renderPicture();return;}
-    select(id);
+    if(activeTool==='cables'&&Object.hasOwn(NAMES,id)){activeTool=allowed('tools','move')?'move':'inspect';renderTools();}
+    select((activeTool==='paste'||activeTool==='clean')&&id==='cpu'?'paste':id,false);
+    feedback((NAMES[selected]||'Equipment')+' selected. Use the actions beside the picture.');
     if(['screwdriver','paste','clean'].includes(activeTool)){
       const mapped=assemblyToolAction(current,current.assembly,activeTool,id);
       if(mapped.action)dispatch(mapped.action);else feedback(mapped.message);
