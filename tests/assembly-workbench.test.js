@@ -65,7 +65,11 @@ function reconnectMotherboardPower(bench){
 
 test('the branded side panel fully covers internal parts and the explicit control follows the safe opening and refitting sequence',()=>{
   const bench=fixture({caseId:'INC-102'});
-  assert.match(bench.picture,/data-asm-panel-cover/);assert.match(bench.picture,/cole-learning-labs-logo-dark\.png/);
+  assert.match(bench.picture,/data-asm-panel-cover/);assert.match(bench.picture,/assets\/favicon\.svg/);
+  const cover=bench.picture.slice(bench.picture.indexOf('<g class="asm-solid-panel"'),bench.picture.indexOf('<g class="hw-bench-annotation"'));
+  assert.match(cover,/class="asm-panel-vents"/);assert.match(cover,/<image[^>]*width="64" height="64"/);
+  assert.doesNotMatch(cover,/<text\b|logo-dark\.png|KEEP CLEAR/);
+  assert.doesNotMatch(bench.picture,/SIDE PANEL FITTED|INTERIOR COVERED/);
   for(const id of ['board','cpu','cooler','ram','gpu','storage','atx','eps','front'])assert.ok(!bench.picture.includes(`data-asm-picture="${id}"`),id);
   assert.doesNotMatch(bench.picture,/data-asm-interior|class="asm-fan/);
   bench.click('asmTool','cables');bench.choose('[data-asm-cable]','atx');
@@ -85,35 +89,32 @@ test('the branded side panel fully covers internal parts and the explicit contro
   bench.controller.dispose();
 });
 
-test('compact physical monitor buttons independently control power and cycle input while retaining focus and the running OS',()=>{
-  const bench=fixture({caseId:'INC-107'});
+test('the compact monitor Input button cycles source and retains focus without a monitor power button',()=>{
+  const bench=fixture({caseId:'INC-107',stateOverride:state=>({...state,monitorOn:false})});
   assert.match(bench.picture,/class="asm-monitor-controls" role="group" aria-label="Monitor bezel controls"/);
-  const before=bench.state.bootCount;
-  assert.match(bench.picture,/class="asm-monitor-power"[\s\S]*class="asm-monitor-power-face"[\s\S]*class="asm-monitor-led"/);
+  assert.deepEqual(bench.pictures().filter(item=>item.dataset.asmToggle).map(item=>item.dataset.asmToggle),['input']);
+  assert.doesNotMatch(bench.picture,/asm-monitor-power|asm-monitor-led|data-asm-toggle="monitor"/);
   assert.match(bench.picture,/class="asm-monitor-input" data-asm-toggle="input" aria-label="Monitor input: DisplayPort\. Switch to HDMI"/);
-  assert.doesNotMatch(bench.picture,/data-asm-monitor-input=|Power · On/);
+  const before=bench.state.bootCount;
   bench.click('asmToggle','input');assert.equal(bench.state.monitorInput,'hdmi');assert.match(bench.picture,/Classroom Desktop/);
   assert.equal(bench.doc.activeElement.dataset.asmToggle,'input');assert.equal(bench.state.documentOpened,false);
+  assert.equal(Object.hasOwn(bench.state,'monitorOn'),false,'An older preview power flag cannot leave the monitor inaccessible.');
   assert.match(bench.picture,/aria-label="Monitor input: HDMI\. Switch to DisplayPort"/);
-  bench.click('asmToggle','monitor');assert.equal(bench.state.monitorOn,false);assert.equal(bench.state.pcOn,true);assert.equal(bench.state.booted,true);
-  assert.equal(bench.doc.activeElement.dataset.asmToggle,'monitor');assert.match(bench.picture,/data-asm-monitor-screen="MONITOR_OFF"/);assert.doesNotMatch(bench.picture,/Classroom Desktop|data-asm-picture="open-document"/);
-  bench.click('assemblyAction','open-document');assert.equal(bench.state.documentOpened,false);
-  bench.click('asmToggle','monitor');assert.equal(bench.state.monitorOn,true);assert.match(bench.picture,/Classroom Desktop/);
   bench.click('asmToggle','input');assert.match(bench.picture,/NO SIGNAL/);assert.equal(bench.state.booted,true);assert.equal(bench.state.bootCount,before);
-  const snapshot=structuredClone(bench.state);bench.controller.setVisible(false);bench.click('asmToggle','monitor');assert.deepEqual(bench.state,snapshot);
+  const snapshot=structuredClone(bench.state);bench.controller.setVisible(false);bench.click('asmToggle','input');assert.deepEqual(bench.state,snapshot);
   bench.controller.dispose();
 });
 
-test('expanded equipment keeps compact monitor buttons inside the same scaled picture canvas through input and power changes',()=>{
+test('expanded equipment keeps the compact Input button inside the scaled picture canvas through source changes',()=>{
   const bench=fixture({caseId:'INC-107'}),host=bench.fields.get('[data-asm-scene]');
   bench.click('asmExpand','picture');assert.equal(host.dataset.expanded,'true');
-  for(const toggle of ['input','monitor','monitor']){
-    bench.click('asmToggle',toggle);
+  for(let i=0;i<3;i++){
+    bench.click('asmToggle','input');
     assert.equal(host.dataset.expanded,'true');
     assert.match(bench.picture,/^<div class="asm-schematic-canvas"><svg[\s\S]*<\/svg><div class="asm-monitor-controls"[\s\S]*<\/div><\/div>$/);
-    assert.equal(bench.doc.activeElement.dataset.asmToggle,toggle);
+    assert.equal(bench.doc.activeElement.dataset.asmToggle,'input');
   }
-  assert.equal(bench.state.monitorInput,'hdmi');assert.equal(bench.state.monitorOn,true);assert.equal(bench.state.booted,true);
+  assert.equal(bench.state.monitorInput,'hdmi');assert.equal(bench.state.booted,true);
   const css=readFileSync(new URL('../src/assembly.css',import.meta.url),'utf8');
   assert.match(css,/\.asm-schematic-canvas\{position:relative\}/);
   assert.doesNotMatch(css,/\.asm-schematic\[data-expanded=true\] \.asm-monitor-controls\{position:sticky/);

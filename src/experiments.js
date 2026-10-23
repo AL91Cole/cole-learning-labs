@@ -140,8 +140,7 @@ export function observationSnapshot(scenario,savedState) {
       ['P/PSU/B/C/G/S screws (1=secured)',['panel','psu','board','cooler','gpu','ssd'].map(group=>a[group+'Screws'].map(value=>value?'1':'0').join('')).join('/')+' '+state.selectedDrive.toUpperCase()],
       ['CPU/RAM/PCIe clips; panel',[a.retentionOpen,a.ramClipsOpen,a.pcieLatchOpen].map(open=>open?'open':'closed').join('/')+'; panel '+(a.panelInstalled?'on':'off')],
       ['Paste / CPU fan',a.paste+' / '+(a.cpuFanConnected?'connected':'disconnected')],
-      // The absent suffix keeps older snapshots equal to the default On state.
-      ['ATX/EPS/GPU/F/data/SATA (1=yes)',[state.atxConnected,state.cpuPowerConnected,state.gpuPowerConnected,state.frontPanelConnected,state.sataDataConnected,state.sataPowerConnected].map(value=>value?'1':'0').join('')+' / '+(state.videoPort==='gpu'?'GPU':'board')+' '+(state.monitorInput==='hdmi'?'HDMI':'DP')+' '+(state.pcVideoConnected!==false?'PCin':'PCout')+' '+(state.signalConnected?'MONin':'MONout')+(state.monitorOn?'':' MOff')]
+      ['ATX/EPS/GPU/F/data/SATA (1=yes)',[state.atxConnected,state.cpuPowerConnected,state.gpuPowerConnected,state.frontPanelConnected,state.sataDataConnected,state.sataPowerConnected].map(value=>value?'1':'0').join('')+' / '+(state.videoPort==='gpu'?'GPU':'board')+' '+(state.monitorInput==='hdmi'?'HDMI':'DP')+' '+(state.pcVideoConnected!==false?'PCin':'PCout')+' '+(state.signalConnected?'MONin':'MONout')]
     ].map(([label,value])=>[text(label,32),text(value,40)]);
   }
   if (scenario.track==='hardware') return [
@@ -149,7 +148,7 @@ export function observationSnapshot(scenario,savedState) {
     ['Installed components',[['Board',state.boardInstalled],['CPU',state.cpuInstalled],['Cooler',state.coolerInstalled],['RAM',state.ramSeated],['GPU',state.gpuInstalled]].filter(([,ready])=>ready).map(([label])=>label).join(', ') || 'None'],
     ['Connected power leads',[['ATX',state.atxConnected],['CPU',state.cpuPowerConnected],['GPU',state.gpuPowerConnected],['Front panel',state.frontPanelConnected]].filter(([,ready])=>ready).map(([label])=>label).join(', ') || 'None'],
     ['Storage','SSD '+(state.originalDriveInstalled?'fitted':'absent')+'; data '+(state.sataDataConnected?'yes':'no')+'; power '+(state.sataPowerConnected?'yes':'no')+'; '+(state.selectedDrive==='sata'?'SATA':'NVMe')],
-    ['Display signal path',(state.videoPort==='gpu'?'GPU':'Board')+' / PC '+(state.pcVideoConnected===false?'out':'in')+' / MON '+(state.signalConnected===false?'out':'in')+' / '+(state.monitorInput==='displayport'?'DP':'HDMI')+(state.monitorOn?'':' MOff')],
+    ['Display signal path',(state.videoPort==='gpu'?'GPU':'Board')+' / PC '+(state.pcVideoConnected===false?'out':'in')+' / MON '+(state.signalConnected===false?'out':'in')+' / '+(state.monitorInput==='displayport'?'DP':'HDMI')],
     ['Startup and document',(state.booted?'Booted':'Not booted')+' / document '+(state.documentOpened && state.pcOn && state.booted && state.videoPort==='gpu' && state.pcVideoConnected!==false && state.signalConnected!==false && state.monitorInput!=='displayport'?'open':'closed')]
   ].map(([label,value])=>[label,text(value,40)]);
   const rows=(FIELD_ROWS[id] || []).map(([key,label]) => {
@@ -252,11 +251,10 @@ export function formatExperimentObservations(rows) {
       const match=/^(?:pea|clean|excess|dry) \/ (connected|disconnected)$/.exec(value);
       add('Cooling fan cable',connected(match?.[1]));
     } else if(label==='ATX/EPS/GPU/F/data/SATA (1=yes)') {
-      const match=/^([01]{6}) \/ (GPU|board) (HDMI|DP) PC(in|out) MON(in|out)(?: M(On|Off))?$/.exec(value);
+      const match=/^([01]{6}) \/ (GPU|board) (HDMI|DP) PC(in|out) MON(in|out)$/.exec(value);
       add('Internal cables',match?[...match[1]].filter(bit=>bit==='1').length+' of 6 connected':'Not recorded');
       add('Picture cable output',match?(match[2]==='GPU'?'Graphics card':'Main board'):'Not recorded');
       add('Picture cable at computer',connected(match?.[4]));add('Picture cable at monitor',connected(match?.[5]));
-      add('Monitor power',match?(match[6]==='Off'?'Off':'On'):'Not recorded');
     } else if(label==='Connected power leads') {
       const parts=value==='None'?[]:value.split(', ');
       add('Internal power cables',parts.every(part=>['ATX','CPU','GPU','Front panel'].includes(part))?parts.length+' cables connected':'Not recorded');
@@ -265,10 +263,9 @@ export function formatExperimentObservations(rows) {
       add('Original storage drive',match?(match[1]==='fitted'?'Fitted':'Not fitted'):'Not recorded');
       add('Drive data cable',connected(match?.[2]));add('Drive power cable',connected(match?.[3]));
     } else if(label==='Display signal path') {
-      const match=/^(GPU|Board) \/ PC (in|out) \/ MON (in|out) \/ (?:DP|HDMI)(?: M(On|Off))?$/.exec(value);
+      const match=/^(GPU|Board) \/ PC (in|out) \/ MON (in|out) \/ (?:DP|HDMI)$/.exec(value);
       add('Picture cable output',match?(match[1]==='GPU'?'Graphics card':'Main board'):'Not recorded');
       add('Picture cable at computer',connected(match?.[2]));add('Picture cable at monitor',connected(match?.[3]));
-      add('Monitor power',match?(match[4]==='Off'?'Off':'On'):'Not recorded');
     } else if(/\b(?:ATX|EPS|GPU|PSU|POST|PCIe)\b|[01]{4,}|(?:\w+\/){2,}\w+/.test(label+' '+value)) {
       add('Other setup details','Not recorded in a readable format');
     } else add(label,value||'Not recorded');

@@ -41,8 +41,10 @@ test('four other pathways retain native named picture buttons for every curricul
 test('a fitted beginner side panel covers internal parts and removes their picture targets',()=>{
   const f=fixture(),original=structuredClone(f.record);
   f.record={...original,hardware:{...original.hardware,assembly:{...original.hardware.assembly,panelInstalled:true}}};
-  assert.match(f.host.innerHTML,/cole-learning-labs-logo-dark\.png/);
-  assert.match(f.host.innerHTML,/Internal parts are covered/);
+  assert.match(f.host.innerHTML,/assets\/favicon\.svg/);
+  const cover=/<g data-foundation-panel-cover>([\s\S]*?)<\/g><\/g>/.exec(f.host.innerHTML)?.[1];
+  assert.ok(cover);assert.match(cover,/class="foundation-panel-vents"/);assert.match(cover,/<image[^>]*width="64" height="64"/);
+  assert.doesNotMatch(cover,/<text\b|logo-dark\.png|KEEP CLEAR/);
   assert.ok(f.nodes.some(node=>node.dataset.foundationItem==='panel'));
   for(const id of ['board','cpu','cooler','ram','gpu','psu','ssd'])assert.ok(!f.nodes.some(node=>node.dataset.foundationItem===id),id);
   assert.doesNotMatch(f.host.innerHTML,/data-pc-fan=/);
@@ -142,5 +144,5 @@ test('beginner monitor captions stay short and an explicitly opened activity exp
   const subtitles=[...f.host.innerHTML.matchAll(/<text x="195" y="(?:190|207)"[^>]*>([^<]*)<\/text>/g)].map(match=>match[1]);
   assert.equal(subtitles.length,2);assert.ok(subtitles.every(line=>line.length<=48));
   f.statusDetails.open=true;f.record={...f.record};assert.equal(f.statusDetails.open,true);
-  assert.match(f.host.innerHTML,/Monitor power is available separately/);f.controller.dispose();
+  assert.match(f.host.innerHTML,/Check the monitor input and cable path/);f.controller.dispose();
 });

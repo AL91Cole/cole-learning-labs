@@ -19,15 +19,17 @@ const fixed = () => steps('INC-101',detailed(),['video-gpu']);
 const freeze = value => {if(value&&typeof value==='object'){for(const entry of Object.values(value))freeze(entry);Object.freeze(value);}return value;};
 const assertStopped = activity => {for(const key of ['powered','cpuFan','psuFan','gpuFan','boardPowered','cpuPowered','ramPowered','gpuPowered','ssdPowered','booted','documentOpened'])assert.equal(activity[key],false,key);};
 
-test('monitor power is independent of PC power, blocks delivery while off, and migrates older saves as on',()=>{
-  let state=steps('INC-101',fixed(),['open-document','monitor-off']);
-  assert.equal(state.pcOn,true);assert.equal(state.booted,true);assert.equal(state.monitorOn,false);assert.equal(state.documentOpened,false);
-  const activity=pcActivity(state);assert.equal(activity.powered,true);assert.equal(activity.booted,true);assert.equal(activity.display.screen.code,'MONITOR_OFF');assert.equal(activity.display.signal,false);assert.equal(activity.display.desktop,false);
-  assert.equal(verifyHardware('INC-101',state).ok,false);assert.match(verifyHardware('INC-101',state).message,/monitor is off/i);assert.equal(applyHardwareAction('INC-101',state,'open-document').kind,'warning');
-  assert.match(getHardwareReadouts('INC-101',state).display.value,/Monitor switched off/);
-  state=steps('INC-101',state,['monitor-on']);assert.equal(pcActivity(state).display.desktop,true);assert.equal(state.documentOpened,false);
-  const old={...state};delete old.monitorOn;assert.equal(normalizeHardwareState('INC-101',old).monitorOn,true);
-  for(const value of ['false',0,{},null])assert.equal(normalizeHardwareState('INC-101',{...state,monitorOn:value}).monitorOn,true);
+test('retired preview monitor power fields and actions cannot trap an older saved screen off',()=>{
+  const base=fixed();
+  for(const value of [false,true,'false',0,{},null]){
+    const saved={...base,monitorOn:value,actions:[...base.actions,'monitor-off','monitor-on']};
+    const state=normalizeHardwareState('INC-101',saved);
+    assert.equal(Object.hasOwn(state,'monitorOn'),false);assert.ok(!state.actions.includes('monitor-off'));assert.ok(!state.actions.includes('monitor-on'));
+    assert.equal(pcActivity(saved).display.desktop,true);assert.equal(pcActivity(state).display.desktop,true);
+    assert.match(getHardwareReadouts('INC-101',state).display.value,/Classroom desktop visible/);
+    const delivered=applyHardwareAction('INC-101',state,'open-document').state;assert.equal(verifyHardware('INC-101',delivered).ok,true);
+    for(const action of ['monitor-on','monitor-off']){const result=applyHardwareAction('INC-101',state,action);assert.deepEqual(result.state,state);}
+  }
 });
 
 test('all eight current hardware faults have distinct honest power/startup/display activity',()=>{
@@ -177,7 +179,7 @@ test('a boot-manager checkpoint and desktop confirmation come from the actual st
   const unseen=pcActivity({...state,signalConnected:false});assert.equal(unseen.startup.bootManager,'ready');assert.equal(unseen.display.screen.code,'INPUT_NO_SIGNAL','A disconnected display does not remove the boot manager or invent a bootloader fault');
   state=steps('INC-101',state,['boot']);const desktop=pcActivity(state);assert.equal(desktop.display.screen.code,'DESKTOP_READY');assert.equal(desktop.startup.bootManager,'completed');assert.equal(desktop.documentOpened,false);
   state=steps('INC-101',state,['open-document']);assert.equal(pcActivity(state).display.screen.code,'LESSON_OPEN');
-  state=steps('INC-101',state,['power-off']);const standby=pcActivity(state);assert.equal(standby.display.screen.code,'MONITOR_STANDBY');assert.match(standby.display.readout,/Monitor power is available separately/);
+  state=steps('INC-101',state,['power-off']);const standby=pcActivity(state);assert.equal(standby.display.screen.code,'MONITOR_STANDBY');assert.match(standby.display.readout,/Check the monitor input and cable path/);
 });
 
 test('teaching mount and cooling interlocks are labeled as workbench checks instead of invented firmware screw or paste detectors',()=>{

@@ -316,7 +316,7 @@ sqlTest('work fields enforce actual record types, list limits, and the assigned 
     { notes: 'x'.repeat(4001) }, { plan: 'x'.repeat(2001) }, { reflection: 'x'.repeat(2001) },
     { verified: 1 }, { closed: 'false' }, { questions: ['0'] }, { questions: [99] }, { evidence: ['not-a-clue'] },
     { events: [{ message: 'x'.repeat(601) }] }, { events: [{ kind: 'error' }] },
-    { state: { pcOn: 'false' } }, { state: { monitorOn: 'false' } }, { state: { caseId: 'INC-102' } }, { state: { bootCount: -1 } },
+    { state: { pcOn: 'false' } }, { state: { caseId: 'INC-102' } }, { state: { bootCount: -1 } },
     { state: { bootCount: 1.5 } }, { state: { actions: ['not-a-simulation-action'] } },
     { events: Array.from({ length: 101 }, () => ({ message: 'Fictional event' })) }
   ];
@@ -331,16 +331,20 @@ sqlTest('work fields enforce actual record types, list limits, and the assigned 
   assert.equal(f.db.sqlite.prepare('SELECT COUNT(*) AS n FROM drafts').get().n, 0);
 });
 
-sqlTest('monitor power controls round-trip through the typed hardware snapshot without accepting arbitrary actions', async t => {
+sqlTest('hardware snapshots retain monitor input while refusing unsupported monitor power fields and actions', async t => {
   const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom); const student = await f.join(classroom);
   const path = '/student/work/' + assignment.id;
-  const work = { state: { pcOn: false, monitorOn: false, actions: ['monitor-off', 'monitor-on', 'monitor-off'] } };
+  const work = { state: { pcOn: false, monitorInput: 'displayport', actions: ['input-displayport'] } };
   const saved = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work } });
   assert.equal(saved.status, 200);
   assert.deepEqual(saved.data.draft.work, work);
-  const rejected = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 1, work: { state: { monitorOn: true, actions: ['monitor-run-script'] } } } });
-  assert.equal(rejected.status, 400);
-  assert.equal(rejected.data.error, 'invalid_work');
+  const writesBefore = f.db.writes.length;
+  for (const state of [{ monitorOn: true }, { monitorOn: false }, { actions: ['monitor-on'] }, { actions: ['monitor-off'] }]) {
+    const rejected = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 1, work: { state } } });
+    assert.equal(rejected.status, 400);
+    assert.equal(rejected.data.error, Object.hasOwn(state, 'monitorOn') ? 'privacy_violation' : 'invalid_work');
+  }
+  assert.equal(f.db.writes.length, writesBefore);
   assert.deepEqual((await f.request(path, { cookie: student.cookie })).data.draft.work, work);
 });
 

@@ -4,7 +4,7 @@ The filename is retained for existing documentation links. The current interface
 
 ## Case access and controls
 
-A fitted opaque side panel carries the Cole Learning Labs logo and hides the internal drawing and targets. The visible Side panel button guides removal of each screw, removal of the cover, refitting, and tightening. All internal model changes still require PC off, AC disconnected, and panel removed. A small illuminated monitor Power button and a compact Input button sit on the bezel; their padded targets preserve keyboard and touch access. The monitor switch does not switch the PC. Cable controls number the cable-end, socket, and connect steps, describe the lead, and offer a direct Disconnect button. Dragging remains optional.
+A fitted opaque side panel has a small centered Cole Learning Labs logo icon, metal seams, and ventilation. Status and instructions sit outside the cover. It hides the internal drawing and targets. The visible Side panel button guides removal of each screw, removal of the cover, refitting, and tightening. All internal model changes still require PC off, AC disconnected, and panel removed. A compact Input button sits on the monitor bezel, with a padded target for keyboard and touch access. Cable controls number the cable-end, socket, and connect steps, describe the lead, and offer a direct Disconnect button. Dragging remains optional.
 
 ## What is retained
 
@@ -22,7 +22,7 @@ The closed **All workbench tools (optional)** disclosure contains **Show complet
 
 Main power, installed components and actual leads determine CPU, graphics and PSU fan activity. Only the blades rotate. Case power, component and storage labels distinguish standby, powered hardware, startup failure, loaded OS and the original lesson file. Fans can run while memory or storage prevents boot; moving fans never award progress. The SSD has no moving disk, and the diagram does not pretend to measure electrical or thermal behavior.
 
-Power off or a lost power path stops the corresponding fans. Hidden sections, background pages and disposed workbenches pause visual motion; reduced-motion preferences retain text indicators without spinning animation. The beginner hardware lesson uses the same derived activity model. No animation loop, remote asset or device permission is added. Monitor power is a normalized boolean field; older saves default to monitor on.
+Power off or a lost power path stops the corresponding fans. Hidden sections, background pages and disposed workbenches pause visual motion; reduced-motion preferences retain text indicators without spinning animation. The beginner hardware lesson uses the same derived activity model. No animation loop, remote asset or device permission is added.
 
 ## Connections
 

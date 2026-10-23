@@ -13,7 +13,7 @@ test('the tutorial explains the complete gated workflow and the separate free-co
   assert.match(html,/href="#sandbox"/);
   assert.match(html,/No ticket|no ticket/);
   assert.match(html,/AC is disconnected, and the side panel is removed/);
-  assert.match(html,/Monitor power and PC power are separate/);
+  assert.match(html,/monitor’s small <strong>Input<\/strong> button/);
   assert.doesNotMatch(html,/<script|onclick=|localStorage/);
 });
 

@@ -149,7 +149,7 @@ test('the actual report includes both disconnected HDMI ends and the other autho
     const result=report({id:'INC-101',title:'The Blank Monitor',grade:'7–12',track:'hardware',goal:'Open the original lesson.',clues:[]},{state,events:[],evidence:[],plan:'',notes:'',reflection:'',closed:false,verified:false});
     assert.match(result,/CABLE CONNECTIONS\nAC power: connected\nHDMI PC end: disconnected\nHDMI monitor end: disconnected/);
     for(const label of ['ATX 24-pin','CPU 8-pin','GPU power','SATA data','SATA power','Front panel'])assert.ok(result.includes(label+': connected'),label);
-    assert.match(result,/PC video output: board\nMonitor source: hdmi\nMonitor power: on/);
+    assert.match(result,/PC video output: board\nMonitor source: hdmi/);
     if(enabled)assert.match(result,/CPU fan: connected/);
   }
 });
