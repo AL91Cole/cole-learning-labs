@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {pcActivity} from '../src/pc-activity.js';
 import {initialHardwareState,applyHardwareAction} from '../src/hardware.js';
+import {normalizeHardwareState,verifyHardware,getHardwareReadouts} from '../src/hardware.js';
 import {SCENARIOS} from '../src/scenarios.js';
 
 const detailed = (id='INC-101') => applyHardwareAction(id,initialHardwareState(id),'enable-assembly').state;
@@ -17,6 +18,19 @@ function steps(id,state,actions) {
 const fixed = () => steps('INC-101',detailed(),['video-gpu']);
 const freeze = value => {if(value&&typeof value==='object'){for(const entry of Object.values(value))freeze(entry);Object.freeze(value);}return value;};
 const assertStopped = activity => {for(const key of ['powered','cpuFan','psuFan','gpuFan','boardPowered','cpuPowered','ramPowered','gpuPowered','ssdPowered','booted','documentOpened'])assert.equal(activity[key],false,key);};
+
+test('retired preview monitor power fields and actions cannot trap an older saved screen off',()=>{
+  const base=fixed();
+  for(const value of [false,true,'false',0,{},null]){
+    const saved={...base,monitorOn:value,actions:[...base.actions,'monitor-off','monitor-on']};
+    const state=normalizeHardwareState('INC-101',saved);
+    assert.equal(Object.hasOwn(state,'monitorOn'),false);assert.ok(!state.actions.includes('monitor-off'));assert.ok(!state.actions.includes('monitor-on'));
+    assert.equal(pcActivity(saved).display.desktop,true);assert.equal(pcActivity(state).display.desktop,true);
+    assert.match(getHardwareReadouts('INC-101',state).display.value,/Classroom desktop visible/);
+    const delivered=applyHardwareAction('INC-101',state,'open-document').state;assert.equal(verifyHardware('INC-101',delivered).ok,true);
+    for(const action of ['monitor-on','monitor-off']){const result=applyHardwareAction('INC-101',state,action);assert.deepEqual(result.state,state);}
+  }
+});
 
 test('all eight current hardware faults have distinct honest power/startup/display activity',()=>{
   const expected={
@@ -165,7 +179,7 @@ test('a boot-manager checkpoint and desktop confirmation come from the actual st
   const unseen=pcActivity({...state,signalConnected:false});assert.equal(unseen.startup.bootManager,'ready');assert.equal(unseen.display.screen.code,'INPUT_NO_SIGNAL','A disconnected display does not remove the boot manager or invent a bootloader fault');
   state=steps('INC-101',state,['boot']);const desktop=pcActivity(state);assert.equal(desktop.display.screen.code,'DESKTOP_READY');assert.equal(desktop.startup.bootManager,'completed');assert.equal(desktop.documentOpened,false);
   state=steps('INC-101',state,['open-document']);assert.equal(pcActivity(state).display.screen.code,'LESSON_OPEN');
-  state=steps('INC-101',state,['power-off']);const standby=pcActivity(state);assert.equal(standby.display.screen.code,'MONITOR_STANDBY');assert.match(standby.display.readout,/Monitor power is available separately/);
+  state=steps('INC-101',state,['power-off']);const standby=pcActivity(state);assert.equal(standby.display.screen.code,'MONITOR_STANDBY');assert.match(standby.display.readout,/Check the monitor input and cable path/);
 });
 
 test('teaching mount and cooling interlocks are labeled as workbench checks instead of invented firmware screw or paste detectors',()=>{

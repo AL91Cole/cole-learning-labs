@@ -1,5 +1,17 @@
 /** Fixed teaching connectors. View gestures propose actions; the model checks safety. */
-const cable = (id, label, internal, sockets) => Object.freeze({ id, label, internal, sockets: Object.freeze(sockets.map(([id, label]) => Object.freeze({ id, label }))) });
+const DESCRIPTIONS=Object.freeze({
+  ac:'AC supplies the PC power supply. Shut down the PC before unplugging it.',
+  'hdmi-pc':'This end goes into a PC video output. The dedicated graphics-card output supplies the picture on this workstation.',
+  'hdmi-monitor':'This end goes into the monitor HDMI input. Select HDMI using the monitor buttons as well.',
+  atx:'The wide 24-pin lead supplies the motherboard. Its keyed shape matches the ATX header.',
+  eps:'The 8-pin EPS lead supplies CPU power. It is different from the graphics-card power lead.',
+  'gpu-power':'This lead supplies the graphics card. The HDMI lead carries its picture separately.',
+  'sata-data':'The narrow SATA data cable links the original SSD to the motherboard. The drive also needs its separate, wider power lead.',
+  'sata-power':'The wide SATA power plug comes from the power supply. The original SSD also needs a separate data cable.',
+  'front-panel':'This small lead links the case Power button to the motherboard F_PANEL header.',
+  'cpu-fan':'This lead links the cooler fan to the motherboard CPU_FAN header.'
+});
+const cable = (id, label, internal, sockets) => Object.freeze({ id, label, internal, description:DESCRIPTIONS[id], sockets: Object.freeze(sockets.map(([id, label]) => Object.freeze({ id, label }))) });
 export const ASSEMBLY_CABLES = Object.freeze([
   cable('ac', 'AC power cord', false, [['ac-inlet', 'Power supply AC inlet']]),
   cable('hdmi-pc', 'HDMI cable — PC end', false, [['hdmi-gpu', 'Graphics-card HDMI output'], ['hdmi-board', 'Motherboard HDMI output']]),

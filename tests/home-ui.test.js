@@ -1,3 +1,4 @@
+import {SANDBOX_STARTERS} from '../src/coding-sandbox.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -26,7 +27,7 @@ function harness(){
   const record={state:{pcOn:false},events:[],verified:false,closed:false},store={labs:{'INC-101':record}},before=structuredClone(store);
   let renders=0;
   const forbidden=()=>assert.fail('Public previews must not create lab records, change equipment, save progress, or call a network service.');
-  const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
+  const context=vm.createContext({SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
     $:selector=>{assert.ok(elements.has(selector),selector);return elements.get(selector);},
     $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;if(selector==='.track-filters [data-track]')return pathwayButtons;assert.fail(selector);},
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,

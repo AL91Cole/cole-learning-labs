@@ -331,6 +331,23 @@ sqlTest('work fields enforce actual record types, list limits, and the assigned 
   assert.equal(f.db.sqlite.prepare('SELECT COUNT(*) AS n FROM drafts').get().n, 0);
 });
 
+sqlTest('hardware snapshots retain monitor input while refusing unsupported monitor power fields and actions', async t => {
+  const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom); const student = await f.join(classroom);
+  const path = '/student/work/' + assignment.id;
+  const work = { state: { pcOn: false, monitorInput: 'displayport', actions: ['input-displayport'] } };
+  const saved = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 0, work } });
+  assert.equal(saved.status, 200);
+  assert.deepEqual(saved.data.draft.work, work);
+  const writesBefore = f.db.writes.length;
+  for (const state of [{ monitorOn: true }, { monitorOn: false }, { actions: ['monitor-on'] }, { actions: ['monitor-off'] }]) {
+    const rejected = await f.request(path, { method: 'PUT', cookie: student.cookie, body: { expectedVersion: 1, work: { state } } });
+    assert.equal(rejected.status, 400);
+    assert.equal(rejected.data.error, Object.hasOwn(state, 'monitorOn') ? 'privacy_violation' : 'invalid_work');
+  }
+  assert.equal(f.db.writes.length, writesBefore);
+  assert.deepEqual((await f.request(path, { cookie: student.cookie })).data.draft.work, work);
+});
+
 sqlTest('cookie changes across tabs cannot read, save, submit, or log out another expected student session', async t => {
   const f = await fixture(t); const classroom = await f.makeClass(); const assignment = await f.assign(classroom);
   const alice = await f.join(classroom); const bob = await f.join(classroom);

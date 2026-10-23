@@ -1,6 +1,6 @@
-import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261022-learning';
-import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261022-learning';
-import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261022-learning';
+import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261022-controls';
+import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261022-controls';
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261022-controls';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },
@@ -184,7 +184,7 @@ export function applyHardwareAction(caseId, state, action) {
     const reason = failureReason(s);
     s.booted = !reason;
     if (reason) return record(reason, 'warning');
-    return record(displayPathReady(s) ? 'POST passed. The original classroom OS has loaded. Open the lesson document to verify delivery.' : 'POST passed and the original OS loaded, but the monitor still has no signal. Inspect its source, both cable ends, and the PC video output.', displayPathReady(s) ? 'success' : 'warning');
+    return record(displayReady(s) ? 'POST passed. The original classroom OS has loaded. Open the lesson document to verify delivery.' : 'POST passed and the original OS loaded, but the monitor still has no signal. Inspect its source, both cable ends, and the PC video output.', displayReady(s) ? 'success' : 'warning');
   }
   if (action === 'video-gpu' || action === 'video-board') {
     const port = action === 'video-gpu' ? 'gpu' : 'board';

@@ -1,4 +1,4 @@
-import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261022-learning';
+import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261022-controls';
 
 /** Read-only teaching indicators. They never start a device or change saved work. */
 const plain = value => {
@@ -90,7 +90,7 @@ export function pcActivity(hardware) {
   const phase=!powered?'power':!processorReady?'processor-init':!memoryReady?'memory-init':!gpuPowered?'graphics-init':!detectedStorage?'boot-device':reason?'workbench-check':booted?'desktop':'boot-manager';
   const display={state:'off',label:'MONITOR STANDBY',detail:'',signal,desktop,documentOpened};
   let stage='monitor',code='MONITOR_STANDBY',brand='CLASSROOM DISPLAY';
-  let lines=['Selected input has no active video.','Monitor power is available separately.','The PC is not supplying a picture.'];
+  let lines=['Selected input has no active video.','Check the monitor input and cable path.','The PC is not supplying a picture.'];
   if(powered&&!signal){
     display.state='no-signal';display.label=source==='DISPLAYPORT'?'NO SIGNAL · DISPLAYPORT':'NO SIGNAL';
     code=videoInitialized?'INPUT_NO_SIGNAL':'PRE_VIDEO_POST';

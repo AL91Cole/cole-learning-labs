@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SCENARIOS } from '../src/scenarios.js';
 import { initialHardwareState, applyHardwareAction, normalizeHardwareState, verifyHardware } from '../src/hardware.js';
-import { observationSnapshot, setExperimentDraft, startExperiment, captureExperimentResult, readExperiments, saveExperiment, experimentReport } from '../src/experiments.js';
-import { normalizeLabRecord } from '../src/records.js';
+import { observationSnapshot, formatExperimentObservations, setExperimentDraft, startExperiment, captureExperimentResult, readExperiments, saveExperiment, experimentReport } from '../src/experiments.js';
+import { normalizeLabRecord, workbenchProgress } from '../src/records.js';
 const scenario=SCENARIOS.find(s=>s.id==='INC-106');
 test('every mechanical build step changes bounded observation evidence, including individual screw positions',()=>{
   let state=applyHardwareAction(scenario.id,initialHardwareState(scenario.id),'enable-assembly').state;
@@ -65,4 +65,23 @@ test('both HDMI ends produce separate bounded experiment evidence and survive re
   const ordinary=observationSnapshot(s,{...initialHardwareState(s.id),videoPort:'gpu',pcVideoConnected:false,documentOpened:true});
   assert.match(ordinary.find(([label])=>label==='Display signal path')[1],/PC out \/ MON in/);
   assert.match(ordinary.find(([label])=>label==='Startup and document')[1],/document closed/);
+});
+
+test('retired preview monitor power fields do not change saved observations or successful current-test credit',()=>{
+  const s=SCENARIOS.find(item=>item.id==='INC-107');
+  for(const detailed of [false,true]){
+    let state=initialHardwareState(s.id);
+    for(const action of [...(detailed?['enable-assembly']:[]),'input-hdmi','open-document'])state=applyHardwareAction(s.id,state,action).state;
+    const previousPreview={...state,monitorOn:false};
+    assert.deepEqual(observationSnapshot(s,previousPreview),observationSnapshot(s,state));
+    const record=normalizeLabRecord(s,{state:previousPreview,verified:true});
+    setExperimentDraft(s,record,{predict:'Selecting HDMI should restore the desktop picture.',evidence:'The cable is attached to the monitor HDMI socket.'});
+    startExperiment(s,record,state);captureExperimentResult(s,record,state);
+    setExperimentDraft(s,record,{changed:'I selected HDMI.',observed:'The original lesson file opened.',explain:'The selected input now matches the fitted cable.'});
+    assert.equal(saveExperiment(s,record).ok,true);
+    assert.equal(workbenchProgress(s,record,verifyHardware(s.id,record.state)).ready,true);
+    const restored=normalizeLabRecord(s,JSON.parse(JSON.stringify({...record,state:previousPreview})));
+    assert.equal(Object.hasOwn(restored.state,'monitorOn'),false);assert.equal(workbenchProgress(s,restored,verifyHardware(s.id,restored.state)).ready,true);
+    assert.doesNotMatch(JSON.stringify(formatExperimentObservations(readExperiments(restored).attempts.at(-1).after)),/Monitor power|MOff|MOn/);
+  }
 });

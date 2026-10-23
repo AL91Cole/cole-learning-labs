@@ -1,12 +1,14 @@
 # Cole Learning Labs
 
-A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 5 beginner labs and 32 troubleshooting investigations across five pathways for grades 7–12. Six investigations focus on coding; the complete catalog has 37 activities including the beginner labs.
+A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 5 beginner labs and 32 troubleshooting investigations across five pathways for grades 7–12. Six investigations focus on coding; the structured catalog has 37 activities including the beginner labs. An additional open coding space offers a blank program and three playful starting examples.
+
+The v2.28.0 simulation update adds an opaque branded PC side panel, guarded panel removal and refitting, a compact monitor Input button on the bezel, guided cable controls, a step-by-step [student tutorial](https://www.colelearninglabs.com/#guide), and [open coding sandboxes](https://www.colelearninglabs.com/#sandbox). Sandboxes keep independent page-memory drafts and reuse the bounded local interpreter; they do not create ticket progress or grades. See [Simulation update verification](docs/SIMULATION-UPDATE-REVIEW.md) and [canonical URL guidance](docs/SEARCH-INDEXING.md). These changes require publication before the public links show this version.
 
 The v2.27.0 coding studio adds three playful investigations, local JavaScript/Python subsets, custom input practice, and language-aware reports, alongside an open messenger conversation and default-on guarded cloud extras. See [Chat and coding studio review](docs/CODING-STUDIO-REVIEW.md) for verification and runtime boundaries.
 
 The v2.27.1 accessibility follow-up targets WCAG 2.2 AA. It preserves keyboard focus and opened help through workbench updates, retains editor selection and scroll position, identifies writing/code errors at their fields, improves report/teacher controls, and adds structured HTML workbook and quiz alternatives. The earlier focus, contrast, reduced-motion, forced-colors, and named-control safeguards remain. See [Accessibility review and pending assistive-technology acceptance](docs/ACCESSIBILITY-REVIEW.md); hands-on ChromeVox/NVDA testing and qualified independent review are pending. This is not ADA certification or a completed conformance audit.
 
-The learning-studio refresh adds a 17px default type size, warmer colors, consistent pathway illustrations, refreshed cards, grade-aware wording, and 32 distinct fictional requester profiles. The full PC picture uses more of the workbench; **Expand picture** offers a larger view, and **Fit picture** or Escape returns it to the fitted view. The physical-style Power button and equivalent keyboard/touch controls remain available. A short screen may still require normal page scrolling; this is not a promise that every control fits on screen at once.
+The learning-studio refresh adds a 17px default type size, warmer colors, consistent pathway illustrations, refreshed cards, grade-aware wording, and 32 distinct fictional requester profiles. The full PC picture uses more of the workbench; **Expand picture** offers a larger view, and **Collapse picture** or Escape returns it to the fitted view. The physical-style Power button and equivalent keyboard/touch controls remain available. A short screen may still require normal page scrolling; this is not a promise that every control fits on screen at once.
 
 Offline character works immediately. Its expanded library combines 112 authored topic cards, 32 fictional profiles, and five reply styles: 17,920 possible compositions, with 17,360 distinct measured replies, all at most 300 characters without clipping. These are deterministic composed possibilities, not 17,360 individually written answers or model generations. The new library measured about 10.4 KB when gzipped. Short-term conversational context stays in the page; unknown facts remain unknown.
 
@@ -14,7 +16,7 @@ Optional AI uses exactly an authored `{scenarioId, topic}` pair. The 161 reviewe
 
 The reviewed 32-case requester Worker is deployed on the existing Paid account at `https://cole-learning-labs-requester.alan91cole.workers.dev/api/requester`; Cloudflare reported Active `47e0fa28`. Runtime `REQUESTER_ENABLED` and `REQUESTER_BILLING_REVIEWED` are true, with AI/D1 bindings preserved. Fresh-deployment source defaults remain false. The legacy Pages requester source lock and independent classroom gate also remain false. Only the exact Worker origin is added to main-page connections; reports forbid connections and the teacher route remains self-only.
 
-At recorded source checkpoint `45d83d086763ea15cd97ca826c705ddffc64167c`, [PR #27](https://github.com/AL91Cole/cole-learning-labs/pull/27) was open, cleanly mergeable, and all six GitHub checks passed. Linux ran 1,002/1,002 tests with no skips; Windows passed 1,000 with two platform-specific skips and no failures. The [branch preview](https://codex-chat-and-safe-coding.cole-learning-labs.pages.dev/) is verified. These results apply to the recorded source revision. Production frontend publication still requires PR #27 merge.
+At recorded source checkpoint `45d83d086763ea15cd97ca826c705ddffc64167c`, [PR #27](https://github.com/AL91Cole/cole-learning-labs/pull/27) was open, cleanly mergeable, and all six GitHub checks passed. Linux ran 1,002/1,002 tests with no skips; Windows passed 1,000 with two platform-specific skips and no failures. The [branch preview](https://codex-chat-and-safe-coding.cole-learning-labs.pages.dev/) is verified. These results apply to the recorded source revision. This was a historical pre-merge checkpoint; it does not describe the current release or prove publication of later changes.
 
 On the preview, cloud availability started automatically without a checkbox. In CODE-504, Noel's favorite-color question produced the genuine cloud reply, “I am Noel. My favorite color is apricot orange.” D1 reservation totals for UTC October 21 and 22 each increased from 50 to 75, matching one 25-unit reservation in each bucket; the ledger was not reset. Turning cloud off worked immediately and stayed off after navigation to CODE-505. This is a live request and preference-persistence check, not a general model-quality, billing, or live-exhaustion guarantee. Earlier bundle `acfd4943` and v2.26.0 live-reply evidence are historical.
 
@@ -26,7 +28,7 @@ Coding drafts also survive normal site navigation and browser back/forward withi
 
 The six coding investigations offer JavaScript and Python subsets: the supply calculator, classroom thermostat, workstation loop, **Pixel Pet Snack Time** (grades 7–8), **Arcade Prize Patrol** (9–10), and **Rover Energy Planner** (11–12). Students use ordinary assignment, arithmetic, conditionals, and counting-loop syntax, compare changing fixtures, and explain a repair. The interpreter stays local and bounded; it has no imports, files, network, browser objects, or general language runtime. Legacy teaching-source programs remain supported. Pixel-pet tokens, arcade prizes, and rover missions are simulation contexts.
 
-PC investigations keep the full PC X-ray visible throughout the repair, including when selecting tools, cables, or saved work. The monitor remains part of the same picture; its startup transcript is available below the equipment. There are no cropped monitor/rear/inside views.
+PC investigations keep the complete PC and monitor in the picture throughout the repair. A solid branded side panel hides the interior until the learner powers down, disconnects AC, removes both screws, and lifts off the cover. Internal changes require that safe open state. Refit the cover and screws before startup. The monitor has a compact Input button on its bezel; its startup transcript is available below the equipment.
 
 PR #22 has also been checked in the actual Windows Microsoft Edge application, including its private Linux terminal and teacher controls. See [Edge acceptance results](docs/PR22-EDGE-TESTING.md) for the verified workflows and remaining school-device/network testing.
 
@@ -122,7 +124,8 @@ Portfolio and lab pages use hash navigation and can be served statically.
 | `#learn/hardware` | Beginner hardware lab; also `network`, `ai`, `security`, and `coding` |
 | `#lab/INC-101` | An individual investigation |
 | `#educators` | Lesson guidance and assessment |
-| `#guide` | Student instructions |
+| `#guide` | Step-by-step student tutorial |
+| `#sandbox` | Free coding space with four starter choices |
 | `#connect` | Professional connection links |
 | `#privacy` | Privacy and accessibility information |
 | `classroom.html` | Independent/classroom choice, student entry, and fictional demo |
@@ -160,7 +163,7 @@ Use fictional scenario information. Keep real passwords, health information, pri
 
 ## School devices, accessibility, and review
 
-The responsive workspaces provide a larger full PC picture, Expand picture and Fit picture controls, a labeled component selector, accessible in-page tabs, keyboard alternatives, optional larger text, and touch controls. Default page type is 17px; key controls retain targets of 44–48px where practical. Mission hints use keyboard-accessible disclosures. Changing sections does not reload the page or rebuild the workbench. Normal page scrolling keeps controls reachable on short screens.
+The responsive workspaces provide a larger full PC picture, Expand picture and Collapse picture controls, a labeled component selector, accessible in-page tabs, keyboard alternatives, optional larger text, and touch controls. Default page type is 17px; key controls retain targets of 44–48px where practical. Mission hints use keyboard-accessible disclosures. Changing sections does not reload the page or rebuild the workbench. Normal page scrolling keeps controls reachable on short screens.
 
 Historical Chrome checks covered 1366 × 768, 1024 × 768, and 768 × 1024 without page-level horizontal overflow, along with representative repairs, saved-work controls, and fictional classroom review. [PR #22's later acceptance record](docs/PR22-EDGE-TESTING.md) also covers actual Windows Microsoft Edge workflows. These results apply to their recorded revisions and devices; they do not establish acceptance of every later visual change or a school-managed Chromebook. Recheck this release with narrow/short windows, larger text, keyboard focus, and zoom, then test representative work on the school's actual supported devices and network.
 

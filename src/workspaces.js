@@ -1,6 +1,6 @@
-import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261022-learning';
-import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261022-learning';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261022-learning';
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261022-controls';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261022-controls';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261022-controls';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });

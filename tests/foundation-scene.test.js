@@ -38,6 +38,21 @@ test('four other pathways retain native named picture buttons for every curricul
   }
 });
 
+test('a fitted beginner side panel covers internal parts and removes their picture targets',()=>{
+  const f=fixture(),original=structuredClone(f.record);
+  f.record={...original,hardware:{...original.hardware,assembly:{...original.hardware.assembly,panelInstalled:true}}};
+  assert.match(f.host.innerHTML,/assets\/favicon\.svg/);
+  const cover=/<g data-foundation-panel-cover>([\s\S]*?)<\/g><\/g>/.exec(f.host.innerHTML)?.[1];
+  assert.ok(cover);assert.match(cover,/class="foundation-panel-vents"/);assert.match(cover,/<image[^>]*width="64" height="64"/);
+  assert.doesNotMatch(cover,/<text\b|logo-dark\.png|KEEP CLEAR/);
+  assert.ok(f.nodes.some(node=>node.dataset.foundationItem==='panel'));
+  for(const id of ['board','cpu','cooler','ram','gpu','psu','ssd'])assert.ok(!f.nodes.some(node=>node.dataset.foundationItem===id),id);
+  assert.doesNotMatch(f.host.innerHTML,/data-pc-fan=/);
+  f.record=original;
+  for(const id of ['board','cpu','cooler','ram','gpu','psu','ssd'])assert.ok(f.nodes.some(node=>node.dataset.foundationItem===id),id);
+  f.controller.dispose();
+});
+
 test('selected picture cards show their job beside the picture and retain it through updates',()=>{
   for(const lab of FOUNDATION_LABS.filter(lab=>lab.id!=='hardware')){
     const f=fixture(lab.id),first=lab.items[0],next=lab.items[1];
@@ -74,7 +89,7 @@ test('Enter and Space inspect SVG components while native buttons retain their b
 test('diagram progress reflects the actual guarded nine-step hardware job and truthful lesson completion',()=>{
   const f=fixture('hardware',{record:prepared()});assert.ok(f.host.innerHTML.includes('DDR4 SLOT EMPTY'));
   for(const job of f.lab.jobs){const result=applyFoundationAction(f.lab.id,f.record,{type:'practice',action:job.action});assert.notEqual(result.kind,'warning',result.message);f.record=result.state;}
-  assert.ok(f.host.innerHTML.includes('DDR4 FITTED'));assert.ok(f.host.innerHTML.includes('Memory clips closed'));assert.ok(f.host.innerHTML.includes('Panel screws 2/2'));assert.ok(f.host.innerHTML.includes('PANEL FITTED'));assert.ok(f.host.innerHTML.includes('AC CONNECTED'));assert.ok(f.host.innerHTML.includes('LESSON FILE OPEN'));assert.deepEqual(f.calls.actions,[]);assert.deepEqual(f.calls.inspections,[]);f.controller.dispose();
+  assert.ok(f.host.innerHTML.includes('Memory (RAM) fitted'));assert.ok(f.host.innerHTML.includes('Memory clips closed'));assert.ok(f.host.innerHTML.includes('Panel screws 2/2'));assert.ok(f.host.innerHTML.includes('PANEL FITTED'));assert.ok(f.host.innerHTML.includes('Power cable connected'));assert.ok(f.host.innerHTML.includes('LESSON FILE OPEN'));assert.deepEqual(f.calls.actions,[]);assert.deepEqual(f.calls.inspections,[]);f.controller.dispose();
 });
 
 test('updates preserve selection and the currently focused picture without moving focus from outside controls',()=>{
@@ -129,5 +144,5 @@ test('beginner monitor captions stay short and an explicitly opened activity exp
   const subtitles=[...f.host.innerHTML.matchAll(/<text x="195" y="(?:190|207)"[^>]*>([^<]*)<\/text>/g)].map(match=>match[1]);
   assert.equal(subtitles.length,2);assert.ok(subtitles.every(line=>line.length<=48));
   f.statusDetails.open=true;f.record={...f.record};assert.equal(f.statusDetails.open,true);
-  assert.match(f.host.innerHTML,/Monitor power is available separately/);f.controller.dispose();
+  assert.match(f.host.innerHTML,/Check the monitor input and cable path/);f.controller.dispose();
 });

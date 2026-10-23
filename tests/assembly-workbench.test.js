@@ -63,6 +63,78 @@ function reconnectMotherboardPower(bench){
   assert.equal(bench.state.assembly.panelInstalled,true);assert.ok(bench.state.assembly.panelScrews.every(Boolean));
 }
 
+test('the branded side panel fully covers internal parts and the explicit control follows the safe opening and refitting sequence',()=>{
+  const bench=fixture({caseId:'INC-102'});
+  assert.match(bench.picture,/data-asm-panel-cover/);assert.match(bench.picture,/assets\/favicon\.svg/);
+  const cover=bench.picture.slice(bench.picture.indexOf('<g class="asm-solid-panel"'),bench.picture.indexOf('<g class="hw-bench-annotation"'));
+  assert.match(cover,/class="asm-panel-vents"/);assert.match(cover,/<image[^>]*width="64" height="64"/);
+  assert.doesNotMatch(cover,/<text\b|logo-dark\.png|KEEP CLEAR/);
+  assert.doesNotMatch(bench.picture,/SIDE PANEL FITTED|INTERIOR COVERED/);
+  for(const id of ['board','cpu','cooler','ram','gpu','storage','atx','eps','front'])assert.ok(!bench.picture.includes(`data-asm-picture="${id}"`),id);
+  assert.doesNotMatch(bench.picture,/data-asm-interior|class="asm-fan/);
+  bench.click('asmTool','cables');bench.choose('[data-asm-cable]','atx');
+  assert.doesNotMatch(bench.picture,/data-asm-picture="port-atx-header"/);
+  assert.doesNotMatch(bench.picture,/data-asm-picture="(?:cable-atx|cable-rest)"/);
+  bench.click('asmCableAction','connect');assert.equal(bench.state.atxConnected,false,'The action boundary still guards the covered socket.');
+  for(const screws of [[false,true],[false,false]]){bench.click('asmToggle','panel');assert.deepEqual(bench.state.assembly.panelScrews,screws);assert.equal(bench.state.assembly.panelInstalled,true);assert.match(bench.picture,/data-asm-panel-cover/);}
+  bench.click('asmToggle','panel');assert.equal(bench.state.assembly.panelInstalled,false);
+  assert.doesNotMatch(bench.picture,/data-asm-panel-cover/);assert.match(bench.picture,/data-asm-interior/);assert.match(bench.picture,/data-asm-picture="port-atx-header"/);
+  assert.match(bench.picture,/data-asm-picture="cable-atx"/);assert.match(bench.picture,/data-asm-picture="cable-rest"/);
+  bench.click('asmCableAction','connect');assert.equal(bench.state.atxConnected,true);
+  for(let i=0;i<3;i++)bench.click('asmToggle','panel');
+  assert.equal(bench.state.assembly.panelInstalled,true);assert.deepEqual(bench.state.assembly.panelScrews,[true,true]);assert.match(bench.picture,/data-asm-panel-cover/);
+  assert.doesNotMatch(bench.picture,/data-asm-picture="(?:cable-atx|cable-rest|port-atx-header)"/);
+  bench.choose('[data-asm-cable]','ac');assert.match(bench.picture,/data-asm-picture="cable-ac"/);assert.match(bench.picture,/data-asm-picture="cable-rest"/);
+  bench.click('asmToggle','ac');const before=structuredClone(bench.state);bench.click('asmToggle','panel');assert.deepEqual(bench.state,before,'Connected AC still blocks opening with the new control.');
+  bench.controller.dispose();
+});
+
+test('the compact monitor Input button cycles source and retains focus without a monitor power button',()=>{
+  const bench=fixture({caseId:'INC-107',stateOverride:state=>({...state,monitorOn:false})});
+  assert.match(bench.picture,/class="asm-monitor-controls" role="group" aria-label="Monitor bezel controls"/);
+  assert.deepEqual(bench.pictures().filter(item=>item.dataset.asmToggle).map(item=>item.dataset.asmToggle),['input']);
+  assert.doesNotMatch(bench.picture,/asm-monitor-power|asm-monitor-led|data-asm-toggle="monitor"/);
+  assert.match(bench.picture,/class="asm-monitor-input" data-asm-toggle="input" aria-label="Monitor input: DisplayPort\. Switch to HDMI"/);
+  const before=bench.state.bootCount;
+  bench.click('asmToggle','input');assert.equal(bench.state.monitorInput,'hdmi');assert.match(bench.picture,/Classroom Desktop/);
+  assert.equal(bench.doc.activeElement.dataset.asmToggle,'input');assert.equal(bench.state.documentOpened,false);
+  assert.equal(Object.hasOwn(bench.state,'monitorOn'),false,'An older preview power flag cannot leave the monitor inaccessible.');
+  assert.match(bench.picture,/aria-label="Monitor input: HDMI\. Switch to DisplayPort"/);
+  bench.click('asmToggle','input');assert.match(bench.picture,/NO SIGNAL/);assert.equal(bench.state.booted,true);assert.equal(bench.state.bootCount,before);
+  const snapshot=structuredClone(bench.state);bench.controller.setVisible(false);bench.click('asmToggle','input');assert.deepEqual(bench.state,snapshot);
+  bench.controller.dispose();
+});
+
+test('expanded equipment keeps the compact Input button inside the scaled picture canvas through source changes',()=>{
+  const bench=fixture({caseId:'INC-107'}),host=bench.fields.get('[data-asm-scene]');
+  bench.click('asmExpand','picture');assert.equal(host.dataset.expanded,'true');
+  for(let i=0;i<3;i++){
+    bench.click('asmToggle','input');
+    assert.equal(host.dataset.expanded,'true');
+    assert.match(bench.picture,/^<div class="asm-schematic-canvas"><svg[\s\S]*<\/svg><div class="asm-monitor-controls"[\s\S]*<\/div><\/div>$/);
+    assert.equal(bench.doc.activeElement.dataset.asmToggle,'input');
+  }
+  assert.equal(bench.state.monitorInput,'hdmi');assert.equal(bench.state.booted,true);
+  const css=readFileSync(new URL('../src/assembly.css',import.meta.url),'utf8');
+  assert.match(css,/\.asm-schematic-canvas\{position:relative\}/);
+  assert.doesNotMatch(css,/\.asm-schematic\[data-expanded=true\] \.asm-monitor-controls\{position:sticky/);
+  bench.controller.dispose();
+});
+
+test('cable sockets connect on click and the cable rest disconnects on click or keyboard without dragging',()=>{
+  const bench=fixture({caseId:'INC-101'});bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-pc');
+  assert.match(bench.fields.get('[data-asm-tool-controls]').innerHTML,/1\. Choose a cable end[\s\S]*2\. Match its socket[\s\S]*3\. Connect cable/);
+  bench.click('asmPicture','port-hdmi-gpu');assert.equal(bench.state.videoPort,'gpu');assert.equal(bench.state.pcVideoConnected,true);
+  assert.equal(bench.root.querySelector('[data-asm-cable-action="connect"]').disabled,true);
+  bench.choose('[data-asm-cable-target]','hdmi-board');assert.equal(bench.root.querySelector('[data-asm-cable-action="connect"]').disabled,false,'Choosing another matching socket enables its connection.');
+  bench.click('asmCableAction','connect');assert.equal(bench.state.videoPort,'board');
+  bench.choose('[data-asm-cable-target]','hdmi-gpu');bench.click('asmCableAction','connect');assert.equal(bench.state.videoPort,'gpu');
+  bench.click('asmPicture','cable-rest');assert.equal(bench.state.pcVideoConnected,false);assert.equal(bench.state.signalConnected,true);
+  bench.click('asmPicture','port-hdmi-gpu');const rest=bench.pictures().find(item=>item.dataset.asmPicture==='cable-rest');
+  bench.listeners.get('keydown')({target:rest,key:'Enter',preventDefault(){}});assert.equal(bench.state.pcVideoConnected,false);
+  assert.equal(bench.state.booted,true);bench.controller.dispose();
+});
+
 test('the workbench uses PR #6 native schematic artwork immediately without any graphics engine or camera import',()=>{
   assert.doesNotMatch(source,/import\(|assembly-scene|BABYLON|THREE|<canvas|data-asm-camera|3D/);
   const bench=fixture();assert.equal(bench.doc.activeElement,null);assert.match(bench.picture,/<svg[^>]+viewBox="12 46 860 566"/);
@@ -76,7 +148,7 @@ test('all eight ticket workbenches always show the complete X-ray with the monit
   for(const caseId of Array.from({length:8},(_,index)=>`INC-10${index+1}`))for(const savedView of ['bench','inside','internals','rear','monitor','display']){
     const bench=fixture({caseId,stateOverride:state=>({...state,view:savedView})}),before=structuredClone(bench.state);
     assert.match(bench.picture,/<svg[^>]+viewBox="12 46 860 566" data-asm-view="full-xray"/);
-    assert.match(bench.picture,/Full PC X-ray workbench with monitor/);
+    assert.match(bench.picture,/Virtual PC workbench with monitor/);
     assert.match(bench.picture,/data-asm-monitor-screen=/);
     assert.doesNotMatch(bench.markup,/data-asm-picture-view|Inside PC|Rear connections/);
     bench.controller.update({...bench.state,view:'rear'});
@@ -105,7 +177,7 @@ test('native controls keep every mechanical action available and preserve the st
 });
 
 test('full PC X-ray and inspection are ephemeral and retain explicit focus and closed disclosures',()=>{
-  const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);bench.complete();
+  const bench=fixture({caseId:'INC-101',stateOverride:state=>({...state,assembly:{...state.assembly,panelInstalled:false,panelScrews:[false,false]}})}),before=structuredClone(bench.state);bench.complete();
   assert.doesNotMatch(bench.markup,/data-asm-picture-view|Equipment picture views/);
   assert.match(bench.picture,/data-asm-view="full-xray"/);
   assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);
@@ -127,7 +199,7 @@ test('Expand picture and Escape change only presentation, keep focus, and cancel
 });
 
 test('native Enter and Space activate labeled schematic equipment without repairing during inspect',()=>{
-  const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);bench.complete();
+  const bench=fixture({caseId:'INC-101',stateOverride:state=>({...state,assembly:{...state.assembly,panelInstalled:false,panelScrews:[false,false]}})}),before=structuredClone(bench.state);bench.complete();
   for(const [id,key]of [['ram','Enter'],['gpu',' ']]){const target=bench.pictures().find(item=>item.dataset.asmPicture===id);let prevented=false;bench.listeners.get('keydown')({target,key,preventDefault(){prevented=true;}});assert.equal(prevented,true);assert.equal(bench.fields.get('[data-asm-select]').value,id);}
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
@@ -230,11 +302,16 @@ test('tool drawers retain user disclosure and picker focus across equipment upda
   bench.click('asmTool','inspect');assert.equal(bench.fields.get('[data-asm-tool-drawer]').hidden,true);bench.controller.dispose();
 });
 
-test('all eighteen numbered screws are native targets and still obey safety rules',()=>{
+test('only the panel screws are exposed until removal, and every internal screw still obeys safety rules',()=>{
   const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);bench.complete();bench.click('asmTool','screwdriver');
-  for(const[group,spec]of Object.entries(ASSEMBLY_FASTENERS))for(let i=0;i<spec.count;i++)assert.ok(bench.picture.includes(`data-asm-picture="${group}-${i}"`));
+  for(const id of ['panel-0','panel-1'])assert.ok(bench.picture.includes('data-asm-picture="'+id+'"'));
+  for(const group of ['psu','board','cooler','gpu','ssd'])assert.ok(!bench.picture.includes('data-asm-picture="'+group+'-0"'));
   bench.click('asmPicture','panel-0');assert.equal(bench.committed.at(-1),'asm-loosen-panel-0');assert.deepEqual(bench.state,before);
-  bench.click('asmToggle','power');bench.click('assemblyAction','unplug');bench.click('asmPicture','panel-0');assert.equal(bench.state.assembly.panelScrews[0],false);bench.controller.dispose();
+  bench.click('asmToggle','power');bench.click('assemblyAction','unplug');
+  for(const id of ['panel-0','panel-1'])bench.click('asmPicture',id);
+  bench.click('asmToggle','panel');assert.equal(bench.state.assembly.panelInstalled,false);
+  for(const[group,spec]of Object.entries(ASSEMBLY_FASTENERS))for(let i=0;i<spec.count;i++)assert.ok(bench.picture.includes('data-asm-picture="'+group+'-'+i+'"'));
+  bench.controller.dispose();
 });
 
 test('optional native part dragging proposes only a matching mount or tray action on release',()=>{
@@ -292,7 +369,7 @@ test('display tickets show only their needed controls until the complete set is 
   const bench=fixture({caseId:'INC-101'}),before=structuredClone(bench.state);
   assert.equal(bench.fields.get('[data-asm-ticket-title]').textContent,'Display checks');
   assert.equal(bench.fields.get('[data-asm-select]').value,'display');
-  assert.match(bench.picture,/Full PC X-ray workbench with monitor/);
+  assert.match(bench.picture,/Virtual PC workbench with monitor/);
   const buttons=bench.root.querySelectorAll('[data-asm-tool]');
   assert.deepEqual(buttons.filter(button=>!button.hidden).map(button=>button.dataset.asmTool),['inspect','cables']);
   assert.doesNotMatch(bench.fields.get('[data-asm-select]').innerHTML,/value="(?:psu|cpu|ram|paste)"/);
@@ -388,12 +465,12 @@ test('ticket guidance refresh keeps selected cable, full view, disclosure and na
   const focused=bench.doc.activeElement;bench.controller.update(bench.state);
   assert.equal(bench.doc.activeElement,focused);assert.equal(bench.fields.get('[data-asm-tool-drawer]').open,false);
   assert.match(bench.fields.get('[data-asm-tool-controls]').innerHTML,/value="hdmi-monitor" selected/);
-  assert.match(bench.picture,/Full PC X-ray workbench with monitor/);
+  assert.match(bench.picture,/Virtual PC workbench with monitor/);
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
 test('fan motion follows powered fitted components even when POST fails, and stops for AC standby',()=>{
-  const bench=fixture({caseId:'INC-103'}),before=structuredClone(bench.state);
+  const bench=fixture({caseId:'INC-103',stateOverride:state=>({...state,assembly:{...state.assembly,panelInstalled:false,panelScrews:[false,false]}})}),before=structuredClone(bench.state);
   assert.equal(bench.state.booted,false);assert.match(bench.fields.get('[data-asm-activity-label]').textContent,/startup blocked/i);
   for(const part of ['cpu','psu','gpu'])assert.match(bench.picture,new RegExp(`class="[^"]*asm-fan-${part}" data-running="true"`));
   assert.match(bench.fields.get('[data-asm-fan-status]').textContent,/CPU cooler fan: running/);
@@ -416,14 +493,14 @@ test('the visible activity banner gives neutral state guidance while detailed di
 });
 
 test('a disconnected CPU fan stays still while other powered fans and startup status remain independently modeled',()=>{
-  const bench=fixture({caseId:'INC-103',stateOverride:state=>({...state,assembly:{...state.assembly,cpuFanConnected:false}})});
+  const bench=fixture({caseId:'INC-103',stateOverride:state=>({...state,assembly:{...state.assembly,cpuFanConnected:false,panelInstalled:false,panelScrews:[false,false]}})});
   assert.match(bench.picture,/asm-fan-cpu" data-running="false"/);
   assert.match(bench.picture,/asm-fan-psu" data-running="true"/);assert.match(bench.picture,/asm-fan-gpu" data-running="true"/);
   assert.match(bench.fields.get('[data-asm-fan-status]').textContent,/CPU cooler fan: stopped/);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
 test('only curved fan blades rotate while PSU grilles, hubs and GPU housings remain fixed',()=>{
-  const bench=fixture({caseId:'INC-103'});
+  const bench=fixture({caseId:'INC-103',stateOverride:state=>({...state,assembly:{...state.assembly,panelInstalled:false,panelScrews:[false,false]}})});
   for(const kind of ['psu','gpu']){
     const rotor=new RegExp(`<g class="asm-fan asm-fan-${kind}"[^>]*>([\\s\\S]*?)<\\/g>`).exec(bench.picture);
     assert.ok(rotor,kind);assert.equal((rotor[1].match(/<path /g)||[]).length,4);

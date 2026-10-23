@@ -1,4 +1,4 @@
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261022-learning';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261022-controls';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
@@ -365,7 +365,7 @@ function storyCard(id){
   const card=cards[key(id)];return card?'<figure class="code-story-card"><svg viewBox="0 0 160 80" aria-hidden="true" focusable="false">'+card.art+'</svg><figcaption><strong>'+esc(card.title)+'</strong><p>'+esc(card.caption)+'</p></figcaption></figure>':'';
 }
 
-function languageReference(language) {
+export function codingLanguageReference(language) {
   const python=language==='python';
   const sample=python?'score = 4\nscore = score + 1\nprint("Score", score)\nif score > 3:\n    print("Above three")\nelif score == 3:\n    print("Exactly three")\nelse:\n    print("Below three")\nfor number in range(1, 4):\n    print("Practice", number)':
     'let score = 4;\nscore = score + 1;\nconsole.log("Score " + score);\nif (score > 3) {\n  console.log("Above three");\n} else {\n  console.log("Three or less");\n}\nfor (let number = 1; number <= 3; number++) {\n  console.log("Practice " + number);\n}';
@@ -387,7 +387,7 @@ export function renderCoding(root,scenario,saved,onAction) {
     '<label for="coding-editor"><b>Your code</b><small>Fixture input: <code>'+esc(definition.input)+'</code> · 4,000 characters maximum</small></label><textarea id="coding-editor" name="code" rows="14" maxlength="4000" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="code-save-help code-language-help code-program-error">'+esc(state.code)+'</textarea><p id="code-save-help">Run all fixtures and Test my idea both save and test the editor’s current text. Changing lab sections keeps your editor in place.</p><div class="code-actions"><button type="submit">Save code</button><button type="button" data-code-run>Run all fixtures</button><button type="button" data-code-reset>Reset starter</button></div><p data-code-status role="status"></p></form>'+
     '<section class="code-console-panel"><label for="code-fixture"><b>Inspect a test fixture</b></label><select id="code-fixture" data-code-fixture>'+definition.values.map((value,index)=>'<option value="'+index+'"'+(index===state.fixtureIndex?' selected':'')+'>'+esc(definition.input)+' = '+value+'</option>').join('')+'</select><h3>Expected output</h3><pre class="code-console code-expected" tabindex="0" role="region" aria-label="Expected program output">'+esc(expected.join('\n'))+'</pre><h3>Actual output</h3><pre class="code-console" data-code-output tabindex="0" role="region" aria-label="Program output"></pre><p id="code-program-error" data-code-error role="status" aria-atomic="true" class="code-error"></p><ul class="code-fixture-results">'+(state.tested?state.results.map(result=>'<li class="'+(result.ok?'code-pass':'code-fail')+'"><span>'+(result.ok?'PASS':'CHECK')+'</span> '+esc(result.label)+'</li>').join(''):'<li>Run the program to see results for every fixture.</li>')+'</ul>'+
     '<details class="code-play"><summary>Play with another input</summary><p id="code-play-help">Try the current draft with a made-up number. This extra run stays in this panel and cannot pass the investigation’s official fixtures.</p><label for="code-play-input">Your '+esc(definition.input)+'</label><input id="code-play-input" data-code-play-input type="number" min="'+minimum+'" max="'+maximum+'" step="1" value="'+definition.values[state.fixtureIndex]+'" aria-describedby="code-play-help code-play-result"><button type="button" data-code-play>Try my input</button><pre id="code-play-result" class="code-console" data-code-play-output tabindex="0" role="status" aria-live="polite" aria-label="Extra practice output">Your extra output will appear here.</pre></details></section></div>'+
-    '<details class="code-reference"><summary>'+esc(language.label)+' reference & examples</summary><div>'+languageReference(state.language)+'</div></details></div></section>';
+    '<details class="code-reference"><summary>'+esc(language.label)+' reference & examples</summary><div>'+codingLanguageReference(state.language)+'</div></details></div></section>';
   root.querySelector('[data-code-output]').textContent=state.tested?(selected?.output.join('\n')||'(No output)'):'Run all fixtures to see this program’s output.';
   root.querySelector('[data-code-error]').textContent=selected?.error?'Line '+selected.error.line+': '+selected.error.message:'';
   const editor=root.querySelector('[name="code"]'),draft=()=>({code:editor.value});
