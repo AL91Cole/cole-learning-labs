@@ -129,7 +129,8 @@ test('teaching module loads without a browser and does not expose networking or 
   const html=renderTeachingPage(SCENARIOS);
   assert.match(html,/Copy teacher prompt/);assert.match(html,/does not generate AI replies or contact an AI service/);
   assert.match(html,/school’s authenticated teacher resources/);
-  assert.doesNotMatch(html,/type="(?:text|email|password)"|contenteditable/);
+  assert.doesNotMatch(html,/type="(?:email|password)"|contenteditable/);
+  assert.match(html,/data-plan-field="title" maxlength="100"/);assert.match(html,/does not upload your plan/);
 });
 
 test('printed lessons keep vocabulary visible and exclude surrounding page content',async()=>{

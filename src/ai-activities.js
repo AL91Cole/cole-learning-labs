@@ -1,5 +1,5 @@
 // Fixed teaching boards. Controls produce the existing workspace actions only.
-import {interactiveToolAction,interactiveToolFields} from './interactive-tools.js?release=20261025-coding-visuals';
+import {interactiveToolAction,interactiveToolFields} from './interactive-tools.js?release=20261025-learning-plans';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const code=id=>typeof id==='string'?id.replaceAll('-','').toUpperCase():'';
 const IDS=['AI301','AI302','AI303','AI304','AI305','AI306'];

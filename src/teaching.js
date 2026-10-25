@@ -1,3 +1,4 @@
+import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261025-learning-plans';
 /** Public teaching supports. This module never reads student work or contacts a provider. */
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const validId = value => /^(?:INC|NET|AI|SEC|CODE)-\d{3}$/.test(String(value));
@@ -238,13 +239,14 @@ function renderPreparation(scenario) {
 export function renderTeachingPage(scenarios) {
   const available=(Array.isArray(scenarios)?scenarios:[]).filter(item=>validId(item?.id)&&lessons[lessonId(item)]);
   if (!available.length) return '<section class="wrap section teaching-page"><h1>Teaching toolkit</h1><p>No reviewed lesson plans are available.</p></section>';
-  return `<div class="teaching-page"><header class="wrap page-intro"><p class="eyebrow">Ready to teach · Grades 7–12</p><h1>A lesson plan for every investigation.</h1><p>Choose a lab, time, and support level. Share a public assignment link, model the reasoning process, and use the evidence to guide discussion. Readiness and learning needs determine support; grade bands are starting suggestions.</p></header><section class="wrap teaching-launcher" aria-labelledby="teaching-launcher-title"><h2 id="teaching-launcher-title">Plan your lesson</h2><div class="teaching-controls"><label>Investigation<select data-teaching-field="lab">${available.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.id+' · '+item.title)+'</option>').join('')}</select></label><label>Lesson time<select data-teaching-field="duration">${options({20:'20 minutes',40:'40 minutes',60:'60 minutes'},'40')}</select></label><label>Learning support<select data-teaching-field="mode">${options(Object.fromEntries(learningModes.map(item=>[item.id,item.label])),'guided')}</select></label><label>Working arrangement<select data-teaching-field="grouping">${options({pairs:'Pairs with rotating roles',individual:'Individual investigation'},'pairs')}</select></label></div><p class="teaching-mode-help" data-teaching-mode-help>${esc(learningModes[0].description)} All safety and accessibility support stays available.</p><div data-teaching-plan>${renderPlan(buildLessonPlan(available[0]))}</div>${renderPreparation(available[0])}<p class="teaching-status" role="status" aria-live="polite" data-teaching-status></p></section></div>`;
+  return `<div class="teaching-page"><header class="wrap page-intro"><p class="eyebrow">Ready to teach · Grades 7–12</p><h1>Pick a lesson. Make it yours.</h1><p>Choose a ready plan or build your own. Preview the activities, then copy or download what you need.</p></header>${renderLessonPlans()}<details class="wrap teaching-investigation-plans"><summary>Plan a specific investigation</summary><section class="teaching-launcher" aria-labelledby="teaching-launcher-title"><h2 id="teaching-launcher-title">Plan your lesson</h2><div class="teaching-controls"><label>Investigation<select data-teaching-field="lab">${available.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.id+' · '+item.title)+'</option>').join('')}</select></label><label>Lesson time<select data-teaching-field="duration">${options({20:'20 minutes',40:'40 minutes',60:'60 minutes'},'40')}</select></label><label>Learning support<select data-teaching-field="mode">${options(Object.fromEntries(learningModes.map(item=>[item.id,item.label])),'guided')}</select></label><label>Working arrangement<select data-teaching-field="grouping">${options({pairs:'Pairs with rotating roles',individual:'Individual investigation'},'pairs')}</select></label></div><p class="teaching-mode-help" data-teaching-mode-help>${esc(learningModes[0].description)} All safety and accessibility support stays available.</p><div data-teaching-plan>${renderPlan(buildLessonPlan(available[0]))}</div>${renderPreparation(available[0])}<p class="teaching-status" role="status" aria-live="polite" data-teaching-status></p></section></details></div>`;
 }
 
 export function mountTeachingPage(root,scenarios,{notify}={}) {
   if (!root?.querySelector || !root.addEventListener) return ()=>{};
   const available=(Array.isArray(scenarios)?scenarios:[]).filter(item=>validId(item?.id)&&lessons[lessonId(item)]);
   if (!available.length) return ()=>{};
+  const disposePlans=mountLessonPlans(root,{notify});
   const field=name=>root.querySelector('[data-teaching-field="'+name+'"]');
   const selected=()=>available.find(item=>item.id===field('lab')?.value)||available[0];
   const status=message=>{const target=root.querySelector('[data-teaching-status]');if(target)target.textContent=message;if(typeof notify==='function')notify(message);};
@@ -278,5 +280,5 @@ export function mountTeachingPage(root,scenarios,{notify}={}) {
     catch {status(action==='copy-link'?'Copy is unavailable. Open the student assignment and copy its address.':'Copy is unavailable. Select the prepared prompt and copy it manually.');}
   }
   root.addEventListener('change',update);root.addEventListener('click',act);
-  return ()=>{root.removeEventListener('change',update);root.removeEventListener('click',act);};
+  return ()=>{disposePlans();root.removeEventListener('change',update);root.removeEventListener('click',act);};
 }

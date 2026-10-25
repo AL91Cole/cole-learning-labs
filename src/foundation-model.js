@@ -1,5 +1,5 @@
-import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261025-coding-visuals';
-import { executeCoding } from './coding-lab.js?release=20261025-coding-visuals';
+import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261025-learning-plans';
+import { executeCoding } from './coding-lab.js?release=20261025-learning-plans';
 
 const item = (id,label,looks,role) => ({id,label,looks,role});
 const check = (id,prompt,options,answer,explanation) => ({id,prompt,options:options.map(([id,label])=>({id,label})),answer,explanation});
@@ -55,6 +55,7 @@ export const FOUNDATION_LABS = deepFreeze([
       check('automatic-address','Which service gives the PC its network settings automatically?',[['dhcp','DHCP'],['dns','DNS'],['gpu','Graphics card']],'dhcp','DHCP gives the PC its automatic network settings. DNS looks up names.'),
       check('name-lookup','The cable works, but a site name cannot be found. What should you check?',[['cooler','Processor cooler'],['dns','Name lookup (DNS)'],['panel','Side panel']],'dns','DNS finds an address from a name. After checking it, try opening the practice page.')
     ],
+    choices:[{"action":"test-unwired","label":"Try the page first","feedback":"Connect the cable first. A page request needs a physical path."},{"action":"skip-settings","label":"Skip the address settings","feedback":"The cable is connected, but the PC still needs an IP address and gateway."},{"action":"skip-dns","label":"Skip the name lookup","feedback":"The address is ready. DNS must still find the practice page by name."}],
     jobs:[job('connect-wired','Connect the practice PC to the switch.','Connect the Ethernet cable'),job('request-dhcp','Use DHCP to get the practice PC’s network settings.','Get automatic settings'),job('test-service','Use DNS to find the practice page, then open it.','Open the practice page')]},
   {id:'ai',code:'AI-300',slug:'ai',track:'ai',title:'Understand an AI response',grade:'7–12',minutes:12,nextLab:'AI-301',
     summary:'Learn how an AI reply is made and check a practice answer.',
@@ -72,6 +73,7 @@ export const FOUNDATION_LABS = deepFreeze([
       check('check-claim','An AI reply sounds certain. What should you do first?',[['confidence','Trust its confident wording'],['evidence','Compare it with a reliable source'],['repeat','Copy it unchanged']],'evidence','Sounding certain does not make a claim true. Check the source and correct any errors.'),
       check('human-responsibility','Who decides whether the checked reply is ready to use?',[['human','A human reviewer'],['model','The AI alone'],['format','The page design']],'human','A person checks whether the reply is accurate, fair and suitable.')
     ],
+    choices:[{"action":"use-private-prompt","label":"Use a real class list","feedback":"Keep private details out. Use the made-up classroom prompt."},{"action":"accept-claim","label":"Keep the original reply","feedback":"The source does not say to restart every 30 minutes. Correct the claim before using it."},{"action":"skip-human","label":"Let the AI approve itself","feedback":"A person must check the reply for accuracy, fairness and suitability."}],
     jobs:[job('choose-fictional','Use the prepared prompt about a made-up classroom.','Use the practice prompt'),job('check-evidence','The AI says to restart every 30 minutes. The source says to save work and restart only when instructed. Correct the reply.','Correct the reply'),job('request-human-review','Check the corrected reply for accuracy and fairness. Keep a person in charge of using it.','Complete human review')]},
   {id:'security',code:'SEC-400',slug:'security',track:'security',title:'Practice safe security habits',grade:'7–12',minutes:12,nextLab:'SEC-401',
     summary:'Learn where testing is allowed and how to protect a practice account.',
@@ -89,6 +91,7 @@ export const FOUNDATION_LABS = deepFreeze([
       check('two-factors','Which sign-in uses two different types of proof?',[['passwords','Two different passwords'],['mfa','A password and an approved authenticator'],['username','A username and a password']],'mfa','A password is something you know. An authenticator can give a second, different type of proof.'),
       check('access-limit','How much access should a practice learner have?',[['admin','Administrator access everywhere'],['minimum','Only the access needed for the task'],['shared','A shared teacher account']],'minimum','Least privilege means giving only the access needed. Do not share a teacher account.')
     ],
+    choices:[{"action":"ignore-scope","label":"Test any account","feedback":"Only the made-up training account is allowed. Check the practice rules first."},{"action":"use-two-passwords","label":"Add another password","feedback":"Two passwords are the same type of proof. Choose a practice authenticator as the second factor."},{"action":"keep-admin","label":"Keep administrator access","feedback":"The learner task does not need administrator access. Give only the access needed."}],
     jobs:[job('confirm-scope','Read the permission card. Only this made-up training account is allowed.','Confirm the practice rules'),job('enable-mfa','Add a second sign-in factor to the practice account. No real password or device is needed.','Add the practice second factor'),job('least-privilege','Change the practice account from administrator to the limited learner role.','Limit the account access')]},
   {id:'coding',code:'CODE-500',slug:'coding',track:'coding',title:'Read, change, and test code',grade:'7–12',minutes:15,nextLab:'CODE-501',
     summary:'Read a short program, fix its calculation and check the results.',
@@ -254,6 +257,8 @@ export function applyFoundationAction(id,previous,action) {
     return result(`${passed} of 3 tests passed for this code. ${passed===3?'The same program handles all three quantities.':'Compare the result with the expected answer. Change one thing, then run again.'}`,passed===3?'success':'warning');
   }
   if(type!=='practice')return result('Choose the current practice step.','warning');
+  const alternative=lab.choices?.find(choice=>choice.action===own(action,'action'));
+  if(alternative)return result(alternative.feedback,'warning');
   if(!lab.jobs.some(job=>job.action===own(action,'action')))return result('Choose a labelled practice step.','warning');
   const next=lab.jobs[state.practice.length];
   if(!next)return result('Practice is complete. Explain what happened next.');

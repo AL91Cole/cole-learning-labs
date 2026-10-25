@@ -1,7 +1,7 @@
-import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261025-coding-visuals';
-import { normalizeWorkspaceState, verifyWorkspace } from './workspaces.js?release=20261025-coding-visuals';
-import { inquiryProgress } from './interview.js?release=20261025-coding-visuals';
-import { retainExperimentEvents, readExperiments, observationSnapshot } from './experiments.js?release=20261025-coding-visuals';
+import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261025-learning-plans';
+import { normalizeWorkspaceState, verifyWorkspace } from './workspaces.js?release=20261025-learning-plans';
+import { inquiryProgress } from './interview.js?release=20261025-learning-plans';
+import { retainExperimentEvents, readExperiments, observationSnapshot } from './experiments.js?release=20261025-learning-plans';
 
 // A saved explanation and a fresh working setup are both needed for page 3.
 // This guides the lesson; imported learner work is not an assessment credential.

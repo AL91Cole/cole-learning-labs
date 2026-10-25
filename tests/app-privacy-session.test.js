@@ -39,7 +39,7 @@ function harness() {
   const initialPracticeStates = { 'NET-201': { ...initialWorkspaceState('NET-201'), ip: '10.24.8.26', workspaceEdits: 2 } };
   const initialNetworkState = {...initialNetworkStudioState(),runs:2};
   const initialStudioState = { ...initialCodingStudioState('blank'), code: 'print("Private fictional creative draft");', runs: 1 };
-  const events = new Map(), notices = [], calls = { disposed: 0, scheduled: 0, rendered: 0, sandboxCleared: 0 };
+  const events = new Map(), notices = [], calls = { disposed: 0, scheduled: 0, rendered: 0, sandboxCleared: 0, lessonPlansCleared: 0 };
   const status = { textContent: '' };
   let mounted;
   const context = vm.createContext({
@@ -51,6 +51,7 @@ function harness() {
     workStatus: currentRecord => currentRecord.notes || '',
     mountWorkControls(options) { mounted = options; },
     clearCodingSandboxWork() { calls.sandboxCleared++; },
+    clearLessonPlanWork() { calls.lessonPlansCleared++; },
     renderRoute() { calls.rendered++; }, showNotice(message) { notices.push(message); }
   });
   // Use the production lifecycle functions with the real storage manager. Only
@@ -94,6 +95,7 @@ function assertReset(h) {
   assert.notEqual(state.networkStudioState,h.initialNetworkState);
   assert.equal(h.calls.disposed, 1); assert.equal(h.calls.rendered, 1);
   assert.equal(h.calls.sandboxCleared, 1);
+  assert.equal(h.calls.lessonPlansCleared, 1);
 }
 
 function saveAndResumeIndependent(h) {
@@ -192,4 +194,24 @@ test('saving-mode changes keep the same live bound record and persist later lear
   h.context.saveCurrentWork();
   assert.equal(JSON.parse(h.storage.getItem(classroomKey)).labs['INC-101'].notes,bound.notes);
   assert.equal(h.calls.rendered,0,'Saving-mode changes must preserve the current mounted lab.');
+});
+
+
+test('educator lesson drafts warn before leaving and clear on document exit regardless of investigation saving', () => {
+  const events=new Map();let dirty=false,clears=0,markupCleared=0;
+  const context=vm.createContext({
+    window:{addEventListener(name,listener){events.set(name,listener);}},
+    networkStudioHasWork:()=>false,networkStudioState:{},initialNetworkStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,
+    codingStudioHasWork:()=>false,codingStudioState:{},initialCodingStudioState:()=>({}),hasFoundationWork:()=>false,
+    hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},hasLessonPlanWork:()=>dirty,clearLessonPlanWork(){dirty=false;clears++;},
+    workStorage:{persistent:true},store:{labs:{}},hasPrivateWork:()=>false,hasCodeDraft:()=>false,
+    $:selector=>selector==='#main'?{replaceChildren(){markupCleared++;}}:null,
+    foundationRecords:{},labNavigation:null,disposeHardware(){},routeCleanup:null,reportCleanup:null,classroomConnection:null
+  });
+  for(const name of ['beforeunload','pagehide'])vm.runInContext(source.split('\n').find(line=>line.startsWith("window.addEventListener('"+name+"'")),context);
+  const event=()=>({prevented:false,preventDefault(){this.prevented=true;}});
+  const pristine=event();events.get('beforeunload')(pristine);assert.equal(pristine.prevented,false);
+  dirty=true;const changed=event();events.get('beforeunload')(changed);assert.equal(changed.prevented,true);assert.equal(changed.returnValue,'');
+  events.get('pagehide')();assert.equal(dirty,false);assert.equal(clears,1);assert.equal(markupCleared,1);
+  const cleared=event();events.get('beforeunload')(cleared);assert.equal(cleared.prevented,false);
 });

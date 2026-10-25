@@ -1,6 +1,6 @@
-import {learningModes,renderLabLearning} from './teaching.js?release=20261025-coding-visuals';
-import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261025-coding-visuals';
-import {transferCaseFor} from './scenarios.js?release=20261025-coding-visuals';
+import {learningModes,renderLabLearning} from './teaching.js?release=20261025-learning-plans';
+import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261025-learning-plans';
+import {transferCaseFor} from './scenarios.js?release=20261025-learning-plans';
 
 export function learningRoute(hash) {
   const [path,query='']=String(hash||'').replace(/^#/,'').split('?'),params=new URLSearchParams(query);

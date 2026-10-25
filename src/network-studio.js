@@ -1,4 +1,4 @@
-import {NETWORK_DEVICE_TYPES,initialNetworkStudioState,normalizeNetworkStudioState,applyNetworkStudioAction,evaluateNetworkStudio} from './network-studio-model.js?release=20261025-coding-visuals';
+import {NETWORK_DEVICE_TYPES,initialNetworkStudioState,normalizeNetworkStudioState,applyNetworkStudioAction,evaluateNetworkStudio} from './network-studio-model.js?release=20261025-learning-plans';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const specFor=type=>NETWORK_DEVICE_TYPES.find(item=>item.id===type);
 const titleFor=(state,id)=>state.devices.find(device=>device.id===id)?.label||'Device';

@@ -64,3 +64,18 @@ Use `#sandbox/blank` to make an original JavaScript- or Python-subset project, o
 Choose text, number bars, or pixel tiles. Bars use finite numbers printed on their own lines. Tiles use at most eight equal rows of up to eight digits from 0 through 9, separated by spaces. Other output stays literal text. Visual output represents the program, not a grade or a promise of correctness.
 
 Source and output stay within the existing interpreter limits. No code gains browser, file, network, shell, package or general runtime access. Drafts remain in page memory and clear through the existing local-work controls; copy or download text to keep a project.
+
+
+## Start with a hands-on tour
+
+The Student Guide at `#guide` uses a short local demonstration. Learners choose a clue, predict a result, change the setup and inspect a test before practising the report handoff. The tour does not award investigation completion. Compact optional references retain safety, keyboard, saving and report-submission guidance.
+
+## Beginner practice
+
+The five Learn the Basics activities retain their ordered exploration, checks, practical task and separate explanations. The current task and visual result sit beside the controls. Diagram actions use the same guarded foundation model as the named controls; they cannot bypass required exploration or checks. Fictional network signals and AI/security states describe the local activity rather than real external services.
+
+## Educator lesson plans
+
+The lesson bank covers each grade from 7 through 12 in hardware, networking, AI, cybersecurity and coding. These are teaching starting points within the site's supported age range, not a statement that grade alone determines readiness. Choose a grade and category, open a ready-made lesson, or adapt it into a custom plan. The existing investigation planner and standards concept table remain available.
+
+Educators can create, preview, keep and remove their own plans on the page, and copy or download a text version. The editor treats all text as content, never as executable markup or AI instructions. Custom drafts and kept plans survive ordinary site navigation in page memory. Reload, close, page exit and the site's local-work clear remove them, even if investigation device saving is enabled. A warning covers unsaved page-only lesson work. There is no automatic plan upload, AI generation, publication, roster, or new storage service. Downloaded files and clipboard contents are separate from the page.

@@ -1,30 +1,31 @@
-import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261025-coding-visuals';
-import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261025-coding-visuals';
-import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261025-coding-visuals';
-import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261025-coding-visuals';
-import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261025-coding-visuals';
-import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261025-coding-visuals';
-import {SCENARIOS} from './scenarios.js?release=20261025-coding-visuals';
-import {labLanguage} from './lab-language.js?release=20261025-coding-visuals';
-import {requesterPersona} from './requester-persona.js?release=20261025-coding-visuals';
-import {mountRequesterChat} from './requester-chat.js?release=20261025-coding-visuals';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261025-coding-visuals';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261025-coding-visuals';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261025-coding-visuals';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261025-coding-visuals';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261025-coding-visuals';
-import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261025-coding-visuals';
-import {privacyPage} from './privacy.js?release=20261025-coding-visuals';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261025-coding-visuals';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261025-coding-visuals';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261025-coding-visuals';
+import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261025-learning-plans';
+import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261025-learning-plans';
+import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261025-learning-plans';
+import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261025-learning-plans';
+import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261025-learning-plans';
+import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261025-learning-plans';
+import {SCENARIOS} from './scenarios.js?release=20261025-learning-plans';
+import {labLanguage} from './lab-language.js?release=20261025-learning-plans';
+import {requesterPersona} from './requester-persona.js?release=20261025-learning-plans';
+import {mountRequesterChat} from './requester-chat.js?release=20261025-learning-plans';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261025-learning-plans';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261025-learning-plans';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261025-learning-plans';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261025-learning-plans';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261025-learning-plans';
+import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261025-learning-plans';
+import {privacyPage} from './privacy.js?release=20261025-learning-plans';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261025-learning-plans';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261025-learning-plans';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261025-learning-plans';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261025-coding-visuals';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261025-coding-visuals';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261025-coding-visuals';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261025-coding-visuals';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261025-coding-visuals';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261025-coding-visuals';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261025-learning-plans';
+import {hasLessonPlanWork,clearLessonPlanWork} from './lesson-plans.js?release=20261025-learning-plans';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261025-learning-plans';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261025-learning-plans';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261025-learning-plans';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261025-learning-plans';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261025-learning-plans';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -48,10 +49,10 @@ let labView=null;
 let labNavigation=null;
 let currentLab=null,libraryTrack='all',libraryGrade='all',libraryMinutes='all',libraryQuery='',noticeTimer,classroomConnection=null;
 function save(){storageAvailable=workStorage.save(store);if(!storageAvailable)showNotice('Device saving is unavailable. Export your private work before leaving.');classroomConnection?.schedule();}
-function resetLocalSession(){practiceStates=Object.create(null);networkStudioState=initialNetworkStudioState();codingStudioState=initialCodingStudioState();clearCodingSandboxWork();foundationRecords=Object.create(null);workStorage.pause();classroomConnection?.dispose();classroomConnection=null;classroomSharingPaused=true;labView=null;storageKey=WORK_PREFIX;workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});store={version:2,labs:{}};renderRoute(false);}
+function resetLocalSession(){practiceStates=Object.create(null);networkStudioState=initialNetworkStudioState();codingStudioState=initialCodingStudioState();clearCodingSandboxWork();clearLessonPlanWork();foundationRecords=Object.create(null);workStorage.pause();classroomConnection?.dispose();classroomConnection=null;classroomSharingPaused=true;labView=null;storageKey=WORK_PREFIX;workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});store={version:2,labs:{}};renderRoute(false);}
 function bindWorkPrivacy(s){mountWorkControls({host:$('#work-privacy'),manager:workStorage,getStore:()=>store,scenarioId:s.id,replaceStore:value=>{store=value;renderRoute(false);},onClear:cleared=>{resetLocalSession();showNotice(cleared?'Local lab data cleared. Downloads and previously submitted records are separate.':'This page’s work is cleared, but device deletion could not be confirmed. Clear this site’s data in browser settings before sharing the profile.');},onChange:()=>{bindWorkPrivacy(s);const status=$('.save-status');if(status)status.textContent=workStatus(store.labs[s.id]||{},workStorage);}});}
 window.addEventListener('storage',event=>{if(event.key===CLEAR_WORK_KEY&&event.newValue){resetLocalSession();showNotice('Local lab data was cleared in another tab. This page has stopped saving and sharing.');}});
-window.addEventListener('pagehide',()=>{practiceStates=Object.create(null);networkStudioState=initialNetworkStudioState();codingStudioState=initialCodingStudioState();clearCodingSandboxWork();foundationRecords=Object.create(null);labNavigation=null;disposeHardware($('#workspace'));routeCleanup?.();routeCleanup=null;reportCleanup?.();reportCleanup=null;classroomConnection?.dispose();$('#main')?.replaceChildren();if(!workStorage.persistent){labView=null;store={version:2,labs:{}};}});
+window.addEventListener('pagehide',()=>{practiceStates=Object.create(null);networkStudioState=initialNetworkStudioState();codingStudioState=initialCodingStudioState();clearCodingSandboxWork();clearLessonPlanWork();foundationRecords=Object.create(null);labNavigation=null;disposeHardware($('#workspace'));routeCleanup?.();routeCleanup=null;reportCleanup?.();reportCleanup=null;classroomConnection?.dispose();$('#main')?.replaceChildren();if(!workStorage.persistent){labView=null;store={version:2,labs:{}};}});
 window.addEventListener('pageshow',event=>{if(event.persisted)renderRoute();});
 function hasCodeDraft(){const editor=$('#coding-editor');return !!editor&&currentLab?.track==='coding'&&editor.value!==store.labs[currentLab.id]?.state.code;}
 function preserveCodeDraft(){
@@ -61,7 +62,7 @@ function preserveCodeDraft(){
   record.state=result.state;record.verified=false;record.closed=false;
   record.events.push({time:new Date().toISOString(),kind:'info',message:'Draft program preserved when leaving the lab. Run all fixtures to test this version.'});record.events=retainExperimentEvents(currentLab,record.events);save();
 }
-window.addEventListener('beforeunload',event=>{if(networkStudioHasWork(networkStudioState)||Object.entries(practiceStates).some(([id,state])=>practiceHasWork(id,state))||codingStudioHasWork(codingStudioState)||hasFoundationWork()||hasCodingSandboxWork()||(!workStorage.persistent&&Object.values(store.labs).some(hasPrivateWork))||$('#student-question')?.value.trim()||hasCodeDraft()){event.preventDefault();event.returnValue='';}});
+window.addEventListener('beforeunload',event=>{if(networkStudioHasWork(networkStudioState)||Object.entries(practiceStates).some(([id,state])=>practiceHasWork(id,state))||codingStudioHasWork(codingStudioState)||hasFoundationWork()||hasCodingSandboxWork()||hasLessonPlanWork()||(!workStorage.persistent&&Object.values(store.labs).some(hasPrivateWork))||$('#student-question')?.value.trim()||hasCodeDraft()){event.preventDefault();event.returnValue='';}});
 function showNotice(message){const n=$('#notice');n.textContent=message;n.hidden=false;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>{n.hidden=true;},5000);}
 function recordFor(scenario){const existing=Object.hasOwn(store.labs,scenario.id)?store.labs[scenario.id]:null;return store.labs[scenario.id]=normalizeLabRecord(scenario,existing);}
 function countComplete(){return SCENARIOS.filter(s=>store.labs[s.id]?.closed===true).length;}
@@ -417,7 +418,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261025-coding-visuals');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261025-learning-plans');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -429,7 +430,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261025-coding-visuals');
+      const cryptoModule=await import('./report-crypto.js?release=20261025-learning-plans');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;

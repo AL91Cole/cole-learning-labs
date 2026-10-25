@@ -1,9 +1,9 @@
-import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261025-coding-visuals';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-coding-visuals';
-import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261025-coding-visuals';
-import {getNetworkBenchSpec,networkBenchInitial,normalizeNetworkBench,networkBenchSignature,networkCableChecks,applyNetworkBenchAction} from './network-bench.js?release=20261025-coding-visuals';
-import {NETWORK_CONFIG,networkChecks,networkDiagnostic} from './network-labs.js?release=20261025-coding-visuals';
-import {renderNetworkVisual,mountNetworkVisual} from './network-visuals.js?release=20261025-coding-visuals';
+import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261025-learning-plans';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-learning-plans';
+import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261025-learning-plans';
+import {getNetworkBenchSpec,networkBenchInitial,normalizeNetworkBench,networkBenchSignature,networkCableChecks,applyNetworkBenchAction} from './network-bench.js?release=20261025-learning-plans';
+import {NETWORK_CONFIG,networkChecks,networkDiagnostic} from './network-labs.js?release=20261025-learning-plans';
+import {renderNetworkVisual,mountNetworkVisual} from './network-visuals.js?release=20261025-learning-plans';
 /** Local, fictional equipment and decision models. No service, shell, or AI calls. */
 const code = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));

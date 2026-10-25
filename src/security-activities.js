@@ -1,4 +1,4 @@
-import {interactiveToolAction} from './interactive-tools.js?release=20261025-coding-visuals';
+import {interactiveToolAction} from './interactive-tools.js?release=20261025-learning-plans';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const code=id=>typeof id==='string'?id.replaceAll('-','').toUpperCase():'';
 const IDS=new Set(['SEC401','SEC402','SEC403','SEC404','SEC405','SEC406']);

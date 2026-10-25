@@ -304,3 +304,16 @@ test('legacy and damaged records keep legitimate practice but cannot invent a sa
   assert.equal(bounded.notes.length,2000);assert.equal(bounded.reflection.length,2000);assert.equal(bounded.explanationSaved,false);
   const invalid=step('network',completed,{type:'explain',notes:'A different answer.',reflection:[]},'warning').state;assert.equal(invalid.notes,completed.notes);assert.equal(invalid.reflection,completed.reflection);
 });
+
+test('authored practice alternatives teach mistakes without changing equipment or granting credit',()=>{
+  for(const id of ['network','ai','security']){
+    const lab=getFoundation(id);let state=prepared(id);
+    for(const [index,choice]of lab.choices.entries()){
+      const simulation=structuredClone(state.simulation),trial=step(id,state,{type:'practice',action:choice.action},'warning');
+      assert.equal(trial.message,choice.feedback);assert.deepEqual(trial.state.simulation,simulation);assert.equal(trial.state.practice.length,index);assert.equal(foundationSummary(id,trial.state).practiceComplete,false);
+      state=step(id,trial.state,{type:'practice',action:lab.jobs[index].action},'success').state;
+    }
+    assert.equal(foundationSummary(id,state).practiceComplete,true);assert.equal(foundationSummary(id,state).complete,false);
+    const blocked=step(id,createFoundationRecord(id),{type:'practice',action:lab.choices[0].action},'warning');assert.deepEqual(blocked.state.practice,[]);assert.match(blocked.message,/Explore each/);
+  }
+});

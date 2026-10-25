@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261025-coding-visuals';
+import { pcActivity } from './pc-activity.js?release=20261025-learning-plans';
 
 /** Control recommendations only. The equipment model still decides every repair. */
 const freezeList=values=>Object.freeze(values);

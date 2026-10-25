@@ -1,5 +1,5 @@
-import {codingVisualHTML} from './coding-visuals.js?release=20261025-coding-visuals';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-coding-visuals';
+import {codingVisualHTML} from './coding-visuals.js?release=20261025-learning-plans';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-learning-plans';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';

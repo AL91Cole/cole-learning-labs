@@ -1,29 +1,109 @@
-const topics = [
-  {id:'choose', title:'Choose how you want to practise', body:`<p>Open <a href="#labs">Virtual labs</a>. Choose the activity that fits your goal.</p><ul><li><strong>Beginner lab:</strong> learn the parts or ideas, follow a short practice job, then explain what you learned.</li><li><strong>Investigation:</strong> read a problem, collect clues, test a change, and explain the result.</li><li><strong>Coding sandbox:</strong> start with a blank program or an example. Choose what to build and run it with your own fictional input.</li></ul><p>Grade bands help you choose a starting point. Ask your teacher which activity to use for an assignment.</p>`},
-  {id:'basics', title:'Start with a beginner lab', body:`<ol><li>Choose a topic under <strong>Learn the basics</strong>.</li><li>In <strong>Explore &amp; learn</strong>, select each pictured item. Read its name and purpose.</li><li>In <strong>Practice &amp; test</strong>, answer the questions and follow the practice steps. Read the result before trying again.</li><li>In <strong>Check &amp; explain</strong>, write what you tried and learned. Select <strong>Finish practice &amp; open report</strong>.</li></ol><p><a href="#learn/hardware">Try the beginner hardware lab →</a></p>`},
-  {id:'clues', title:'Read the request and save your first idea', body:`<ol><li>Open an investigation. Read the request and its goal.</li><li>Ask the requester a question about the problem. Type your own question or use a starter. Some requests are missing a fact you need to ask about.</li><li>Open and read at least two clues.</li><li>Write the <strong>symptoms</strong>: what you notice happening.</li><li>In the separate box, write your <strong>possible cause</strong> and the clue that supports it.</li><li>Select <strong>Save first idea</strong>. When the requirements are complete, select <strong>Next: Workbench &amp; test</strong>.</li></ol><p>If Next is unavailable, read the progress message beside it. Later pages unlock when the required work is complete.</p>`},
-  {id:'hardware', title:'Open the virtual PC and use its controls', body:`<p>These instructions are for the pictured virtual PC. Follow your teacher’s separate safety instructions for physical equipment.</p><p>Choose either the <strong>PC picture</strong> or <strong>Part controls · keyboard &amp; touch</strong>. Both use the same equipment and safety checks. You can stay with one or switch between them.</p><ol><li>Read the monitor and the equipment status. Use <strong>Expand picture</strong> if you need a larger view; use <strong>Collapse picture</strong> or Escape to return.</li><li>Use the monitor’s small <strong>Input</strong> button to switch between HDMI and DisplayPort. The selected input must match the video cable. The Monitor group in Part controls offers the same source and connection choices.</li><li>Before changing internal parts or cables, turn the PC off and disconnect its AC power.</li><li>Choose <strong>Screwdriver</strong> and select each numbered panel screw, then choose <strong>Move parts</strong> and select the panel to remove it. The same screw and panel actions are available beside the picture and in Part controls. The covered panel hides the inside until you open it.</li><li>Select a part in the picture and read its state and available actions beside the picture. Use <strong>All parts &amp; tools</strong> if the tool or part you need is outside the ticket’s starting set. In Part controls, choose the component and use its named actions.</li><li>Before lifting the CPU cooler, disconnect its <strong>CPU_FAN</strong> lead and remove its four screws in the instructed cross pattern. Read any blocked-action message. After removing it, clean the old paste and apply fresh paste before refitting.</li><li>To refit a removed part, select its empty mount in the picture and use its fitting action, or choose the component in Part controls. Secure its fasteners, clips and leads.</li><li>Before starting the PC, refit the panel and secure its screws. Reconnect AC, then use PC power. Read the startup result. When the requested desktop appears, open <strong>Lesson_Practice_File.docx</strong> on the monitor if the case requires it.</li></ol><p>A blocked action tells you what to do first. Do not skip that message. A running fan or a lit power light alone does not prove the computer can complete the requested job.</p>`},
-  {id:'connectors', title:'Connect and disconnect a cable', body:`<ol><li>Check the cable’s name and purpose. HDMI carries video; AC supplies power. Internal power and data cables have different jobs.</li><li>In the picture, choose <strong>Connect cables</strong>, then select the labelled lead or cable choice. In Part controls, choose the component whose lead you need.</li><li>Read the current connection. Select a matching socket or use the named connection action. Follow the instruction for the selected end.</li><li>To unplug it, use its <strong>Disconnect</strong> control. Read the updated connection status. A visible CPU_FAN lead shows whether the cooler fan is connected.</li><li>For a video cable, check both ends: one at the PC and one at the monitor. Then check the monitor input.</li></ol><p>Internal cable controls become available after the PC is safely powered down, AC is disconnected, and the side panel is removed. If the connection is wrong, disconnect that end and choose the correct matching socket.</p>`},
-  {id:'test', title:'Make one change and test your idea', body:`<ol><li>Inspect the current equipment, settings, or code. Decide what result you expect from one change.</li><li>Make that change. If the workspace has a <strong>Save</strong> or <strong>Apply</strong> button, use it before testing.</li><li>Check that the requested task works. In a classroom PC case, open <strong>Lesson_Practice_File.docx</strong> on the monitor before testing. Then select <strong>Test my idea</strong>. In a coding investigation, run the saved program against its supplied test inputs.</li><li>Read the actual result. Record your prediction, the clue you used, what you changed, and what happened in the <strong>Experiment notebook</strong>. Save your attempt.</li><li>If it did not work, use that result to choose another change and test again.</li></ol><p>Network, AI, and security tools use fictional local models. The public lab tools do not run real network probes or operating-system commands. The optional private Linux terminal is a separate teacher-run service.</p><p>Changing the setup or program makes an older test out of date. Test the new version before moving on.</p>`},
-  {id:'sandbox', title:'Write your own program in a coding sandbox', body:`<ol><li>Open the <a href="#sandbox">coding sandbox</a>. Choose a blank program, Pixel Pet, Arcade, or Rover starter.</li><li>Select JavaScript or Python. Read the supported-language reference beside the editor.</li><li>Write or change the program. Use the editable numeric <strong>input</strong> value to try different cases.</li><li>Select <strong>Run program</strong>. Read the output or the error message. Change one thing and run it again.</li><li>Copy the code or download it before leaving the page. Check the downloaded file yourself.</li></ol><p>There is no ticket, required repair, grade, or completion checklist in this space. You decide what to make. Programs use a small language with limits on length, loops, steps, and output. Imports, files, network requests, browser objects, and system commands are unavailable.</p><p>Sandbox drafts stay in this page’s memory while you visit other sections. Closing or reloading the page clears them. Optional investigation device saving does not save sandbox code.</p>`},
-  {id:'finish', title:'Check the original task and save your report', body:`<ol><li>When the task works and your experiment is saved, select <strong>Next</strong> to open <strong>Check &amp; explain</strong>.</li><li>Explain what you changed, what the test showed, and why that result supports your conclusion.</li><li>Select <strong>Check the original task</strong>. Read the verification result. A desktop alone is not enough when the request includes opening the original lesson file.</li><li>Select <strong>Finish investigation &amp; open report</strong>.</li><li>Download the report or copy its text. Open the saved file and check its contents before closing the lab.</li><li>Submit it through your teacher’s approved assignment system if requested. Downloading a report does not submit it.</li></ol>`},
-  {id:'help', title:'Keep your work and get unstuck', body:`<ul><li><strong>Going back:</strong> use Back or an unlocked numbered step. Your current investigation stays in place during ordinary navigation on this page.</li><li><strong>Saving:</strong> investigations start in page memory. Optional device saving is an explicit choice and is unencrypted. Export important reports before closing or reloading.</li><li><strong>Keyboard:</strong> use Tab and Shift+Tab to move between controls; Enter or Space activates buttons. Use arrow keys on numbered lab tabs and native menus. You can complete connections with named controls.</li><li><strong>More help:</strong> read a blocked-action message, inspect another clue, or open the available learning support. Try the beginner lab if the equipment is unfamiliar.</li><li><strong>Privacy:</strong> use fictional information. Keep real passwords, names, student IDs, health details, and private school information out of code, chat, and notes.</li></ul><p>Requester chat may offer optional AI for fixed extra topics. Evidence and completion checks stay authored. Turn AI off with the conversation’s control if you want to use only the on-device replies.</p>`}
-];
+const steps = ['Find clues','Save an idea','Make a change','Test & record','Check & finish'];
+const causes = ['The cable is unplugged.','The screen is too dim.'];
+const predictions = ['The class site opens.','The connection still fails.'];
+
+export function createTutorialState() {
+  return {step:0,asked:false,clues:[],symptom:false,cause:-1,ideaSaved:false,connected:false,changed:false,prediction:-1,test:'',attemptSaved:false,verified:false,finished:false};
+}
+
+export function tutorialCanAdvance(state,step=state.step) {
+  return [state.asked&&state.clues.length===2,state.ideaSaved,state.changed,state.test==='success'&&state.attemptSaved,state.finished][step]===true;
+}
+
+function reachableStep(state) {
+  let step=0;
+  while(step<4&&tutorialCanAdvance(state,step)) step++;
+  return step;
+}
+
+export function tutorialTransition(state,action,value) {
+  let next={...state,clues:[...state.clues]};
+  if(action==='reset') return createTutorialState();
+  if(action==='go') {
+    if(Number.isInteger(value)&&value>=0&&value<=reachableStep(state)) next.step=value;
+  } else if(action==='next'&&state.step<4&&tutorialCanAdvance(state)) next.step++;
+  else if(action==='ask'&&state.step===0) next.asked=true;
+  else if(action==='clue'&&state.step===0&&[0,1].includes(value)&&!next.clues.includes(value)) next.clues.push(value);
+  else if(action==='symptom'&&state.step===1) next.symptom=true;
+  else if(action==='cause'&&state.step===1&&[0,1].includes(value)) {next.cause=value;next.ideaSaved=false;}
+  else if(action==='save-idea'&&state.step===1&&state.symptom&&state.cause>=0) next.ideaSaved=true;
+  else if(action==='cable'&&[2,3].includes(state.step)) {
+    next.connected=!state.connected;next.changed=true;next.test='';next.attemptSaved=false;next.verified=false;next.finished=false;
+  } else if(action==='prediction'&&state.step===3&&[0,1].includes(value)) {
+    next.prediction=value;next.test='';next.attemptSaved=false;next.verified=false;next.finished=false;
+  } else if(action==='test'&&state.step===3&&state.prediction>=0) {
+    next.test=state.connected?'success':'error';next.attemptSaved=false;next.verified=false;next.finished=false;
+  } else if(action==='save-attempt'&&state.step===3&&state.test) next.attemptSaved=true;
+  else if(action==='verify'&&state.step===4&&state.test==='success'&&state.attemptSaved&&state.connected) next.verified=true;
+  else if(action==='finish'&&state.step===4&&state.verified) next.finished=true;
+  return next;
+}
+
+function button(label,action,options={}) {
+  return '<button type="button" class="button '+(options.outline?'button-outline':'')+'" data-tour-action="'+action+'"'+(options.value===undefined?'':' data-tour-value="'+options.value+'"')+(options.disabled?' disabled':'')+(options.pressed===undefined?'':' aria-pressed="'+options.pressed+'"')+'>'+label+'</button>';
+}
+
+function diagram(state,control=false) {
+  const result=state.test==='success'?'The class site opened.':state.test==='error'?'Packet stopped: the cable is unplugged.':state.connected?'Cable connected. Ready to test.':'Cable unplugged. The class site cannot be reached.';
+  return '<div class="tour-network '+(state.connected?'is-connected ':'')+(state.test?'tour-signal-'+state.test:'')+'"><div class="tour-network-path" aria-hidden="true"><span class="tour-device"><span class="tour-device-icon">▣</span>Laptop</span><span class="tour-wire"><i class="tour-packet"></i></span><span class="tour-device"><span class="tour-device-icon">▤</span>Switch</span><span class="tour-wire tour-wire-fixed"><i class="tour-packet"></i></span><span class="tour-device"><span class="tour-device-icon">▧</span>Class site</span></div><p class="tour-link-status">'+result+'</p>'+(control?button(state.connected?'Disconnect cable':'Connect cable','cable',{outline:true,pressed:state.connected}):'')+'</div>';
+}
+
+function task(state) {
+  if(state.step===0) return '<p class="tour-request"><strong>Your request:</strong> Help a fictional student open the class site.</p>'+button(state.asked?'Question asked':'Ask: What happened?','ask',{outline:true,disabled:state.asked})+(state.asked?'<p class="tour-reply"><strong>Requester:</strong> “The class site stopped opening after I moved my laptop.”</p>':'')+diagram(state)+'<p>Select both clues. What do you notice?</p><div class="tour-choice-grid">'+button(state.clues.includes(0)?'✓ Browser: “No connection.”':'Inspect the browser','clue',{value:0,outline:true,pressed:state.clues.includes(0)})+button(state.clues.includes(1)?'✓ Cable: unplugged from laptop.':'Inspect the cable','clue',{value:1,outline:true,pressed:state.clues.includes(1)})+'</div>';
+  if(state.step===1) return '<p>Keep what you see separate from what you think caused it.</p><fieldset class="tour-fieldset"><legend>Symptom · What happened?</legend>'+button('The class site will not open.','symptom',{outline:true,pressed:state.symptom})+'</fieldset><fieldset class="tour-fieldset"><legend>Possible cause · Your first idea</legend><div class="tour-choice-grid">'+causes.map((cause,index)=>button(cause,'cause',{value:index,outline:true,pressed:state.cause===index})).join('')+'</div></fieldset>'+button(state.ideaSaved?'First idea saved':'Save first idea','save-idea',{disabled:!state.symptom||state.cause<0||state.ideaSaved})+'<p class="tour-hint">A first idea can be wrong. Your test will give you more evidence.</p>';
+  if(state.step===2) return '<p>Use the cable control. Watch the connection change.</p>'+diagram(state,true)+'<p class="tour-hint">In a lab, change one thing before testing.</p>';
+  if(state.step===3) return '<p>Predict, run a test, then save what happened.</p>'+diagram(state,true)+'<fieldset class="tour-fieldset"><legend>My prediction</legend><div class="tour-choice-grid">'+predictions.map((prediction,index)=>button(prediction,'prediction',{value:index,outline:true,pressed:state.prediction===index})).join('')+'</div></fieldset><div class="tour-actions">'+button('Send test packet','test',{disabled:state.prediction<0})+'</div>'+(state.test?'<div class="tour-result '+(state.test==='success'?'is-success':'is-error')+'"><strong>'+ (state.test==='success'?'Success · site reached':'No connection · try another change')+'</strong><p>'+ (state.test==='success'?'The packet reached the class site and a reply came back.':'The packet stopped at the unplugged cable. Connect it and test again.')+'</p></div><details class="tour-notebook" open><summary>Experiment notebook</summary><p><strong>Prediction:</strong> '+predictions[state.prediction]+'</p><p><strong>Clue:</strong> The laptop cable was unplugged.</p><p><strong>Change:</strong> Cable '+(state.connected?'connected':'disconnected')+'.</p><p><strong>Result:</strong> '+(state.test==='success'?'The class site opened.':'The connection failed.')+'</p>'+button(state.attemptSaved?'Attempt saved':'Save attempt','save-attempt',{outline:true,disabled:state.attemptSaved})+'</details>':'<p class="tour-hint">Changing the cable or prediction clears the old result.</p>');
+  if(state.finished) return '<div class="tour-result is-success"><strong>Tour complete</strong><p>You found clues, saved an idea, tested a change, and checked the request.</p></div><div class="tour-report"><h3>Your practice report</h3><p><strong>Symptom:</strong> The class site would not open.</p><p><strong>First idea:</strong> '+causes[state.cause]+'</p><p><strong>Evidence:</strong> An unplugged cable; a successful test after connecting it.</p><p><strong>Conclusion:</strong> The connection works with the cable attached.</p></div><p class="tour-hint">In a real lab, add your own explanation, then copy or download the report. Downloading a report does not submit it.</p><div class="tutorial-start"><a class="button" href="#labs">Choose a lab →</a><a class="button button-outline" href="#sandbox">Build your own code</a></div>';
+  return '<p>Check the original request before finishing.</p>'+diagram(state)+'<div class="tour-actions">'+button(state.verified?'Original task checked':'Check the original task','verify',{disabled:state.verified})+'</div>'+(state.verified?'<p class="tour-result is-success">The requested class site opens. Add your explanation in a real investigation.</p>':'<p class="tour-hint">A connected cable alone is not proof that the requested task works.</p>');
+}
+
+function feedback(state) {
+  if(state.finished) return 'Tour complete. Your practice report is ready.';
+  if(state.step===0) return (state.asked?'Question asked. ':'Ask the requester what happened. ')+state.clues.length+' of 2 clues inspected.';
+  if(state.step===1) return state.ideaSaved?'First idea saved. Next is ready.':'Choose a symptom and a possible cause, then save your idea.';
+  if(state.step===2) return state.changed?'Connection updated. Next is ready.':'Connect the cable to try a change.';
+  if(state.step===3) return state.attemptSaved?(state.test==='success'?'Successful attempt saved. Next is ready.':'Failed attempt saved. Connect the cable and test again.'):state.test?'Read the result and save this attempt.':'Choose a prediction and send a test packet.';
+  return state.verified?'Original task checked. Finish tour is ready.':'Check that the class site opens.';
+}
+
+export function renderTutorialPanel(state) {
+  const reached=reachableStep(state);
+  return '<ol class="tour-progress" aria-label="Tour steps">'+steps.map((label,index)=>'<li>'+button((index+1)+'. '+label,'go',{value:index,outline:true,disabled:index>reached}).replace('data-tour-action="go"','data-tour-action="go"'+(index===state.step?' aria-current="step"':''))+'</li>').join('')+'</ol><article class="tour-task"><p class="eyebrow">TRY IT · STEP '+(state.step+1)+' OF 5</p><h2 id="tutorial-task-title" tabindex="-1">'+steps[state.step]+'</h2>'+task(state)+'<div class="tour-footer">'+button('Restart tour','reset',{outline:true})+(state.finished?'':state.step===4?button('Finish tour & open practice report','finish',{disabled:!state.verified}):button('Next: '+steps[state.step+1]+' →','next',{disabled:!tutorialCanAdvance(state)}))+'</div></article>';
+}
 
 export function renderLabTutorial() {
-  return `<section class="wrap page-intro"><p class="eyebrow">STUDENT GUIDE · STEP-BY-STEP TUTORIAL</p><h1>Learn your way<br><em>around the virtual labs.</em></h1><p>Start here, then keep this guide handy while you practise. Choose a section below to jump to its instructions.</p><div class="tutorial-start"><a class="button" href="#labs">Choose a lab →</a><a class="button button-outline" href="#sandbox">Open coding sandbox</a></div></section><section class="wrap section tutorial-layout"><nav class="tutorial-nav" aria-label="Tutorial sections"><h2>In this guide</h2><ol>${topics.map((topic,index)=>`<li><button type="button" data-tutorial-target="${topic.id}"><span aria-hidden="true">${index+1}.</span> ${topic.title}</button></li>`).join('')}</ol></nav><div class="tutorial-content">${topics.map((topic,index)=>`<article class="tutorial-step" aria-labelledby="tutorial-${topic.id}"><p class="eyebrow">STEP ${index+1}</p><h2 id="tutorial-${topic.id}" tabindex="-1">${topic.title}</h2><div class="prose">${topic.body}</div></article>`).join('')}<p><a class="button" href="#labs">Choose your next activity →</a></p></div></section>`;
+  return '<section class="wrap page-intro"><p class="eyebrow">STUDENT GUIDE · TRY IT FIRST</p><h1>Learn by<br><em>trying a small lab.</em></h1><p>Help a laptop reach its class site. Five short steps show you how labs work.</p><p class="tour-hint">This is a practice tour. It does not earn lab credit or change an investigation.</p></section><section class="wrap tutorial-layout" aria-label="Hands-on lab tour"><div data-tour-panel>'+renderTutorialPanel(createTutorialState())+'</div><p class="tour-feedback" data-tour-status role="status" aria-live="polite" tabindex="-1">'+feedback(createTutorialState())+'</p></section><section class="wrap section tutorial-reference"><h2>Quick help when you need it</h2><details><summary>Choose your next activity</summary><p><a href="#learn/hardware">Learn the basics</a>: explore, practise, and explain. <a href="#labs">Investigations</a>: solve a fictional problem. <a href="#sandbox">Coding sandbox</a>: build your own project with no ticket or required repair.</p></details><details><summary>Follow the investigation steps</summary><p>Ask a requester question and inspect at least two clues. Save symptoms and your possible cause separately with <strong>Save first idea</strong>. Use the <strong>Experiment notebook</strong> to save your prediction, clue, change, and result. Complete each section to unlock Next.</p></details><details><summary>Use the virtual PC safely</summary><p>For internal parts: turn the PC off, disconnect AC, then remove the side panel. Read each blocked-action message. Use the named <strong>Part controls</strong> for keyboard and touch, or the picture. Match both video cable ends and the monitor <strong>Input</strong>. Secure parts, leads, and the panel before restarting.</p><p>Follow your teacher’s separate safety instructions for physical equipment.</p></details><details><summary>Keep your work and protect privacy</summary><p>Use fictional information. Keep real names, passwords, student IDs, and private school details out of notes and code. Work begins in page memory; closing or reloading can clear it. Optional investigation device saving is an explicit choice and is unencrypted. Sandbox drafts are not included.</p><p>Copy or download important work and open the file to check it. Submit through your teacher’s assignment system when asked. Downloading a report does not submit it.</p></details><details><summary>Keyboard, models, and coding limits</summary><p>Use Tab and Shift+Tab to move; Enter or Space activates buttons. Network, AI, and security tools use fictional local models. Sandbox programs use a limited language; imports, files, network requests, browser objects, and system commands are unavailable.</p></details></section>';
 }
 
 export function mountLabTutorial(root) {
-  const jump = event => {
-    const button = event.target.closest?.('[data-tutorial-target]');
-    if (!button || !root.contains(button)) return;
-    const topic = topics.find(item => item.id === button.dataset.tutorialTarget);
-    if (!topic) return;
-    const heading = root.querySelector('#tutorial-'+topic.id);
-    heading?.focus({preventScroll:true});
-    heading?.scrollIntoView({block:'start',behavior:'instant'});
+  const panel=root.querySelector('[data-tour-panel]');
+  const status=root.querySelector('[data-tour-status]');
+  if(!panel||!status) return ()=>{};
+  let state=createTutorialState(),active=true;
+  const actions=new Set(['reset','go','next','ask','clue','symptom','cause','save-idea','cable','prediction','test','save-attempt','verify','finish']);
+  const click=event=>{
+    const control=event.target.closest?.('[data-tour-action]');
+    if(!active||!control||!root.contains(control)||control.disabled) return;
+    const action=control.dataset.tourAction;
+    if(!actions.has(action)) return;
+    const value=control.dataset.tourValue===undefined?undefined:Number(control.dataset.tourValue);
+    state=tutorialTransition(state,action,value);
+    panel.innerHTML=renderTutorialPanel(state);
+    status.textContent=feedback(state);
+    if(['go','next','reset','finish'].includes(action)) panel.querySelector('#tutorial-task-title')?.focus({preventScroll:true});
+    else {
+      const replacement=panel.querySelector('[data-tour-action="'+action+'"]'+(value===undefined?'':'[data-tour-value="'+value+'"]'));
+      if(replacement&&!replacement.disabled) replacement.focus({preventScroll:true});
+      else {
+        const followup=action==='ask'?panel.querySelector('[data-tour-action="clue"][aria-pressed="false"]')||panel.querySelector('[data-tour-action="next"]:not([disabled])'):
+          action==='save-idea'?panel.querySelector('[data-tour-action="next"]:not([disabled])'):
+          action==='save-attempt'?panel.querySelector(state.test==='success'?'[data-tour-action="next"]:not([disabled])':'[data-tour-action="cable"]'):
+          action==='verify'?panel.querySelector('[data-tour-action="finish"]:not([disabled])'):null;
+        if(followup) followup.focus({preventScroll:true});
+        else status.focus({preventScroll:true});
+      }
+    }
   };
-  root.addEventListener('click',jump);
-  return () => root.removeEventListener('click',jump);
+  root.addEventListener('click',click);
+  return ()=>{active=false;root.removeEventListener('click',click);};
 }
