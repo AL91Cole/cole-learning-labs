@@ -1,3 +1,4 @@
+import {supportsExpandedLab} from '../src/expanded-labs.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {SCENARIOS} from '../src/scenarios.js';
@@ -135,7 +136,7 @@ test('every software lab keeps its practice diagnostics bounded and rejects real
       assert.match(root.innerHTML,/No full runtime, installation, network, packages, real files or browser APIs/);
       continue;
     }
-    if(/^(?:NET-20[4-6]|AI-30[4-6]|SEC-40[4-6])$/.test(scenario.id)) {
+    if(supportsExpandedLab(scenario.id)) {
       assert.match(root.innerHTML,/aria-label="Local practice inspection tools"/);
       assert.match(root.innerHTML,/data-exp-command=/);
       assert.match(root.innerHTML,/exp-console/);

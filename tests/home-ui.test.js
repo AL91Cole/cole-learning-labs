@@ -21,7 +21,7 @@ class Control{
 function harness(){
   const hero=['video','power','keyboard'].map(heroCheck=>new Control({heroCheck}));
   const guardian=['before','after'].map(guardianView=>new Control({guardianView}));
-  const elements=new Map(['#hero-demo-feedback','#guardian-before','#guardian-after','#guardian-demo-feedback','#lab-count','#lab-results','#clear-filters','#grade-filter','#duration-filter','#lab-search'].map(id=>[id,new Control()]));
+  const elements=new Map(['#practice-entries','#network-sequence','#hero-demo-feedback','#guardian-before','#guardian-after','#guardian-demo-feedback','#lab-count','#lab-results','#clear-filters','#grade-filter','#duration-filter','#lab-search'].map(id=>[id,new Control()]));
   const pathwayButtons=['all',...Object.keys(tracks)].map(track=>new Control({track}));
   elements.get('#guardian-after').hidden=true;
   const record={state:{pcOn:false},events:[],verified:false,closed:false},store={labs:{'INC-101':record}},before=structuredClone(store);
@@ -33,7 +33,7 @@ function harness(){
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,
     history:{replaceState(){}},renderRoute(){renders++;}
   });
-  vm.runInContext("let libraryTrack='all',libraryGrade='all',libraryMinutes='all',libraryQuery='';\n"+cut('function routeLink(','\nfunction about(')+'\n'+cut('function library(','\nfunction labPage('),context);
+  vm.runInContext("let libraryTrack='all',libraryGrade='all',libraryMinutes='all',libraryQuery='';\n"+cut('function routeLink(','\nfunction about(')+'\n'+cut('function networkSequence(','\nfunction labPage('),context);
   return {context,hero,guardian,pathwayButtons,elements,store,before,get renders(){return renders;},filter({track='all',grade='all',minutes='all',query=''}={}){context.filterValues={track,grade,minutes,query};vm.runInContext('libraryTrack=filterValues.track;libraryGrade=filterValues.grade;libraryMinutes=filterValues.minutes;libraryQuery=filterValues.query;labCards();',context);return [...elements.get('#lab-results').innerHTML.matchAll(/href="#lab\/([A-Z]+-\d+)"/gu)].map(match=>match[1]);}};
 }
 
@@ -104,6 +104,9 @@ test('pathway changes keep the existing toolbar and focus instead of replacing t
   for(const other of h.pathwayButtons.filter(item=>item!==button))assert.equal(other.attributes['aria-pressed'],'false');
   const ids=[...h.elements.get('#lab-results').innerHTML.matchAll(/href="#lab\/([A-Z]+-\d+)"/gu)].map(match=>match[1]);
   assert.deepEqual(ids,SCENARIOS.filter(item=>item.track==='hardware').map(item=>item.id));
+  assert.equal(h.elements.get('#practice-entries').innerHTML,'');assert.equal(h.elements.get('#network-sequence').innerHTML,'');
+  h.context.filterLibraryTrack('network');assert.match(h.elements.get('#practice-entries').innerHTML,/#studio\/network/u);assert.match(h.elements.get('#network-sequence').innerHTML,/10 labs/u);
+  h.context.filterLibraryTrack('ai');assert.match(h.elements.get('#practice-entries').innerHTML,/#practice\/AI-305/u);assert.doesNotMatch(h.elements.get('#practice-entries').innerHTML,/#studio\/network/u);assert.equal(h.elements.get('#network-sequence').innerHTML,'');
   assert.deepEqual(h.store,h.before);
 });
 

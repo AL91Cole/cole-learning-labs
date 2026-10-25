@@ -30,8 +30,8 @@ function saveExplanation(id,state=finishPractice(id)) {
   return step(id,state,{type:'save-explanation'},'success').state;
 }
 
-test('five public beginner foundations stay separate from the 32 investigation tickets',()=>{
-  assert.equal(FOUNDATION_LABS.length,5);assert.equal(SCENARIOS.length,32);
+test('five public beginner foundations stay separate from the 42 investigation tickets',()=>{
+  assert.equal(FOUNDATION_LABS.length,5);assert.equal(SCENARIOS.length,42);
   assert.deepEqual(FOUNDATION_LABS.map(lab=>lab.id),['hardware','network','ai','security','coding']);
   assert.deepEqual(FOUNDATION_LABS.map(lab=>lab.code),['HW-100','NET-200','AI-300','SEC-400','CODE-500']);
   assert.deepEqual(FOUNDATION_LABS.map(lab=>lab.nextLab),['INC-101','NET-201','AI-301','SEC-401','CODE-501']);

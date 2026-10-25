@@ -1,6 +1,6 @@
-import {normalizeHardwareState, verifyHardware} from './hardware.js?release=20261023-monitor';
-import {normalizeWorkspaceState, verifyWorkspace, getWorkspaceMission} from './workspaces.js?release=20261023-monitor';
-import {inquiryProtectedEvents} from './interview.js?release=20261023-monitor';
+import {normalizeHardwareState, verifyHardware} from './hardware.js?release=20261024-network-studio';
+import {normalizeWorkspaceState, verifyWorkspace, getWorkspaceMission} from './workspaces.js?release=20261024-network-studio';
+import {inquiryProtectedEvents} from './interview.js?release=20261024-network-studio';
 
 // Experiment writing shares the existing local-work, clear, and manual-export
 // lifecycle. It is not a grade, an identity record, or proof of authorship.
@@ -112,6 +112,16 @@ const FIELD_ROWS = {
   'NET-204':[['placement','Access point position'],['band','Radio band'],['channel','Radio channel'],['width','Channel width']],
   'NET-205':[['spooler','Print service'],['queue','Queue state'],['port','Printer destination'],['job','Original print job']],
   'NET-206':[['snapshot','Backup snapshot'],['destination','Restore destination'],['preserve','Original file'],['integrity','Integrity review']],
+  'NET-207':[['layerMap','Protocol layers'],['fileTransport','File transport'],['callTransport','Call transport'],['addressPair','Address roles']],
+  'NET-208':[['topology','Room topology'],['localDevice','Local network device'],['boundary','Network boundary'],['media','Cable media']],
+  'NET-209':[['subnet','IPv4 subnet'],['host','Workstation address'],['gateway','Default gateway'],['edge','Routing and address boundary']],
+  'NET-210':[['access','Access port VLAN'],['trunk','Trunk VLANs'],['guestPolicy','Guest traffic policy'],['redundancy','Redundant link plan']],
+  'NET-211':[['authentication','Authentication plan'],['firewall','Firewall policy'],['detection','IDS response'],['evidence','Incident evidence']],
+  'NET-212':[['link','Local link check'],['gateway','Gateway check'],['route','WAN route plan'],['diagnostic','Path evidence']],
+  'NET-213':[['media','Voice protocol roles'],['voiceQueue','Voice queue'],['congestion','Congestion plan'],['record','FCAPS record']],
+  'NET-214':[['capacity','Room capacity'],['wireless','Secure Wi-Fi plan'],['segments','Network segments'],['changePlan','Baseline and rollback']],
+  'NET-215':[['interface','Capture interface'],['nextHop','Local next hop'],['headers','Frame and packet headers'],['interpretation','Capture conclusion']],
+  'NET-216':[['target','Monitored device'],['protection','SNMP access protection'],['threshold','Alert threshold'],['receiver','Alert receiver']],
   'AI-302':[['ticketA','Ticket A category'],['ticketB','Ticket B category']],
   'AI-303':[['secret','Secret handling'],['query','Query handling'],['authorization','Access rule']],
   'AI-304':[['input','Activity input'],['identifiers','Learner identifiers'],['route','Processing route'],['participation','Participation choice']],

@@ -1,4 +1,4 @@
-import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261023-monitor';
+import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261024-network-studio';
 
 /** Read-only teaching indicators. They never start a device or change saved work. */
 const plain = value => {

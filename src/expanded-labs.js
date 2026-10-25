@@ -1,6 +1,9 @@
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261024-network-studio';
+import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261024-network-studio';
+import {getNetworkBenchSpec,networkBenchInitial,normalizeNetworkBench,networkBenchSignature,networkCableChecks,applyNetworkBenchAction} from './network-bench.js?release=20261024-network-studio';
+import {NETWORK_CONFIG,networkChecks,networkDiagnostic} from './network-labs.js?release=20261024-network-studio';
+import {renderNetworkVisual,mountNetworkVisual} from './network-visuals.js?release=20261024-network-studio';
 /** Local, fictional equipment and decision models. No service, shell, or AI calls. */
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261023-monitor';
-
 const code = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const esc = value => String(value ?? '').replace(/[&<>"']/g, letter => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[letter]));
@@ -99,6 +102,7 @@ export const EXPANDED_SCENARIOS = [
 const field = (name,label,options,initial) => ({name,label,options,initial:initial ?? options[0][0]});
 const choice = (value,label=value) => [value,label];
 const CONFIG = {
+  ...NETWORK_CONFIG,
   NET204:{icon:'◉',device:'CLASSROOM ACCESS POINT · AP-04',concept:'Signal strength, channel occupancy, and channel width are separate parts of a wireless plan.',commands:['survey channels','measure desk','show radio'],fields:[field('placement','Access-point mounting position',[choice('cupboard','Inside metal cupboard'),choice('ceiling-center','Ceiling · center of room'),choice('hallway','Far hallway')]),field('band','Radio band',[choice('2.4','2.4 GHz'),choice('5','5 GHz')],'5'),field('channel','5 GHz primary channel',[choice('36'),choice('40'),choice('44')],'40'),field('width','Channel width',[choice('80','80 MHz'),choice('20','20 MHz')],'20')]},
   NET205:{icon:'▤',device:'CLASSROOM PRINT STATION · JOB-041',concept:'A print job depends on the service, queue state, destination, and preservation of the requested document.',commands:['show queue','service spooler','show printer'],fields:[field('spooler','Print Spooler service',[choice('stopped','Stopped'),choice('running','Running')]),field('queue','Queue state',[choice('paused','Paused'),choice('resume','Resume printing')]),field('port','Printer destination',[choice('old','OLD-PRINTER · offline'),choice('approved','CLASSROOM-PRINT · online')]),field('job','Original JOB-041',[choice('hold','Keep held'),choice('release','Preserve and release original job'),choice('delete','Delete the queue')])]},
   NET206:{icon:'▰',device:'RECOVERY CONSOLE · PROJECT DOCUMENTS',concept:'Restore a verified useful version separately, then inspect content and integrity before delivery.',commands:['list snapshots','inspect restored','compare manifest'],fields:[field('snapshot','Backup snapshot',[choice('B-16','B-16 · incomplete'),choice('B-17','B-17 · verified original'),choice('B-18','B-18 · empty export')]),field('destination','Restore destination',[choice('overwrite','Overwrite current damaged file'),choice('recovery','Separate Recovery/Project folder')]),field('preserve','Current damaged copy',[choice('delete','Delete current copy'),choice('keep','Preserve as evidence')]),field('integrity','After-copy verification',[choice('skip','Trust copy completion only'),choice('compare','Compare content and manifest')])]},
@@ -114,10 +118,13 @@ export const supportsExpandedLab = id => Object.hasOwn(CONFIG,code(id));
 export const expandedStateFields = id => Object.fromEntries((CONFIG[code(id)]?.fields ?? []).map(item=>[item.name,item.options.map(([value])=>value)]));
 export function initialExpandedState(id) {
   const config=CONFIG[code(id)];
-  return {tested:false,results:[],workspaceEdits:0,checkRuns:0,testSignature:'',...(config ? Object.fromEntries(config.fields.map(item=>[item.name,item.initial])) : {})};
+  const state={tested:false,results:[],workspaceEdits:0,checkRuns:0,testSignature:'',...(getNetworkBenchSpec(id)?{networkBench:networkBenchInitial(id)}:{}),...(config ? Object.fromEntries(config.fields.map(item=>[item.name,item.initial])) : {})};
+  if(code(id)==='NET208'&&state.topology==='chain')state.networkBench=applyNetworkBenchAction(id,state.networkBench,'disconnect',{cableId:'pc04-cabinet'}).bench;
+  return state;
 }
-const signature = (id,state) => JSON.stringify((CONFIG[code(id)]?.fields ?? []).map(item=>state[item.name]));
+const signature = (id,state) => {const settings=(CONFIG[code(id)]?.fields ?? []).map(item=>state[item.name]);const cables=networkBenchSignature(id,state.networkBench);return JSON.stringify(settings)+(cables==='[]'?'':'|'+cables);};
 function checks(id,state) {
+  if (Object.hasOwn(NETWORK_CONFIG,code(id))) {const rows=networkChecks(id,state),missing=networkCableChecks(id,state.networkBench).filter(item=>!item.ok);return missing.length?rows.map((row,index)=>index===rows.length-1?{label:'Reconnect the disconnected network cables, then test again',ok:false}:row):rows;}
   const rows={
     NET204:[['Reading desk meets the −67 dBm coverage target',state.placement==='ceiling-center'],['Client uses its supported 5 GHz radio',state.band==='5'],['Primary channel avoids neighboring occupied channels',state.band==='5' && state.channel==='40'],['20 MHz width avoids overlap with adjacent channels',state.width==='20']],
     NET205:[['Print Spooler service is running',state.spooler==='running'],['Queue resumes instead of staying paused',state.queue==='resume'],['Destination is the online classroom printer',state.port==='approved'],['Original JOB-041 is preserved and printed',state.job==='release' && state.spooler==='running' && state.queue==='resume' && state.port==='approved']],
@@ -137,6 +144,7 @@ export function normalizeExpandedState(id,saved) {
   const state=initialExpandedState(id), config=CONFIG[code(id)];
   if (!config || !plain(saved)) return state;
   for (const item of config.fields) if (Object.hasOwn(saved,item.name) && item.options.some(([value])=>value===saved[item.name])) state[item.name]=saved[item.name];
+  if(getNetworkBenchSpec(id)) {state.networkBench=normalizeNetworkBench(id,Object.hasOwn(saved,'networkBench')?saved.networkBench:undefined);if(code(id)==='NET208'&&state.topology==='chain'&&!Object.hasOwn(saved,'networkBench'))state.networkBench=applyNetworkBenchAction(id,state.networkBench,'disconnect',{cableId:'pc04-cabinet'}).bench;if(code(id)==='NET212'&&state.link==='down'&&!Object.hasOwn(saved,'networkBench'))state.networkBench=applyNetworkBenchAction(id,state.networkBench,'disconnect',{cableId:'pc-gateway'}).bench;}
   for (const key of ['workspaceEdits','checkRuns']) if (Object.hasOwn(saved,key) && Number.isSafeInteger(saved[key]) && saved[key]>=0) state[key]=Math.min(saved[key],1000000);
   if (Object.hasOwn(saved,'tested') && saved.tested===true && Object.hasOwn(saved,'testSignature') && saved.testSignature===signature(id,state) && state.checkRuns>0) {
     state.tested=true;state.testSignature=signature(id,state);state.results=checks(id,state);
@@ -148,6 +156,19 @@ export function applyExpandedAction(id,previous,action,value) {
   const state=normalizeExpandedState(id,previous), config=CONFIG[code(id)];
   if (!config) return {state,message:'This practice workspace is not available.',kind:'warning'};
   if (action==='inspect-command') return {state,message:expandedDiagnostic(id,state,plain(value)?value.command:value),kind:'info'};
+  if(typeof action==='string'&&action.startsWith('bench-')&&getNetworkBenchSpec(id)) {
+    const operation=action.slice(6),change=applyNetworkBenchAction(id,state.networkBench,operation,value),before=JSON.stringify([state.topology,state.link,state.redundancy]);
+    state.networkBench=change.bench;
+    const spec=getNetworkBenchSpec(id),cable=operation==='disconnect'?spec.cables.find(item=>item.id===value?.cableId):operation==='connect'?spec.cables.find(item=>(item.fromPort===value?.fromPort&&item.toPort===value?.toPort)||(item.toPort===value?.fromPort&&item.fromPort===value?.toPort)):null;
+    if(cable) {
+      if(code(id)==='NET208'&&operation==='connect'&&cable.id==='pc04-cabinet')state.topology='star';
+      if(code(id)==='NET212'&&cable.id==='pc-gateway')state.link=operation==='connect'?'up':'down';
+      if(code(id)==='NET210'&&['switch-backup','backup-core'].includes(cable.id)) {if(operation==='disconnect')state.redundancy='disconnect';else if(state.redundancy==='disconnect')state.redundancy='both-forward';}
+    }
+    const behaviorChanged=(change.changed&&change.kind==='cable')||before!==JSON.stringify([state.topology,state.link,state.redundancy]);
+    if(behaviorChanged) {state.workspaceEdits=Math.min(state.workspaceEdits+1,1000000);state.tested=false;state.results=[];state.testSignature='';}
+    return {state,message:change.message,kind:'info',viewOnly:!behaviorChanged};
+  }
   if (action==='run-check') {
     state.checkRuns=Math.min(state.checkRuns+1,1000000);state.testSignature=signature(id,state);state.tested=true;state.results=checks(id,state);
     const passed=state.results.filter(item=>item.ok).length;
@@ -155,6 +176,9 @@ export function applyExpandedAction(id,previous,action,value) {
   }
   if (action==='save-expanded' && plain(value)) {
     for (const item of config.fields) if (Object.hasOwn(value,item.name) && item.options.some(([option])=>option===value[item.name])) state[item.name]=value[item.name];
+    if(code(id)==='NET208'&&Object.hasOwn(value,'topology')){const cable=getNetworkBenchSpec(id).cables.find(item=>item.id==='pc04-cabinet');state.networkBench=applyNetworkBenchAction(id,state.networkBench,state.topology==='star'?'connect':'disconnect',state.topology==='star'?{fromPort:cable.fromPort,toPort:cable.toPort}:{cableId:cable.id}).bench;}
+    if(code(id)==='NET210'&&value.redundancy==='disconnect')for(const cableId of ['switch-backup','backup-core'])state.networkBench=applyNetworkBenchAction(id,state.networkBench,'disconnect',{cableId}).bench;
+    if(code(id)==='NET212'&&Object.hasOwn(value,'link')) {const spec=getNetworkBenchSpec(id),cable=spec.cables.find(item=>item.id==='pc-gateway');state.networkBench=applyNetworkBenchAction(id,state.networkBench,state.link==='up'?'connect':'disconnect',state.link==='up'?{fromPort:cable.fromPort,toPort:cable.toPort}:{cableId:cable.id}).bench;}
     state.workspaceEdits=Math.min(state.workspaceEdits+1,1000000);state.tested=false;state.results=[];state.testSignature='';
     return {state,message:'Your choices are applied to this fictional workspace. Inspect the effect, then run a fresh test.',kind:'info'};
   }
@@ -185,6 +209,7 @@ export function expandedDiagnostic(id,saved,command) {
   const key=command.trim().toLowerCase().replace(/\s+/g,' ');
   if (key==='help') return `Local practice tools: ${config.commands.join(' · ')}. These show saved choices, never run a real command, and do not award a passed test.`;
   if (!config.commands.includes(key)) return 'Use a displayed practice tool. No real systems, commands, or targets are contacted.';
+  if (Object.hasOwn(NETWORK_CONFIG,code(id))) return networkDiagnostic(id,state,key);
   let output='';
   switch (code(id)) {
     case 'NET204':
@@ -239,7 +264,17 @@ export function expandedDiagnostic(id,saved,command) {
 }
 
 const inspections = new WeakMap();
-function artifact(id,state) {
+const networkSelections = new WeakMap();
+const networkMounts = new WeakMap();
+/** Release native observers, signal frames and controls before a workspace leaves its route. */
+export function disposeExpanded(root) {
+  const cleanup=networkMounts.get(root);
+  networkMounts.delete(root);
+  cleanup?.();
+}
+function artifact(id,state,selectedId) {
+  const network=NETWORK_CONFIG[code(id)];
+  if (network) return renderNetworkVisual(id,state,selectedId);
   switch(code(id)) {
     case 'NET204': return `<div class="exp-room"><span class="exp-room-cupboard">Metal cupboard<br>${state.placement==='cupboard'?'◉ AP-04':''}</span><span class="exp-room-center">Ceiling center<br>${state.placement==='ceiling-center'?'◉ AP-04':'○ mount'}</span><span class="exp-room-hall">Hallway<br>${state.placement==='hallway'?'◉ AP-04':''}</span><span class="exp-room-desk">▰ Reading desk<br>${state.placement==='ceiling-center'?'−58':state.placement==='cupboard'?'−79':'−74'} dBm</span></div><p class="exp-artifact-note">Room plan · modeled signal at the desk · target ≥ −67 dBm. Inspect the channel survey separately.</p>`;
     case 'NET205': return `<div class="exp-printer"><div class="exp-printer-slot"></div><div class="exp-lcd">CLASSROOM-PRINT<br>ONLINE · PAPER READY<br>Service: ${esc(state.spooler)}<br>Queue: ${state.queue==='resume'?'RESUMED':'PAUSED'}</div><div class="exp-paper">JOB-041<br>Classroom handout<br>2 pages<br><strong>${state.job==='delete'?'REMOVED':state.job==='release'?'RELEASED':'HELD'}</strong></div></div><p class="exp-artifact-note">The original job, service, queue, and destination are separate checks. Inspect delivery after applying your plan.</p>`;
@@ -261,7 +296,11 @@ export function renderExpanded(root,scenario,saved,onAction) {
   const state=normalizeExpandedState(id,saved), mission=getExpandedMission(id,state), previous=inspections.get(root);
   const tool=previous?.id===code(id)?previous:{id:code(id),command:config.commands[0],output:''};
   inspections.set(root,tool);
-  root.innerHTML=`<div class="expanded-workspace"><details class="workspace-help"><summary>Workbench help</summary><section class="exp-start" aria-label="How to use this lab"><h3>Use this workbench</h3><ol><li><b>Inspect.</b> Read the device view and evidence from Request &amp; clues.</li><li><b>Choose.</b> Set the menus, then choose “Apply my choices”.</li><li><b>Test.</b> Choose “Run workspace test”. Read the results before trying another change.</li></ol><p>Apply and test do not submit work to a teacher. Next, open 3. Check &amp; explain. All equipment is fictional.</p></section></details><section class="exp-device" aria-label="Fictional equipment and case artifacts"><div class="exp-device-header"><span aria-hidden="true">${config.icon}</span><b>${esc(config.device)}</b><small>LOCAL SIMULATION</small></div>${artifact(id,state)}</section><section class="exp-mission" aria-label="Current mission progress"><div><h3>${esc(mission.stage)}</h3><strong>${mission.tested?`${mission.passed} / ${mission.total} checks passing`:'No full test yet'}</strong></div><progress max="${mission.total || 1}" value="${mission.passed}" aria-label="Checks passing in latest test"></progress><p>${esc(mission.next)}</p><details><summary>Need help with the idea?</summary><p>${esc(mission.hints[0])}</p><p>${esc(mission.hints[1])}</p><p>${esc(mission.hints[2])}</p></details></section><form class="exp-controls" aria-label="Workspace choices"><h3>Choose a plan</h3><div class="exp-field-grid">${config.fields.map(item=>`<label>${esc(item.label)}<select name="${esc(item.name)}">${item.options.map(([value,label])=>`<option value="${esc(value)}"${state[item.name]===value?' selected':''}>${esc(label)}</option>`).join('')}</select></label>`).join('')}</div><div class="exp-actions"><button type="submit" class="button primary">Apply my choices</button><button type="button" class="button" data-exp-test>Run workspace test</button></div><p class="exp-artifact-note">Choose in the menus, apply your choices, then test the updated model.</p></form><section class="exp-inspector" aria-label="Local practice inspection tools"><h3>Practice inspection tools</h3><p>Each tool runs locally and reads saved choices. It does not run the full test.</p><div class="exp-tool-buttons">${config.commands.map(command=>`<button type="button" data-exp-command="${esc(command)}" aria-pressed="${tool.command===command}">${esc(command)}</button>`).join('')}</div><pre class="exp-console" tabindex="0" role="status" aria-label="Practice inspection output" aria-atomic="true">${esc(tool.output || 'Choose a practice tool above. Apply a changed plan before inspecting it.')}</pre></section><section class="exp-results" aria-label="Workspace test results"><h3>Latest full test</h3>${state.tested?`<ul>${state.results.map(result=>`<li class="${result.ok?'exp-pass':'exp-revisit'}"><b>${result.ok?'PASS':'REVISIT'}</b> ${esc(result.label)}</li>`).join('')}</ul>`:'<p>No current full test. Apply a plan, then run the workspace test. New choices require a fresh test.</p>'}</section></div>`;
+  disposeExpanded(root);
+  const selection=networkSelections.get(root);
+  const selectedId=selection?.id===code(id)?selection.selectedId:undefined;
+  root.innerHTML=`<div class="expanded-workspace"><details class="workspace-help"><summary>Workbench help</summary><section class="exp-start" aria-label="How to use this lab"><h3>Use this workbench</h3><ol><li><b>Inspect.</b> Read the device view and evidence from Request &amp; clues.</li><li><b>Choose.</b> Set the menus, then choose “Apply my choices”.</li><li><b>Test.</b> Choose “Run workspace test”. Read the results before trying another change.</li></ol><p>Apply and test do not submit work to a teacher. Next, open 3. Check &amp; explain. All equipment is fictional.</p></section></details><section class="exp-device" aria-label="Fictional equipment and case artifacts"><div class="exp-device-header"><span aria-hidden="true">${config.icon}</span><b>${esc(config.device)}</b><small>LOCAL SIMULATION</small></div>${artifact(id,state,selectedId)}</section><section class="exp-mission" aria-label="Current mission progress"><div><h3>${esc(mission.stage)}</h3><strong>${mission.tested?`${mission.passed} / ${mission.total} checks passing`:'No full test yet'}</strong></div><progress max="${mission.total || 1}" value="${mission.passed}" aria-label="Checks passing in latest test"></progress><p>${esc(mission.next)}</p><details><summary>Need help with the idea?</summary><p>${esc(mission.hints[0])}</p><p>${esc(mission.hints[1])}</p><p>${esc(mission.hints[2])}</p></details></section>${renderInteractiveTools(scenario,state)}<form class="exp-controls" aria-label="Workspace choices"><h3>Choose a plan</h3><div class="exp-field-grid">${config.fields.map(item=>`<label>${esc(item.label)}<select name="${esc(item.name)}">${item.options.map(([value,label])=>`<option value="${esc(value)}"${state[item.name]===value?' selected':''}>${esc(label)}</option>`).join('')}</select></label>`).join('')}</div><div class="exp-actions"><button type="submit" class="button primary">Apply my choices</button><button type="button" class="button" data-exp-test>Run workspace test</button></div><p class="exp-artifact-note">Choose in the menus, apply your choices, then test the updated model.</p></form><section class="exp-inspector" aria-label="Local practice inspection tools"><h3>Practice inspection tools</h3><p>Each tool runs locally and reads saved choices. It does not run the full test.</p><div class="exp-tool-buttons">${config.commands.map(command=>`<button type="button" data-exp-command="${esc(command)}" aria-pressed="${tool.command===command}">${esc(command)}</button>`).join('')}</div><pre class="exp-console" tabindex="0" role="status" aria-label="Practice inspection output" aria-atomic="true">${esc(tool.output || 'Choose a practice tool above. Apply a changed plan before inspecting it.')}</pre></section><section class="exp-results" aria-label="Workspace test results"><h3>Latest full test</h3>${state.tested?`<ul>${state.results.map(result=>`<li class="${result.ok?'exp-pass':'exp-revisit'}"><b>${result.ok?'PASS':'REVISIT'}</b> ${esc(result.label)}</li>`).join('')}</ul>`:'<p>No current full test. Apply a plan, then run the workspace test. New choices require a fresh test.</p>'}</section></div>`;
+  if (Object.hasOwn(NETWORK_CONFIG,code(id))) networkMounts.set(root,mountNetworkVisual(root,id,state,{selectedId,onSelect:next=>networkSelections.set(root,{id:code(id),selectedId:next}),onBenchAction:(operation,value)=>({...onAction('bench-'+operation,value),rendered:true}),onSettings:fields=>{const name=fields.find(key=>config.fields.some(item=>item.name===key));if(name)root.querySelector(`select[name="${name}"]`)?.focus?.();}}));
   root.querySelector('form').addEventListener('submit',event=>{
     event.preventDefault();
     const values={};for(const item of config.fields)values[item.name]=root.querySelector(`select[name="${item.name}"]`).value;
@@ -275,5 +314,6 @@ export function renderExpanded(root,scenario,saved,onAction) {
     root.querySelectorAll('[data-exp-command]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.expCommand===tool.command)));
     onAction('inspect-command',{command:tool.command});
   }));
+  mountInteractiveTools(root,scenario,()=>state,onAction);
   restoreView();
 }

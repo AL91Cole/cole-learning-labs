@@ -1,6 +1,7 @@
-import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261023-monitor';
-import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261023-monitor';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261023-monitor';
+import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261024-network-studio';
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,disposeExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261024-network-studio';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261024-network-studio';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261024-network-studio';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });
@@ -474,14 +475,18 @@ function security(id,state) {
   return `<section class="ws-scope"><div><b>AUTHORIZED TRAINING SCOPE</b><p>Only the two fictional records in this browser. No real accounts, endpoints, network requests, or security tools.</p></div><label class="ws-check"><input type="checkbox" data-scope${checked(state.scope)}><span>I understand and will stay within this simulation.</span></label></section><div class="ws-two-col"><section class="ws-panel"><div class="ws-section-label">LEARNDESK / FICTIONAL APP</div><h3>Try the two practice records</h3><p class="ws-identity">Active session <code>learner-101</code></p><div class="ws-request-controls"><button class="ws-button" type="button" data-action="fetch-record" data-value="101"${!state.scope?' disabled':''}>Request own record · 101</button><button class="ws-button ws-button-secondary" type="button" data-action="fetch-record" data-value="102"${!state.scope?' disabled':''}>Request test record · 102</button></div>${response?`<div class="ws-response"><span class="ws-http-code ${response.status===403?'ws-http-denied':''}">HTTP ${esc(response.status)}</span><pre>${esc(response.body)}</pre></div>`:'<div class="ws-test-placeholder">Acknowledge scope, then inspect your own record and the supplied test record.</div>'}${terminal(state.history.length?state.history:['No simulated requests yet.'])}</section><form class="ws-panel" data-form="set-authorization"><h3>Choose an access rule</h3><p class="ws-muted">An interface choice is not a server-side access check.</p>${select('patch','Rule for who can read a record',state.patch,[['none','Original: signed-in users can access all records'],['hidden','Hide other record links in the interface'],['owner','Server: require record.owner_id === user.id']])}${submit('Save access rule')}<pre class="ws-code" tabindex="0" role="region" aria-label="Illustrative code preview"><code>${esc(state.patch==='owner'?'if record.owner_id !== session.user_id:\n    return 403\nreturn 200, record':state.patch==='hidden'?'hide_other_record_links()\n# Server still returns any requested record\nreturn 200, record':'# Missing ownership check\nreturn 200, record')}</code></pre>${run('Test both records')}</form></div>`;
 }
 
+/** Stop native workspace controllers before their DOM is removed. */
+export function disposeWorkspace(root) { disposeExpanded(root); }
+
 /** Render only documented, fixed simulation controls. All state changes go to onAction. */
 export function renderWorkspace(root, scenario, state, onAction) {
+  if(!supportsExpandedLab(scenario.id)) disposeWorkspace(root);
   if(supportsExpandedLab(scenario.id))return renderExpanded(root,scenario,state,onAction);if(supportsCodingLab(scenario.id))return renderCoding(root,scenario,state,onAction);
   const restoreView=captureWorkspaceView(root,scenario.id);
   state = normalizeWorkspaceState(scenario.id, state);
   const code=normalize(scenario.id);
   const body=code.startsWith('NET')?network(code,state):code.startsWith('AI')?ai(code,state):code.startsWith('SEC')?security(code,state):'<p>This case is available in the hardware bench.</p>';
-  root.innerHTML=`<div class="ws-desktop"><div class="ws-windowbar"><span class="ws-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(scenario.id)} <span aria-hidden="true">/</span> ${esc(scenario.title)}</span><span class="ws-local-badge">PRACTICE ONLY</span></div><div class="ws-body"><details class="workspace-help"><summary>Workbench help</summary>${workspaceGuide(scenario.id)}</details>${missionPanel(scenario.id,state)}${body}${inspectionPanel(scenario.id)}${results(state)}</div></div>`;
+  root.innerHTML=`<div class="ws-desktop"><div class="ws-windowbar"><span class="ws-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(scenario.id)} <span aria-hidden="true">/</span> ${esc(scenario.title)}</span><span class="ws-local-badge">PRACTICE ONLY</span></div><div class="ws-body"><details class="workspace-help"><summary>Workbench help</summary>${workspaceGuide(scenario.id)}</details>${missionPanel(scenario.id,state)}${renderInteractiveTools(scenario,state)}${body}${inspectionPanel(scenario.id)}${results(state)}</div></div>`;
   const previous=inspectionViews.get(root), signature=JSON.stringify(state);
   const display=root.querySelector('[data-inspection-output]');
   const commandInput=root.querySelector('[data-inspect-form] [name="command"]');
@@ -514,5 +519,6 @@ export function renderWorkspace(root, scenario, state, onAction) {
     if (form.dataset.form==='set-authorization') onAction('set-authorization',value.patch);
     else onAction(form.dataset.form,value);
   }));
+  mountInteractiveTools(root,scenario,()=>state,onAction);
   restoreView();
 }

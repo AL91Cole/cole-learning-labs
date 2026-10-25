@@ -85,13 +85,13 @@ const workspaceRepairs = {
   ]
 };
 
-test('the assignment catalogue has 32 distinct, implemented cases across five pathways', () => {
-  assert.equal(SCENARIOS.length, 32);
-  assert.equal(new Set(SCENARIOS.map(scenario => scenario.id)).size, 32);
-  const expected = [...Object.keys(hardwareRepairs), ...Object.keys(workspaceRepairs)].sort();
+test('the assignment catalogue has 42 distinct, implemented cases across five pathways', () => {
+  assert.equal(SCENARIOS.length, 42);
+  assert.equal(new Set(SCENARIOS.map(scenario => scenario.id)).size, 42);
+  const expected = [...Object.keys(hardwareRepairs), ...Object.keys(workspaceRepairs), ...Array.from({length:10},(_,index)=>`NET-${207+index}`)].sort();
   assert.deepEqual(SCENARIOS.map(scenario => scenario.id).sort(), expected);
   assert.deepEqual(Object.fromEntries(['hardware','network','ai','security','coding'].map(track => [track, SCENARIOS.filter(scenario => scenario.track === track).length])), {
-    hardware:8, network:6, ai:6, security:6, coding:6
+    hardware:8, network:16, ai:6, security:6, coding:6
   });
 });
 

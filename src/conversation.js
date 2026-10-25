@@ -1,5 +1,5 @@
 /** Small, on-device language resolver. It selects an authored case question; it never invents a fact. */
-const IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
+const IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','NET-207','NET-208','NET-209','NET-210','NET-211','NET-212','NET-213','NET-214','NET-215','NET-216','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const compact = value => value.replace(/\s+/gu,' ').trim();
 const valid = value => typeof value === 'string' && value.length <= 240 && compact(value).length > 0 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value);
 // Correct only a few unambiguous classroom words, rather than guessing arbitrary names or text.
@@ -78,6 +78,60 @@ const rules = {
     rule('backup.destination',/\b(?:overwrite|replace|damaged|where|folder|keep|evidence)\b/u,'Can I overwrite the damaged file?'),
     rule('backup.catalog',/\b(?:newest|latest|version|copy|copies|backup|snapshot|catalog|which one|empty)\b/u,'Which backup snapshot contains the original?'),
     rule('backup.integrity',/\b(?:check|prove|verify|right|correct|complete|integrity|manifest|compare|contents)\b/u,'How do I verify the restored file with the manifest?')
+  ],
+  'NET-207':[
+    rule('protocol.layers',/\b(?:osi|tcp.?ip|layers?|stack|encapsulation)\b/u,'What does the protocol layer evidence show?'),
+    rule('protocol.service',/\b(?:dns|https|tcp|udp|service|web|website|portal|port|file|voice|call)\b/u,'What do TCP and UDP carry in this case?'),
+    rule('protocol.path',/\b(?:path|frame|packet|data|order|route|travel)\b/u,'How does the request travel through the network?')
+  ],
+  'NET-208':[
+    rule('ethernet.design',/\b(?:star|topology|layout|design|hub|switch|ports?)\b/u,'Which topology and switch fit the room?'),
+    rule('ethernet.media',/\b(?:cable|wire|copper|fiber|fibre|media|distance|length|metres?|meters?)\b/u,'Which cable media fit the supplied distances?'),
+    rule('ethernet.routing',/\b(?:router|gateway|outside|internet|other networks?)\b/u,'What does the router connect?')
+  ],
+  'NET-209':[
+    rule('addressing.routing',/\b(?:dynamic|static|routing|route updates?|ospf|rip)\b/u,'What does the supplied OSPF route evidence show?'),
+    rule('addressing.translation',/\b(?:nat|translation|public|private|internet)\b/u,'What does NAT change in this IPv4 plan?'),
+    rule('addressing.ipv6',/\b(?:ipv6|dual stack)\b/u,'What does IPv6 mean in the boundary plan?'),
+    rule('addressing.subnet',/\b(?:ipv4|subnet|prefix|mask|address|gateway|host|range|number)\b/u,'Which subnet and mask fit the room allocation?')
+  ],
+  'NET-210':[
+    rule('switching.loop',/\b(?:loop|stp|spanning tree|redundant|duplicate|storm)\b/u,'How does STP handle the redundant link?'),
+    rule('switching.policy',/\b(?:route|routing|allowed|deny|permission|staff|guest|printer|policy)\b/u,'Which routing policy applies to guest and staff traffic?'),
+    rule('switching.vlan',/\b(?:vlan|trunk|tag|uplink|switch|port)\b/u,'Which VLANs belong on the trunk?')
+  ],
+  'NET-211':[
+    rule('portal.identity',/\b(?:identity|sign in|login|log in|authentication|account|mfa)\b/u,'What does the authentication evidence show?'),
+    rule('portal.alert',/\b(?:ids|alert|attack|proof|log|event|evidence)\b/u,'What can the IDS alert establish?'),
+    rule('portal.filter',/\b(?:firewall|allow|block|deny|https|443|rule)\b/u,'Which firewall rule allows the required portal traffic?')
+  ],
+  'NET-212':[
+    rule('wan.evidence',/\b(?:hop|trace|traceroute|tracert|timeout|time out|ping|loss|delay)\b/u,'Which diagnostic trace records the WAN path?'),
+    rule('wan.scope',/\b(?:local|lan|gateway|dns|nearby|other devices?|scope)\b/u,'Which local services still work?'),
+    rule('wan.handoff',/\b(?:provider|isp|escalate|handoff|report|ticket)\b/u,'Which diagnostic checkpoints belong in the provider handoff?')
+  ],
+  'NET-213':[
+    rule('voice.quality',/\b(?:qos|jitter|delay|loss|choppy|breaking up|queue|quality|priority)\b/u,'What do the call quality and QoS readings show?'),
+    rule('voice.protocol',/\b(?:sip|rtp|protocol|call setup|signaling|signalling|audio|sound)\b/u,'How do SIP and RTP serve the call?'),
+    rule('voice.management',/\b(?:fcaps|management|fault|accounting|performance|baseline)\b/u,'Which FCAPS evidence should the handoff include?')
+  ],
+  'NET-214':[
+    rule('plan.topology',/\b(?:topology|layout|diagram|design|model|gns3)\b/u,'Which topology and capacity plan fits the supplied room?'),
+    rule('plan.wireless',/\b(?:wi-fi|wifi|wireless|channel|access point|coverage)\b/u,'Which secure Wi-Fi plan meets the room requirements?'),
+    rule('plan.segmentation',/\b(?:segment|segmentation|vlan|guest|staff|isolation|security|secure)\b/u,'How should the plan separate guest and staff traffic?'),
+    rule('plan.capacity',/\b(?:capacity|devices?|ports?|bandwidth|inventory|count)\b/u,'What capacity and ports does the room need?'),
+    rule('plan.validation',/\b(?:baseline|rollback|undo|test|acceptance|handoff)\b/u,'Which baseline tests and rollback plan are required?')
+  ],
+  'NET-215':[
+    rule('capture.arp',/\b(?:arp|broadcast|resolve|resolution|next hop)\b/u,'What does the supplied ARP exchange show?'),
+    rule('capture.addresses',/\b(?:mac|ip|source|destination|address|frame|hop|router)\b/u,'Which MAC and IP addresses appear in the supplied capture?'),
+    rule('capture.evidence',/\b(?:capture|packet|ethernet|layer|record|wireshark|filter|evidence)\b/u,'What can the supplied packet capture establish?')
+  ],
+  'NET-216':[
+    rule('monitoring.security',/\b(?:snmpv3|version|credential|authentication|encryption|private|secure|security)\b/u,'Which SNMP access policy is approved?'),
+    rule('monitoring.baseline',/\b(?:counter|rate|baseline|utilization|utilisation|error|reading|difference)\b/u,'What do the supplied SNMP counter readings show?'),
+    rule('monitoring.alert',/\b(?:trap|inform|notification|alert|threshold|alarm)\b/u,'What does the manager alert require us to check?'),
+    rule('monitoring.roles',/\b(?:snmp|manager|agent|mib|oid|poll|monitor)\b/u,'How do the SNMP manager and agent exchange information?')
   ],
   'AI-301':[
     rule('ai.privacy',/\b(?:real|personal|identify|identifiers|private|details|account|send|sent|sending|leave (?:the|my) (?:device|computer|browser)|online|upload)\b/u,'Will this send my prompt to AI?'),

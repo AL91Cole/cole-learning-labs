@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261023-monitor';
+import { pcActivity } from './pc-activity.js?release=20261024-network-studio';
 
 /** Control recommendations only. The equipment model still decides every repair. */
 const freezeList=values=>Object.freeze(values);

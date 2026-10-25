@@ -5,6 +5,9 @@ import vm from 'node:vm';
 import { createWorkStorage, CLEAR_WORK_KEY, WORK_PREFIX } from '../src/local-work.js';
 import { SCENARIOS } from '../src/scenarios.js';
 import { normalizeLabRecord } from '../src/records.js';
+import {initialNetworkStudioState} from '../src/network-studio-model.js';
+import { initialCodingStudioState } from '../src/coding-studio.js';
+import { initialWorkspaceState } from '../src/workspaces.js';
 
 const source = await readFile(new URL('../src/app.js', import.meta.url), 'utf8');
 const production = ['save', 'resetLocalSession', 'bindWorkPrivacy', 'recordFor'].map(name => {
@@ -33,12 +36,15 @@ class DeviceStorage {
 function harness() {
   const storage = new DeviceStorage();
   const initialStore = record('Earlier fictional classroom draft.');
+  const initialPracticeStates = { 'NET-201': { ...initialWorkspaceState('NET-201'), ip: '10.24.8.26', workspaceEdits: 2 } };
+  const initialNetworkState = {...initialNetworkStudioState(),runs:2};
+  const initialStudioState = { ...initialCodingStudioState('blank'), code: 'print("Private fictional creative draft");', runs: 1 };
   const events = new Map(), notices = [], calls = { disposed: 0, scheduled: 0, rendered: 0, sandboxCleared: 0 };
   const status = { textContent: '' };
   let mounted;
   const context = vm.createContext({
     SCENARIOS, normalizeLabRecord, createWorkStorage, CLEAR_WORK_KEY, WORK_PREFIX, deviceStorage: storage,
-    initialKey: classroomKey, initialStore,
+    initialKey: classroomKey, initialStore, initialPracticeStates, initialStudioState, initialCodingStudioState, initialNetworkState, initialNetworkStudioState,
     initialConnection: { dispose() { calls.disposed++; }, schedule() { calls.scheduled++; } },
     window: { addEventListener(name, listener) { events.set(name, listener); } },
     $: selector => selector === '#work-privacy' ? {} : selector === '.save-status' ? status : null,
@@ -52,10 +58,11 @@ function harness() {
   vm.runInContext(`
     let storageKey=initialKey, store=initialStore, classroomSharingPaused=false, labView={id:'INC-101',section:2};
     let classroomConnection=initialConnection, storageAvailable=true;
+    let networkStudioState=initialNetworkState, practiceStates=initialPracticeStates, codingStudioState=initialStudioState, foundationRecords=Object.create(null);
     let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});
     ${production.join('\n')}
     ${storageListener}
-    globalThis.sessionState=()=>({storageKey,store,manager:workStorage,classroomSharingPaused,classroomConnection,storageAvailable});
+    globalThis.sessionState=()=>({storageKey,store,manager:workStorage,classroomSharingPaused,classroomConnection,storageAvailable,practiceStates,codingStudioState,networkStudioState});
     globalThis.setCurrentWork=value=>{store=value;};
     globalThis.saveCurrentWork=save;
     globalThis.mountPrivacy=()=>bindWorkPrivacy(SCENARIOS.find(s=>s.id==='INC-101'));
@@ -67,7 +74,7 @@ function harness() {
   storage.setItem(WORK_PREFIX, JSON.stringify(record('Earlier fictional independent draft.')));
   storage.setItem('unrelated-browser-setting', 'keep');
   context.mountPrivacy();
-  return { storage, context, events, notices, calls, status, originalManager, get mounted() { return mounted; }, state: () => context.sessionState() };
+  return { storage, context, events, notices, calls, status, originalManager, initialPracticeStates, initialStudioState, initialNetworkState, get mounted() { return mounted; }, state: () => context.sessionState() };
 }
 
 function assertReset(h) {
@@ -79,6 +86,12 @@ function assertReset(h) {
   assert.equal(state.classroomSharingPaused, true);
   assert.equal(state.classroomConnection, null);
   assert.deepEqual(JSON.parse(JSON.stringify(state.store)), { version: 2, labs: {} });
+  assert.deepEqual(JSON.parse(JSON.stringify(state.practiceStates)), {}, 'Clear all practice workbench drafts from page memory.');
+  assert.notEqual(state.practiceStates, h.initialPracticeStates);
+  assert.deepEqual(JSON.parse(JSON.stringify(state.codingStudioState)), initialCodingStudioState(), 'Restore a fresh coding studio, with no prior creative program or run history.');
+  assert.notEqual(state.codingStudioState, h.initialStudioState);
+  assert.deepEqual(JSON.parse(JSON.stringify(state.networkStudioState)),initialNetworkStudioState(),'Clear the editable network and packet history from page memory.');
+  assert.notEqual(state.networkStudioState,h.initialNetworkState);
   assert.equal(h.calls.disposed, 1); assert.equal(h.calls.rendered, 1);
   assert.equal(h.calls.sandboxCleared, 1);
 }
@@ -149,6 +162,9 @@ test('unrelated storage notifications do not reset active work or stop its curre
   const h = harness();
   for (const event of [{ key: 'unrelated-browser-setting', newValue: 'changed' }, { key: CLEAR_WORK_KEY, newValue: null }]) h.events.get('storage')(event);
   assert.equal(h.state().storageKey, classroomKey);
+  assert.equal(h.state().practiceStates, h.initialPracticeStates);
+  assert.equal(h.state().codingStudioState, h.initialStudioState);
+  assert.equal(h.state().networkStudioState,h.initialNetworkState);
   assert.equal(h.state().manager, h.originalManager);
   assert.equal(h.state().classroomSharingPaused, false);
   assert.equal(h.state().manager.persistent, true);

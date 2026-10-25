@@ -1,6 +1,7 @@
 /** Optional, fail-closed classroom service. Public simulations remain independent. */
 import { SCENARIOS } from '../../src/scenarios.js';
-import { EXPANDED_SCENARIOS, expandedStateFields } from '../../src/expanded-labs.js';
+import { getNetworkBenchSpec } from '../../src/network-bench.js';
+import { expandedStateFields } from '../../src/expanded-labs.js';
 import { CODING_SCENARIOS, codingFixtureCount } from '../../src/coding-lab.js';
 // Production release lock. Only a reviewed code release may change this after the
 // applicable privacy, legal, district-agreement, and operational requirements are met.
@@ -154,7 +155,15 @@ const workspaceCommonFields = {
   tested: workBoolean, workspaceEdits: workCount, checkRuns: workCount,
   results: workList(workRecord({ label: workString(300), ok: workBoolean }), 10)
 };
-const expandedWorkspaceFields=Object.fromEntries(EXPANDED_SCENARIOS.map(scenario=>[scenario.id,{testSignature:workString(160),...Object.fromEntries(Object.entries(expandedStateFields(scenario.id)).map(([field,values])=>[field,workEnum(values)]))}]));
+const networkBenchField = id => value => {
+  const spec=getNetworkBenchSpec(id);if(!spec||!plain(value))return false;
+  workFields(value,{positions:positions=>{
+    if(!plain(positions)||Object.keys(positions).length!==spec.nodes.length)return false;
+    return workFields(positions,Object.fromEntries(spec.nodes.map(node=>[node.id,point=>plain(point)&&Object.keys(point).length===2&&workFields(point,{x:coordinate=>Number.isFinite(coordinate)&&coordinate>=12&&coordinate<=88,y:coordinate=>Number.isFinite(coordinate)&&coordinate>=18&&coordinate<=82})])));
+  },disconnected:items=>Array.isArray(items)&&items.length<=spec.cables.length&&new Set(items).size===items.length&&items.every(item=>spec.cables.some(cable=>cable.id===item))});
+  return Object.keys(value).length===2;
+};
+const expandedWorkspaceFields=Object.fromEntries(SCENARIOS.filter(scenario=>Object.keys(expandedStateFields(scenario.id)).length>0).map(scenario=>[scenario.id,{testSignature:workString(512),...(getNetworkBenchSpec(scenario.id)?{networkBench:networkBenchField(scenario.id)}:{}),...Object.fromEntries(Object.entries(expandedStateFields(scenario.id)).map(([field,values])=>[field,workEnum(values)]))}]));
 const codingWorkspaceFields=Object.fromEntries(CODING_SCENARIOS.map(scenario=>[scenario.id,{code:workString(4000),sourceAtRun:workString(4000),language:workEnum(['javascript','python']),languageAtRun:workEnum(['','javascript','python']),fixtureIndex:value=>Number.isInteger(value)&&value>=0&&value<codingFixtureCount(scenario.id),output:workList(workString(300),20),errors:workList(workRecord({line:value=>Number.isInteger(value)&&value>=1&&value<=4001,message:workString(300)}),1)}]));
 const workspaceStateFields = {
   ...expandedWorkspaceFields, ...codingWorkspaceFields,

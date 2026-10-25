@@ -63,9 +63,9 @@ function availableWorkspaceGuide(scenario,state) {
 }
 
 test('every settings workspace offers three optional instructions that name its visible real controls',()=>{
-  assert.equal(SCENARIOS.length,32);
+  assert.equal(SCENARIOS.length,42);
   assert.equal(SCENARIOS.filter(item=>item.track==='hardware').length,8);
-  assert.equal(legacyScenarios.length,9);assert.equal(expandedScenarios.length,9);assert.equal(codingScenarios.length,6);
+  assert.equal(legacyScenarios.length,9);assert.equal(expandedScenarios.length,19);assert.equal(codingScenarios.length,6);
   for(const scenario of settingsScenarios) {
     const {html,guide}=availableWorkspaceGuide(scenario,initialWorkspaceState(scenario.id));
     assert.match(html,supportsCodingLab(scenario.id)?/Run the program to see results for every fixture/:supportsExpandedLab(scenario.id)?/No current full test/:/No current test results/,scenario.id);
@@ -91,7 +91,7 @@ test('optional instructions remain available after a real saved change and test 
   }
 });
 
-test('the nine decision labs retain optional guidance after real saved changes and tests',()=>{
+test('all decision labs retain optional guidance after real saved changes and tests',()=>{
   for(const scenario of expandedScenarios) {
     let state=initialWorkspaceState(scenario.id);
     const guideBefore=availableWorkspaceGuide(scenario,state).guide;

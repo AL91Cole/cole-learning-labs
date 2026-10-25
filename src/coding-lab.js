@@ -1,4 +1,4 @@
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261023-monitor';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261024-network-studio';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
@@ -229,7 +229,17 @@ export function executeCoding(source,inputs={},language='javascript') {
     if(!CODING_LANGUAGES.some(item=>item.id===language))fail('Choose the JavaScript subset or Python subset.');
     const python=language==='python',program=parse(source,language),variables=new Map(),inputNames=new Set();
     if(!record(inputs)) fail('This fixture has invalid inputs.');
-    for(const [name,value] of Object.entries(inputs)) {if(!/^[A-Za-z_][A-Za-z_0-9]{0,39}$/.test(name) || forbidden.has(name)||reserved.has(name) || !['string','number','boolean'].includes(typeof value) || typeof value==='number' && (!Number.isFinite(value) || Math.abs(value)>1000000) || typeof value==='string' && value.length>LIMITS.text) fail('This fixture has invalid inputs.');variables.set(name,value);inputNames.add(name);}
+    // Only primitive own data properties cross the interpreter boundary. Do not
+    // invoke getters while inspecting inputs, or retain host objects in variables.
+    const inputDescriptors=Object.getOwnPropertyDescriptors(inputs),names=Reflect.ownKeys(inputDescriptors);
+    if(names.length>60) fail('This fixture has invalid inputs.');
+    for(const name of names) {
+      const descriptor=inputDescriptors[name];
+      if(typeof name!=='string' || !Object.hasOwn(descriptor,'value')) fail('This fixture has invalid inputs.');
+      const value=descriptor.value;
+      if(!/^[A-Za-z_][A-Za-z_0-9]{0,39}$/.test(name) || forbidden.has(name) || reserved.has(name) || !['string','number','boolean'].includes(typeof value) || typeof value==='number' && (!Number.isFinite(value) || Math.abs(value)>1000000) || typeof value==='string' && value.length>LIMITS.text) fail('This fixture has invalid inputs.');
+      variables.set(name,value);inputNames.add(name);
+    }
     const tick=line=>{steps++;if(steps>LIMITS.steps) fail('Execution stopped at the 1,000-step limit. Reduce the repeat count or simplify nested loops.',line);};
     const bounded=(value,line)=>{if(typeof value==='number' && (!Number.isFinite(value) || Math.abs(value)>1000000)) fail('The calculation must stay finite and within ±1,000,000.',line);if(typeof value==='string' && value.length>LIMITS.text) fail('Text grew beyond 300 characters. Shorten the output.',line);return value;};
     const text=value=>python&&typeof value==='boolean'?(value?'True':'False'):String(value);

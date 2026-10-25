@@ -1,13 +1,13 @@
-import { resolveQuestion } from './conversation.js?release=20261023-monitor';
-import { pcActivity } from './pc-activity.js?release=20261023-monitor';
-import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261023-monitor';
+import { resolveQuestion } from './conversation.js?release=20261024-network-studio';
+import { pcActivity } from './pc-activity.js?release=20261024-network-studio';
+import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261024-network-studio';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
 const PRIVACY_NOTICE = 'Case replies use local facts. When available, extra cloud replies use a fixed topic code and lab ID. Cloudflare does not receive your typed words or work in that request. Extra chat stays out of saved reports. Built-in replies stay available if the service cannot reply.';
-const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
-const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
+const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','NET-207','NET-208','NET-209','NET-210','NET-211','NET-212','NET-213','NET-214','NET-215','NET-216','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
+const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','NET-207','NET-208','NET-209','NET-210','NET-211','NET-212','NET-213','NET-214','NET-215','NET-216','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();
 const bounded = text => text.length <= ANSWER_MAX ? text : text.slice(0, ANSWER_MAX - 1).trimEnd() + '…';
 const response = (answer, topic, kind = 'answer', accepted = true) => ({ accepted, answer:bounded(answer), kind, topic });
@@ -85,6 +85,9 @@ function requiredInquiryFacts(scenario) {
 // Only the shipped case IDs can use them. A question never becomes executable code or a prompt.
 function expandedCaseReply(scenario, question, state) {
   if (!EXPANDED_CASE_IDS.has(scenario.id)) return null;
+  if (scenario.track === 'network' && /\b(?:wireshark|gns3)\b/iu.test(question)) {
+    return response('This lab uses supplied fictional packet records and network diagrams. It does not launch Wireshark or GNS3, capture device traffic, or connect to a real network. Use the built-in tools to inspect the supplied evidence.', 'scope');
+  }
   if (/\b(?:code|python|javascript|program|script)\b.*\b(?:run|execut)|\b(?:run|execut)\w*\b.*\b(?:code|python|javascript|program|script)\b/iu.test(question) && scenario.track === 'coding' && /\b(?:real|arbitrary|external|internet|shell|system)\b/iu.test(question)) {
     return response('Only the small, built-in teaching language is supported in this browser sandbox. It cannot run arbitrary Python, use your device, open files, or make network requests. Use the sample program and supplied test inputs.', 'scope');
   }

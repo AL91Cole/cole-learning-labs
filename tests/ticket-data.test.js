@@ -5,7 +5,7 @@ import {SCENARIOS} from '../src/scenarios.js';
 test('support requests mix detailed reports with five specific follow-up investigations', () => {
   const tickets = SCENARIOS.filter(scenario => scenario.intake);
   assert.deepEqual(tickets.filter(scenario => scenario.intake.kind === 'follow-up').map(scenario => scenario.id), ['INC-101','INC-103','INC-108','NET-201','NET-205']);
-  assert.equal(tickets.filter(scenario => scenario.intake.kind === 'detailed').length, 8);
+  assert.equal(tickets.filter(scenario => scenario.intake.kind === 'detailed').length, 18);
   for (const scenario of tickets) {
     assert.ok(['detailed','follow-up'].includes(scenario.intake.kind), scenario.id);
     assert.ok(Array.isArray(scenario.intake.factIds), scenario.id);

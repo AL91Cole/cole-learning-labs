@@ -1,5 +1,6 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261023-monitor';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261023-monitor';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261024-network-studio';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261024-network-studio';
+import {NETWORK_SCENARIOS} from './network-labs.js?release=20261024-network-studio';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 
@@ -161,5 +162,6 @@ export const SCENARIOS = [
     questions: [question('May I try this on the school portal?','No. Permission for this fictional simulation does not authorize testing any real system.'),question('What should the retest show?','The same user should receive 200 for record 101 and 403 for record 102 after the ownership check is applied.')],
   },
   ...EXPANDED_SCENARIOS,
+  ...NETWORK_SCENARIOS,
   ...CODING_SCENARIOS
 ];
