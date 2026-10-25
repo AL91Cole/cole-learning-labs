@@ -161,18 +161,27 @@ function mockRoot(){
   };
   return {innerHTML:'',elements,querySelector:node,querySelectorAll(){return []}};
 }
-test('renderers use native form controls, keep all data local, and reject injected saved markup',()=>{
+test('renderers use native controls, keep all data local, and reject injected saved markup',()=>{
   const markup=[];
   for(const scenario of EXPANDED_SCENARIOS){
     const root=mockRoot();
     const poison={...solved(scenario.id)};
     for(const key of Object.keys(SOLUTIONS[scenario.id]))poison[key]='<script>window.bad=true</script>';
     renderExpanded(root,scenario,poison,()=>{});
-    assert.match(root.innerHTML,/Use this workbench/);
-    assert.match(root.innerHTML,/Apply my choices/);assert.match(root.innerHTML,/Run workspace test/);
+    const activity=['ai','security'].includes(scenario.track);
+    if(activity) {
+      assert.match(root.innerHTML,/data-learning-activity/);
+      assert.match(root.innerHTML,/data-la-test>Test this setup<\/button>/);
+      assert.match(root.innerHTML,/<button[^>]*data-la-choice=/);
+      assert.match(root.innerHTML,/<details class="activity-reference">/);
+      assert.doesNotMatch(root.innerHTML,/<form|<select\b/);
+    } else {
+      assert.match(root.innerHTML,/Use this workbench/);
+      assert.match(root.innerHTML,/Apply my choices/);assert.match(root.innerHTML,/Run workspace test/);
+    }
     assert.match(root.innerHTML,/role="status"/);
     assert.doesNotMatch(root.innerHTML,/<script|<iframe|javascript:|window\.bad|rubric/i);
-    assert.equal((root.innerHTML.match(/<select /g)||[]).length,4);
+    if(!activity)assert.equal((root.innerHTML.match(/<select /g)||[]).length,4);
     markup.push(root.innerHTML);
   }
   assert.equal(new Set(markup).size,9,'All nine cases have distinct equipment and artifacts');

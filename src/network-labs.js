@@ -1,4 +1,4 @@
-import {normalizeNetworkBench} from './network-bench.js?release=20261024-network-studio';
+import {normalizeNetworkBench} from './network-bench.js?release=20261025-hands-on';
 /** Original local networking adaptations. No live network, capture, or emulator calls. */
 const code=id=>typeof id==='string'?id.replaceAll('-','').toUpperCase():'';
 const option=(value,label)=>[value,label];

@@ -1,6 +1,6 @@
 # Teaching with Cole Learning Labs
 
-Cole Learning Labs provides 32 browser-based investigations across five pathways for grades 7–12. Use it for demonstrations, guided investigation, independent practice, and discussion on school devices.
+Cole Learning Labs provides 42 browser-based investigations across five pathways for grades 7–12. Use it for demonstrations, guided investigation, independent practice, and discussion on school devices.
 
 If a learner leaves a coding lab through the site menu or browser history, the current editor text is preserved as an untested program in that lab’s work. They must rerun fixtures before finishing. This does not enable device saving; private work still needs an export before closing the page.
 
@@ -58,10 +58,20 @@ The software consoles accept only the displayed fixed practice commands and targ
 
 Other workspaces provide shared-folder read/write previews, recovery and service status, scripted AI-response and source previews, simulated code-request results, message sender/destination/header inspection, and defensive gateway probes. Keep inspection separate from the full test: reading a result does not mark the workspace tested, reproduce the scoped authorization defect, or submit work. Software inspections preserve unapplied form entries. After a meaningful change, learners need a fresh test and an explanation.
 
+## AI and cybersecurity activity boards
+
+The six AI and six cybersecurity cases now start with a hands-on board and a short task. Students can mark a message, sort a claim or source card, adjust a threshold, compare record responses, or build a recovery plan. Saved choices change the visual preview immediately. Source notes, clues and inspection tools stay available when students need them. See [Interactive workbenches](INTERACTIVE-LABS.md) for the twelve activities.
+
+Use a short learning loop: **predict → change one thing → observe → test → explain**. Ask the learner to name what changed and what the result supports. A preview or replay illustrates the saved model; the learner still runs the full test. Changing a choice clears earlier test evidence. Failed checks point to another comparison, and a successful test still needs the learner’s explanation.
+
+The same boards appear in direct practice and guided investigations. Direct practice lets students explore the controls first. Guided work keeps separate symptoms, hypotheses, clues, saved ideas, test evidence and reflection, with the existing ordered steps. SEC-403 still requires scope acknowledgement and observation of the original defect before a patch can satisfy the investigation. Drag targets also offer buttons, and reduced motion preserves state and feedback without animation.
+
+These are fixed local teaching simulations. Prompt and source text cannot grant the boards new powers. They do not request real credentials, run student Python, scan networks, download packages, or apply changes to school systems. Optional requester conversation remains separate from the board’s evidence and tests.
+
 ## Five pathways
 
 - **Hardware & ServiceDesk — eight investigations.** Trace display and power faults, reseat compatible memory, reconnect storage, preserve the original classroom drive, and assemble a virtual PC. Use the virtual safe-power sequence for internal changes. A repaired component, a working desktop, and delivery of the original lesson file are separate checkpoints.
-- **Network & Operating Systems — six investigations.** Repair IPv4/DNS settings, reach a share using the correct network and least privilege, recover startup and update services, survey wireless coverage, restore a print queue, and recover a verified backup without overwriting evidence. Test the saved settings and explain the output.
+- **Network & Operating Systems — sixteen investigations.** Repair IPv4/DNS settings, reach a share using the correct network and least privilege, recover startup and update services, survey wireless coverage, restore a print queue, and recover a verified backup without overwriting evidence. Test the saved settings and explain the output.
 - **AI Literacy & Audit — six investigations.** Improve a privacy-aware prompt, compare claims with a source, check equal treatment of equivalent tickets, review generated code, minimize data, reject source injection, and evaluate thresholds with human oversight. These activities use authored examples and local checks. Optional requester conversation does not replace their source cards, tests, or teacher review.
 - **Ethical Hacking & Penetration Testing — six investigations.** Inspect phishing, correlate logs, patch an access-control defect, practice MFA recovery, contain a fictional incident, and verify a software package. Authorization and scope are part of every task.
 - **Coding Sandbox — six investigations.** Repair supply and pixel-pet expressions, thermostat and arcade-prize boundaries, and readiness and rover-energy loops. Choose JavaScript or Python; the editor accepts documented subsets of ordinary syntax through a local bounded interpreter. These are not full language runtimes, an operating-system shell, or a connection to a real device. Legacy teaching-source programs still work.

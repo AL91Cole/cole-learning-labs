@@ -1,6 +1,6 @@
-import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261024-network-studio';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261024-network-studio';
-import {createTextReport,createReportURLs} from './report-downloads.js?release=20261024-network-studio';
+import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261025-hands-on';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-hands-on';
+import {createTextReport,createReportURLs} from './report-downloads.js?release=20261025-hands-on';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const drafts=new Map();

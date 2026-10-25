@@ -104,6 +104,6 @@ test('restoration never steals outside focus, reveals closed content or reuses a
 
 test('fictional inbox selection is programmatic and scrollable consoles have names',()=>{
   const {root}=fixture();renderWorkspace(root,scenario('SEC-401'),initialWorkspaceState('SEC-401'),()=>{});
-  assert.equal(root.querySelector('[data-value="urgent"]').getAttribute('aria-pressed'),'true');assert.equal(root.querySelector('[data-value="routine"]').getAttribute('aria-pressed'),'false');
+  assert.equal(root.querySelector('[data-la-choice="message"][data-la-value="urgent"]').getAttribute('aria-pressed'),'true');assert.equal(root.querySelector('[data-la-choice="message"][data-la-value="routine"]').getAttribute('aria-pressed'),'false');
   renderWorkspace(root,scenario('NET-201'),initialWorkspaceState('NET-201'),()=>{});assert.equal(root.querySelector('.ws-terminal').getAttribute('tabindex'),'0');assert.equal(root.querySelector('.ws-terminal').getAttribute('role'),'region');
 });

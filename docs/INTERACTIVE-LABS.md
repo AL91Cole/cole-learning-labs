@@ -18,9 +18,32 @@ Select matching cable ports to connect them. Select a cable or use the labelled 
 
 In the course investigations, ports and cable pairs are supplied by the activity. Use Network Studio to add or remove devices and choose other connections. Neither mode accepts real destinations or executable commands. The course diagrams also provide a local test-packet demonstration. Saved configuration or cable changes refresh the trace; layout-only moves and inspections do not start a new packet. A physical-path demonstration never replaces the full lab test or earns completion. Layer labels, policy evidence and supplied packet records remain distinct from physical cabling. Keyboard and labelled button alternatives support the same actions as dragging.
 
-## Act on the other workbenches
+## Explore the AI and cybersecurity boards
 
-Action cards expose the current task controls for legacy network/OS, AI and cybersecurity cases. Each button applies a supported model action; it does not bypass scope acknowledgement, perform a real network operation, or award a successful test. Detailed settings remain available when useful. Inspections preserve pending settings. Guided investigations still require their saved learning artifacts.
+All twelve AI and cybersecurity cases put the activity controls first. Short instructions introduce one task; source facts, clues and inspection tools remain available when needed. Use the same board in a guided investigation or its practice workbench.
+
+| Case | Learn by doing |
+| --- | --- |
+| AI-301 | Build a prompt with chips and an editable draft; compare the local checks. |
+| AI-302 | Sort claims against a source and compare the two matching tickets. |
+| AI-303 | Change code-review choices and watch the access gate. |
+| AI-304 | Choose the input, route and learner alternative in a data-flow board. |
+| AI-305 | Sort source content into evidence and an attempted task change. |
+| AI-306 | Move the threshold and compare review queues and missed urgent tickets. |
+| SEC-401 | Mark warning signs directly on a text-only message. |
+| SEC-402 | Link related log events and watch source and portal rules change. |
+| SEC-403 | Request two fictional records, patch the access gate and compare responses. |
+| SEC-404 | Build the identity-check, lost-factor, recovery and audit path. |
+| SEC-405 | Isolate the affected endpoint and choose evidence and recovery actions. |
+| SEC-406 | Select a package, inspect its signature and digest, and plan a pilot. |
+
+A moving preview shows the saved plan, not a successful full test. Replay it to compare a change, then choose **Test this setup**. Edits invalidate earlier test evidence. Reduced-motion users receive the same saved state and test feedback without the animation. Every drag action has a button alternative.
+
+The boards use fixed fictional data and the existing bounded workspace actions. Scope acknowledgement and the original-defect check still apply to SEC-403. No choice sends a real packet, reads a real account, runs a package, contacts an AI provider, or earns an automatic grade. Guided investigations retain separate symptoms, hypothesis, clues, test evidence and explanations.
+
+## Other workbench controls
+
+Legacy network/OS action cards apply the existing model choices. Detailed settings remain available, and inspections preserve pending settings. Run a fresh test after a meaningful change.
 
 ## Create in Coding Studio
 

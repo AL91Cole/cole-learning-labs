@@ -1,4 +1,4 @@
-import {executeCoding} from './coding-lab.js?release=20261024-network-studio';
+import {executeCoding} from './coding-lab.js?release=20261025-hands-on';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const SOURCE_LIMIT=4000;

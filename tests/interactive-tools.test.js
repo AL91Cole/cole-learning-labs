@@ -70,7 +70,7 @@ test('an applied card invalidates prior full-test evidence',()=>{
 
 test('visual flows escape saved values and classifier matrix follows the saved threshold',()=>{
   const html=renderInteractiveTools({id:'NET-202'},{network:'<img src=x onerror=alert(1)>',folder:'<script>',permission:'&"'});
-  assert.doesNotMatch(html,/<img|<script>/);assert.match(html,/&lt;img/);
+  assert.doesNotMatch(html,/<img\b|<script\b/i);assert.match(html,/&lt;img/);
   const high=renderInteractiveTools({id:'AI-306'},initialWorkspaceState('AI-306'));
   const low=renderInteractiveTools({id:'AI-306'},{...initialWorkspaceState('AI-306'),threshold:'0.50'});
   assert.match(high,/<b>1<\/b><span>Urgent → missed/);assert.match(low,/<b>0<\/b><span>Urgent → missed/);

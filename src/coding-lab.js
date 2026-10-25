@@ -1,4 +1,4 @@
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261024-network-studio';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-hands-on';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';

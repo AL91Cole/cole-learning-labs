@@ -1,5 +1,5 @@
-import {SCENARIOS} from './scenarios.js?release=20261024-network-studio';
-import {initialWorkspaceState,normalizeWorkspaceState,applyWorkspaceAction,renderWorkspace,disposeWorkspace,getWorkspaceMission} from './workspaces.js?release=20261024-network-studio';
+import {SCENARIOS} from './scenarios.js?release=20261025-hands-on';
+import {initialWorkspaceState,normalizeWorkspaceState,applyWorkspaceAction,renderWorkspace,disposeWorkspace,getWorkspaceMission} from './workspaces.js?release=20261025-hands-on';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const TRACKS=Object.freeze({network:'Networking',ai:'AI literacy',security:'Cybersecurity'});
 export const practiceScenarioFor=id=>typeof id==='string'?SCENARIOS.find(scenario=>scenario.id===id&&Object.hasOwn(TRACKS,scenario.track))||null:null;

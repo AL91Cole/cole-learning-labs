@@ -1,5 +1,5 @@
-import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261024-network-studio';
-import { executeCoding } from './coding-lab.js?release=20261024-network-studio';
+import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261025-hands-on';
+import { executeCoding } from './coding-lab.js?release=20261025-hands-on';
 
 const item = (id,label,looks,role) => ({id,label,looks,role});
 const check = (id,prompt,options,answer,explanation) => ({id,prompt,options:options.map(([id,label])=>({id,label})),answer,explanation});

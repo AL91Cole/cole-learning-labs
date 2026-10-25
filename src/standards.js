@@ -1,4 +1,4 @@
-import {SCENARIOS} from './scenarios.js?release=20261024-network-studio';
+import {SCENARIOS} from './scenarios.js?release=20261025-hands-on';
 
 const esc=value=>String(value??'').replace(/[&<>"']/gu,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const NYS_CONCEPTS=Object.freeze(['Impacts of Computing','Computational Thinking','Networks and Systems Design','Cybersecurity','Digital Literacy']);

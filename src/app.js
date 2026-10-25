@@ -1,30 +1,30 @@
-import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261024-network-studio';
-import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261024-network-studio';
-import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261024-network-studio';
-import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261024-network-studio';
-import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261024-network-studio';
-import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261024-network-studio';
-import {SCENARIOS} from './scenarios.js?release=20261024-network-studio';
-import {labLanguage} from './lab-language.js?release=20261024-network-studio';
-import {requesterPersona} from './requester-persona.js?release=20261024-network-studio';
-import {mountRequesterChat} from './requester-chat.js?release=20261024-network-studio';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261024-network-studio';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261024-network-studio';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261024-network-studio';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261024-network-studio';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261024-network-studio';
-import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261024-network-studio';
-import {privacyPage} from './privacy.js?release=20261024-network-studio';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261024-network-studio';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261024-network-studio';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261024-network-studio';
+import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261025-hands-on';
+import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261025-hands-on';
+import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261025-hands-on';
+import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261025-hands-on';
+import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261025-hands-on';
+import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261025-hands-on';
+import {SCENARIOS} from './scenarios.js?release=20261025-hands-on';
+import {labLanguage} from './lab-language.js?release=20261025-hands-on';
+import {requesterPersona} from './requester-persona.js?release=20261025-hands-on';
+import {mountRequesterChat} from './requester-chat.js?release=20261025-hands-on';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261025-hands-on';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261025-hands-on';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261025-hands-on';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261025-hands-on';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261025-hands-on';
+import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261025-hands-on';
+import {privacyPage} from './privacy.js?release=20261025-hands-on';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261025-hands-on';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261025-hands-on';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261025-hands-on';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261024-network-studio';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261024-network-studio';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261024-network-studio';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261024-network-studio';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261024-network-studio';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261024-network-studio';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261025-hands-on';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261025-hands-on';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261025-hands-on';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261025-hands-on';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261025-hands-on';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261025-hands-on';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -417,7 +417,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261024-network-studio');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261025-hands-on');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -429,7 +429,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261024-network-studio');
+      const cryptoModule=await import('./report-crypto.js?release=20261025-hands-on');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;
