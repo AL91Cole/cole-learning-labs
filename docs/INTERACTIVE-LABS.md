@@ -54,3 +54,13 @@ The studio parses a deliberately small language. It does not evaluate JavaScript
 The interpreter has independent limits for source length, tokens, nesting, repeat counts, variables, execution steps, output lines and string lengths. Inputs are finite primitive values from known controls; accessors and host objects are rejected before execution. Unsupported syntax fails closed. These controls reduce available capabilities but do not establish an impenetrable system or eliminate the need for review.
 
 The implementation follows the separation described in [OWASP safe output guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html) and avoids string execution described in [MDN eval guidance](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval). This work does not change the requester live-AI configuration. The real-classroom release gate remains closed.
+
+## Explore coding and build a project
+
+Each of the six coding investigations shows actual program output beside the expected result. Select an input card, change the program, then run the full tests. The extra-input number and slider use the current draft for local practice; they do not pass the investigation fixtures. Changing code removes stale output and passing indicators.
+
+Use `#sandbox/blank` to make an original JavaScript- or Python-subset project, or start with a pixel pet, arcade, rover, or pixel tiles. Code chips insert small supported examples. The input slider changes the supplied number; **Run program** updates the visual. Both languages keep their own drafts.
+
+Choose text, number bars, or pixel tiles. Bars use finite numbers printed on their own lines. Tiles use at most eight equal rows of up to eight digits from 0 through 9, separated by spaces. Other output stays literal text. Visual output represents the program, not a grade or a promise of correctness.
+
+Source and output stay within the existing interpreter limits. No code gains browser, file, network, shell, package or general runtime access. Drafts remain in page memory and clear through the existing local-work controls; copy or download text to keep a project.

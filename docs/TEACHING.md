@@ -222,3 +222,9 @@ Browser checks on responsive layouts do not establish formal accessibility certi
 Use [Networking sequence](NETWORKING-SEQUENCE.md) for the ten communications investigations and [Interactive workbenches](INTERACTIVE-LABS.md) for direct practice. Network Studio lets learners build a layout, cable free ports and compare an animated successful path with a failed one. Course diagrams use the reviewed devices and cable pairs. Packet traces are teaching demonstrations; completion still requires the current full test and explanation.
 
 Direct networking, AI and security practice starts with controls. Creative Coding Studio offers text and numeric-bar projects alongside the existing free coding sandbox. These drafts stay in page memory, separate from guided records and classroom submissions. Keep fictional inputs and use the reduced-motion and keyboard alternatives when needed.
+
+## Visual coding and original projects
+
+In coding investigations, ask students to predict the output, run a changed input, compare actual and expected results, and explain a repair. The extra-input playground is practice; the full fixture test and guided evidence still determine investigation progress. For original projects, use `#sandbox/blank` or a supplied example and let students choose text, bars, or digit tiles as their output representation. These projects use the bounded local JavaScript/Python subsets and do not create grades or classroom submissions.
+
+The educator table distinguishes NYSED state concepts, as referenced by CSTA New York, from the national 2026 CSTA concepts. Read [Standards connections](STANDARDS-ALIGNMENT.md) for sources, grade bands and the limits of the author-created concept mapping.

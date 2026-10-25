@@ -1,5 +1,5 @@
-import {supportsAIActivity,renderAIActivity,aiActivityAction} from './ai-activities.js?release=20261025-hands-on';
-import {supportsSecurityActivity,renderSecurityActivity,securityActivityAction} from './security-activities.js?release=20261025-hands-on';
+import {supportsAIActivity,renderAIActivity,aiActivityAction} from './ai-activities.js?release=20261025-coding-visuals';
+import {supportsSecurityActivity,renderSecurityActivity,securityActivityAction} from './security-activities.js?release=20261025-coding-visuals';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mounts=new WeakMap();
 export const supportsLearningActivity=id=>supportsAIActivity(id)||supportsSecurityActivity(id);

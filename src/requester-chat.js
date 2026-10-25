@@ -1,6 +1,6 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261025-hands-on';
-import {requesterTopic} from './requester-topics.js?release=20261025-hands-on';
-import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261025-hands-on';
+import {requesterTextIsPrivate} from './interview.js?release=20261025-coding-visuals';
+import {requesterTopic} from './requester-topics.js?release=20261025-coding-visuals';
+import {REQUESTER_ENDPOINT} from './requester-config.js?release=20261025-coding-visuals';
 
 // Page memory only: an off choice or automatic fallback survives lab changes.
 const pagePreference={enabled:true};

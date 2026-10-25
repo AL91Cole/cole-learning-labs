@@ -1,6 +1,6 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261025-hands-on';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261025-hands-on';
-import {NETWORK_SCENARIOS} from './network-labs.js?release=20261025-hands-on';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261025-coding-visuals';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261025-coding-visuals';
+import {NETWORK_SCENARIOS} from './network-labs.js?release=20261025-coding-visuals';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 

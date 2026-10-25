@@ -1,6 +1,6 @@
 # Cole Learning Labs
 
-A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 5 beginner labs and 42 troubleshooting investigations across five pathways for grades 7–12. Six investigations focus on coding; the structured catalog has 47 activities including the beginner labs. An additional open coding space offers a blank program and three playful starting examples.
+A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 5 beginner labs and 42 troubleshooting investigations across five pathways for grades 7–12. Six investigations focus on coding; the structured catalog has 47 activities including the beginner labs. An additional open coding space offers a blank program and four playful starting examples.
 
 The v2.28.1 workbench follow-up fixes panel screw hit targets and adds actions beside the selected part, a visible CPU_FAN lead, latch controls, selectable empty mounts, and direct access to all parts and tools. The picture and native Part controls each support a complete guarded teardown and rebuild. The separate side-panel instruction banner is removed. See [Workbench interaction review](docs/WORKBENCH-INTERACTIONS.md) for verification and remaining device checks. Publication of this follow-up requires its own merge and deployment.
 
@@ -135,7 +135,7 @@ Portfolio and lab pages use hash navigation and can be served statically.
 | `#lab/INC-101` | An individual investigation |
 | `#educators` | Lesson guidance and assessment |
 | `#guide` | Step-by-step student tutorial |
-| `#sandbox` | Free coding space with four starter choices |
+| `#sandbox` | Free coding space with five starting points and visual output |
 | `#studio/coding` | Creative coding with adjustable inputs, text and numeric bars |
 | `#studio/network` | Free network layout with live checks and modeled packet animation |
 | `#practice/NET-214` | Direct workbench practice; also accepts supported AI and security IDs |
@@ -280,3 +280,9 @@ The **Classroom opening day** capstone (#capstone) connects INC-106, NET-201, SE
 **Teacher AI preparation** builds a copyable fictional drafting prompt from reviewed lesson metadata and bounded choices. It does not generate AI output or contact a provider. A teacher may use it with a school-approved service to draft requester wording, differentiated hints, misconceptions or synthetic test questions. Compare every generated assumption with the actual equipment, controls and case evidence before use; an AI draft cannot add capabilities to the simulation. Keep human grading. This follows the testing approach in the [official OpenAI evaluation guidance](https://developers.openai.com/api/docs/guides/evaluation-best-practices). A live student AI coach remains a separate reviewed future service under the existing privacy gate and [under-18 guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance).
 
 Browser checks on responsive layouts do not establish formal accessibility certification, actual managed-Chromebook compatibility, or school approval. Complete keyboard, screen-reader, zoom, touch, Edge and actual school-network checks before classroom rollout. Do not claim these device-specific checks have occurred without recorded evidence.
+
+## Visual coding projects
+
+The six coding investigations pair actual output with the expected result, offer input cards and an extra-input playground, and keep the full fixture tests separate from exploration. Code edits clear stale results.
+
+The free `#sandbox` supports JavaScript and Python subsets with a blank project, four examples, safe code chips and numeric inputs. Display actual printed output as text, number bars, or an up-to-eight-by-eight digit grid. No output is interpreted as HTML or drawing commands. Drafts stay in page memory, and supported programs use the existing bounded interpreter. See [Interactive labs](docs/INTERACTIVE-LABS.md) and [Standards connections](docs/STANDARDS-ALIGNMENT.md).

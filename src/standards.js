@@ -1,13 +1,16 @@
-import {SCENARIOS} from './scenarios.js?release=20261025-hands-on';
+import {SCENARIOS} from './scenarios.js?release=20261025-coding-visuals';
 
 const esc=value=>String(value??'').replace(/[&<>"']/gu,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const NYS_CONCEPTS=Object.freeze(['Impacts of Computing','Computational Thinking','Networks and Systems Design','Cybersecurity','Digital Literacy']);
 const CSTA_CONCEPTS=Object.freeze(['Algorithms & Design','Programming','Data & Analysis','Systems & Security','Computing & Society']);
+export const STANDARDS_CONCEPTS=Object.freeze({nys:NYS_CONCEPTS,csta:CSTA_CONCEPTS});
 const GRADES=Object.freeze(['7–8','9–10','11–12']);
 export const STANDARDS_SOURCES=Object.freeze({
-  checked:'2026-10-20',
+  checked:'2026-10-25',
   nys:'https://www.nysed.gov/standards-instruction/computer-science-and-digital-fluency',
   nysGuidance:'https://www.nysed.gov/standards-instruction/computer-science-and-digital-fluency-guidance-resources',
+  cstaNewYork:'https://newyork.csteachers.org/about/learning-standards',
+  nysBands:'https://www.nysed.gov/standards-instruction/computer-science-digital-literacy-faq',
   csta:'https://csteachers.org/pk12standards/',
   cstaView:'https://csteachers.org/pk12standards/view/'
 });
@@ -16,31 +19,31 @@ export const STANDARDS_SOURCES=Object.freeze({
 // individual-standard coverage claim, assessment, endorsement or certification.
 const MAPPINGS=[
   {pathway:'hardware',name:'Hardware & ServiceDesk',
-    nys:['Networks and Systems Design','Computational Thinking'],csta:['Systems & Security','Algorithms & Design'],
-    practice:'Trace a signal or startup path, compare compatible components, and test a repair against the original request.',
-    evidence:'Ask learners to connect a component or connection to its role, describe one controlled change, and show a successful acceptance test.',
+    nys:['Networks and Systems Design','Computational Thinking'],csta:['Systems & Security'],
+    practice:'Trace a signal path, connect compatible parts, and test one repair at a time.',
+    evidence:'Explain each part’s role, show the change, and retest the original task.',
     examples:['INC-101','INC-105','INC-106']},
   {pathway:'network',name:'Networking & operating systems',
-    nys:['Networks and Systems Design','Cybersecurity','Computational Thinking'],csta:['Systems & Security','Algorithms & Design'],
-    practice:'Investigate connectivity, permissions, services, wireless coverage, printing and recovery using fictional system evidence.',
-    evidence:'Compare a before-and-after result, explain which network or system setting matters, and check that approved access or original files are preserved.',
-    examples:['NET-201','NET-202','NET-206']},
+    nys:['Networks and Systems Design','Cybersecurity','Computational Thinking'],csta:['Systems & Security','Data & Analysis'],
+    practice:'Build and trace network paths, separate guest access, and compare packet or service evidence.',
+    evidence:'Show a changed path or access rule. Use packet headers or measured rates to explain the test result.',
+    examples:['NET-208','NET-210','NET-215']},
   {pathway:'ai',name:'AI literacy & audit',
     nys:['Impacts of Computing','Computational Thinking','Cybersecurity','Digital Literacy'],
     csta:['Algorithms & Design','Programming','Data & Analysis','Systems & Security','Computing & Society'],
-    practice:'Check AI claims against sources, compare classifier decisions, minimize fictional data, and review unsafe code or source instructions.',
-    evidence:'Look for a cited correction, an explanation of unequal or uncertain decisions, and a justified privacy or code-review choice. Using optional chat alone is not this evidence.',
+    practice:'Check claims and code, compare classifier outcomes, and protect fictional learner data.',
+    evidence:'Cite a correction, compare group results, or explain a privacy or code choice. Chat use alone is not evidence.',
     examples:['AI-302','AI-303','AI-306']},
   {pathway:'security',name:'Ethical cybersecurity',
     nys:['Cybersecurity','Networks and Systems Design','Computational Thinking'],csta:['Systems & Security','Programming','Computing & Society'],
-    practice:'Assess fictional phishing, account recovery, access controls, incident evidence and software integrity within authorized simulations.',
-    evidence:'Ask for the threat and minimum necessary control, an allowed-and-denied retest, or a careful containment and evidence handoff.',
+    practice:'Inspect fictional threats, compare access rules, and try safe containment and recovery choices.',
+    evidence:'Name the threat, explain the smallest useful control, and show both an allowed and a denied test.',
     examples:['SEC-401','SEC-403','SEC-405']},
   {pathway:'coding',name:'Coding sandbox',
     nys:['Computational Thinking'],csta:['Algorithms & Design','Programming'],
-    practice:'Read, repair and run small programs involving expressions, decisions and bounded loops with changing fictional inputs.',
-    evidence:'Compare expected and actual outputs, test a boundary or a changed input, and explain why the revised program works.',
-    examples:['CODE-501','CODE-502','CODE-503']}
+    practice:'Build and debug expressions, decisions, and loops. Change inputs and compare visual results.',
+    evidence:'Predict a result, run it, test a boundary or new input, and explain one revision. Use an open coding sandbox for your own project.',
+    examples:['CODE-501','CODE-505','CODE-506']}
 ];
 export const STANDARDS_ALIGNMENTS=Object.freeze(MAPPINGS.map(mapping=>Object.freeze({...mapping,
   nys:Object.freeze(mapping.nys),csta:Object.freeze(mapping.csta),examples:Object.freeze(mapping.examples),
@@ -62,24 +65,25 @@ const exampleItems=ids=>ids.map(id=>`<li>${esc(id)} · ${esc(SCENARIOS.find(scen
 export function standardsAlignmentHTML() {
   return `<section id="standards-alignment" class="wrap section standards-alignment" aria-labelledby="standards-heading">
   <p class="eyebrow">TEACHER PLANNING CONNECTIONS</p><h2 id="standards-heading">Find a standards connection.</h2>
-  <p>Explore how the five investigation pathways can support New York State Computer Science and Digital Fluency concepts and the <strong>2026 CSTA PK–12</strong> concepts. These are suggested teaching connections, not a claim that every lab addresses every listed concept.</p>
+  <p>Connect hands-on work with <strong>NYSED Computer Science and Digital Fluency</strong> and the national <strong>2026 CSTA PK–12</strong> concepts. Each row connects selected tasks across a pathway. Choose the concepts supported by your activity.</p>
+  <p><a href="${STANDARDS_SOURCES.cstaNewYork}" target="_blank" rel="noopener noreferrer">CSTA New York’s learning-standards guide</a> points educators to the NYSED state framework. The two framework columns below keep New York and national CSTA concepts distinct.</p>
   <div class="library-options standards-filters" role="group" aria-label="Filter standards connections">
   <label for="standards-pathway">Pathway<select id="standards-pathway" data-standards-pathway>${options(STANDARDS_ALIGNMENTS.map(row=>[row.pathway,row.name]),'All pathways')}</select></label>
-  <label for="standards-nys">NYS concept<select id="standards-nys" data-standards-nys>${options(NYS_CONCEPTS,'All NYS concepts')}</select></label>
+  <label for="standards-nys">NYSED concept<select id="standards-nys" data-standards-nys>${options(NYS_CONCEPTS,'All NYSED concepts')}</select></label>
   <label for="standards-csta">CSTA 2026 concept<select id="standards-csta" data-standards-csta>${options(CSTA_CONCEPTS,'All CSTA concepts')}</select></label>
   <label for="standards-grade">Lab starting grade<select id="standards-grade" data-standards-grade>${options(GRADES.map(grade=>[grade,'Grades '+grade]),'All lab grades')}</select></label>
   <button type="button" class="button button-outline button-small" data-standards-reset>Clear filters</button></div>
   <p class="result-count" data-standards-count role="status" aria-live="polite">5 pathways shown.</p>
-  <p id="standards-band-help">Lab starting grades are teaching suggestions. NYSED uses grades 7–8 and 9–12 here; CSTA 2026 uses middle school (6–8) and high school (9–12). The lab’s 9–10 and 11–12 groups both sit within those high-school bands.</p>
+  <p id="standards-band-help">Starting grades suggest a lesson entry point, not mastery. NYSED uses 7–8 and 9–12; CSTA’s foundational bands are middle school (6–8) and high school (9–12). Both 9–10 and 11–12 lab groups sit within the high-school bands. These connections do not claim CSTA high-school specialty coverage.</p>
   <p id="standards-scroll-help">On smaller screens, scroll sideways to see all four columns. Keyboard: focus the table, then use the Left and Right arrow keys.</p>
   <div class="standards-table-scroll" role="region" tabindex="0" aria-labelledby="standards-heading" aria-describedby="standards-band-help standards-scroll-help">
   <table class="standards-table"><caption>Suggested concept connections across the ${SCENARIOS.length} fictional investigations. Review the actual activity and student explanation before selecting an individual standard.</caption>
-  <thead><tr><th scope="col">Pathway and examples</th><th scope="col">Practice and evidence to review</th><th scope="col">NYS concepts</th><th scope="col">CSTA 2026 concepts</th></tr></thead><tbody>
-  ${STANDARDS_ALIGNMENTS.map(row=>`<tr data-standards-row="${esc(row.pathway)}"><th scope="row"><a href="#labs/${esc(row.pathway)}">${esc(row.name)}</a><p data-standards-grades>Starting grades ${esc(row.grades.join(', '))}</p><ul data-standards-examples>${exampleItems(row.examples)}</ul></th><td><p>${esc(row.practice)}</p><p><strong>Teacher look-for:</strong> ${esc(row.evidence)}</p></td><td>${list(row.nys)}</td><td>${list(row.csta)}</td></tr>`).join('')}
+  <thead><tr><th scope="col">Pathway and examples</th><th scope="col">Practice and evidence to review</th><th scope="col">NYSED concepts</th><th scope="col">CSTA 2026 concepts</th></tr></thead><tbody>
+  ${STANDARDS_ALIGNMENTS.map(row=>`<tr data-standards-row="${esc(row.pathway)}"><th scope="row"><a href="#labs/${esc(row.pathway)}">${esc(row.name)}</a>${row.pathway==='coding'?'<p><a href="#sandbox/blank">Build an original project →</a></p>':''}<p data-standards-grades>Starting grades ${esc(row.grades.join(', '))}</p><ul data-standards-examples>${exampleItems(row.examples)}</ul></th><td><p>${esc(row.practice)}</p><p><strong>Teacher look-for:</strong> ${esc(row.evidence)}</p></td><td>${list(row.nys)}</td><td>${list(row.csta)}</td></tr>`).join('')}
   </tbody></table></div>
   <p data-standards-empty hidden>No pathways match all these filters. Clear a concept or choose another pathway.</p>
-  <div class="guide-callout"><p><strong>A planning aid, not certification.</strong> Mx. Cole’s concept-level interpretation is not an official NYSED or CSTA review, endorsement, complete curriculum crosswalk, or proof of student mastery. Districts choose the applicable standards, instruction and assessment. This table makes no privacy-law or accessibility-compliance determination.</p></div>
-  <p>Official sources, checked October 20, 2026: <a href="${STANDARDS_SOURCES.nys}" target="_blank" rel="noopener noreferrer">NYSED standards and grade bands</a>, <a href="${STANDARDS_SOURCES.nysGuidance}" target="_blank" rel="noopener noreferrer">NYSED instructional guidance</a>, <a href="${STANDARDS_SOURCES.csta}" target="_blank" rel="noopener noreferrer">2026 CSTA PK–12 standards</a> and <a href="${STANDARDS_SOURCES.cstaView}" target="_blank" rel="noopener noreferrer">CSTA’s official standards browser</a>. No individual standard codes are asserted here.</p>
+  <div class="guide-callout"><p><strong>Choose the expectation; review the work.</strong> This task-based interpretation is not an official NYSED or CSTA review, endorsement, complete curriculum crosswalk, or proof of student mastery. Choose the individual grade-band expectation and assess the learner’s explanation and tests.</p></div>
+  <details><summary>Official sources · checked October 25, 2026</summary><p><a href="${STANDARDS_SOURCES.nys}" target="_blank" rel="noopener noreferrer">NYSED state standards</a> · <a href="${STANDARDS_SOURCES.nysBands}" target="_blank" rel="noopener noreferrer">NYSED grade bands</a> · <a href="${STANDARDS_SOURCES.nysGuidance}" target="_blank" rel="noopener noreferrer">NYSED instructional guidance</a> · <a href="${STANDARDS_SOURCES.cstaNewYork}" target="_blank" rel="noopener noreferrer">CSTA New York’s guide</a> · <a href="${STANDARDS_SOURCES.csta}" target="_blank" rel="noopener noreferrer">2026 CSTA PK–12 standards</a> · <a href="${STANDARDS_SOURCES.cstaView}" target="_blank" rel="noopener noreferrer">CSTA’s official standards browser</a>. No individual standard codes are asserted here.</p></details>
   </section>`;
 }
 

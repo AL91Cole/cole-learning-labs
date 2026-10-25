@@ -1,4 +1,5 @@
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-hands-on';
+import {codingVisualHTML} from './coding-visuals.js?release=20261025-coding-visuals';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-coding-visuals';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
@@ -14,27 +15,27 @@ const question = (label,answer) => ({label,answer});
 export const CODING_SCENARIOS = [
   {
     id:'CODE-501',title:'The Supply Calculator',track:'coding',grade:'7–8',minutes:20,
-    summary: 'Fix a kit-cost calculation and test it with different quantities.',requester:'Virtual lab coordinator · Supply desk',
+    summary: 'Make a supply calculator work for every order.',requester:'Virtual lab coordinator · Supply desk',
     goal:'Print the total cost: the supplied quantity multiplied by 3 credits per kit.',
-    brief: 'The calculator gives the wrong total for a kit order. Each kit costs 3 credits. Read the supplied quantity, change the calculation and test every listed input. Use the practice-language reference if you need help.',
+    brief: 'Each kit costs 3 credits. Fix the calculation, then try every quantity card.',
     clues:[clue('input','Read the input contract','quantity is supplied by the test fixture. It can change between runs; do not replace it with a fixed number.'),clue('price','Read the price label','Each kit costs 3 credits. Print a number only: quantity multiplied by the price.'),clue('fixtures','Inspect the fixture sheet','The tests supply quantities 2, 5, and 0. A zero quantity must produce zero cost.')],
     questions:[question('What does quantity represent?','quantity is the number of kits requested. The simulator supplies a different value for each fixture.'),question('How should the answer look?','Print one numeric total, with no currency label. For two kits at 3 credits each, print 6.')],
     interviewFacts:[{keywords:['price','cost','credit','kit'],answer:'Each kit costs 3 credits. The output must be the supplied quantity multiplied by 3.'},{keywords:['input','quantity','fixture'],answer:'The simulator supplies quantity. Test quantities are 2, 5, and 0; the same program must handle all three.'}]
   },
   {
     id:'CODE-502',title:'The Classroom Thermostat',track:'coding',grade:'9–10',minutes:25,
-    summary: 'Check temperature boundaries and choose the right message.',requester:'Virtual facilities technician · Room monitor',
+    summary: 'Make a room display react to changing temperatures.',requester:'Virtual facilities technician · Room monitor',
     goal:'Print Heating below 20, Comfortable from 20 through 25, and Cooling above 25.',
-    brief: 'The thermostat’s message is wrong near the temperature limits. Compare the input, the rule and the output. Repair the if/else choices and test both boundary values. This practice program controls no real equipment.',
+    brief: 'Fix the display rule. Try 20 and 25 as well as a colder and warmer room. No real equipment is connected.',
     clues:[clue('contract','Read the control specification','The input temperature is a number. Below 20 print Heating. From 20 through 25 inclusive print Comfortable. Above 25 print Cooling.'),clue('boundary','Inspect the boundary tests','The tests include 18, 20, 25, and 30. The values 20 and 25 belong to Comfortable.'),clue('output','Read the display format','Print exactly one word per input: Heating, Comfortable, or Cooling. Letter case matters.')],
     questions:[question('Are the boundaries included?','Yes. Both 20 and 25 belong to Comfortable. Only values below 20 need Heating, and only values above 25 need Cooling.'),question('Is this connected to equipment?','No. The temperatures and display are fictional test fixtures inside this coding simulation.')],
     interviewFacts:[{keywords:['temperature','threshold','boundary','comfortable'],answer:'Below 20 means Heating. Both 20 and 25 are Comfortable. Above 25 means Cooling.'},{keywords:['fixture','test','input'],answer:'Tests supply temperatures 18, 20, 25, and 30. Print exactly one correctly capitalized mode word for each input.'}]
   },
   {
     id:'CODE-503',title:'The Workstation Readiness Loop',track:'coding',grade:'11–12',minutes:30,
-    summary: 'Trace a loop’s counter and match its output to the number of stations.',requester:'Virtual deployment lead · Training room',
+    summary: 'Build the right readiness list for each room size.',requester:'Virtual deployment lead · Training room',
     goal:'Print Ready 1 through Ready N, one line per station, using the supplied stations count.',
-    brief: 'A room’s readiness list includes a station that does not exist. Compare the count and the first and last lines, then repair the loop. Test more than one room size.',
+    brief: 'The list includes a station that does not exist. Fix the loop, then compare its first and last lines for each room.',
     secondLook:{prompt:'Have someone trace one repeat of the loop with you.',checks:['What changes after each repeat?','Does that match the output for every test?']},
     clues:[clue('input','Read the deployment sheet','stations is supplied by the test fixture. Test room sizes are 1, 3, and 5.'),clue('sequence','Inspect the required checklist','A room with three stations needs Ready 1, Ready 2, and Ready 3 on separate lines. Do not print Ready 0 or an extra line.'),clue('loop','Read the loop card','Both loop forms need a start, a stopping boundary, and a step. Print exactly stations lines. The editor reference covers JavaScript for, Python range, and legacy repeat.')],
     questions:[question('What should the first line be?','The first line is Ready 1. A three-station room ends at Ready 3, with three lines total.'),question('How does repeat work?','repeat(count) executes the braced block count times. Counts must be whole numbers from 0 through 50. The simulator also limits total execution steps.')],
@@ -42,27 +43,27 @@ export const CODING_SCENARIOS = [
   },
   {
     id:'CODE-504',title:'Pixel Pet Snack Time',track:'coding',grade:'7–8',minutes:20,
-    summary:'Help a pretend pixel pet count snack-token energy with a changing input.',requester:'Noel · Pixel-pet caretaker',
+    summary:'Turn fictional snack tokens into a pixel pet’s energy display.',requester:'Noel · Pixel-pet caretaker',
     goal:'Print Energy followed by a space and snacks multiplied by 4. Zero snacks means Energy 0.',
-    brief:'Our fictional pixel pet receives snack tokens, not real food. Each token adds 4 energy points. Its little program adds 4 just once instead of counting all the tokens. Repair the expression and keep the Energy label.',
+    brief:'Each fictional snack token adds 4 energy points. Fix the total and keep the Energy label. These tokens are not real food.',
     clues:[clue('input','Read the snack tray','snacks is a read-only fixture input. The tray tries 0, 2, and 5 fictional snack tokens.'),clue('energy','Read the pet card','Each snack token adds exactly 4 energy points. No tokens add no energy.'),clue('format','Read the display card','Print one line: Energy, one space, then the total. For two tokens, the display must say Energy 8.')],
     questions:[question('Is this advice about feeding a pet?','No. This is an imaginary pixel pet and made-up snack tokens. It is a coding exercise, not real animal-care advice.'),question('How much energy does a token add?','Each fictional snack token adds 4 energy points. Keep the input variable so the same program works with every tray.')],
     interviewFacts:[{keywords:['snack','token','input','tray'],answer:'The fixture supplies snacks: 0, 2, and 5. Each fictional token adds 4 energy points.'},{keywords:['energy','display','label','output'],answer:'Print Energy, one space, then the total. Two snack tokens produce Energy 8; zero produces Energy 0.'}]
   },
   {
     id:'CODE-505',title:'Arcade Prize Patrol',track:'coding',grade:'9–10',minutes:25,
-    summary:'Use fair threshold checks to choose a pretend arcade reward at the exact boundaries.',requester:'Kit · Arcade prize-desk volunteer',
+    summary:'Make a pretend prize desk respond at the right scores.',requester:'Kit · Arcade prize-desk volunteer',
     goal:'Print Try again below 50 points, Sticker from 50 through 99, and Badge for 100 or more.',
-    brief:'The pretend arcade desk mixes up prizes at 50 and 100 points. Repair the conditions so every score receives the right message. The points and prizes are fictional; no account, purchase or real reward is involved.',
+    brief:'The fictional prize desk mixes up scores of 50 and 100. Fix the decisions, then try the score cards. No real rewards are involved.',
     clues:[clue('threshold','Read the prize board','Below 50 points: Try again. From 50 through 99: Sticker. At 100 points or more: Badge.'),clue('fixtures','Read the score cards','The checks use points 0, 49, 50, 99, 100, and 140. Both thresholds must be tested.'),clue('format','Read the message card','Print exactly one message per score: Try again, Sticker, or Badge. Keep the capitalization and the space in Try again.')],
     questions:[question('What happens at exactly 50 or 100?','Exactly 50 earns Sticker. Exactly 100 earns Badge. A score of 49 still prints Try again.'),question('Can I change the score to win?','No. points is supplied and read-only. Repair the decisions so the same code handles all the score cards fairly.')],
     interviewFacts:[{keywords:['prize','threshold','boundary','sticker','badge'],answer:'Below 50 prints Try again; 50 through 99 prints Sticker; 100 or more prints Badge.'},{keywords:['point','score','input','fixture'],answer:'The fixture supplies points 0, 49, 50, 99, 100, and 140. Keep points read-only and test the same program on every card.'}]
   },
   {
     id:'CODE-506',title:'Rover Energy Planner',track:'coding',grade:'11–12',minutes:30,
-    summary:'Plan a fictional rover trip by accumulating each numbered leg’s energy cost.',requester:'Sol · Rover mission planner',
+    summary:'Build an energy total for a fictional rover trip.',requester:'Sol · Rover mission planner',
     goal:'Print one numeric total equal to 1 + 2 + ... + steps. With zero steps, print 0.',
-    brief:'A made-up rover trip has steps numbered from 1 through steps. Leg 1 costs 1 energy unit, leg 2 costs 2, and so on. The planner starts at zero and misses the last leg. Fix the loop bounds and accumulate the costs. Nothing controls a real rover.',
+    brief:'Leg 1 costs 1 energy unit, leg 2 costs 2, and so on. Fix the missing last leg and add every cost. No real rover is connected.',
     clues:[clue('input','Read the mission cards','steps is supplied and read-only. Test trip lengths are 0, 1, 4, and 6.'),clue('sum','Read the route costs','Start energy at 0. Add each leg’s number once, from 1 through steps. Four legs cost 1 + 2 + 3 + 4 = 10.'),clue('boundary','Inspect an empty trip','A zero-step trip runs no legs and prints 0. Print one numeric total after the loop, not one line per leg.')],
     questions:[question('What are the first and last legs?','The first leg is 1 and the last leg is steps. For four legs, add 1, 2, 3, and 4.'),question('When should the program print?','Print the accumulated energy once after the loop. For a zero-step trip, the untouched total is 0.')],
     interviewFacts:[{keywords:['leg','step','input','fixture','trip'],answer:'The fixture supplies steps 0, 1, 4, and 6. Number the legs 1 through steps; an empty trip has no legs.'},{keywords:['energy','sum','total','accumulat'],answer:'Start the energy total at 0, add each leg number once, then print one numeric total. Four legs cost 10.'}]
@@ -389,35 +390,66 @@ export function renderCoding(root,scenario,saved,onAction) {
   if(!definition){root.textContent='This coding case is unavailable.';return;}
   const language=CODING_LANGUAGES.find(item=>item.id===state.language),mission=getCodingMission(scenario.id,state);
   const runs=state.tested?fixtureRuns(scenario.id,state.code,state.language):[],selected=runs[state.fixtureIndex],expected=definition.expected(definition.values[state.fixtureIndex]);
-  const {minimum,maximum}=playBounds(definition);
+  const {minimum,maximum}=playBounds(definition),mode=['CODE501','CODE506'].includes(key(scenario.id))?'bars':'text';
+  const resultVisual=run=>{
+    const energy=key(scenario.id)==='CODE504'&&run?.output?.length===1?/^Energy (-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)$/i.exec(run.output[0]):null;
+    return (energy?'<p class="code-visual-caption">Energy · from actual program output</p>':'')+codingVisualHTML(energy?{...run,output:[energy[1]]}:run,energy?'bars':mode);
+  };
+  const fixtureCards=definition.values.map((value,index)=>'<button type="button" class="code-input-card '+(state.tested?(runs[index].passed?'code-pass':'code-fail'):'')+'" data-code-fixture-card="'+index+'" aria-pressed="'+(index===state.fixtureIndex)+'"><small>'+esc(definition.input)+'</small><strong>'+value+'</strong><span data-code-card-status="'+index+'">'+(state.tested?(runs[index].passed?'MATCH':'CHECK'):'TRY INPUT')+'</span></button>').join('');
   root.innerHTML='<section class="code-lab" aria-label="Coding simulation"><header class="code-lab-bar"><span aria-hidden="true">● ● ●</span><strong>CODE STUDIO / '+esc(scenario.id)+'</strong><span>ON-DEVICE PRACTICE</span></header><div class="code-lab-content">'+
-    '<details class="workspace-help"><summary>Editor help</summary>'+codingGuide+'</details><section class="code-mission" aria-label="Current mission progress"><span class="code-eyebrow">YOUR NEXT STEP · '+esc(mission.stage)+'</span><p>'+esc(mission.next)+'</p><progress value="'+mission.passed+'" max="'+(mission.total||1)+'" aria-label="Coding fixtures passing">'+mission.passed+' of '+mission.total+'</progress><p>'+(state.tested?mission.passed+' / '+mission.total+' fixtures passing':'No test yet')+' · '+mission.attempts+' test runs</p></section>'+
-    '<p class="code-scope"><b>Choose your coding style:</b> bounded JavaScript and Python subsets run in our own interpreter on this device. No full runtime, installation, network, packages, real files or browser APIs. Use fictional practice text only.</p>'+storyCard(scenario.id)+
-    '<div class="code-workspace"><form data-code-form class="code-editor-panel"><label for="coding-language"><b>Practice language</b></label><select id="coding-language" data-code-language aria-describedby="code-language-help">'+CODING_LANGUAGES.map(item=>'<option value="'+item.id+'"'+(item.id===state.language?' selected':'')+'>'+item.label+'</option>').join('')+'</select><p id="code-language-help">Switching keeps your draft and clears old test results. It does not translate code. Reset starter replaces the draft with a '+esc(language.label)+' example.</p>'+
-    '<label for="coding-editor"><b>Your code</b><small>Fixture input: <code>'+esc(definition.input)+'</code> · 4,000 characters maximum</small></label><textarea id="coding-editor" name="code" rows="14" maxlength="4000" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="code-save-help code-language-help code-program-error">'+esc(state.code)+'</textarea><p id="code-save-help">Run all fixtures and Test my idea both save and test the editor’s current text. Changing lab sections keeps your editor in place.</p><div class="code-actions"><button type="submit">Save code</button><button type="button" data-code-run>Run all fixtures</button><button type="button" data-code-reset>Reset starter</button></div><p data-code-status role="status"></p></form>'+
-    '<section class="code-console-panel"><label for="code-fixture"><b>Inspect a test fixture</b></label><select id="code-fixture" data-code-fixture>'+definition.values.map((value,index)=>'<option value="'+index+'"'+(index===state.fixtureIndex?' selected':'')+'>'+esc(definition.input)+' = '+value+'</option>').join('')+'</select><h3>Expected output</h3><pre class="code-console code-expected" tabindex="0" role="region" aria-label="Expected program output">'+esc(expected.join('\n'))+'</pre><h3>Actual output</h3><pre class="code-console" data-code-output tabindex="0" role="region" aria-label="Program output"></pre><p id="code-program-error" data-code-error role="status" aria-atomic="true" class="code-error"></p><ul class="code-fixture-results">'+(state.tested?state.results.map(result=>'<li class="'+(result.ok?'code-pass':'code-fail')+'"><span>'+(result.ok?'PASS':'CHECK')+'</span> '+esc(result.label)+'</li>').join(''):'<li>Run the program to see results for every fixture.</li>')+'</ul>'+
-    '<details class="code-play"><summary>Play with another input</summary><p id="code-play-help">Try the current draft with a made-up number. This extra run stays in this panel and cannot pass the investigation’s official fixtures.</p><label for="code-play-input">Your '+esc(definition.input)+'</label><input id="code-play-input" data-code-play-input type="number" min="'+minimum+'" max="'+maximum+'" step="1" value="'+definition.values[state.fixtureIndex]+'" aria-describedby="code-play-help code-play-result"><button type="button" data-code-play>Try my input</button><pre id="code-play-result" class="code-console" data-code-play-output tabindex="0" role="status" aria-live="polite" aria-label="Extra practice output">Your extra output will appear here.</pre></details></section></div>'+
-    '<details class="code-reference"><summary>'+esc(language.label)+' reference & examples</summary><div>'+codingLanguageReference(state.language)+'</div></details></div></section>';
-  root.querySelector('[data-code-output]').textContent=state.tested?(selected?.output.join('\n')||'(No output)'):'Run all fixtures to see this program’s output.';
-  root.querySelector('[data-code-error]').textContent=selected?.error?'Line '+selected.error.line+': '+selected.error.message:'';
+    '<section class="code-mission" aria-label="Current mission progress"><span class="code-eyebrow">YOUR CHALLENGE</span><h3>'+esc(scenario.goal)+'</h3><p data-code-progress-label>'+(state.tested?mission.passed+' / '+mission.total+' test inputs match':'Edit → run → compare')+'</p><progress data-code-progress value="'+mission.passed+'" max="'+(mission.total||1)+'" aria-label="Coding fixtures passing">'+mission.passed+' of '+mission.total+'</progress></section>'+
+    '<p class="code-scope">Safe on-device practice · limited JavaScript or Python · fictional inputs. <a href="#sandbox">Build your own project →</a></p>'+
+    '<details class="workspace-help"><summary>How this lab works</summary>'+codingGuide+'</details>'+storyCard(scenario.id)+
+    '<div class="code-workspace"><form data-code-form class="code-editor-panel"><label for="coding-language"><b>Practice language</b></label><select id="coding-language" data-code-language aria-describedby="code-language-help">'+CODING_LANGUAGES.map(item=>'<option value="'+item.id+'"'+(item.id===state.language?' selected':'')+'>'+item.label+'</option>').join('')+'</select><p id="code-language-help">Switching keeps your draft and clears results. Reset starter loads the selected language.</p>'+
+    '<label for="coding-editor"><b>Your code</b><small>Input: <code>'+esc(definition.input)+'</code> · up to 4,000 characters</small></label><textarea id="coding-editor" name="code" rows="14" maxlength="4000" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="code-save-help code-language-help code-program-error">'+esc(state.code)+'</textarea><p id="code-save-help">Run all fixtures tests this draft with every input card.</p><div class="code-actions"><button type="button" data-code-run>Run all fixtures</button><button type="submit">Save code</button><button type="button" data-code-reset>Reset starter</button></div><p data-code-status role="status"></p></form>'+
+    '<section class="code-console-panel"><h3>Try the input cards</h3><div class="code-input-cards" role="group" aria-label="Choose a test input">'+fixtureCards+'</div><details class="code-fixture-picker"><summary>Choose from input list</summary><label for="code-fixture">Inspect a test fixture</label><select id="code-fixture" data-code-fixture>'+definition.values.map((value,index)=>'<option value="'+index+'"'+(index===state.fixtureIndex?' selected':'')+'>'+esc(definition.input)+' = '+value+'</option>').join('')+'</select></details>'+
+    '<div class="code-output-pair"><section><h3>Actual program output</h3><div data-code-visual></div><pre class="code-console" data-code-output tabindex="0" role="region" aria-label="Program output"></pre></section><section><h3>Expected reference</h3><pre class="code-console code-expected" tabindex="0" role="region" aria-label="Expected program output">'+esc(expected.join('\n'))+'</pre></section></div><p class="code-comparison" data-code-comparison role="status"></p><p id="code-program-error" data-code-error role="status" aria-atomic="true" class="code-error"></p>'+
+    '<details class="code-fixture-sheet"><summary>All test results</summary><ul class="code-fixture-results">'+(state.tested?state.results.map(result=>'<li>'+esc(result.label)+'</li>').join(''):'<li>Run the program to see results for every fixture.</li>')+'</ul></details>'+
+    '<section class="code-play" aria-label="Extra input playground"><h3>What happens if…?</h3><p id="code-play-help">Try your draft with another input. Extra practice does not pass the official tests.</p><label for="code-play-input">Your '+esc(definition.input)+'</label><div class="code-play-controls"><input id="code-play-input" data-code-play-input type="number" min="'+minimum+'" max="'+maximum+'" step="1" value="'+definition.values[state.fixtureIndex]+'" aria-describedby="code-play-help code-play-result"><input type="range" data-code-play-slider aria-label="Adjust practice '+esc(definition.input)+'" min="'+minimum+'" max="'+maximum+'" step="1" value="'+definition.values[state.fixtureIndex]+'"></div><button type="button" data-code-play>Try my input</button><div data-code-play-visual></div><pre id="code-play-result" class="code-console" data-code-play-output tabindex="0" role="status" aria-live="polite" aria-label="Extra practice output">Your extra output will appear here.</pre></section></section></div>'+
+    '<details class="code-reference"><summary>'+esc(language.label)+' reference & examples</summary><div><p>Safe practice: bounded JavaScript and Python subsets run in our own interpreter on this device. No full runtime, installation, network, packages, real files or browser APIs.</p>'+codingLanguageReference(state.language)+'</div></details></div></section>';
   const editor=root.querySelector('[name="code"]'),draft=()=>({code:editor.value});
+  const output=root.querySelector('[data-code-output]'),visual=root.querySelector('[data-code-visual]'),comparison=root.querySelector('[data-code-comparison]');
+  const showOutput=changed=>{
+    visual.innerHTML=!changed&&selected?resultVisual(selected):'<p class="code-preview-pending">'+(changed?'Draft changed. Run all fixtures to update this preview.':'Run all fixtures to reveal your program’s result.')+'</p>';
+    output.textContent=changed?'Results are out of date.':state.tested?(selected?.output.join('\n')||'(No output)'):'Your output appears after a run.';
+    comparison.textContent=changed?'Draft changed · rerun to compare.':selected?(selected.passed?'✓ This input matches.':selected.error?'Run stopped · read the error.':'Compare the output, then change one part of your code.'):'No run yet.';
+    comparison.className='code-comparison'+(!changed&&selected?.passed?' code-match':'');
+  };
+  showOutput(false);
+  root.querySelector('[data-code-error]').textContent=selected?.error?'Line '+selected.error.line+': '+selected.error.message:'';
   if(selected?.error)editor.setAttribute?.('aria-invalid','true');
   root.querySelector('[data-code-form]').addEventListener('submit',event=>{event.preventDefault();onAction('save-code',draft());});
   root.querySelector('[data-code-run]').addEventListener('click',()=>onAction('run-check',draft()));
   root.querySelector('[data-code-reset]').addEventListener('click',()=>onAction('reset-code'));
   root.querySelector('[data-code-language]').addEventListener('change',event=>onAction('set-language',{language:event.target.value,code:editor.value}));
-  root.querySelector('[data-code-fixture]').addEventListener('change',event=>{const index=Number(event.target.value),current=draft();if(current.code!==state.code)onAction('save-code',current);onAction('inspect-fixture',{index});});
-  root.querySelector('[data-code-play]').addEventListener('click',()=>{
-    const field=root.querySelector('[data-code-play-input]'),value=Number(field.value),output=root.querySelector('[data-code-play-output]');
-    if(!field.value.trim()||!Number.isSafeInteger(value)||value<minimum||value>maximum){field.setAttribute?.('aria-invalid','true');output.textContent='Choose a whole number from '+minimum+' through '+maximum+'.';return;}
-    field.removeAttribute?.('aria-invalid');
+  const inspect=index=>{const current=draft();if(current.code!==state.code)onAction('save-code',current);onAction('inspect-fixture',{index});};
+  root.querySelector('[data-code-fixture]').addEventListener('change',event=>inspect(Number(event.target.value)));
+  definition.values.forEach((value,index)=>root.querySelector('[data-code-fixture-card="'+index+'"]').addEventListener('click',()=>inspect(index)));
+  const field=root.querySelector('[data-code-play-input]'),slider=root.querySelector('[data-code-play-slider]'),playOutput=root.querySelector('[data-code-play-output]'),playVisual=root.querySelector('[data-code-play-visual]');
+  const play=()=>{
+    const value=Number(field.value);
+    if(!field.value.trim()||!Number.isSafeInteger(value)||value<minimum||value>maximum){field.setAttribute?.('aria-invalid','true');playOutput.textContent='Choose a whole number from '+minimum+' through '+maximum+'.';playVisual.innerHTML='';return;}
+    field.removeAttribute?.('aria-invalid');slider.value=String(value);
     const result=executeCoding(editor.value,{[definition.input]:value},state.language);
-    output.textContent=result.ok?(result.output.join('\n')||'(No output)'):'Line '+result.error.line+': '+result.error.message;
-  });
+    playOutput.textContent=result.ok?(result.output.join('\n')||'(No output)'):'Line '+result.error.line+': '+result.error.message;
+    playVisual.innerHTML=resultVisual(result);
+  };
+  root.querySelector('[data-code-play]').addEventListener('click',play);
+  slider.addEventListener('input',()=>{field.value=slider.value;play();});
+  field.addEventListener('input',()=>{playVisual.innerHTML='';playOutput.textContent='Input changed. Choose Try my input.';});
   editor.addEventListener('input',()=>{
     const changed=editor.value!==state.code;
     if(changed||!selected?.error)editor.removeAttribute?.('aria-invalid');else editor.setAttribute?.('aria-invalid','true');
-    root.querySelector('[data-code-status]').textContent=changed?'Unsaved edits. Save code or run all fixtures to test this version.':'Editor matches the saved program.';
+    showOutput(changed);playVisual.innerHTML='';playOutput.textContent='Draft changed. Try your input again.';
+    root.querySelector('[data-code-error]').textContent=changed?'':selected?.error?'Line '+selected.error.line+': '+selected.error.message:'';
+    root.querySelector('[data-code-status]').textContent=changed?'Draft changed. Run all fixtures to test it.':'Editor matches the saved program.';
+    root.querySelector('[data-code-progress]').value=changed?0:mission.passed;
+    root.querySelector('[data-code-progress-label]').textContent=changed?'Draft changed · rerun':state.tested?mission.passed+' / '+mission.total+' test inputs match':'Edit → run → compare';
+    definition.values.forEach((value,index)=>{
+      const current=!changed&&state.tested,card=root.querySelector('[data-code-fixture-card="'+index+'"]');
+      card.className='code-input-card '+(current?(runs[index].passed?'code-pass':'code-fail'):'');
+      root.querySelector('[data-code-card-status="'+index+'"]').textContent=current?(runs[index].passed?'MATCH':'CHECK'):'TRY INPUT';
+    });
   });
   restoreView();
 }

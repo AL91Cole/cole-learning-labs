@@ -1,30 +1,30 @@
-import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261025-hands-on';
-import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261025-hands-on';
-import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261025-hands-on';
-import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261025-hands-on';
-import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261025-hands-on';
-import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261025-hands-on';
-import {SCENARIOS} from './scenarios.js?release=20261025-hands-on';
-import {labLanguage} from './lab-language.js?release=20261025-hands-on';
-import {requesterPersona} from './requester-persona.js?release=20261025-hands-on';
-import {mountRequesterChat} from './requester-chat.js?release=20261025-hands-on';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261025-hands-on';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261025-hands-on';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261025-hands-on';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261025-hands-on';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261025-hands-on';
-import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261025-hands-on';
-import {privacyPage} from './privacy.js?release=20261025-hands-on';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261025-hands-on';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261025-hands-on';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261025-hands-on';
+import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261025-coding-visuals';
+import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261025-coding-visuals';
+import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261025-coding-visuals';
+import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261025-coding-visuals';
+import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261025-coding-visuals';
+import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261025-coding-visuals';
+import {SCENARIOS} from './scenarios.js?release=20261025-coding-visuals';
+import {labLanguage} from './lab-language.js?release=20261025-coding-visuals';
+import {requesterPersona} from './requester-persona.js?release=20261025-coding-visuals';
+import {mountRequesterChat} from './requester-chat.js?release=20261025-coding-visuals';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261025-coding-visuals';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261025-coding-visuals';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261025-coding-visuals';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261025-coding-visuals';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261025-coding-visuals';
+import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261025-coding-visuals';
+import {privacyPage} from './privacy.js?release=20261025-coding-visuals';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork} from './local-work.js?release=20261025-coding-visuals';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261025-coding-visuals';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261025-coding-visuals';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261025-hands-on';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261025-hands-on';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261025-hands-on';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261025-hands-on';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261025-hands-on';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261025-hands-on';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261025-coding-visuals';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261025-coding-visuals';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261025-coding-visuals';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261025-coding-visuals';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261025-coding-visuals';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261025-coding-visuals';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -69,7 +69,7 @@ function routeLink(route,text,style='button'){return `<a class="${style}" href="
 function tag(text,extra=''){return `<span class="tag ${extra}">${text}</span>`;}
 function trackIcon(track){const paths={hardware:'<rect x="5" y="9" width="27" height="21" rx="3"/><path d="M18 30v7m-7 0h15"/><rect x="36" y="9" width="8" height="28" rx="2"/><path d="M39 15h2m-2 5h2m-2 12h2"/>',network:'<rect x="17" y="4" width="14" height="10" rx="2"/><rect x="3" y="33" width="14" height="10" rx="2"/><rect x="31" y="33" width="14" height="10" rx="2"/><path d="M24 14v9M10 33v-10h28v10M24 23v14"/>',ai:'<path d="m24 4 5 13 13 5-13 5-5 13-5-13-13-5 13-5Z"/><path d="m40 4 1.5 4.5L46 10l-4.5 1.5L40 16l-1.5-4.5L34 10l4.5-1.5Z"/>',security:'<path d="M24 4 40 10v12c0 10-9 17-16 22C17 39 8 32 8 22V10Z"/><path d="m16 24 5 5 11-12"/>',coding:'<path d="m15 12-11 12 11 12m18-24 11 12-11 12M28 6 20 42"/>'};return `<svg class="track-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[track]||paths.hardware}</svg>`;}
 function foundationCards(){return `<section class="basics-section wrap" aria-labelledby="basics-heading"><div class="basics-heading"><div><p class="eyebrow">New here? Start with the basics</p><h2 id="basics-heading">Learn the basics.</h2></div><p>Take a look around, try a short practice job and explain what you learned.</p></div><div class="basics-grid">${FOUNDATION_LABS.map(lab=>`<a class="basics-card" data-track="${esc(lab.track)}" href="#learn/${esc(lab.id)}"><span class="basics-symbol">${trackIcon(lab.track)}</span><span class="eyebrow">${esc(tracks[lab.track].short)} · Beginner</span><h3>${esc(lab.title)}</h3><p>${esc(lab.summary)}</p><span class="text-link">${esc(lab.minutes)} min · Start learning <span aria-hidden="true">→</span></span></a>`).join('')}</div></section>`;}
-function sandboxCards(){return `<section class="wrap sandbox-library" aria-labelledby="sandbox-library-title"><div class="investigation-heading"><div><p class="eyebrow">Make something of your own</p><h2 id="sandbox-library-title">Open coding sandboxes</h2></div><p>Write JavaScript or Python, try an input, and read the output. Start with a blank page or change an example.</p></div><div class="sandbox-starter-grid">${SANDBOX_STARTERS.map(starter=>`<a class="sandbox-starter-card" href="#sandbox/${esc(starter.id)}"><span aria-hidden="true">⌨</span><h3>${esc(starter.title)}</h3><p>${esc(starter.description)}</p><span class="text-link">Open sandbox →</span></a>`).join('')}</div><p class="panel-help">Free coding practice · Small local language · No ticket or required repair</p></section>`;}
+function sandboxCards(){return `<section class="wrap sandbox-library" aria-labelledby="sandbox-library-title"><div class="investigation-heading"><div><p class="eyebrow">Make something of your own</p><h2 id="sandbox-library-title">Open coding sandboxes</h2></div><p>Write JavaScript or Python, try an input, and see text, number bars, or pixel tiles. Start with a blank page or change an example.</p></div><div class="sandbox-starter-grid">${SANDBOX_STARTERS.map(starter=>`<a class="sandbox-starter-card" href="#sandbox/${esc(starter.id)}"><span aria-hidden="true">⌨</span><h3>${esc(starter.title)}</h3><p>${esc(starter.description)}</p><span class="text-link">Open sandbox →</span></a>`).join('')}</div><p class="panel-help">Free coding practice · Small local language · No ticket or required repair</p></section>`;}
 function sectionHead(eyebrow,title,description=''){return `<div class="section-heading"><p class="eyebrow">${eyebrow}</p><h2>${title}</h2>${description?`<p>${description}</p>`:''}</div>`;}
 function stationArt(){return `<div class="station-art" aria-hidden="true"><div class="station-floor"></div><div class="station-monitor"><div class="station-screen"><div class="screen-menu"><i></i><i></i><i></i><span>CLASSROOM DESKTOP · HDMI</span></div><div class="screen-signal"><span class="signal-icon">⌁</span><b>No signal</b><small>Check the video cable and input source.</small></div><div class="screen-bottom"><span>Power on</span><span>●</span></div></div><div class="monitor-logo">COLE / LAB 01</div></div><div class="station-stand"></div><div class="station-base"></div><div class="station-tower"><div class="tower-top"></div><div class="tower-front"><i class="power-led"></i><div class="tower-ports">▰<br>▰<br>●</div><div class="tower-vent"></div><span>WORKSTATION 01</span></div><div class="tower-side"><div class="board-traces"></div><div class="hero-fan"><i></i><i></i><i></i><i></i></div><div class="hero-ram"></div><div class="hero-gpu">GRAPHICS</div><div class="hero-ssd">SATA / SSD</div><div class="hero-wire"></div></div></div><div class="station-keyboard"></div><div class="station-cable"></div><span class="part-callout callout-one">01 / FOLLOW THE SIGNAL</span><span class="part-callout callout-two">02 / INSPECT THE HARDWARE</span></div>`;}
 
@@ -417,7 +417,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261025-hands-on');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261025-coding-visuals');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -429,7 +429,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261025-hands-on');
+      const cryptoModule=await import('./report-crypto.js?release=20261025-coding-visuals');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;

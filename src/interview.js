@@ -1,6 +1,6 @@
-import { resolveQuestion } from './conversation.js?release=20261025-hands-on';
-import { pcActivity } from './pc-activity.js?release=20261025-hands-on';
-import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261025-hands-on';
+import { resolveQuestion } from './conversation.js?release=20261025-coding-visuals';
+import { pcActivity } from './pc-activity.js?release=20261025-coding-visuals';
+import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261025-coding-visuals';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
