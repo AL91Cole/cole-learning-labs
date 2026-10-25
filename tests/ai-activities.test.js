@@ -104,6 +104,6 @@ test('hostile action values cannot become fields, code, sources, thresholds, or 
 });
 test('saved prompt values stay escaped and supported routes remain narrow',()=>{
  const html=renderAIActivity('AI-301',{prompt:'</textarea><img src=x onerror=alert(1)><script>bad</script>'});
- assert.doesNotMatch(html,/<img|<script>/);assert.match(html,/&lt;\/textarea&gt;/);
+ assert.doesNotMatch(html,/<img\b|<script\b/i);assert.match(html,/&lt;\/textarea&gt;/);
  assert.equal(supportsAIActivity('AI-307'),false);assert.equal(renderAIActivity('AI-307',{}),'');
 });
