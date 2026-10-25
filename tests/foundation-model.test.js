@@ -30,8 +30,8 @@ function saveExplanation(id,state=finishPractice(id)) {
   return step(id,state,{type:'save-explanation'},'success').state;
 }
 
-test('five public beginner foundations stay separate from the 32 investigation tickets',()=>{
-  assert.equal(FOUNDATION_LABS.length,5);assert.equal(SCENARIOS.length,32);
+test('five public beginner foundations stay separate from the 42 investigation tickets',()=>{
+  assert.equal(FOUNDATION_LABS.length,5);assert.equal(SCENARIOS.length,42);
   assert.deepEqual(FOUNDATION_LABS.map(lab=>lab.id),['hardware','network','ai','security','coding']);
   assert.deepEqual(FOUNDATION_LABS.map(lab=>lab.code),['HW-100','NET-200','AI-300','SEC-400','CODE-500']);
   assert.deepEqual(FOUNDATION_LABS.map(lab=>lab.nextLab),['INC-101','NET-201','AI-301','SEC-401','CODE-501']);
@@ -303,4 +303,17 @@ test('legacy and damaged records keep legitimate practice but cannot invent a sa
   const bounded=step('network',completed,{type:'explain',notes:'n'.repeat(2500),reflection:'r'.repeat(2500)}).state;
   assert.equal(bounded.notes.length,2000);assert.equal(bounded.reflection.length,2000);assert.equal(bounded.explanationSaved,false);
   const invalid=step('network',completed,{type:'explain',notes:'A different answer.',reflection:[]},'warning').state;assert.equal(invalid.notes,completed.notes);assert.equal(invalid.reflection,completed.reflection);
+});
+
+test('authored practice alternatives teach mistakes without changing equipment or granting credit',()=>{
+  for(const id of ['network','ai','security']){
+    const lab=getFoundation(id);let state=prepared(id);
+    for(const [index,choice]of lab.choices.entries()){
+      const simulation=structuredClone(state.simulation),trial=step(id,state,{type:'practice',action:choice.action},'warning');
+      assert.equal(trial.message,choice.feedback);assert.deepEqual(trial.state.simulation,simulation);assert.equal(trial.state.practice.length,index);assert.equal(foundationSummary(id,trial.state).practiceComplete,false);
+      state=step(id,trial.state,{type:'practice',action:lab.jobs[index].action},'success').state;
+    }
+    assert.equal(foundationSummary(id,state).practiceComplete,true);assert.equal(foundationSummary(id,state).complete,false);
+    const blocked=step(id,createFoundationRecord(id),{type:'practice',action:lab.choices[0].action},'warning');assert.deepEqual(blocked.state.practice,[]);assert.match(blocked.message,/Explore each/);
+  }
 });

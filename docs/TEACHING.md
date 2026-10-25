@@ -1,6 +1,6 @@
 # Teaching with Cole Learning Labs
 
-Cole Learning Labs provides 32 browser-based investigations across five pathways for grades 7–12. Use it for demonstrations, guided investigation, independent practice, and discussion on school devices.
+Cole Learning Labs provides 42 browser-based investigations across five pathways for grades 7–12. Use it for demonstrations, guided investigation, independent practice, and discussion on school devices.
 
 If a learner leaves a coding lab through the site menu or browser history, the current editor text is preserved as an untested program in that lab’s work. They must rerun fixtures before finishing. This does not enable device saving; private work still needs an export before closing the page.
 
@@ -58,10 +58,20 @@ The software consoles accept only the displayed fixed practice commands and targ
 
 Other workspaces provide shared-folder read/write previews, recovery and service status, scripted AI-response and source previews, simulated code-request results, message sender/destination/header inspection, and defensive gateway probes. Keep inspection separate from the full test: reading a result does not mark the workspace tested, reproduce the scoped authorization defect, or submit work. Software inspections preserve unapplied form entries. After a meaningful change, learners need a fresh test and an explanation.
 
+## AI and cybersecurity activity boards
+
+The six AI and six cybersecurity cases now start with a hands-on board and a short task. Students can mark a message, sort a claim or source card, adjust a threshold, compare record responses, or build a recovery plan. Saved choices change the visual preview immediately. Source notes, clues and inspection tools stay available when students need them. See [Interactive workbenches](INTERACTIVE-LABS.md) for the twelve activities.
+
+Use a short learning loop: **predict → change one thing → observe → test → explain**. Ask the learner to name what changed and what the result supports. A preview or replay illustrates the saved model; the learner still runs the full test. Changing a choice clears earlier test evidence. Failed checks point to another comparison, and a successful test still needs the learner’s explanation.
+
+The same boards appear in direct practice and guided investigations. Direct practice lets students explore the controls first. Guided work keeps separate symptoms, hypotheses, clues, saved ideas, test evidence and reflection, with the existing ordered steps. SEC-403 still requires scope acknowledgement and observation of the original defect before a patch can satisfy the investigation. Drag targets also offer buttons, and reduced motion preserves state and feedback without animation.
+
+These are fixed local teaching simulations. Prompt and source text cannot grant the boards new powers. They do not request real credentials, run student Python, scan networks, download packages, or apply changes to school systems. Optional requester conversation remains separate from the board’s evidence and tests.
+
 ## Five pathways
 
 - **Hardware & ServiceDesk — eight investigations.** Trace display and power faults, reseat compatible memory, reconnect storage, preserve the original classroom drive, and assemble a virtual PC. Use the virtual safe-power sequence for internal changes. A repaired component, a working desktop, and delivery of the original lesson file are separate checkpoints.
-- **Network & Operating Systems — six investigations.** Repair IPv4/DNS settings, reach a share using the correct network and least privilege, recover startup and update services, survey wireless coverage, restore a print queue, and recover a verified backup without overwriting evidence. Test the saved settings and explain the output.
+- **Network & Operating Systems — sixteen investigations.** Repair IPv4/DNS settings, reach a share using the correct network and least privilege, recover startup and update services, survey wireless coverage, restore a print queue, and recover a verified backup without overwriting evidence. Test the saved settings and explain the output.
 - **AI Literacy & Audit — six investigations.** Improve a privacy-aware prompt, compare claims with a source, check equal treatment of equivalent tickets, review generated code, minimize data, reject source injection, and evaluate thresholds with human oversight. These activities use authored examples and local checks. Optional requester conversation does not replace their source cards, tests, or teacher review.
 - **Ethical Hacking & Penetration Testing — six investigations.** Inspect phishing, correlate logs, patch an access-control defect, practice MFA recovery, contain a fictional incident, and verify a software package. Authorization and scope are part of every task.
 - **Coding Sandbox — six investigations.** Repair supply and pixel-pet expressions, thermostat and arcade-prize boundaries, and readiness and rover-energy loops. Choose JavaScript or Python; the editor accepts documented subsets of ordinary syntax through a local bounded interpreter. These are not full language runtimes, an operating-system shell, or a connection to a real device. Legacy teaching-source programs still work.
@@ -154,7 +164,7 @@ The separate prepared implementation uses `CLASSROOM_ENABLED=true`, a migrated `
 
 The following describes the prepared workflow for a possible future reviewed release, not a current enrollment option:
 
-1. The verified teacher creates a class and selects assignments from the 32 supported labs. Distribute its code through the approved classroom process.
+1. The verified teacher creates a class and selects assignments from the 42 supported labs. Distribute its code through the approved classroom process.
 2. A learner explicitly joins using only that code. The prepared server generates a random neutral alias; a learner does not supply a name, email, school ID, or chosen alias. An alias is a display label, not verified identity or a recovery credential. A browser has one class session; a lost or logged-out session cannot be recovered using the alias or code. Use separate assigned profiles and export important work.
 3. Assigned drafts can then be shared from the lab. A visible connection explains the classroom and save state. Classroom work uses a separate local namespace from independent practice; independent records are not silently imported. The portal’s independent-labs choice turns off the active sharing flag while preserving saved work.
 4. The teacher reviews class progress and opens work details. The roster refreshes about every 15 seconds only while the real, authorized teacher view is open and visible. Pause/resume is available. Polling updates summaries and rows while preserving typed grading feedback; work details refresh on request.
@@ -195,7 +205,7 @@ AI literacy activities use authored artifacts and visible local checks. Their ch
 
 ## Learning toolkit in release 2.9
 
-Open **For educators** (#educators) to select any of the 32 labs, a 20-/40-/60-minute plan, guided/independent/challenge support and individual/pair work. The chosen plan provides subject-specific goals, prerequisites, a modeled reasoning example, vocabulary, a timed sequence, discussion and an exit question. Print the selected plan, or copy its canonical public assignment link. Links carry only lab identity and support mode; never add learner details, access codes, keys or work to URLs.
+Open **For educators** (#educators) to select any of the 42 labs, a 20-/40-/60-minute plan, guided/independent/challenge support and individual/pair work. The chosen plan provides subject-specific goals, prerequisites, a modeled reasoning example, vocabulary, a timed sequence, discussion and an exit question. Print the selected plan, or copy its canonical public assignment link. Links carry only lab identity and support mode; never add learner details, access codes, keys or work to URLs.
 
 In each lab, use the practice-mode selector without replacing the equipment or discarding unfinished questions/settings/code. Guided mode opens model support and question starters; independent/challenge modes begin with those supports collapsed and add a decision or alternative-explanation task. Safety, instructions, vocabulary and hints remain available in every mode. Modes do not authenticate a learner or secure an exam. INC-101, INC-107 and INC-108 form a transfer sequence: the same no-picture symptom has different modeled causes (rear output, display input and monitor-end cable). The challenge launcher explicitly shows the actual assigned case and its goals. Other pathways use their own alternative-explanation and exit prompts.
 
@@ -206,3 +216,15 @@ The **Classroom opening day** capstone (#capstone) connects INC-106, NET-201, SE
 **Teacher AI preparation** builds a copyable fictional drafting prompt from reviewed lesson metadata and bounded choices. It does not generate AI output or contact a provider. A teacher may use it with a school-approved service to draft requester wording, differentiated hints, misconceptions or synthetic test questions. Compare every generated assumption with the actual equipment, controls and case evidence before use; an AI draft cannot add capabilities to the simulation. Keep human grading. This follows the testing approach in the [official OpenAI evaluation guidance](https://developers.openai.com/api/docs/guides/evaluation-best-practices). A live student AI coach remains a separate reviewed future service under the existing privacy gate and [under-18 guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance).
 
 Browser checks on responsive layouts do not establish formal accessibility certification, actual managed-Chromebook compatibility, or school approval. Complete keyboard, screen-reader, zoom, touch, Edge and actual school-network checks before classroom rollout. Do not claim these device-specific checks have occurred without recorded evidence.
+
+## Interactive network and coding practice
+
+Use [Networking sequence](NETWORKING-SEQUENCE.md) for the ten communications investigations and [Interactive workbenches](INTERACTIVE-LABS.md) for direct practice. Network Studio lets learners build a layout, cable free ports and compare an animated successful path with a failed one. Course diagrams use the reviewed devices and cable pairs. Packet traces are teaching demonstrations; completion still requires the current full test and explanation.
+
+Direct networking, AI and security practice starts with controls. Creative Coding Studio offers text and numeric-bar projects alongside the existing free coding sandbox. These drafts stay in page memory, separate from guided records and classroom submissions. Keep fictional inputs and use the reduced-motion and keyboard alternatives when needed.
+
+## Visual coding and original projects
+
+In coding investigations, ask students to predict the output, run a changed input, compare actual and expected results, and explain a repair. The extra-input playground is practice; the full fixture test and guided evidence still determine investigation progress. For original projects, use `#sandbox/blank` or a supplied example and let students choose text, bars, or digit tiles as their output representation. These projects use the bounded local JavaScript/Python subsets and do not create grades or classroom submissions.
+
+The educator table distinguishes NYSED state concepts, as referenced by CSTA New York, from the national 2026 CSTA concepts. Read [Standards connections](STANDARDS-ALIGNMENT.md) for sources, grade bands and the limits of the author-created concept mapping.

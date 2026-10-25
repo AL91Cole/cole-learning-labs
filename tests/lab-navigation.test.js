@@ -44,6 +44,7 @@ class Element {
   removeAttribute(name) { this.attributes.delete(name); }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
   querySelector(selector) { if (!this.children.has(selector)) this.children.set(selector, new Element()); return this.children.get(selector); }
+  querySelectorAll(selector) { return selector==='select[name]'?this.selects||[]:[]; }
   closest(selector) { return selector === 'details' ? this.disclosure || null : null; }
   appendChild(child) { this.childNodes.push(child); return child; }
   replaceChildren(...children) { this.childNodes = [...children]; }
@@ -69,7 +70,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     ['[data-question]',scenario.questions.map((_,index) => new Element({question:String(index)}))],
     ['[data-clue]',scenario.clues.map(clue => new Element({clue:clue.id}))]
   ]);
-  const calls = {saved:0,rendered:0,reports:0,benchCancelled:0,hardwareVisible:[],forcedRenders:[],notices:[],modeChanges:[]}; let workspaceAction;
+  const calls = {saved:0,rendered:0,reports:0,benchCancelled:0,workspaceDisposed:[],hardwareVisible:[],forcedRenders:[],notices:[],modeChanges:[]}; let workspaceAction;
   const location={hash:labPageHash(id,initialSection,routeOptions)},historyEntries=[location.hash];let historyIndex=0;
   elements.get('#learning-mode').value=routeOptions.mode||'guided';
   const history={pushState(_state,_title,url){historyEntries.splice(++historyIndex);historyEntries.push(url);location.hash=url;},replaceState(_state,_title,url){historyEntries[historyIndex]=url;location.hash=url;}};
@@ -78,7 +79,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     // The real renderer replaces inputs; this draft detects unexpected replacement.
     root.children = new Map(); root.querySelector('[data-unsaved-workbench-draft]').value = '';
   }
-  const context = vm.createContext({
+  const context = vm.createContext({networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,
     mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
     // Production modules share one realm. Transfer VM-created action data into
@@ -92,7 +93,8 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     renderHardware(root,_id,_state,callback) { assert.equal(scenario.track,'hardware'); renderBench(root,callback); },
     cancelHardwareInteraction(root) { assert.equal(root,elements.get('#workspace')); calls.benchCancelled++; },
     setHardwareVisible(root,visible) { assert.equal(root,elements.get('#workspace')); assert.equal(typeof visible,'boolean'); calls.hardwareVisible.push(visible); },
-    renderWorkspace(root,_scenario,_state,callback) { assert.notEqual(scenario.track,'hardware'); renderBench(root,callback); if(scenario.track==='coding'){const editor=new Element();editor.value=_state.code;elements.set('#coding-editor',editor);} },
+    disposeWorkspace(root) { calls.workspaceDisposed.push(root); },
+    renderWorkspace(root,_scenario,_state,callback) { assert.notEqual(scenario.track,'hardware'); renderBench(root,callback); root.selects=Object.entries(_state).filter(([,value])=>typeof value==='string').map(([name,value])=>Object.assign(new Element(),{name,value})); if(scenario.track==='coding'){const editor=new Element();editor.value=_state.code;elements.set('#coding-editor',editor);} },
     save() { calls.saved++; },showNotice(message) { calls.notices.push(message); },openReport() { calls.reports++; },renderRoute(preserveDraft) { calls.forcedRenders.push(preserveDraft); },
     onModeChange(mode) { calls.modeChanges.push(mode);elements.get('#learning-mode').value=mode; },
     normalizeLabRecord:(_scenario,value) => value,attachClassroomLab:() => null,matchMedia:() => ({matches:true}),Date
@@ -937,7 +939,7 @@ function routeHarness(id='CODE-501',initialPath='',suppliedController) {
   Object.defineProperty(main,'innerHTML',{get:()=>markup,set(value){order.push('replace DOM');markup=value;editor=null;}});
   const location={hash:'#lab/'+id+initialPath};
   const initialStore={version:2,labs:{}};
-  const context=vm.createContext({
+  const context=vm.createContext({networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     SCENARIOS,learningRoute,labPageHash,retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),
     mountLabLearning(_root,options){learning=options;const {mode}=options;learningCalls.mounts++;const dispose=()=>{learningCalls.disposals++;};dispose.setMode=value=>learningCalls.modes.push(value);return dispose;},
     mountInvestigationPreview:()=>null,mountTeachingPage:()=>()=>{},renderCapstone:()=>'capstone',mountCapstone:()=>()=>{},capstoneReport:()=>'capstone report',checkCapstoneState:()=>({ok:false}),normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,
@@ -949,7 +951,7 @@ function routeHarness(id='CODE-501',initialPath='',suppliedController) {
     mountWorkControls(options){mounted=options;},workStatus:()=>'',showNotice(){},
     onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
     makeNavigation(scenario,route,{onModeChange}={}){if(suppliedController)return suppliedController;const mountedRoute=route||learningRoute(location.hash);let mode=mountedRoute.mode;return {syncRoute(next){routeSyncs.push(next);if(next.page!=='lab'||next.id!==scenario.id||next.sequence!==mountedRoute.sequence)return false;if(next.mode!==mode){onModeChange?.(next.mode);mode=next.mode;}return true;},refreshStatus(){},runHypothesisTest(){},currentTaskResult(){return {ok:false};},dispose(){}};},
-    eventList:()=>'',routeLink:()=>'',labCards(){},bindHome(){},mountStandardsAlignment:()=>()=>{},mountLabTutorial:()=>()=>{},hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
+    eventList:()=>'',routeLink:()=>'',labCards(){},bindHome(){},mountStandardsAlignment:()=>()=>{},mountLabTutorial:()=>()=>{},hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
   });
   vm.runInContext('let routeCleanup=null,store=initialStore,currentLab=null,labNavigation=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
     'let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});\n'+lifecycle.join('\n')+'\n'+
@@ -1156,4 +1158,24 @@ test('finish focuses the actual missing explanation, preserves the other answer,
     assert.equal(h.elements.get('#'+missing+'-error').hidden,true);assert.equal(h.elements.get('#'+missing).getAttribute('aria-invalid'),null);
     h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,true);assert.equal(h.calls.reports,1);
   }
+});
+
+
+test('network cable gestures preserve unapplied settings and keep configuration changes from the model',()=>{
+  const h=readyHarness('NET-208',2),workspace=h.elements.get('#workspace'),select=name=>workspace.querySelectorAll('select[name]').find(input=>input.name===name);
+  select('media').value='matched';select('topology').value='chain';
+  h.action('bench-connect',{fromPort:'pc04-cabinet:a',toPort:'pc04-cabinet:b'});
+  assert.equal(h.record.state.topology,'star');assert.equal(select('topology').value,'star','A stale draft cannot override the topology repaired by the cable gesture.');
+  assert.equal(h.record.state.media,'all-copper');assert.equal(select('media').value,'matched','Other unsaved settings survive the diagram redraw.');
+  assert.equal(h.record.state.tested,false);assert.equal(h.record.closed,false);
+});
+
+
+test('guided network disposal releases its exact mounted workbench while page history retains it',()=>{
+  const h=readyHarness('NET-208',2),workspace=h.elements.get('#workspace'),before=structuredClone(h.record);
+  assert.deepEqual(h.calls.workspaceDisposed,[]);
+  h.sync('#lab/NET-208/request?mode=guided');h.sync('#lab/NET-208/workbench?mode=guided');
+  assert.deepEqual(h.calls.workspaceDisposed,[],'Same-ticket page history keeps the diagram controller mounted.');
+  h.controller.dispose();assert.deepEqual(h.calls.workspaceDisposed,[workspace],'Leaving the guided route releases observers, packet animation and diagram listeners for this workbench.');
+  assert.deepEqual(h.record,before,'Cleanup never changes saved equipment or learner evidence.');
 });

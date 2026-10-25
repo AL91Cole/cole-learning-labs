@@ -1,6 +1,6 @@
 # Cole Learning Labs
 
-A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 5 beginner labs and 32 troubleshooting investigations across five pathways for grades 7–12. Six investigations focus on coding; the structured catalog has 37 activities including the beginner labs. An additional open coding space offers a blank program and three playful starting examples.
+A professional portfolio and browser-based technology learning platform created by Alan “Al” Cole / Mx. Cole, with 5 beginner labs and 42 troubleshooting investigations across five pathways for grades 7–12. Six investigations focus on coding; the structured catalog has 47 activities including the beginner labs. An additional open coding space offers a blank program and four playful starting examples.
 
 The v2.28.1 workbench follow-up fixes panel screw hit targets and adds actions beside the selected part, a visible CPU_FAN lead, latch controls, selectable empty mounts, and direct access to all parts and tools. The picture and native Part controls each support a complete guarded teardown and rebuild. The separate side-panel instruction banner is removed. See [Workbench interaction review](docs/WORKBENCH-INTERACTIONS.md) for verification and remaining device checks. Publication of this follow-up requires its own merge and deployment.
 
@@ -40,19 +40,27 @@ Each investigation has three separate pages: **1. Request & clues**, **2. Workbe
 
 Mx. Cole is developing the project toward a future goal of teaching Computer Technology through CTE. The project does not represent completed CTE certification. Public professional learning includes the Google Cybersecurity Professional Certificate and the **Professional Certificate in Computer Systems and Networks — American Public University**.
 
+## Interactive networking and practice
+
+The networking catalog adds ten original investigations following the supplied communications syllabus and textbook lab topics. See [Networking sequence](docs/NETWORKING-SEQUENCE.md) for the order and simulation boundaries.
+
+In **Network Studio** (`#studio/network`), students add, remove and move devices, connect ports, select endpoints and watch modeled packets travel or stop at a failure. Connections and checks update with the layout. The ten course diagrams also support moving devices, cabling and packet traces.
+
+Networking, AI and cybersecurity offer direct practice workbenches with action controls. **Creative Coding Studio** (`#studio/coding`) adds text-art and numeric-bar projects alongside the existing JavaScript/Python sandbox. Practice and studio drafts stay in page memory and do not enter classroom submissions. Guided investigations keep their evidence and progression requirements. See [Interactive workbenches](docs/INTERACTIVE-LABS.md) for controls, accessibility and execution limits.
+
 ## Learning pathways
 
 | Pathway | Assignments | Practice focus |
 | --- | ---: | --- |
 | Hardware & ServiceDesk | 8 | Trace faults, handle virtual power safely, match components, restore the classroom desktop, and open the original lesson file |
-| Network & Operating Systems | 6 | Repair addressing, sharing and startup; survey wireless coverage; restore printing; recover a verified backup |
+| Network & Operating Systems | 16 | Build and cable topologies; inspect packets, routing, switching and monitoring; repair addressing, wireless, printing and recovery |
 | AI Literacy & Audit | 6 | Review prompts, claims, bias and generated code; minimize data; reject source injection; evaluate thresholds and human review |
 | Ethical Hacking & Penetration Testing | 6 | Investigate phishing, logs and authorization; practice MFA recovery, incident containment and package verification |
 | Coding Sandbox | 6 | Repair supply/pixel-pet expressions, thermostat/prize boundaries, and readiness/rover loops; compare changing fixtures in JavaScript or Python |
 
 The 7–8, 9–10, and 11–12 grade bands are starting points for teacher selection and support. They do not establish an individual learner’s readiness.
 
-All 32 investigations include mission checkpoints, feedback tied to the current simulation state, and optional progressive coaching clues. Hints move from an idea to evidence and then a more specific next step; they do not perform the action, pass a test, close a ticket, or earn a grade. Hardware checkpoints distinguish the repair, a working classroom desktop, and delivery of the requested lesson file. Other workspaces count passing checks only after a current test; changing settings or a program requires testing again.
+All 42 investigations include mission checkpoints, feedback tied to the current simulation state, and optional progressive coaching clues. Hints move from an idea to evidence and then a more specific next step; they do not perform the action, pass a test, close a ticket, or earn a grade. Hardware checkpoints distinguish the repair, a working classroom desktop, and delivery of the requested lesson file. Other workspaces count passing checks only after a current test; changing settings or a program requires testing again.
 
 AI activities use authored examples and local rule checks, with no live AI API. Security work stays inside fixed fictional simulations. The coding sandbox accepts bounded subsets of ordinary JavaScript and Python syntax, using its own local interpreter with source, loop, step and output limits. It is not a full language runtime and cannot use imports, browser, network, file, shell or device capabilities. Earlier teaching-language programs remain supported. No lab scans real systems or executes operating-system commands or uploaded programs.
 
@@ -64,7 +72,7 @@ Resuming an older completed record without the newly required clarification reop
 
 In **Request & clues**, learners can type their own question or use a starter. An offline, authored responder matches supported wording to fictional case facts and selected simulation observations. Short follow-ups such as “Why?”, “Explain that more simply”, and “What should I check next?” use the recent case topic and current equipment state. Saved answer text is not treated as a source of facts. It does not contact an AI service or invent a fact when a question is outside its coverage; an honest fallback suggests using the supplied clues or another question. Accepted case questions and replies can enter the bounded action log and report under the existing saving choice. Casual and generated chat remain in page memory and are excluded from saved work, reports, and evidence credit. Keep personal information out of questions as well as notes.
 
-The on-device conversation understands authored everyday paraphrases across all 32 cases, common equipment-word misspellings, short references to a recent question, and two-part questions. Ambiguous references offer optional clarification questions; unsupported details stay unknown. Case replies come from supplied case facts or recognized current simulation state. Casual replies use explicitly invented character preferences, bounded definitions, and simple calculations. Previous answer text never becomes a source of facts. The five incomplete-ticket requesters use first-person wording, while earlier saved replies retain credit. An earned contextual answer retains the concrete question it refers to within the same 100-event and snapshot-byte limits. Offline mode contacts no AI provider and has finite language coverage.
+The on-device conversation understands authored everyday paraphrases across all 42 cases, common equipment-word misspellings, short references to a recent question, and two-part questions. Ambiguous references offer optional clarification questions; unsupported details stay unknown. Case replies come from supplied case facts or recognized current simulation state. Casual replies use explicitly invented character preferences, bounded definitions, and simple calculations. Previous answer text never becomes a source of facts. The five incomplete-ticket requesters use first-person wording, while earlier saved replies retain credit. An earned contextual answer retains the concrete question it refers to within the same 100-event and snapshot-byte limits. Offline mode contacts no AI provider and has finite language coverage.
 
 AI replies start on for eligible extra conversation in a fresh page. Availability is checked automatically while that page-memory preference is on; GET carries no question and performs no inference. Only a newly submitted question that maps to one of the 161 fixed authored topic IDs can request a model reply. One **AI on/off** button works during the check, and **Reply privacy** opens the service information. Turning AI off, or an automatic error/quota fallback, stays in effect across ordinary lab navigation in this page; it is not saved in browser storage. Turning AI back on performs a fresh availability check without sending or replaying an earlier question. Every inference must still pass the backend's shared budget guard. Raw typed words stay local. Case evidence and all completion checks remain authored. Errors retain the immediate local reply and switch cloud off; changing the control does not open classroom records, change billing, or turn extra chat into evidence.
 
@@ -122,12 +130,15 @@ Portfolio and lab pages use hash navigation and can be served statically.
 | `#home` | Professional introduction and learning entry points |
 | `#projects` | Selected work and project links |
 | `#about` | Background, education, and professional direction |
-| `#labs` | Five beginner labs, plus 32 investigations with grade/pathway filters |
+| `#labs` | Five beginner labs, plus 42 investigations with grade/pathway filters |
 | `#learn/hardware` | Beginner hardware lab; also `network`, `ai`, `security`, and `coding` |
 | `#lab/INC-101` | An individual investigation |
 | `#educators` | Lesson guidance and assessment |
 | `#guide` | Step-by-step student tutorial |
-| `#sandbox` | Free coding space with four starter choices |
+| `#sandbox` | Free coding space with five starting points and visual output |
+| `#studio/coding` | Creative coding with adjustable inputs, text and numeric bars |
+| `#studio/network` | Free network layout with live checks and modeled packet animation |
+| `#practice/NET-214` | Direct workbench practice; also accepts supported AI and security IDs |
 | `#connect` | Professional connection links |
 | `#privacy` | Privacy and accessibility information |
 | `classroom.html` | Independent/classroom choice, student entry, and fictional demo |
@@ -196,7 +207,7 @@ npm run build
 | File | Responsibility |
 | --- | --- |
 | `index.html`, `src/app.js`, `src/styles.css` | Portfolio, routes, reports, and lab shell |
-| `src/scenarios.js` | Combined catalogue of all 32 student assignments; no teacher rubrics or answer keys |
+| `src/scenarios.js` | Combined catalogue of all 42 student assignments; no teacher rubrics or answer keys |
 | `src/interview.js`, `src/interview.css` | Bounded conversational case replies and chat presentation; on-device authored facts, no live AI |
 | `src/requester-persona.js`, `src/requester-library.js`, `src/requester-topics.js` | Fictional profiles, 112-card composed offline library, and 161 authored remote-topic choices |
 | `src/requester-chat.js`, `src/requester-config.js` | Consent-based topic-only AI client and exact standalone Worker endpoint |
@@ -244,7 +255,7 @@ PR #22 adds a separate, disabled-by-default Docker terminal scaffold and state-d
 
 For private testing on this computer, the PR also includes a [local review profile](terminal-sandbox/LOCAL-TESTING.md) and [teacher/student walkthrough](terminal-sandbox/TEST-PLAN.md). It starts a loopback-only Node controller with actual Docker Linux sessions, a private teacher key, and a resizable guide/terminal workbench. It leaves the public site and production configuration unchanged.
 
-Complete a representative repair and a lab from every other pathway. Check all 32 entry points, filters, keyboard focus, touch controls, zoom, resume/reset, report copy/download, and back/forward navigation. Confirm that home and catalog contain no 3D hub, each lab begins with its ticket, conversation stays open, the three evidence/idea/test panels start expanded, and optional help remains accessible. Verify that initial hardware setup preserves the fault and later section focus changes retain equipment, questions, notes, code and workspace drafts. Try a supported student-written question, a contextual follow-up and an unknown question; confirm offline mode makes no inference request. Verify automatic availability, the default-on and off behavior across navigation, the exact topic-only payload, a successful live reply, and fallback before accepting this refinement. Inspect a tool without changing settings, and compare a real simulation test with the written hypothesis. For coding, test a changed fixture, syntax error, boundary input and bounded loop, then review the saved source/output in the report. Open help without hiding the actual repair or test controls. Review the fictional classroom demo, grade/return flow, and disabled-service behavior. Development verification of the prepared classroom handler should use fictional teacher/student sessions to check ownership, isolation, locking, expiry/deletion, stale versions, and failure recovery. It does not replace the blocking privacy review or permit real enrollment.
+Complete a representative repair and a lab from every other pathway. Check all 42 entry points, filters, keyboard focus, touch controls, zoom, resume/reset, report copy/download, and back/forward navigation. Confirm that home and catalog contain no 3D hub, each lab begins with its ticket, conversation stays open, the three evidence/idea/test panels start expanded, and optional help remains accessible. Verify that initial hardware setup preserves the fault and later section focus changes retain equipment, questions, notes, code and workspace drafts. Try a supported student-written question, a contextual follow-up and an unknown question; confirm offline mode makes no inference request. Verify automatic availability, the default-on and off behavior across navigation, the exact topic-only payload, a successful live reply, and fallback before accepting this refinement. Inspect a tool without changing settings, and compare a real simulation test with the written hypothesis. For coding, test a changed fixture, syntax error, boundary input and bounded loop, then review the saved source/output in the report. Open help without hiding the actual repair or test controls. Review the fictional classroom demo, grade/return flow, and disabled-service behavior. Development verification of the prepared classroom handler should use fictional teacher/student sessions to check ownership, isolation, locking, expiry/deletion, stale versions, and failure recovery. It does not replace the blocking privacy review or permit real enrollment.
 
 For detailed assembly, check a correct and incorrect drop, each tool's large-button alternative, keyboard operation, vertical page scrolling beside the equipment controls, and cancellation while opening a report or switching sections. Confirm that an unfinished drag changes no saved equipment and that unsafe or out-of-order tool attempts receive a reason. Use the native part, screw and socket selectors when small diagram targets are difficult to reach. Confirm that no engine or scene assets are requested in any pathway.
 
@@ -258,7 +269,7 @@ The labs support guided practice and teacher judgment. Completion is learning ev
 
 ## Learning toolkit in release 2.9
 
-Open **For educators** (#educators) to select any of the 32 labs, a 20-/40-/60-minute plan, guided/independent/challenge support and individual/pair work. The chosen plan provides subject-specific goals, prerequisites, a modeled reasoning example, vocabulary, a timed sequence, discussion and an exit question. Print the selected plan, or copy its canonical public assignment link. Links carry only lab identity and support mode; never add learner details, access codes, keys or work to URLs.
+Open **For educators** (#educators) to select any of the 42 labs, a 20-/40-/60-minute plan, guided/independent/challenge support and individual/pair work. The chosen plan provides subject-specific goals, prerequisites, a modeled reasoning example, vocabulary, a timed sequence, discussion and an exit question. Print the selected plan, or copy its canonical public assignment link. Links carry only lab identity and support mode; never add learner details, access codes, keys or work to URLs.
 
 In each lab, use the practice-mode selector without replacing the equipment or discarding unfinished questions/settings/code. Guided mode opens model support and question starters; independent/challenge modes begin with those supports collapsed and add a decision or alternative-explanation task. Safety, instructions, vocabulary and hints remain available in every mode. Modes do not authenticate a learner or secure an exam. INC-101, INC-107 and INC-108 form a transfer sequence: the same no-picture symptom has different modeled causes (rear output, display input and monitor-end cable). The challenge launcher explicitly shows the actual assigned case and its goals. Other pathways use their own alternative-explanation and exit prompts.
 
@@ -269,3 +280,9 @@ The **Classroom opening day** capstone (#capstone) connects INC-106, NET-201, SE
 **Teacher AI preparation** builds a copyable fictional drafting prompt from reviewed lesson metadata and bounded choices. It does not generate AI output or contact a provider. A teacher may use it with a school-approved service to draft requester wording, differentiated hints, misconceptions or synthetic test questions. Compare every generated assumption with the actual equipment, controls and case evidence before use; an AI draft cannot add capabilities to the simulation. Keep human grading. This follows the testing approach in the [official OpenAI evaluation guidance](https://developers.openai.com/api/docs/guides/evaluation-best-practices). A live student AI coach remains a separate reviewed future service under the existing privacy gate and [under-18 guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance).
 
 Browser checks on responsive layouts do not establish formal accessibility certification, actual managed-Chromebook compatibility, or school approval. Complete keyboard, screen-reader, zoom, touch, Edge and actual school-network checks before classroom rollout. Do not claim these device-specific checks have occurred without recorded evidence.
+
+## Visual coding projects
+
+The six coding investigations pair actual output with the expected result, offer input cards and an extra-input playground, and keep the full fixture tests separate from exploration. Code edits clear stale results.
+
+The free `#sandbox` supports JavaScript and Python subsets with a blank project, four examples, safe code chips and numeric inputs. Display actual printed output as text, number bars, or an up-to-eight-by-eight digit grid. No output is interpreted as HTML or drawing commands. Drafts stay in page memory, and supported programs use the existing bounded interpreter. See [Interactive labs](docs/INTERACTIVE-LABS.md) and [Standards connections](docs/STANDARDS-ALIGNMENT.md).

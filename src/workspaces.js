@@ -1,6 +1,8 @@
-import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261023-monitor';
-import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261023-monitor';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261023-monitor';
+import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261025-learning-plans';
+import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261025-learning-plans';
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,disposeExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261025-learning-plans';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261025-learning-plans';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-learning-plans';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });
@@ -163,45 +165,45 @@ const COACH = {
   AI302: {
     concept:'Judge a claim by its source, then compare matching examples. Confidence or a person’s name is not evidence for a technical decision.',
     checks:[
-      ['Compare claim 1 with source card v4.2.','The source explicitly says to check the display cable first.','Mark claim 1 Supported by source, save the findings, and validate the review.'],
-      ['Look for a source that supports the 90-day password claim.','The supplied guide gives no password-expiration policy. Missing evidence is different from a verified rule.','Mark claim 2 Unsupported by source. Do not treat the invented policy as confirmed.'],
-      ['Separate technical evidence from a guess about a person.','A name does not show how much effort a learner made. The guide does not support this judgement.','Mark claim 3 Unsupported personal judgement / bias. Save and validate the review.'],
-      ['Compare the two tickets without using their names.','Both monitors have power and both HDMI cables are disconnected. Their technical category should match.','Choose Display / cable for both tickets, save the findings, and validate the source and fairness review.']
+      ['Compare claim 1 with source card v4.2.','The source explicitly says to check the display cable first.','Mark claim 1 Supported, then choose Test this setup.'],
+      ['Look for a source that supports the 90-day password claim.','The supplied guide gives no password-expiration policy. Missing evidence is different from a verified rule.','Mark claim 2 Unsupported. The source does not confirm this policy.'],
+      ['Separate technical evidence from a guess about a person.','A name does not show how much effort a learner made. The guide does not support this judgement.','Mark claim 3 Unsupported / biased, then choose Test this setup.'],
+      ['Compare the two tickets without using their names.','Both monitors have power and both HDMI cables are disconnected. Their technical category should match.','Choose Display / cable for both tickets, then choose Test this setup.']
     ]
   },
   AI303: {
     concept:'Working code still needs a security review. Check secrets, data handling, and permission decisions independently, then test the selected patterns.',
     checks:[
-      ['Review where the example stores its key and what happens if the key is missing.','A key embedded in source can leak with the source. Missing configuration should fail safely.','Choose Read environment; fail if missing, apply the review choices, and run the regression tests.'],
-      ['Inspect how the query separates its instructions from user-supplied data.','Concatenating input into SQL mixes data with query structure. A separate parameter keeps that boundary.','Choose Use a parameterized query. Apply the patch and rerun the fixed test matrix.'],
-      ['Check whether being signed in is enough to read someone else’s record.','Authentication identifies a user; authorization checks whether that user may access this particular record.','Choose Check record owner on every request. Save and test both the owner and another user.']
+      ['Review where the example stores its key and what happens if the key is missing.','A key embedded in source can leak with the source. Missing configuration should fail safely.','Keep Environment; stop if missing, then choose Test this setup.'],
+      ['Inspect how the query separates its instructions from user-supplied data.','Concatenating input into SQL mixes data with query structure. A separate parameter keeps that boundary.','Keep Separate query parameters, then choose Test this setup.'],
+      ['Check whether being signed in is enough to read someone else’s record.','Authentication identifies a user; authorization checks whether that user may access this particular record.','Choose Check record owner, then Test this setup to compare both users.']
     ]
   },
   SEC401: {
     concept:'Inspect a message before acting on its pressure. Record specific warning signs and use the approved reporting process; do not reply with credentials.',
     checks:[
-      ['Read the sender and destination of the urgent verification message.','The claimed school identity and the displayed .test domain do not match. Treat the credential demand as suspicious.','Choose Phishing — report through approved process. Save the triage decision.'],
-      ['Document the evidence that supports the report.','The sender domain and the text-only destination both differ from the school portal.','Select both the sender-domain and destination warning signs, then save the triage.'],
-      ['Check how the message tries to rush the reader.','The threatened 10-minute deadline pressures someone to skip a careful check. Urgency alone is not proof, but it is relevant evidence here.','Record the threatening time limit as a pressure tactic, then save and validate.'],
-      ['Review the helper’s actual task before choosing an access level.','A helper reading a checklist does not need editing or administrator permissions.','Choose Read only for checklist access. Save and validate the safety review.']
+      ['Read the sender and destination of the urgent verification message.','The claimed school identity and the displayed .test domain do not match. Treat the credential demand as suspicious.','Choose Report phishing, then test the selected review.'],
+      ['Document the evidence that supports the report.','The sender domain and the text-only destination both differ from the school portal.','Mark the sender and destination directly on the urgent message.'],
+      ['Check how the message tries to rush the reader.','The threatened 10-minute deadline pressures someone to skip a careful check. Urgency alone is not proof, but it is relevant evidence here.','Mark the threatening time limit, then choose Test this setup.'],
+      ['Review the helper’s actual task before choosing an access level.','A helper reading a checklist does not need editing or administrator permissions.','Choose Read only for helper access, then choose Test this setup.']
     ]
   },
   SEC402: {
     concept:'Connect events through time and shared evidence. Make a narrow defensive change, then verify that legitimate classroom work still functions.',
     checks:[
-      ['Find the repeated failures and the later success from the same source.','Read the timestamps and source column. Routine teacher and HTTPS events are context, not the suspicious pair.','Select EVT-102 and EVT-103 only. Save the defensive response and test it.'],
-      ['Base the temporary block on the correlated source, not a familiar classroom address.','Both suspicious events use the documentation address 198.51.100.24.','Enter 198.51.100.24 as the temporary blocked source. Apply and test the response.'],
-      ['Match the legacy service with its port before changing the policy.','Telnet is the unnecessary legacy listener. The HTTPS learning portal must remain available.','Close TCP 23 · Telnet. Keep HTTPS enabled, apply the policy, and test again.'],
-      ['Check the effect of containment on legitimate learning access.','Blocking suspicious activity should not also disable the classroom portal.','Keep classroom HTTPS on port 443 available, then apply and validate the response.']
+      ['Find the repeated failures and the later success from the same source.','Read the timestamps and source column. Routine teacher and HTTPS events are context, not the suspicious pair.','Select EVT-102 and EVT-103 only, then choose Test this setup.'],
+      ['Base the temporary block on the correlated source, not a familiar classroom address.','Both suspicious events use the documentation address 198.51.100.24.','Choose Block 198.51.100.24, then choose Test this setup.'],
+      ['Match the legacy service with its port before changing the policy.','Telnet is the unnecessary legacy listener. The HTTPS learning portal must remain available.','Choose Close TCP 23 · Telnet and HTTPS enabled, then Test this setup.'],
+      ['Check the effect of containment on legitimate learning access.','Blocking suspicious activity should not also disable the classroom portal.','Keep HTTPS enabled, then choose Test this setup and check portal access.']
     ]
   },
   SEC403: {
     concept:'Permission comes before testing. Show the defect only in the supplied fictional records, then prove the patch allows the owner and denies another learner.',
     checks:[
       ['Read the authorization statement before making a request.','Permission applies only to these two built-in fictional records. It does not cover any real school system.','Acknowledge this simulation scope. Then request your own record 101 and the supplied test record 102.'],
-      ['Capture the original behavior before applying the ownership patch.','The original rule returns record 102 to learner-101 even though learner-102 owns it. That is the defect to document.','With the Original policy selected, request test record 102 and note HTTP 200. Then apply the server-side ownership check.'],
-      ['A secure repair must keep the owner’s legitimate access working.','Hiding a link does not enforce a permission rule on the server. Compare the record owner with the active user.','Choose Server: require record.owner_id === user.id. Apply the patch and retest allowed and denied access.'],
-      ['Retest access to the other learner’s record after the patch.','The owner should receive 200 for record 101. The same user must receive 403 for record 102.','Use the server-side ownership rule, then run Test both records and record both results.']
+      ['Capture the original behavior before applying the ownership patch.','The original rule returns record 102 to learner-101 even though learner-102 owns it. That is the defect to document.','Under the original policy, request other record 102 and note HTTP 200. Then choose Check ownership on server.'],
+      ['A secure repair must keep the owner’s legitimate access working.','Hiding a link does not enforce a permission rule on the server. Compare the record owner with the active user.','Choose Check ownership on server. Request both records, then Test this setup.'],
+      ['Retest access to the other learner’s record after the patch.','The owner should receive 200 for record 101. The same user must receive 403 for record 102.','Use Check ownership on server, then Test this setup and compare both results.']
     ]
   }
 };
@@ -254,39 +256,39 @@ const WORKSPACE_GUIDES = {
   AI301: [
     ['Read', 'Read the writing task. Use imaginary information only.'],
     ['Write', 'Revise the text box, then choose “Save prompt”.'],
-    ['Check', 'Choose “Check my prompt”. Use the feedback to revise and check again.']
+    ['Check', 'Choose “Test this setup”. Use the feedback to revise and check again.']
   ],
   AI302: [
     ['Compare', 'Read the source card, AI claims, and two matching tickets.'],
-    ['Review', 'Choose a finding for each claim and both ticket categories. Choose “Save my review”.'],
-    ['Check', 'Choose “Check my review”. Revisit any result that needs another look.']
+    ['Review', 'Sort each claim and choose both ticket categories. Choices apply right away.'],
+    ['Check', 'Choose “Test this setup”. Revisit any result that needs another look.']
   ],
   AI303: [
     ['Read', 'Inspect the code preview. You do not need to type or run code.'],
-    ['Choose', 'Review each menu. Keep safe choices and fix the unsafe choice, then choose “Save code choices”.'],
-    ['Test', 'Choose “Test code choices”. Compare the results with the updated preview.']
+    ['Choose', 'Keep safe choices and change the unsafe choice. Watch the access preview update.'],
+    ['Test', 'Choose “Test this setup”. Compare the results with the updated preview.']
   ],
   SEC401: [
     ['Inspect', 'Open both messages. Read each sender and text-only destination; message links are inactive.'],
-    ['Decide', 'Choose a verdict, evidence, and checklist access. Choose “Save message review”.'],
-    ['Check', 'Choose “Check my review”. Use message details to explain your decision.']
+    ['Decide', 'Mark warning signs on the urgent message. Choose its verdict and helper access.'],
+    ['Check', 'Choose “Test this setup”. Use message details to explain your decision.']
   ],
   SEC402: [
     ['Inspect', 'Compare times and source addresses. Select two related log events.'],
-    ['Plan', 'Choose a defensive change, then choose “Save response plan”.'],
-    ['Test', 'Choose “Test response plan”. Check that the learning portal still works.']
+    ['Plan', 'Choose a source block and listener rule. Watch the portal preview.'],
+    ['Test', 'Choose “Test this setup”. Check that the learning portal still works.']
   ],
   SEC403: [
     ['Check the scope', 'Read the scope statement and check the box. Use only these two fictional records.'],
-    ['Try and change', 'Try both record buttons first. Choose a rule, then choose “Save access rule”.'],
-    ['Test', 'Choose “Test both records”. Compare the allowed and denied results.']
+    ['Try and change', 'Try both record buttons first. Change the rule and compare both records again.'],
+    ['Test', 'Choose “Test this setup”. Compare the allowed and denied results.']
   ]
 };
 
 function workspaceGuide(id) {
   const steps = WORKSPACE_GUIDES[normalize(id)];
   if (!steps) return '';
-  return `<section class="ws-start" aria-label="How to use this lab"><h3>Use this workbench <span>Read → change → test</span></h3><div class="ws-start-content"><ol>${steps.map(([title,text])=>`<li><b>${esc(title)}</b><span>${esc(text)}</span></li>`).join('')}</ol><p>Save updates the model; Test checks it. Neither button submits work to a teacher. Next, open 3. Check &amp; explain.</p></div></section>`;
+  return `<section class="ws-start" aria-label="How to use this lab"><h3>Use this workbench <span>Read → change → test</span></h3><div class="ws-start-content"><ol>${steps.map(([title,text])=>`<li><b>${esc(title)}</b><span>${esc(text)}</span></li>`).join('')}</ol><p>${supportsLearningActivity(id)?'Choices update the preview; Test this setup checks it. Neither button submits work to a teacher.':'Save updates the model; Test checks it. Neither button submits work to a teacher.'} Next, open 3. Check &amp; explain.</p></div></section>`;
 }
 
 const WORKSPACE_TOOLS = {
@@ -378,12 +380,12 @@ export function applyWorkspaceAction(id, previous, action, value) {
   }
   if (action==='save-access' && code==='NET202') return save({network:data.network,folder:data.folder,permission:data.permission},'Access settings saved. Choose Test teacher access next.');
   if (action==='save-recovery' && code==='NET203') return save({recovery:data.recovery,status:data.status,startup:data.startup},'Recovery plan saved in the simulation. Choose Test startup and updates.');
-  if (action==='save-prompt' && code==='AI301') return save({prompt:typeof data.prompt === 'string' ? data.prompt.slice(0,3000) : ''},'Prompt saved for this session. Choose Check my prompt and read each result.');
-  if (action==='save-claims' && code==='AI302') return save({claims:[data.claim0,data.claim1,data.claim2],ticketA:data.ticketA,ticketB:data.ticketB},'Review saved. Choose Check my review and compare the results with the source.');
-  if (action==='save-code' && code==='AI303') return save({secret:data.secret,query:data.query,authorization:data.authorization},'Code choices saved in the preview. Choose Test code choices.');
+  if (action==='save-prompt' && code==='AI301') return save({prompt:typeof data.prompt === 'string' ? data.prompt.slice(0,3000) : ''},'Prompt saved. Choose Test this setup and read each result.');
+  if (action==='save-claims' && code==='AI302') return save({claims:[data.claim0,data.claim1,data.claim2],ticketA:data.ticketA,ticketB:data.ticketB},'Review updated. Choose Test this setup and compare the source.');
+  if (action==='save-code' && code==='AI303') return save({secret:data.secret,query:data.query,authorization:data.authorization},'Code preview updated. Choose Test this setup.');
   if (action==='view-message' && code==='SEC401') { state.message=value==='routine'?'routine':'urgent'; return outcome(state,'Text-only message opened. No link was followed.'); }
-  if (action==='save-triage' && code==='SEC401') return save({verdict:data.verdict,flags:Array.isArray(data.flags)?data.flags:[],permission:data.permission},'Message review saved. Choose Check my review to check both decisions.');
-  if (action==='save-response' && code==='SEC402') return save({events:Array.isArray(data.events)?data.events:[],source:typeof data.source === 'string' ? data.source.trim() : '',port:typeof data.port === 'string' ? data.port.trim() : '',keepHttps:data.keepHttps===true},'Response plan saved. Choose Test response plan to check the change and the learning portal.');
+  if (action==='save-triage' && code==='SEC401') return save({verdict:data.verdict,flags:Array.isArray(data.flags)?data.flags:[],permission:data.permission},'Message review updated. Choose Test this setup.');
+  if (action==='save-response' && code==='SEC402') return save({events:Array.isArray(data.events)?data.events:[],source:typeof data.source === 'string' ? data.source.trim() : '',port:typeof data.port === 'string' ? data.port.trim() : '',keepHttps:data.keepHttps===true},'Response preview updated. Choose Test this setup to check portal access.');
   if (code==='SEC403') {
     if (action==='acknowledge-scope') { state.scope=value===true; state.tested=false; state.results=[]; return outcome(state,state.scope?'Scope acknowledged. Only the two built-in records are available.':'Scope acknowledgement removed. Requests are locked.'); }
     if (!state.scope && ['fetch-record','set-authorization','run-check'].includes(action)) return outcome(state,'Read and acknowledge the simulation scope before making a request.','warning');
@@ -398,13 +400,13 @@ export function applyWorkspaceAction(id, previous, action, value) {
       state.history=state.history.slice(-8);
       return outcome(state,denied?'403: the ownership check blocked another learner’s record.':state.requested==='102'?'200: the original app exposed another learner’s fictional record. Record this authorization defect.':'200: your own fictional record is accessible.',denied?'success':state.requested==='102'?'warning':'info');
     }
-    if (action==='set-authorization') return save({patch:value==='owner'?'owner':value==='hidden'?'hidden':'none',response:null},'Access rule saved. Choose Test both records with the same active user.');
+    if (action==='set-authorization') return save({patch:value==='owner'?'owner':value==='hidden'?'hidden':'none',response:null},'Access rule updated. Compare both records, then choose Test this setup.');
   }
   if (action==='run-check') {
     state.results=testMatrix(id,state); state.tested=true; state.checkRuns+=1;
     const passed=state.results.length>0 && state.results.every(result=>result.ok);
     const mission=getWorkspaceMission(id,state);
-    return outcome(state,passed?`All ${mission.total} practice checks passed. Choose Check & explain, check the original task, then finish your report.`:`${mission.passed} of ${mission.total} checks pass. ${mission.next} Save your change and test again.`,passed?'success':'warning');
+    return outcome(state,passed?`All ${mission.total} practice checks passed. Choose Check & explain, check the original task, then finish your report.`:`${mission.passed} of ${mission.total} checks pass. ${mission.next} ${supportsLearningActivity(id)?'Choose Test this setup after another change.':'Save your change and test again.'}`,passed?'success':'warning');
   }
   return outcome(state,'That action is not available in this workspace.','warning');
 }
@@ -474,14 +476,19 @@ function security(id,state) {
   return `<section class="ws-scope"><div><b>AUTHORIZED TRAINING SCOPE</b><p>Only the two fictional records in this browser. No real accounts, endpoints, network requests, or security tools.</p></div><label class="ws-check"><input type="checkbox" data-scope${checked(state.scope)}><span>I understand and will stay within this simulation.</span></label></section><div class="ws-two-col"><section class="ws-panel"><div class="ws-section-label">LEARNDESK / FICTIONAL APP</div><h3>Try the two practice records</h3><p class="ws-identity">Active session <code>learner-101</code></p><div class="ws-request-controls"><button class="ws-button" type="button" data-action="fetch-record" data-value="101"${!state.scope?' disabled':''}>Request own record · 101</button><button class="ws-button ws-button-secondary" type="button" data-action="fetch-record" data-value="102"${!state.scope?' disabled':''}>Request test record · 102</button></div>${response?`<div class="ws-response"><span class="ws-http-code ${response.status===403?'ws-http-denied':''}">HTTP ${esc(response.status)}</span><pre>${esc(response.body)}</pre></div>`:'<div class="ws-test-placeholder">Acknowledge scope, then inspect your own record and the supplied test record.</div>'}${terminal(state.history.length?state.history:['No simulated requests yet.'])}</section><form class="ws-panel" data-form="set-authorization"><h3>Choose an access rule</h3><p class="ws-muted">An interface choice is not a server-side access check.</p>${select('patch','Rule for who can read a record',state.patch,[['none','Original: signed-in users can access all records'],['hidden','Hide other record links in the interface'],['owner','Server: require record.owner_id === user.id']])}${submit('Save access rule')}<pre class="ws-code" tabindex="0" role="region" aria-label="Illustrative code preview"><code>${esc(state.patch==='owner'?'if record.owner_id !== session.user_id:\n    return 403\nreturn 200, record':state.patch==='hidden'?'hide_other_record_links()\n# Server still returns any requested record\nreturn 200, record':'# Missing ownership check\nreturn 200, record')}</code></pre>${run('Test both records')}</form></div>`;
 }
 
+/** Stop native workspace controllers before their DOM is removed. */
+export function disposeWorkspace(root) { disposeLearningActivity(root);disposeExpanded(root); }
+
 /** Render only documented, fixed simulation controls. All state changes go to onAction. */
 export function renderWorkspace(root, scenario, state, onAction) {
+  if(!supportsExpandedLab(scenario.id)) disposeWorkspace(root);
   if(supportsExpandedLab(scenario.id))return renderExpanded(root,scenario,state,onAction);if(supportsCodingLab(scenario.id))return renderCoding(root,scenario,state,onAction);
   const restoreView=captureWorkspaceView(root,scenario.id);
   state = normalizeWorkspaceState(scenario.id, state);
   const code=normalize(scenario.id);
+  const activity=supportsLearningActivity(scenario.id);
   const body=code.startsWith('NET')?network(code,state):code.startsWith('AI')?ai(code,state):code.startsWith('SEC')?security(code,state):'<p>This case is available in the hardware bench.</p>';
-  root.innerHTML=`<div class="ws-desktop"><div class="ws-windowbar"><span class="ws-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(scenario.id)} <span aria-hidden="true">/</span> ${esc(scenario.title)}</span><span class="ws-local-badge">PRACTICE ONLY</span></div><div class="ws-body"><details class="workspace-help"><summary>Workbench help</summary>${workspaceGuide(scenario.id)}</details>${missionPanel(scenario.id,state)}${body}${inspectionPanel(scenario.id)}${results(state)}</div></div>`;
+  root.innerHTML=`<div class="ws-desktop"><div class="ws-windowbar"><span class="ws-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(scenario.id)} <span aria-hidden="true">/</span> ${esc(scenario.title)}</span><span class="ws-local-badge">PRACTICE ONLY</span></div><div class="ws-body"><details class="workspace-help"><summary>Workbench help</summary>${workspaceGuide(scenario.id)}</details>${activity?renderLearningActivity(scenario,state)+`<details class="activity-reference"><summary>Reference &amp; inspection tools</summary>${inspectionPanel(scenario.id)}</details>`:missionPanel(scenario.id,state)+renderInteractiveTools(scenario,state)+body+inspectionPanel(scenario.id)+results(state)}</div></div>`;
   const previous=inspectionViews.get(root), signature=JSON.stringify(state);
   const display=root.querySelector('[data-inspection-output]');
   const commandInput=root.querySelector('[data-inspect-form] [name="command"]');
@@ -514,5 +521,6 @@ export function renderWorkspace(root, scenario, state, onAction) {
     if (form.dataset.form==='set-authorization') onAction('set-authorization',value.patch);
     else onAction(form.dataset.form,value);
   }));
+  if(activity)mountLearningActivity(root,scenario,()=>state,onAction);else mountInteractiveTools(root,scenario,()=>state,onAction);
   restoreView();
 }

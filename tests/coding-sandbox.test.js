@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {setMaxListeners} from 'node:events';
 import {SANDBOX_STARTERS,runCodingSandbox,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from '../src/coding-sandbox.js';
 
 test('free coding accepts learner programs and all examples in both languages with changing input',()=>{
@@ -38,7 +39,7 @@ function rootFixture(html){
     if(!nodes.has(selector)){
       const value=selector==='[data-sandbox-editor]'?decode(/<textarea[^>]*>([\s\S]*?)<\/textarea>/.exec(root.html)?.[1]||''):selector==='[data-sandbox-input]'?decode(/data-sandbox-input[^>]*value="([^"]*)"/.exec(root.html)?.[1]||''):'';
       const listeners=new Map();
-      nodes.set(selector,{value,textContent:'',attributes:new Map(),listeners,addEventListener(event,handler,{signal}={}){listeners.set(event,handler);signal?.addEventListener('abort',()=>listeners.delete(event),{once:true});},setAttribute(name,value){this.attributes.set(name,value);},removeAttribute(name){this.attributes.delete(name);},focus(){},select(){},emit(event,detail={}){return listeners.get(event)?.({preventDefault(){},...detail});}});
+      nodes.set(selector,{value,textContent:'',attributes:new Map(),listeners,addEventListener(event,handler,{signal}={}){listeners.set(event,handler);if(signal)setMaxListeners(0,signal);signal?.addEventListener('abort',()=>listeners.delete(event),{once:true});},setAttribute(name,value){this.attributes.set(name,value);},removeAttribute(name){this.attributes.delete(name);},focus(){},select(){},emit(event,detail={}){return listeners.get(event)?.({preventDefault(){},...detail});}});
     }
     return nodes.get(selector);
   }};return root;

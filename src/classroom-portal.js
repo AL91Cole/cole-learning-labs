@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261023-monitor';
+import { SCENARIOS } from './scenarios.js?release=20261025-learning-plans';
 
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';

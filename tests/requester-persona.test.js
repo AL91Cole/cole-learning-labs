@@ -9,7 +9,7 @@ const scenario=SCENARIOS.find(item=>item.id==='INC-101');
 const ask=(question,entry=scenario,history=[])=>answerQuestion(entry,question,Object.freeze({pcOn:false,acConnected:false,ramSeated:false,booted:false,documentOpened:false}),history);
 
 test('every shipped lab has a consistent individual fictional character card, without private learner data',()=>{
-  assert.equal(SCENARIOS.length,32);
+  assert.equal(SCENARIOS.length,42);
   const focuses=new Set(),greetings=new Set(),moods=new Set();
   for(const entry of SCENARIOS){
     const profile=requesterPersona(entry);

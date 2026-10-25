@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {SCENARIOS} from '../src/scenarios.js';
-import {STANDARDS_ALIGNMENTS,STANDARDS_SOURCES,filterStandardsAlignments,standardsAlignmentHTML,mountStandardsAlignment} from '../src/standards.js';
+import {STANDARDS_ALIGNMENTS,STANDARDS_CONCEPTS,STANDARDS_SOURCES,filterStandardsAlignments,standardsAlignmentHTML,mountStandardsAlignment} from '../src/standards.js';
 
 class Element {
   constructor(value='all'){this.value=value;this.hidden=false;this.textContent='';this.listeners=new Map();this.dataset={};}
@@ -25,7 +25,7 @@ function fixture(){
 
 test('mapping examples remain real investigations in the declared pathway and grade bands reflect source metadata',()=>{
   assert.deepEqual(STANDARDS_ALIGNMENTS.map(row=>row.pathway),[...new Set(SCENARIOS.map(scenario=>scenario.track))]);
-  assert.equal(SCENARIOS.length,32);assert.equal(STANDARDS_ALIGNMENTS.length,5);
+  assert.equal(SCENARIOS.length,42);assert.equal(STANDARDS_ALIGNMENTS.length,5);
   const nys=new Set(['Impacts of Computing','Computational Thinking','Networks and Systems Design','Cybersecurity','Digital Literacy']);
   const csta=new Set(['Algorithms & Design','Programming','Data & Analysis','Systems & Security','Computing & Society']);
   for(const row of STANDARDS_ALIGNMENTS){
@@ -40,6 +40,8 @@ test('framework, pathway and grade filters intersect without mutating the mappin
   assert.equal(filterStandardsAlignments().length,5);
   assert.deepEqual(filterStandardsAlignments({nys:'Digital Literacy'}).map(row=>row.pathway),['ai']);
   assert.deepEqual(filterStandardsAlignments({csta:'Programming'}).map(row=>row.pathway),['ai','security','coding']);
+  assert.deepEqual(filterStandardsAlignments({csta:'Data & Analysis'}).map(row=>row.pathway),['network','ai']);
+  assert.deepEqual(filterStandardsAlignments({csta:'Algorithms & Design'}).map(row=>row.pathway),['ai','coding']);
   assert.deepEqual(filterStandardsAlignments({nys:'Cybersecurity',csta:'Programming'}).map(row=>row.pathway),['ai','security']);
   assert.deepEqual(filterStandardsAlignments({pathway:'coding',nys:'Cybersecurity'}),[]);
   assert.deepEqual(filterStandardsAlignments({pathway:'coding',csta:'Programming',grade:'7–8'}).map(row=>row.pathway),['coding']);
@@ -53,12 +55,12 @@ test('rendered table exposes labeled filters, source versions, grade distinction
   for(const key of ['pathway','nys','csta','grade']){
     assert.ok(html.includes(`for="standards-${key}"`));assert.ok(html.includes(`id="standards-${key}" data-standards-${key}`));
   }
-  assert.match(html,/<caption>.*32 fictional investigations/u);assert.match(html,/scope="col"/u);assert.match(html,/scope="row"/u);
+  assert.match(html,/<caption>.*42 fictional investigations/u);assert.match(html,/scope="col"/u);assert.match(html,/scope="row"/u);
   assert.match(html,/role="region" tabindex="0"/u);assert.match(html,/role="status" aria-live="polite"/u);
   assert.match(html,/2026 CSTA PK–12/u);assert.match(html,/middle school \(6–8\) and high school \(9–12\)/u);
   assert.match(html,/not an official NYSED or CSTA review/u);assert.match(html,/No individual standard codes are asserted/u);
   assert.ok(html.includes('Algorithms &amp; Design'));assert.ok(!html.includes('Algorithms & Design</li>'));
-  for(const key of ['nys','nysGuidance','csta','cstaView'])assert.ok(html.includes(STANDARDS_SOURCES[key]));
+  for(const key of ['nys','nysGuidance','nysBands','cstaNewYork','csta','cstaView'])assert.ok(html.includes(STANDARDS_SOURCES[key]));
 });
 
 test('mounted native controls update visible rows and announced counts, and reset recovers from an empty intersection',()=>{
@@ -92,6 +94,37 @@ test('selecting a starting grade refreshes actual lab examples even when every p
   assert.equal(network.grades.textContent,'Starting grades 7–8');
   h.controls.grade.value='11–12';h.controls.grade.emit('change');assert.match(network.examples.innerHTML,/NET-203/u);assert.match(network.examples.innerHTML,/NET-206/u);
   assert.doesNotMatch(network.examples.innerHTML,/NET-204/u);
-  h.reset.emit('click');assert.match(network.examples.innerHTML,/NET-201/u);assert.equal(network.grades.textContent,'Starting grades 7–8, 9–10, 11–12');
+  h.reset.emit('click');assert.match(network.examples.innerHTML,/NET-208/u);assert.equal(network.grades.textContent,'Starting grades 7–8, 9–10, 11–12');
   dispose();
+});
+
+test('concept vocabulary preserves the distinct NYSED and published national CSTA frameworks',()=>{
+  assert.deepEqual(STANDARDS_CONCEPTS.nys,['Impacts of Computing','Computational Thinking','Networks and Systems Design','Cybersecurity','Digital Literacy']);
+  assert.deepEqual(STANDARDS_CONCEPTS.csta,['Algorithms & Design','Programming','Data & Analysis','Systems & Security','Computing & Society']);
+  assert.ok(Object.isFrozen(STANDARDS_CONCEPTS)&&Object.isFrozen(STANDARDS_CONCEPTS.nys)&&Object.isFrozen(STANDARDS_CONCEPTS.csta));
+  assert.equal(STANDARDS_SOURCES.checked,'2026-10-25');
+  assert.equal(STANDARDS_SOURCES.cstaNewYork,'https://newyork.csteachers.org/about/learning-standards');
+  assert.equal(new URL(STANDARDS_SOURCES.nysBands).hostname,'www.nysed.gov');
+  const html=standardsAlignmentHTML();
+  assert.match(html,/CSTA New York’s learning-standards guide/u);
+  assert.match(html,/points educators to the NYSED state framework/u);
+  assert.match(html,/national <strong>2026 CSTA PK–12/u);
+  assert.match(html,/do not claim CSTA high-school specialty coverage/u);
+  assert.doesNotMatch(html,/NY CSTA standards|2017 CSTA concepts|certified curriculum/u);
+});
+
+test('pathway examples support task connections while original coding projects remain additional practice',()=>{
+  const rows=Object.fromEntries(STANDARDS_ALIGNMENTS.map(row=>[row.pathway,row]));
+  assert.deepEqual(rows.hardware.csta,['Systems & Security']);
+  assert.deepEqual(rows.network.csta,['Systems & Security','Data & Analysis']);
+  assert.ok(rows.network.examples.every(id=>Number(id.slice(4))>=207));
+  assert.equal(SCENARIOS.filter(scenario=>scenario.track==='coding').length,6);
+  assert.deepEqual(rows.coding.nys,['Computational Thinking']);
+  assert.deepEqual(rows.coding.csta,['Algorithms & Design','Programming']);
+  assert.ok(rows.coding.examples.some(id=>id==='CODE-505'));
+  assert.ok(rows.coding.examples.some(id=>id==='CODE-506'));
+  const html=standardsAlignmentHTML();
+  assert.match(html,/href="#sandbox\/blank">Build an original project/u);
+  assert.match(html,/Predict a result, run it, test a boundary or new input/u);
+  assert.match(html,/Choose the concepts supported by your activity/u);
 });

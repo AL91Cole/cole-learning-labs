@@ -19,7 +19,10 @@ test('every reachable runtime module stays local and excludes the retired graphi
   }
   assert.doesNotMatch([...seen].join('\n'),/(?:babylon|three\.(?:core|module)|assembly-scene|virtual-lab-scene)\.js/);
   for(const path of ['src/workbench-guidance.js','src/pc-activity.js','src/assembly-model.js','src/assembly-workbench.js','src/assembly-cables.js','src/foundation-model.js','src/foundation-scene.js','src/interview.js','src/report-downloads.js','src/report-crypto.js'])assert.ok(seen.has(path),`Keep the current ${path} behavior`);
-  assert.ok(bytes<1_000_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // Includes the requester/coding modules, native network builder, and 30 authored
+  // grade/category lesson plans plus their local editor and beginner practice boards.
+  // Keep a bounded source budget and continue rejecting external graphics engines.
+  assert.ok(bytes<1_300_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('the published artifact cannot contain a retired engine, scene or graphics-vendor asset',async()=>{

@@ -213,3 +213,35 @@ test('practice code and explanation drafts are escaped and cannot become page ma
   const record=createFoundationRecord('coding');record.code='</textarea><img src=x onerror=alert(1)>';record.notes='</textarea><img src=x>';record.reflection='<script>alert(1)</script>';
   const html=render('coding',record);assert.match(html,/&lt;\/textarea&gt;&lt;img src=x onerror=alert\(1\)&gt;/);assert.doesNotMatch(html,/<img src=x|<script>alert/);assert.match(html,/&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
 });
+
+test('live boards show current network, AI and security outcomes without a duplicate equipment wall',()=>{
+  for(const id of ['network','ai','security']){
+    const view=fixture(id);assert.doesNotMatch(view.prompt(),/foundation-live-board/i);
+    exploreAll(view);view.tab('practice');assert.doesNotMatch(view.prompt(),/foundation-live-board/i);view.controller.dispose();
+    const ready=fixture(id);prepare(ready);assert.match(ready.prompt(),/foundation-live-board/i);assert.equal(ready.fields.get('[data-foundation-stage]').hidden,true);
+    for(const job of ready.lab.jobs)ready.click('foundationJob');
+    if(id==='network'){assert.match(ready.prompt(),/192\.0\.2\.20/);assert.match(ready.prompt(),/Page open/);assert.match(ready.prompt(),/foundation-packet/i);}
+    if(id==='ai'){assert.match(ready.prompt(),/AI reply · corrected/);assert.match(ready.prompt(),/A person checked accuracy and fairness/);}
+    if(id==='security'){assert.match(ready.prompt(),/Password \+ practice authenticator/);assert.match(ready.prompt(),/Learner · open the lesson/);assert.doesNotMatch(ready.prompt(),/Administrator ·/);}
+    assert.equal(ready.button('foundationNext').disabled,false);assert.equal(ready.record.explanationSaved,false);ready.controller.dispose();
+  }
+});
+
+test('trying a tempting wrong choice gives useful feedback and cannot change the board or award progress',()=>{
+  for(const id of ['network','ai','security']){
+    const view=fixture(id);prepare(view);
+    for(const [index,choice]of view.lab.choices.entries()){
+      const before=structuredClone(view.record.simulation);view.click('foundationChoice',choice.action);
+      assert.deepEqual(view.record.simulation,before);assert.equal(view.record.practice.length,index);assert.match(view.fields.get('[data-foundation-feedback]').textContent,new RegExp(choice.feedback.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&')));assert.equal(view.button('foundationSection','check').disabled,true);
+      view.click('foundationJob');
+    }
+    view.controller.dispose();
+  }
+});
+
+test('coding operator controls edit without running and clear old bars until the changed program is tested',()=>{
+  const view=fixture('coding');prepare(view);view.click('foundationRun');assert.match(view.fields.get('[data-foundation-code-results]').innerHTML,/<meter\b/i);assert.ok(view.record.results.some(result=>!result.passed));
+  const runs=view.record.runCount;view.click('foundationOperator','*');assert.match(view.record.code,/quantity \* price/);assert.equal(view.record.runCount,runs);assert.equal(view.record.results.length,0);assert.doesNotMatch(view.fields.get('[data-foundation-code-results]').innerHTML,/<meter\b/i);
+  view.click('foundationRun');assert.ok(view.record.results.every(result=>result.passed));assert.equal((view.fields.get('[data-foundation-code-results]').innerHTML.match(/data-foundation-result="pass"/g)||[]).length,3);assert.match(view.fields.get('[data-foundation-code-results]').innerHTML,/Target 15 · Your result 15/);
+  view.click('foundationOperator','+');assert.equal(view.record.results.length,0);assert.equal(view.button('foundationSection','check').disabled,true);view.controller.dispose();
+});

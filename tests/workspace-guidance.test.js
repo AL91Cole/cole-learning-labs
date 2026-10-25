@@ -5,6 +5,7 @@ import { initialWorkspaceState, applyWorkspaceAction, renderWorkspace } from '..
 import { initialHardwareState, applyHardwareAction, renderHardware } from '../src/hardware.js';
 import { supportsExpandedLab, expandedStateFields } from '../src/expanded-labs.js';
 import { supportsCodingLab } from '../src/coding-lab.js';
+import { supportsLearningActivity } from '../src/learning-activities.js';
 
 const settingsScenarios=SCENARIOS.filter(item=>item.track!=='hardware');
 const legacyScenarios=settingsScenarios.filter(item=>!supportsExpandedLab(item.id) && !supportsCodingLab(item.id));
@@ -31,6 +32,22 @@ function view(scenario,state) {
 
 function availableWorkspaceGuide(scenario,state) {
     const html=view(scenario,state);
+    // Activity boards replace duplicate forms with a short instruction and a named reference disclosure.
+    // Keep testing the usable instruction and real control, rather than requiring the retired form layout.
+    if(supportsLearningActivity(scenario.id)) {
+      const guide=html.match(/<(?:header|div) class="(?:ai|sa)-heading">([\s\S]*?)<\/(?:header|div)>/)?.[1];
+      assert.ok(guide,scenario.id+': a short activity instruction stays beside the controls');
+      assert.match(guide,/<h3>[^<]+<\/h3>/,scenario.id);
+      assert.match(guide,/<p>[^<]+<\/p>/,scenario.id);
+      assert.match(html,/data-la-test(?: disabled)?>Test this setup<\/button>/,scenario.id);
+      assert.match(html,/<details class="activity-reference"><summary>Reference &amp; inspection tools<\/summary>/,scenario.id);
+      const help=html.match(/<section class="ws-start" aria-label="How to use this lab">([\s\S]*?)<\/section>/)?.[1]??'';
+      const buttons=[...html.matchAll(/<button\b[^>]*>(.*?)<\/button>/gs)].map(match=>match[1].replaceAll('&amp;','&'));
+      for(const [,label] of help.matchAll(/“([^”]+)”/g))assert.ok(buttons.includes(label),scenario.id+': help names an available board control: '+label);
+      assert.match(html,/data-learning-activity/,scenario.id);
+      assert.doesNotMatch(html,/class="it-grid"|data-form=|class="exp-controls"/,scenario.id);
+      return {html,guide};
+    }
     const coding=supportsCodingLab(scenario.id),expanded=supportsExpandedLab(scenario.id);
     const pattern=coding?/<section class="ws-start code-start" aria-label="How to use this coding lab">(.*?)<\/section>/s:expanded?/<section class="exp-start" aria-label="How to use this lab">(.*?)<\/section>/s:/<section class="ws-start" aria-label="How to use this lab">(.*?)<\/section>/s;
     const matched=html.match(pattern),guide=matched?.[1];
@@ -62,13 +79,13 @@ function availableWorkspaceGuide(scenario,state) {
     return {html,guide};
 }
 
-test('every settings workspace offers three optional instructions that name its visible real controls',()=>{
-  assert.equal(SCENARIOS.length,32);
+test('every settings workspace offers focused instructions beside its visible real controls',()=>{
+  assert.equal(SCENARIOS.length,42);
   assert.equal(SCENARIOS.filter(item=>item.track==='hardware').length,8);
-  assert.equal(legacyScenarios.length,9);assert.equal(expandedScenarios.length,9);assert.equal(codingScenarios.length,6);
+  assert.equal(legacyScenarios.length,9);assert.equal(expandedScenarios.length,19);assert.equal(codingScenarios.length,6);
   for(const scenario of settingsScenarios) {
     const {html,guide}=availableWorkspaceGuide(scenario,initialWorkspaceState(scenario.id));
-    assert.match(html,supportsCodingLab(scenario.id)?/Run the program to see results for every fixture/:supportsExpandedLab(scenario.id)?/No current full test/:/No current test results/,scenario.id);
+    assert.match(html,supportsLearningActivity(scenario.id)?/Preview only. No full test yet/:supportsCodingLab(scenario.id)?/Run the program to see results for every fixture/:supportsExpandedLab(scenario.id)?/No current full test/:/No current test results/,scenario.id);
     assert.doesNotMatch(guide,/<button\b/,`${scenario.id}: closing help must not hide the repair or test controls`);
   }
 });
@@ -87,11 +104,11 @@ test('optional instructions remain available after a real saved change and test 
     assert.equal(state.tested,true,scenario.id);
     const {html,guide}=availableWorkspaceGuide(scenario,state);
     assert.equal(guide,initial,scenario.id);
-    assert.match(html,/Your latest test results/,scenario.id);
+    assert.match(html,supportsLearningActivity(scenario.id)?/checks passed/:/Your latest test results/,scenario.id);
   }
 });
 
-test('the nine decision labs retain optional guidance after real saved changes and tests',()=>{
+test('all decision labs retain optional guidance after real saved changes and tests',()=>{
   for(const scenario of expandedScenarios) {
     let state=initialWorkspaceState(scenario.id);
     const guideBefore=availableWorkspaceGuide(scenario,state).guide;
@@ -106,8 +123,13 @@ test('the nine decision labs retain optional guidance after real saved changes a
     assert.equal(state.tested,true,scenario.id);assert.equal(state.checkRuns,1,scenario.id);
     const {html,guide}=availableWorkspaceGuide(scenario,state);
     assert.equal(guide,guideBefore,scenario.id);
-    assert.match(html,/<h3>Latest full test<\/h3><ul>/,scenario.id);
-    assert.equal((html.match(/class="exp-(?:pass|revisit)"/g)||[]).length,state.results.length,scenario.id);
+    if(supportsLearningActivity(scenario.id)) {
+      assert.match(html,/<details class="la-checks" open>/,scenario.id);
+      assert.equal((html.match(/class="la-check-(?:ok|revisit)"/g)||[]).length,state.results.length,scenario.id);
+    } else {
+      assert.match(html,/<h3>Latest full test<\/h3><ul>/,scenario.id);
+      assert.equal((html.match(/class="exp-(?:pass|revisit)"/g)||[]).length,state.results.length,scenario.id);
+    }
   }
 });
 
@@ -165,9 +187,9 @@ test('hardware instructions are visible before and after interacting in every ha
 test('test feedback explains a retry without changing the assessment result',()=>{
   const scenario=SCENARIOS.find(item=>item.id==='AI-303');
   const html=view(scenario,{...initialWorkspaceState(scenario.id),tested:true,checkRuns:1});
-  assert.match(html,/Your latest test results/);
-  assert.match(html,/A “Try again” result is a clue/);
-  assert.equal((html.match(/class="ws-fail"/g)||[]).length,1,'Only the ownership check starts faulty.');
-  assert.equal((html.match(/class="ws-pass"/g)||[]).length,2,'Correct key and query protections remain working.');
+  assert.match(html,/2 \/ 3 checks passed/);
+  assert.match(html,/A missed check is a clue/);
+  assert.equal((html.match(/class="la-check-revisit"/g)||[]).length,1,'Only the ownership check starts faulty.');
+  assert.equal((html.match(/class="la-check-ok"/g)||[]).length,2,'Correct key and query protections remain working.');
   assert.doesNotMatch(html,/All checks passed/);
 });

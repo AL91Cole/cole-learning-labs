@@ -1,3 +1,4 @@
+import {getNetworkBenchSpec} from '../src/network-bench.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -18,7 +19,7 @@ const start = source.indexOf('const invalidWork =');
 const end = source.indexOf('\nasync function readBody', start);
 assert.ok(start >= 0 && end > start, 'the server work-validation boundary must exist');
 const validate = vm.runInNewContext(`${source.slice(start, end)}; workPayload`, {
-  Object, Array, Number, SCENARIOS, EXPANDED_SCENARIOS, expandedStateFields, CODING_SCENARIOS, codingFixtureCount,
+  Object, Array, Number, SCENARIOS, EXPANDED_SCENARIOS, expandedStateFields, CODING_SCENARIOS, codingFixtureCount, getNetworkBenchSpec,
   encoder: new TextEncoder(), MAX_WORK: 65_536,
   plain: value => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype,
   fail(status, code, message) { const error = new Error(message); error.status = status; error.code = code; throw error; }

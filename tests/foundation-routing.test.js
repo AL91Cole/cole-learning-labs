@@ -13,10 +13,10 @@ function fixture(){
   const elements=new Map();
   function node(){return {innerHTML:'',value:'',classList:{add(){},remove(){}},setAttribute(){},addEventListener(name,fn){this[name]=fn;},close(){},replaceChildren(){this.innerHTML='';}};}
   const $=selector=>{if(!elements.has(selector))elements.set(selector,node());return elements.get(selector);};
-  const context=vm.createContext({SCENARIOS,FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport,learningRoute,
+  const context=vm.createContext({networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,SCENARIOS,FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport,learningRoute,
     foundationRecords:Object.create(null),location:{hash:'#learn/hardware'},currentLab:null,labNavigation:null,routeCleanup:null,reportCleanup:null,classroomConnection:null,
     document:{body:{classList:{add(){},remove(){}}},title:''},window:{scrollTo(){},addEventListener(name,fn){events.set(name,fn);}},
-    $,$$:()=>[],disposeHardware(){},preserveCodeDraft(){},hasCodeDraft:()=>false,hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},workStorage:{persistent:true},store:{labs:{}},
+    $,$$:()=>[],disposeHardware(){},preserveCodeDraft(){},hasCodeDraft:()=>false,hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},workStorage:{persistent:true},store:{labs:{}},
     renderFoundationLab:(lab,record)=>`<section>${lab.code} ${record.labId}</section>`,
     mountFoundationLab(root,options){calls.mounts.push(options);return {dispose(){calls.disposals++;},cancelInteraction(){}};},
     openReport(...args){calls.reports.push(args);},routeLink:(route,label)=>`<a href="#${route}">${label}</a>`});
@@ -39,7 +39,7 @@ function finishPractice(id,record){
 }
 
 test('five beginner routes keep the established investigation catalog and next tickets intact',()=>{
-  assert.equal(SCENARIOS.length,32);
+  assert.equal(SCENARIOS.length,42);
   assert.deepEqual(FOUNDATION_LABS.map(lab=>lab.id),['hardware','network','ai','security','coding']);
   const f=fixture();
   for(const lab of FOUNDATION_LABS){

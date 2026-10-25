@@ -144,7 +144,7 @@ test('body length is bounded by actual UTF-8 bytes even without a trustworthy Co
 
 test('each fictional lab supplies only its authored persona and grade, never case or learner data',async()=>{
   const h=fixture();
-  assert.equal(SCENARIOS.length,32);
+  assert.equal(SCENARIOS.length,42);
   for(const scenario of SCENARIOS){
     const before=structuredClone(scenario),result=await h.request({body:{scenarioId:scenario.id,topic:'breakfast'},
       dependencies:{limiter:createRequesterRateLimiter()}});
@@ -251,7 +251,7 @@ test('default Worker wrapper cannot treat Cloudflare execution context as handle
   assert.equal(result.status,200);assert.equal(h.calls.length,1);
 });
 
-test('all 5152 trusted lab-topic combinations stay inside the prompt byte ceiling',async()=>{
+test('all 6762 trusted lab-topic combinations stay inside the prompt byte ceiling',async()=>{
   for(const scenario of SCENARIOS){
     const h=fixture();
     for(const topic of REQUESTER_TOPICS){

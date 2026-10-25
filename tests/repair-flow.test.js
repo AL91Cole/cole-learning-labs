@@ -27,7 +27,7 @@ function pages() {
     currentLab:null,labView:null,workStorage:{},recordFor:normalizeLabRecord,inquiryProgress,labLanguage,requesterPersona,
     workStatus:()=> 'Private session',eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',
     renderVirtualLabHubMarkup(){assert.fail('Choosing a lab must not create a 3D classroom hub.');}});
-  vm.runInContext(extract('function routeLink(','\nfunction projectPage(')+'\n'+extract('function library(','\nfunction labCards(')+'\n'+extract('function labPage(s){','\nfunction evidenceList('),context);
+  vm.runInContext(extract('function routeLink(','\nfunction projectPage(')+'\n'+extract('function networkSequence(','\nfunction labCards(')+'\n'+extract('function labPage(s){','\nfunction evidenceList('),context);
   return context;
 }
 function detailTag(html,name) {

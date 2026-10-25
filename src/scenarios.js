@@ -1,5 +1,6 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261023-monitor';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261023-monitor';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261025-learning-plans';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261025-learning-plans';
+import {NETWORK_SCENARIOS} from './network-labs.js?release=20261025-learning-plans';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 
@@ -113,53 +114,54 @@ export const SCENARIOS = [
   },
   {
     id: 'AI-301', title: 'Prompt Engineering & Student Privacy', track: 'ai', grade: '7–8', minutes: 20,
-    summary: 'Write a clear learning prompt using fictional information.', requester: 'Student technology team · AI literacy',
-    goal: 'Create a privacy-aware prompt that asks for a short explanation and a practice question.',
-    brief: 'This practice prompt includes private student details and an unclear task. Replace the details with a fictional learner. Ask for a short explanation and a practice question. The check runs locally without contacting AI.',
+    summary: 'Build a clear prompt with invented details.', requester: 'Student technology team · AI literacy',
+    goal: 'Build a clear prompt with invented details, an explanation and a practice question.',
+    brief: 'Replace the private details with an invented learner. Ask for a short network explanation and one practice question. Check the prompt here; nothing is sent to AI.',
     clues: [clue('privacy','Read the privacy note','Do not include student names, email addresses, grades, diagnoses, passwords, or private records. Use a fictional learner.'),clue('task','Read the learning goal','Ask for a short explanation of computer networks and one practice question.'),clue('limits','Read the AI note','A clear prompt cannot guarantee a correct answer. Ask the learner to check the explanation against class notes.')],
     questions: [question('Do I need a real student account?','No. All information in this activity is fictional.'),question('Will this send my prompt to AI?','No. The browser checks a few visible rules locally and shows why they pass or fail.')],
   },
   {
     id: 'AI-302', title: 'Hallucination Audit & Ticket Classifier Bias', track: 'ai', grade: '9–10', minutes: 25,
-    summary: 'Check AI claims against a source and compare matching tickets fairly.', requester: 'Help desk training · AI review desk',
-    goal: 'Correct an unsupported AI report and apply the same category to equivalent tickets.',
-    brief: 'The AI draft sounds certain. Check its three claims against source v4.2, then compare the two matching tickets. Decide what the evidence supports.',
+    summary: 'Check the claims. Compare matching tickets fairly.', requester: 'Help desk training · AI review desk',
+    goal: 'Use the source to correct the report. Give matching tickets the same category.',
+    brief: 'Check the three claims against source v4.2. Then compare the matching tickets and decide what the evidence supports.',
     secondLook:{prompt:'Compare your source check with a second pair of eyes.',checks:['Which words in the source support each claim?','Did the same technical evidence lead to the same category?']},
     clues: [clue('source','Read source card v4.2','The local help guide says: check the display cable first; record the test result. It contains no password-expiration policy or claims about student effort.'),clue('pair','Compare the ticket pair','Ticket A and Ticket B both say “monitor has power; HDMI cable disconnected.” Their names differ, but the technical evidence is identical.'),clue('human','Read the review policy','A reviewer should cite evidence, mark unsupported claims, and avoid guessing personal traits.')],
     questions: [question('Is a confident AI claim a source?','No. Compare it with the provided guide and record what the guide actually supports.'),question('Should a student’s name change the category?','No. Equivalent technical evidence should receive equivalent treatment.')],
   },
   {
     id: 'AI-303', title: 'AI-Generated Python Security & Logic Audit', track: 'ai', grade: '11–12', minutes: 30,
-    summary: 'Find why a signed-in user can still read someone else’s record.', requester: 'Application review team · Code audit',
-    goal: 'Keep the safe key and query settings, then prevent one user from reading another user’s record.',
-    brief: 'The code already reads its key from the environment and uses a parameterized query. It still lets any signed-in user read any record. Keep the safe parts and test a record-ownership check. This is a simulated code review; it does not run Python.',
+    summary: 'Stop a signed-in user from reading someone else’s record.', requester: 'Application review team · Code audit',
+    goal: 'Keep the safe settings. Add a record-ownership check.',
+    brief: 'The key and query settings are safe, but users can read any record. Keep those settings, add an owner check, and test both users. This review does not run Python.',
     clues: [clue('secret','Inspect the key','The key comes from the environment, outside the source. Keep that setting and fail safely if the key is missing.'),clue('query','Inspect the query','The SQL already uses a parameter placeholder and a separate argument tuple. Keep input separate from the query text.'),clue('owner','Inspect authorization','Signing in proves who the user is. Each requested record still needs an owner check.')],
     questions: [question('May I run arbitrary Python here?','No. This is a code-review simulation with a fixed test matrix.'),question('Does hiding the record ID protect it?','No. Authorization must be enforced for each record request.')],
   },
   {
     id: 'SEC-401', title: 'Phishing Triage & Least-Privilege Audit', track: 'security', grade: '7–8', minutes: 20,
-    summary: 'Check a suspicious message and keep access limited to the task.', requester: 'Digital safety team · Training inbox',
-    goal: 'Flag the suspicious message, identify its warning signs, and preserve the minimum access needed.',
-    brief: 'A message says your school account will close soon. Compare its sender and link with the school’s approved details. Inspect text only; do not open links or type a password.',
+    summary: 'Spot the phishing signs. Choose only the access needed.', requester: 'Digital safety team · Training inbox',
+    goal: 'Flag the message, mark its warning signs, and keep access limited.',
+    brief: 'An urgent message threatens to close your account. Compare its sender and link with the school details. Inspect the text; do not open links or type a password.',
     clues: [clue('sender','Inspect the sender','The urgent account message claims to be school IT, but its sender is verify@school-account-check.test rather than helpdesk@school.test.'),clue('link','Inspect the link preview','The button would lead to https://school-account-check.test/verify. The real school link in this simulation is https://portal.school.test.'),clue('scope','Read the access task','A student helper needs read access to a shared troubleshooting checklist, not administrator rights.')],
     questions: [question('Should I reply with my password?','Never provide credentials in response to this message. Report it through the school’s approved process.'),question('Can I safely inspect the link here?','Yes. The interface shows a text-only destination and never navigates to it.')],
   },
   {
     id: 'SEC-402', title: 'SIEM Log Analysis & Exposed Legacy Ports', track: 'security', grade: '9–10', minutes: 30,
-    summary: 'Compare sign-in events and contain a threat without closing the learning portal.', requester: 'School SOC · Defensive training queue',
-    goal: 'Contain the suspicious source, close Telnet, and keep the HTTPS portal available.',
-    brief: 'A gateway log shows repeated failed sign-ins followed by a success. Compare the events before blocking a source. Keep the classroom portal working. This lab uses fixed fictional logs and addresses.',
+    summary: 'Trace the sign-ins. Block the suspicious source and keep the portal open.', requester: 'School SOC · Defensive training queue',
+    goal: 'Block the suspicious source, close Telnet, and keep HTTPS open.',
+    brief: 'Trace failed sign-ins followed by a success. Choose what to block while keeping the portal working. These logs and addresses are fictional.',
     clues: [clue('logs','Read the event sequence','EVT-102 records repeated failures from 198.51.100.24. EVT-103 records a success from the same source one minute later.'),clue('ports','Read the port inventory','TCP 23 is a legacy Telnet listener that should be closed. TCP 443 serves the classroom learning portal and must stay available.'),clue('policy','Read containment policy','Temporarily block the suspicious source and preserve evidence. A single event is not proof of an attacker’s identity.')],
     questions: [question('Are these real IP addresses to test?','No. These documentation addresses and logs are synthetic. No packets leave this lab.'),question('Should I shut down all access?','No. Contain the suspicious source and legacy service while keeping the classroom portal available.')],
   },
   {
     id: 'SEC-403', title: 'Authorized Web App: Patch & Retest', track: 'security', grade: '11–12', minutes: 35,
-    summary: 'Test who can read each record, apply a patch and check both users’ access.', requester: 'Application security · Authorized sandbox',
-    goal: 'Keep access to your fictional record while denying access to another learner’s record.',
-    brief: 'In this simulation, entering another record ID reveals a different learner’s record. Confirm the allowed scope, try both supplied records, then patch and retest. Keep your own record available.',
+    summary: 'Test two records. Patch access and test again.', requester: 'Application security · Authorized sandbox',
+    goal: 'Keep your record available and block access to the other learner’s record.',
+    brief: 'Confirm the scope. Try both fictional records, add an ownership check, and retest. Your record should open; the other learner’s record should stay private.',
     clues: [clue('scope','Read the authorization','Only the two built-in fictional records in this browser simulation are in scope. No real websites, accounts, scanners, or tools are involved.'),clue('identity','Inspect the active session','The active user is learner-101. Record 101 belongs to learner-101; record 102 belongs to learner-102.'),clue('patch','Read the remediation note','Check ownership on every server-side record request. A hidden URL or a disabled button alone does not enforce authorization.')],
     questions: [question('May I try this on the school portal?','No. Permission for this fictional simulation does not authorize testing any real system.'),question('What should the retest show?','The same user should receive 200 for record 101 and 403 for record 102 after the ownership check is applied.')],
   },
   ...EXPANDED_SCENARIOS,
+  ...NETWORK_SCENARIOS,
   ...CODING_SCENARIOS
 ];
