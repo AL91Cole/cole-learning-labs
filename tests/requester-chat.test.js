@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mountRequesterChat} from '../src/requester-chat.js';
+import {mountRequesterChat,resetRequesterPreference} from '../src/requester-chat.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {answerQuestion} from '../src/interview.js';
 import {initialHardwareState} from '../src/hardware.js';
@@ -34,6 +34,51 @@ function harness(provider,{timeoutMs=1000,preference={enabled:true}}={}){
 }
 const enabledProvider=(_path,options)=>Promise.resolve(json(options.method==='GET'?{enabled:true}:extra('An extra reply.')));
 const on=h=>h.toggle.getAttribute('aria-pressed')==='true';
+
+test('a fresh page never contacts the cloud until an explicit choice, including availability checks',async()=>{
+  const calls=[],answers=[],toggle=new Control(),status=new Control();
+  const chat=mountRequesterChat({querySelector:selector=>selector==='[data-ai-toggle]'?toggle:status},{scenario,fetcher:async(path,options)=>{calls.push({path,options});return enabledProvider(path,options);}});
+  await flush();chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));await flush();
+  assert.deepEqual(calls,[]);assert.equal(toggle.getAttribute('aria-pressed'),'false');
+  await toggle.fire();assert.deepEqual(calls.map(c=>c.options.method),['GET']);assert.deepEqual(answers,[]);
+  chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));await flush();
+  assert.deepEqual(calls.map(c=>c.options.method),['GET','POST']);
+  await toggle.fire();chat.dispose();
+});
+
+test('missing, false and malformed preference values never imply cloud permission',async()=>{
+  for(const enabled of [undefined,false,null,0,1,'true','false']){
+    const h=harness(enabledProvider,{preference:{enabled}});await h.ready();h.enrich();await flush();
+    assert.deepEqual(h.calls,[],String(enabled));assert.equal(on(h),false);h.chat.dispose();
+  }
+});
+
+test('clearing a shared session cancels active cloud work and a remount needs a new choice',async()=>{
+  const pending=deferred(),h=harness((_p,o)=>o.method==='GET'?Promise.resolve(json({enabled:true})):pending.promise);
+  await h.ready();h.enrich();resetRequesterPreference();
+  assert.equal(h.preference.enabled,false);assert.equal(on(h),false);assert.equal(h.calls[1].options.signal.aborted,true);
+  pending.resolve(json(extra('Old shared-session reply.')));await flush();assert.deepEqual(h.answers,[]);h.chat.dispose();
+  const calls=[],status=new Control(),toggle=new Control();
+  const remounted=mountRequesterChat({querySelector:s=>s==='[data-ai-toggle]'?toggle:status},{scenario,fetcher:async(_p,o)=>{calls.push(o);return json({enabled:true});}});
+  await flush();assert.deepEqual(calls,[]);assert.equal(toggle.getAttribute('aria-pressed'),'false');remounted.dispose();
+});
+
+test('turning off cancels an unfinished availability request immediately',async()=>{
+  const pending=deferred(),h=harness(()=>pending.promise);
+  await h.toggle.fire();assert.equal(h.calls[0].options.signal.aborted,true);
+  pending.resolve(json({enabled:true}));await flush();assert.equal(on(h),false);h.enrich();assert.equal(h.calls.length,1);h.chat.dispose();
+});
+
+test('chunked and multibyte replies are bounded while streaming and cancel the reader',async()=>{
+  for(const chunk of [new Uint8Array(4097),new TextEncoder().encode('€'.repeat(1500))]){
+    let cancelled=false;
+    const h=harness((_p,o)=>Promise.resolve(o.method==='GET'?json({enabled:true}):new Response(new ReadableStream({
+      start(controller){controller.enqueue(chunk);},cancel(){cancelled=true;}
+    }))));
+    await h.ready();h.enrich();await flush();await flush();
+    assert.equal(cancelled,true);assert.equal(h.calls[1].options.signal.aborted,true);assert.equal(on(h),false);assert.deepEqual(h.answers,[]);h.chat.dispose();
+  }
+});
 
 test('a lab without a reply toggle still checks availability and keeps the same private topic transport',async()=>{
   const calls=[],answers=[],status=new Control();

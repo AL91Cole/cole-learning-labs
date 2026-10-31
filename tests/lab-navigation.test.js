@@ -916,7 +916,7 @@ test('first-page copy keeps the question above history and removes distracting r
     assert.ok(first.indexOf('id="page-one-next"')>first.indexOf('id="save-idea"'));
     assert.match(first,/<button[^>]*id="page-one-next"[^>]*disabled/u);
     assert.match(html,/<div id="work-privacy" hidden>/u);assert.match(html,/id="saving-options"/u);
-    assert.doesNotMatch(html,/id="interview-mode"|AI replies on|Reply privacy|Teacher lesson plans|Help &amp; practice options/u);
+    assert.doesNotMatch(html,/id="interview-mode"|AI replies on|Teacher lesson plans|Help &amp; practice options/u);
   }
 });
 
@@ -951,7 +951,7 @@ function routeHarness(id='CODE-501',initialPath='',suppliedController) {
     mountWorkControls(options){mounted=options;},workStatus:()=>'',showNotice(){},
     onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
     makeNavigation(scenario,route,{onModeChange}={}){if(suppliedController)return suppliedController;const mountedRoute=route||learningRoute(location.hash);let mode=mountedRoute.mode;return {syncRoute(next){routeSyncs.push(next);if(next.page!=='lab'||next.id!==scenario.id||next.sequence!==mountedRoute.sequence)return false;if(next.mode!==mode){onModeChange?.(next.mode);mode=next.mode;}return true;},refreshStatus(){},runHypothesisTest(){},currentTaskResult(){return {ok:false};},dispose(){}};},
-    eventList:()=>'',routeLink:()=>'',labCards(){},bindHome(){},mountStandardsAlignment:()=>()=>{},mountLabTutorial:()=>()=>{},hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
+    eventList:()=>'',routeLink:()=>'',labCards(){},bindHome(){},mountStandardsAlignment:()=>()=>{},mountLabTutorial:()=>()=>{},hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,resetRequesterPreference(){},clearCodingSandboxWork(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
   });
   vm.runInContext('let routeCleanup=null,store=initialStore,currentLab=null,labNavigation=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
     'let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});\n'+lifecycle.join('\n')+'\n'+
@@ -1119,14 +1119,15 @@ test('coding reports identify only the normalized practice-language labels, incl
   for(const scenario of SCENARIOS.filter(item=>item.track!=='coding'))assert.doesNotMatch(harness(scenario.id).report(),/PRACTICE LANGUAGE/u,scenario.id);
 });
 
-test('every lab keeps persona replies and accessible history without student reply settings',()=>{
+test('every lab offers an accessible explicit cloud choice beside the processing disclosure',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
   const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],symptoms:'',plan:'',ideaSaved:false,notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for(const scenario of SCENARIOS){
     const html=context.labPage(scenario);
-    assert.doesNotMatch(html,/data-ai-toggle|data-ai-consent|data-ai-check|Reply privacy/u);
-    assert.match(html,/<section id="requester-options" hidden><p data-ai-status role="status"><\/p><\/section>/u);
+    assert.match(html,/data-ai-toggle aria-pressed="false" aria-describedby="requester-cloud-help"/u);
+    assert.match(html,/Cloud replies are off until you choose them.*Cloudflare.*Reply privacy/u);
+    assert.match(html,/<section id="requester-options" aria-label="Optional cloud replies">/u);
     assert.match(html,/<div class="requester-live-reply sr-only" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"><\/p><p id="question-response"><\/p>/u);
     assert.ok(html.includes('Ask '+escapeHtml(requesterPersona(scenario).name)));
     assert.doesNotMatch(html,/<details class="conversation-history"|<summary>Conversation history/u);
