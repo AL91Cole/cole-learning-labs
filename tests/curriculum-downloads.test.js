@@ -31,7 +31,7 @@ test('only the approved public PDFs receive a bounded shared download cache poli
     assert.match(block,/Cache-Control: public, max-age=3600, must-revalidate, no-transform/);
   }
   assert.match(headers,/\/teacher\/\*\r?\n  Cache-Control: private, no-store/);
-  assert.deepEqual(JSON.parse(read('_routes.json')),{version:1,include:['/api/*'],exclude:[]});
+  assert.deepEqual(JSON.parse(read('_routes.json')),{version:1,include:['/api/requester'],exclude:[]});
 });
 test('README pathway totals are derived from the current investigation catalog',()=>{
   const md=read('README.md').toString();

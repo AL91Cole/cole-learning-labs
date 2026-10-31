@@ -14,7 +14,7 @@ async function fixture(t) {
   for (const filename of PUBLIC_FILES) {
     const target = path.join(root, filename);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, filename === '_routes.json' ? JSON.stringify({ version: 1, include: ['/api/*'], exclude: [] }) : `Reviewed fixture: ${filename}`);
+    await writeFile(target, filename === '_routes.json' ? JSON.stringify({ version: 1, include: ['/api/requester'], exclude: [] }) : `Reviewed fixture: ${filename}`);
   }
   return { root, directory };
 }
@@ -47,7 +47,7 @@ test('publish output includes browser resources and API routing while excluding 
   assert.equal(files.some(filename => privateFiles.includes(filename)), false);
   for (const filename of files) assert.equal((await readFile(path.join(result.directory, filename), 'utf8')).includes('PRIVATE_FIXTURE_DO_NOT_PUBLISH'), false);
   assert.equal(await readFile(path.join(root, 'functions/api/[[path]].js'), 'utf8'), 'PRIVATE_FIXTURE_DO_NOT_PUBLISH', 'Functions stay at project root for Cloudflare compilation.');
-  assert.deepEqual(JSON.parse(await readFile(path.join(result.directory, '_routes.json'), 'utf8')), { version: 1, include: ['/api/*'], exclude: [] });
+  assert.deepEqual(JSON.parse(await readFile(path.join(result.directory, '_routes.json'), 'utf8')), { version: 1, include: ['/api/requester'], exclude: [] });
 });
 
 for (const unexpected of ['src/.env', 'src/unreviewed.js', 'assets/unreviewed.svg', 'assets/secret.json', 'teacher/extra.html']) {
@@ -72,11 +72,19 @@ test('missing or nonregular required sources refuse a new build without replacin
   assert.equal(await readFile(path.join(root, 'dist', 'previous.txt'), 'utf8'), 'Keep this on failure.');
 });
 
-test('unreviewed API routing cannot broaden Functions invocation', async t => {
+test('unreviewed API routing cannot expose other Functions or broaden the requester route', async t => {
   const { root } = await fixture(t);
-  await writeFile(path.join(root, '_routes.json'), JSON.stringify({ version: 1, include: ['/*'], exclude: [] }));
-  await assert.rejects(buildSite({ sourceRoot: root }), /reviewed \/api\/\*/);
-  await assert.rejects(lstat(path.join(root, 'dist')), { code: 'ENOENT' });
+  for (const routes of [
+    { version: 1, include: ['/*'], exclude: [] },
+    { version: 1, include: ['/api', '/api/*'], exclude: [] },
+    { version: 1, include: ['/api/requester', '/api/improvements'], exclude: [] },
+    { version: 1, include: ['/api/requester', '/api/session'], exclude: [] },
+    { version: 1, include: ['/api/requester/*'], exclude: [] }
+  ]) {
+    await writeFile(path.join(root, '_routes.json'), JSON.stringify(routes));
+    await assert.rejects(buildSite({ sourceRoot: root }), /requester/);
+    await assert.rejects(lstat(path.join(root, 'dist')), { code: 'ENOENT' });
+  }
 });
 
 test('successful rebuild removes stale output without copying new root files', async t => {

@@ -1,32 +1,27 @@
 /** Optional topic-only fictional conversation with shared early budget admission. */
-import {SCENARIOS} from '../src/scenarios.js';
-import {requesterPersona} from '../src/requester-persona.js';
-import {requesterTopicInstruction} from '../src/requester-topics.js';
 import {requesterTextIsPrivate} from '../src/interview.js';
 import {reserveRequesterBudget,requesterBudgetReservationCurrent} from './budget.js';
 
+import {PRIVATE_REQUESTER_URL,RequesterError,failRequester,readRequesterTopic} from './contract.js';
+
 const MODEL='@cf/meta/llama-3.1-8b-instruct-fp8-fast';
-const BODY_MAX=600;
+const REQUESTER_PRIVATE_ACTIVATION_APPROVED=true;
 const ANSWER_MAX=600;
 const TIMEOUT_MS=12_000;
 const PROMPT_BYTES_MAX=2500;
-const LABS=new Map(SCENARIOS.map(scenario=>[scenario.id,scenario]));
 const compact=value=>value.replace(/\s+/gu,' ').trim();
 const bounded=(value,max)=>typeof value==='string'?compact(value).slice(0,max):'';
 
-class RequesterError extends Error {
-  constructor(status,code){super(code);this.status=status;this.code=code;}
-}
-const fail=(status,code)=>{throw new RequesterError(status,code);};
-function response(body,status,origin='',extra={}) {
+const fail=failRequester;
+function response(body,status,extra={}) {
   return new Response(body===null?null:JSON.stringify(body),{status,headers:{
     'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store',
     'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',
     'Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'",
-    'Vary':'Origin',...(origin?{'Access-Control-Allow-Origin':origin}:{}),...extra
+    ...extra
   }});
 }
-const fallback=(status,error,origin='')=>response({enabled:false,error,fallback:true,accepted:false},status,origin);
+const fallback=(status,error)=>response({enabled:false,error,fallback:true,accepted:false},status);
 
 /** Anonymous per-isolate backstop, NOT a global quota or spending cap. Other
  * isolates/restarts have independent counters. The persistent early-budget
@@ -44,49 +39,6 @@ export function createRequesterRateLimiter({now=Date.now}={}) {
   }};
 }
 const rateLimiter=createRequesterRateLimiter();
-
-function allowedOrigins(value) {
-  if(typeof value!=='string'||value.length>4000)return new Set();
-  const entries=value.split(',').map(entry=>entry.trim());
-  if(!entries.length||entries.length>20)return new Set();
-  for(const entry of entries){
-    try{
-      const url=new URL(entry);
-      if(url.protocol!=='https:'||url.origin!==entry||url.username||url.password||url.port||
-        !url.hostname.includes('.')||url.hostname==='localhost'||url.hostname.endsWith('.localhost')||
-        /^[\d.]+$/u.test(url.hostname)||url.hostname.includes('*'))return new Set();
-    }catch{return new Set();}
-  }
-  return new Set(entries);
-}
-
-async function readBody(request) {
-  const size=request.headers.get('Content-Length');
-  if(size!==null&&(!/^\d+$/u.test(size)||Number(size)>BODY_MAX))fail(413,'request_too_large');
-  if(!request.body)fail(400,'invalid_request');
-  const reader=request.body.getReader(),chunks=[];let length=0;
-  try{
-    while(true){
-      const {done,value}=await reader.read();if(done)break;
-      length+=value.byteLength;
-      if(length>BODY_MAX){void reader.cancel().catch(()=>{});fail(413,'request_too_large');}
-      chunks.push(value);
-    }
-  }finally{reader.releaseLock();}
-  const bytes=new Uint8Array(length);let offset=0;
-  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
-  let body;
-  try{body=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{fail(400,'invalid_json');}
-  // A raw question or any extra property is rejected, never stripped or sent on.
-  if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length!==2||
-    !Object.hasOwn(body,'scenarioId')||!Object.hasOwn(body,'topic'))fail(400,'invalid_request');
-  if(typeof body.scenarioId!=='string'||!LABS.has(body.scenarioId))fail(400,'unknown_scenario');
-  const instruction=requesterTopicInstruction(body.topic);
-  if(typeof instruction!=='string'||!instruction||instruction.length>1200)fail(400,'unknown_topic');
-  const scenario=LABS.get(body.scenarioId),profile=requesterPersona(scenario.id);
-  if(!profile)fail(400,'unknown_scenario');
-  return {scenario,profile,instruction};
-}
 
 function instructions(scenario,profile) {
   // Only these authored fictional fields are supplied. The scenario's clues,
@@ -124,33 +76,15 @@ async function limitedInference(promise,signal,timeoutMs) {
 /** Options are test dependencies only. No request field or Cloudflare execution
  * context can change approval, model, prompts, rate policy or inference options. */
 export async function handleRequesterRequest(request,env,{limiter=rateLimiter,timeoutMs=TIMEOUT_MS}={}) {
-  let origin='';
   try{
-    const url=new URL(request.url);
-    if(url.protocol!=='https:'||url.username||url.password)fail(403,'secure_origin_required');
-    if(url.pathname!=='/api/requester'||url.search)fail(404,'not_found');
-    const candidate=request.headers.get('Origin');
-    if(!candidate||!allowedOrigins(env?.REQUESTER_ALLOWED_ORIGINS).has(candidate))fail(403,'origin_not_allowed');
-    origin=candidate;
-    // Billing review confirms the fixed model and shared ledger, not a provider
-    // spending cap. Other AI apps in this Paid account still share its allowance.
+    if(request.url!==PRIVATE_REQUESTER_URL)fail(403,'private_route_required');
+    if(!['GET','POST'].includes(request.method))return response({enabled:false,error:'method_not_allowed',fallback:true,accepted:false},405,{Allow:'GET, POST'});
+    for(const name of request.headers.keys())if(name.toLowerCase()!=='content-type')fail(403,'forwarded_headers_not_allowed');
     if(env?.REQUESTER_ENABLED!=='true'||env?.REQUESTER_BILLING_REVIEWED!=='true')fail(503,'requester_not_enabled');
-    if(request.headers.has('Cookie')||request.headers.has('Authorization'))fail(403,'credentials_not_allowed');
-    if(!['GET','POST','OPTIONS'].includes(request.method))return response({enabled:false,error:'method_not_allowed',fallback:true,accepted:false},405,origin,{Allow:'GET, POST, OPTIONS'});
-    if(request.method==='OPTIONS'){
-      if(!['GET','POST'].includes(request.headers.get('Access-Control-Request-Method')))fail(403,'preflight_not_allowed');
-      const headers=(request.headers.get('Access-Control-Request-Headers')||'').split(',').map(item=>item.trim().toLowerCase()).filter(Boolean);
-      if(headers.some(header=>header!=='content-type'))fail(403,'preflight_not_allowed');
-      return response(null,204,origin,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
-    }
     if(request.signal.aborted)fail(499,'request_cancelled');
-    if(request.method==='POST'){
-      if(!/^application\/json(?:\s*;\s*charset=utf-8)?$/iu.test(request.headers.get('Content-Type')||''))fail(415,'json_required');
-      if(request.headers.has('Content-Encoding'))fail(415,'encoded_body_not_allowed');
-    }
-    const body=request.method==='POST'?await readBody(request):null;
+    const body=request.method==='POST'?await readRequesterTopic(request):null;
     if(typeof env?.AI?.run!=='function'||typeof env?.REQUESTER_BUDGET?.prepare!=='function')fail(503,'requester_not_configured');
-    if(request.method==='GET')return response({enabled:true,provider:'cloudflare-workers-ai',requiresConsent:true},200,origin);
+    if(request.method==='GET')return response({enabled:true,provider:'cloudflare-workers-ai',requiresConsent:true},200);
     if(request.signal.aborted)fail(499,'request_cancelled');
     const release=limiter.acquire();if(!release)fail(429,'requester_rate_limited');
     const {scenario,profile,instruction}=body;
@@ -176,17 +110,22 @@ export async function handleRequesterRequest(request,env,{limiter=rateLimiter,ti
     if(typeof raw!=='string'||raw.length>2000||requesterTextIsPrivate(raw)||/<\/?[a-z][^>]*>|```|https?:\/\/|\bwww\./iu.test(raw))fail(502,'unsafe_model_reply');
     const text=compact(raw),answer=text.length>ANSWER_MAX?text.slice(0,ANSWER_MAX-1).trimEnd()+'…':text;
     if(!answer)fail(502,'empty_model_reply');
-    return response({enabled:true,answer,kind:'ai',accepted:false,ungraded:true,provider:'cloudflare-workers-ai'},200,origin);
+    return response({enabled:true,answer,kind:'ai',accepted:false,ungraded:true,provider:'cloudflare-workers-ai'},200);
   }catch(error){
-    if(error instanceof RequesterError)return fallback(error.status,error.code,origin);
+    if(error instanceof RequesterError)return fallback(error.status,error.code);
     const status=Number(error?.status||error?.statusCode),code=Number(error?.code);
-    if(status===429||code===3036||code===3040)return fallback(429,'requester_quota_or_capacity',origin);
-    if(status===408||code===3007||code===3008)return fallback(504,'requester_timeout',origin);
+    if(status===429||code===3036||code===3040)return fallback(429,'requester_quota_or_capacity');
+    if(status===408||code===3007||code===3008)return fallback(504,'requester_timeout');
     // Never echo or log provider errors, which can contain prompts or identifiers.
-    return fallback(503,'requester_unavailable',origin);
+    return fallback(503,'requester_unavailable');
   }
 }
 
 // Cloudflare passes an execution context as argument three. Do not treat it as
 // the test dependency object, or permit it to override handler policy.
-export default {fetch(request,env){return handleRequesterRequest(request,env);}};
+export default {fetch(request,env){
+  // Only the private binding contract and independently enabled runtime flags
+  // can reach inference. Classroom and improvement approval remain separate.
+  if(!REQUESTER_PRIVATE_ACTIVATION_APPROVED)return fallback(503,'requester_private_activation_required');
+  return handleRequesterRequest(request,env);
+}};

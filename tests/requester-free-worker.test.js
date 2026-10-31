@@ -8,7 +8,7 @@ import {requesterPersona} from '../src/requester-persona.js';
 import {REQUESTER_TOPICS,requesterTopicInstruction} from '../src/requester-topics.js';
 
 const ORIGIN='https://www.colelearninglabs.com';
-const ENDPOINT='https://requester.example.workers.dev/api/requester';
+const ENDPOINT='https://requester.internal/api/requester';
 const MODEL='@cf/meta/llama-3.1-8b-instruct-fp8-fast';
 const schema=readFileSync(new URL('../worker-requester/budget-schema.sql',import.meta.url),'utf8');
 function budgetFixture(){
@@ -24,7 +24,7 @@ function fixture(run=async()=>({response:'I enjoy oatmeal and berries in this fi
     AI:{run(...args){calls.push(args);return run(...args);}}};
   const options={limiter:createRequesterRateLimiter()};
   function makeRequest({method='POST',body={scenarioId:'INC-101',topic:'breakfast'},url=ENDPOINT,headers={},signal,raw=false}={}) {
-    const h=new Headers({Origin:ORIGIN,...(method==='POST'?{'Content-Type':'application/json'}:{}),...headers});
+    const h=new Headers({...((method==='POST')?{'Content-Type':'application/json'}:{}),...headers});
     for(const [key,value] of Object.entries(headers))if(value===null)h.delete(key);
     return new Request(url,{method,headers:h,signal,
       ...(!['GET','HEAD'].includes(method)?{body:raw?body:JSON.stringify(body)}:{})});
@@ -51,65 +51,35 @@ test('disabled or unconfirmed configuration never reads the AI binding or starts
   assert.equal(h.calls.length,0);
 });
 
-test('availability checks and allowed CORS preflights never infer or accept credentials',async()=>{
+test('private availability needs no browser identity and emits no CORS or cookies',async()=>{
   const h=fixture(),ready=await h.request({method:'GET'});
   assert.equal(ready.response.status,200);
   assert.deepEqual(ready.data,{enabled:true,provider:'cloudflare-workers-ai',requiresConsent:true});
-  assert.equal(ready.response.headers.get('Access-Control-Allow-Origin'),ORIGIN);
-  assert.equal(ready.response.headers.get('Vary'),'Origin');
+  for(const header of ['Access-Control-Allow-Origin','Access-Control-Allow-Credentials','Set-Cookie','Vary'])assert.equal(ready.response.headers.get(header),null);
   assert.equal(ready.response.headers.get('Cache-Control'),'private, no-store');
-  assert.equal(ready.response.headers.get('Access-Control-Allow-Credentials'),null);
-  assert.equal(ready.response.headers.get('Set-Cookie'),null);
-  const preflight=await h.request({method:'OPTIONS',headers:{'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type'}});
-  assert.equal(preflight.response.status,204);assert.equal(preflight.data,null);
-  assert.equal(preflight.response.headers.get('Access-Control-Allow-Origin'),ORIGIN);
-  assert.equal(preflight.response.headers.get('Access-Control-Allow-Headers'),'Content-Type');
-  for(const headers of [{Cookie:'session=do-not-send'},{Authorization:'Bearer do-not-send'}]){
-    const r=await h.request({method:'GET',headers});assert.equal(r.response.status,403);
+  assert.equal(h.calls.length,0);
+});
+
+test('only the exact internal route and minimal reconstructed headers are accepted',async()=>{
+  const h=fixture(),env={...h.env,get AI(){assert.fail('Rejected private request read AI.');}};
+  for(const url of [ORIGIN+'/api/requester','https://requester.example.workers.dev/api/requester',
+    'http://requester.internal/api/requester',ENDPOINT+'?topic=breakfast',ENDPOINT+'/extra',ENDPOINT+'#fragment']){
+    const r=await h.request({url,selectedEnv:env});assert.equal(r.response.status,403,url);
+  }
+  for(const [name,value] of [['Origin',ORIGIN],['Cookie','identity=fictional'],['Authorization','Bearer fictional'],
+    ['Cf-Access-Jwt-Assertion','fictional'],['Referer',ORIGIN+'/private'],['Cf-Connecting-Ip','192.0.2.1'],
+    ['User-Agent','A private browser'],['X-Forwarded-For','192.0.2.2']]){
+    const r=await h.request({headers:{[name]:value},selectedEnv:env});assert.equal(r.response.status,403,name);
   }
   assert.equal(h.calls.length,0);
 });
 
-test('origin matching is exact and malformed configuration closes the allowlist before AI access',async()=>{
-  const h=fixture(),env={...h.env,get AI(){assert.fail('Rejected origin accessed AI.');}};
-  for(const origin of [null,'null','http://www.colelearninglabs.com','https://www.colelearninglabs.com.evil.test',
-    'https://colelearninglabs.com.evil.test','https://arbitrary.cole-learning-labs.pages.dev',
-    'https://review-123.cole-learning-labs.pages.dev.evil.test','https://www.colelearninglabs.com:444',
-    'https://attacker.invalid']){
-    const r=await h.request({headers:{Origin:origin},selectedEnv:env});
-    assert.equal(r.response.status,403,String(origin));assert.equal(r.response.headers.get('Access-Control-Allow-Origin'),null);
-  }
-  for(const bad of ['',ORIGIN+',',ORIGIN+',https://*.pages.dev',ORIGIN+',http://localhost:8080',
-    ORIGIN+',https://localhost',ORIGIN+',https://127.0.0.1',ORIGIN+',https://example.test/path',
-    ORIGIN+',https://example.test?query=1',ORIGIN+',https://name:secret@example.test',ORIGIN+',https://example.test:443']){
-    const r=await h.request({method:'GET',selectedEnv:{...h.env,REQUESTER_ALLOWED_ORIGINS:bad,
-      get AI(){assert.fail('Malformed origin configuration accessed AI.');}}});
-    assert.equal(r.response.status,403,bad);
-  }
-  for(const origin of ['https://colelearninglabs.com','https://review-123.cole-learning-labs.pages.dev']){
-    const r=await h.request({method:'GET',headers:{Origin:origin}});
-    assert.equal(r.response.status,200);assert.equal(r.response.headers.get('Access-Control-Allow-Origin'),origin);
-  }
-  assert.equal(h.calls.length,0);
-});
-
-test('route, protocol, method, JSON type, encoding and preflight headers are constrained',async()=>{
+test('methods and JSON encoding are constrained on the private entry',async()=>{
   const h=fixture();
-  for(const entry of [
-    {url:ENDPOINT.replace('https:','http:')},{url:ENDPOINT+'?topic=breakfast'},
-    {url:ENDPOINT+'/extra'},{url:ENDPOINT.replace('/api/requester','/')},
-    {headers:{'Content-Type':'text/plain'}},{headers:{'Content-Type':'application/json; charset=iso-8859-1'}},
-    {headers:{'Content-Encoding':'gzip'}},{headers:{Cookie:'identity=fictional'}},
-    {headers:{Authorization:'Bearer fictional'}},
-    {method:'OPTIONS',headers:{'Access-Control-Request-Method':'DELETE'}},
-    {method:'OPTIONS',headers:{'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type,authorization'}}
-  ]){
-    const r=await h.request(entry);assert.ok(r.response.status>=400,JSON.stringify(entry));assert.equal(r.data.fallback,true);
+  for(const method of ['OPTIONS','PUT','DELETE','HEAD']){
+    const r=await h.request({method});assert.equal(r.response.status,405);assert.equal(r.response.headers.get('Allow'),'GET, POST');
   }
-  for(const method of ['PUT','DELETE','HEAD']){
-    const r=await h.request({method});assert.equal(r.response.status,405);
-    assert.equal(r.response.headers.get('Allow'),'GET, POST, OPTIONS');
-  }
+  for(const headers of [{'Content-Type':'text/plain'},{'Content-Type':'application/json; charset=iso-8859-1'},{'Content-Encoding':'gzip'}])assert.ok((await h.request({headers})).response.status>=400);
   assert.equal(h.calls.length,0);
 });
 
@@ -136,7 +106,7 @@ test('body length is bounded by actual UTF-8 bytes even without a trustworthy Co
     const r=await h.request({body,raw:true,selectedEnv:env});assert.ok([400,413].includes(r.response.status));
   }
   for(const size of ['601','invalid','-1']){
-    const r=await h.request({headers:{'Content-Length':size},selectedEnv:env});assert.equal(r.response.status,413);
+    const r=await h.request({headers:{'Content-Length':size},selectedEnv:env});assert.equal(r.response.status,403,'The internal contract refuses caller-supplied transport headers before reading a body.');
   }
   const invalidUtf8=await h.request({body:new Uint8Array([0xff,0xff]),raw:true,selectedEnv:env});
   assert.equal(invalidUtf8.response.status,400);assert.equal(h.calls.length,0);
@@ -217,7 +187,7 @@ test('provider quota and capacity failures fall back once without retry or leaki
     const h=fixture(async()=>{throw error;}),r=await h.request();
     assert.equal(r.response.status,status);assert.equal(r.data.fallback,true);assert.equal(h.calls.length,1);
     assert.doesNotMatch(JSON.stringify(r.data),/PRIVATE_PROVIDER_DETAIL/);
-    assert.equal(r.response.headers.get('Access-Control-Allow-Origin'),ORIGIN);
+    assert.equal(r.response.headers.get('Access-Control-Allow-Origin'),null);
   }
 });
 
@@ -245,10 +215,15 @@ test('anonymous per-isolate backstops bound bursts, daily starts and concurrency
   time+=60_000;assert.equal(daily.acquire(),null);time+=86_400_000;assert.ok(daily.acquire());
 });
 
-test('default Worker wrapper cannot treat Cloudflare execution context as handler test options',async()=>{
-  const h=fixture();
-  const result=await worker.fetch(h.makeRequest(),h.env,{get limiter(){assert.fail('Execution context became a policy override.');}});
-  assert.equal(result.status,200);assert.equal(h.calls.length,1);
+test('the production Worker wrapper applies the private contract and ignores execution-context policy overrides',async()=>{
+  const h=fixture(),poison=new Proxy({},{get(){assert.fail('Execution context was treated as policy options.');}});
+  const result=await worker.fetch(h.makeRequest({method:'GET'}),h.env,poison);
+  assert.equal(result.status,200);assert.deepEqual(await result.json(),{enabled:true,provider:'cloudflare-workers-ai',requiresConsent:true});
+  const env={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',get AI(){assert.fail('Public or identity-bearing request reached AI.');}};
+  for(const request of [h.makeRequest({url:ORIGIN+'/api/requester'}),h.makeRequest({headers:{'Cf-Connecting-Ip':'192.0.2.2'}})])assert.equal((await worker.fetch(request,env,poison)).status,403);
+  const disabled=h.makeRequest();Object.defineProperty(disabled,'body',{get(){assert.fail('Disabled Worker read a body.');}});
+  assert.equal((await worker.fetch(disabled,{REQUESTER_ENABLED:'false',get AI(){assert.fail('Disabled Worker read AI.');}},poison)).status,503);
+  assert.equal(h.calls.length,0);
 });
 
 test('all 6762 trusted lab-topic combinations stay inside the prompt byte ceiling',async()=>{

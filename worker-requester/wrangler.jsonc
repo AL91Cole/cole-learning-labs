@@ -2,24 +2,21 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cole-learning-labs-requester",
   "main": "worker.js",
-  "compatibility_date": "2026-10-20",
-  "workers_dev": true,
-  "ai": {
-    "binding": "AI"
-  },
+  "compatibility_date": "2026-10-31",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "ai": { "binding": "AI" },
   "observability": {
     "enabled": false
   },
   "vars": {
-    "REQUESTER_ENABLED": "false",
-    "REQUESTER_ALLOWED_ORIGINS": "https://www.colelearninglabs.com,https://colelearninglabs.com",
-    "REQUESTER_BILLING_REVIEWED": "false"
+    "REQUESTER_ENABLED": "true",
+    "REQUESTER_BILLING_REVIEWED": "true"
   },
-  "d1_databases": [
-    {
-      "binding": "REQUESTER_BUDGET",
-      "database_name": "cole-learning-labs-requester-budget",
-      "database_id": "a29b1ed2-0477-4c0f-8897-50823ba37e8d"
-    }
-  ]
+  "d1_databases": [{
+    "binding": "REQUESTER_BUDGET",
+    "database_name": "cole-learning-labs-requester-budget",
+    "database_id": "a29b1ed2-0477-4c0f-8897-50823ba37e8d"
+  }]
 }

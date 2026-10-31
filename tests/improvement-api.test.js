@@ -199,5 +199,6 @@ test('collector sources have no outbound network or request-content logging',asy
   const source=(await Promise.all(['functions/api/improvements.js','improvements/storage.js','improvements/retention-worker.js'].map(file=>readFile(new URL('../'+file,import.meta.url),'utf8')))).join('\n');
   assert.doesNotMatch(source,/console\.|\bfetch\s*\((?!\s*\)\s*\{)|\.headers\.get\(['"](?:CF-Connecting-IP|User-Agent|Referer)|request\.cf|localStorage|sessionStorage|indexedDB|randomUUID/iu);
   const config=JSON.parse((await readFile(new URL('../improvements/wrangler.retention.jsonc',import.meta.url),'utf8')).replace(/\/\/[^\n]*/g,''));
-  assert.equal(config.observability.enabled,false);assert.equal(config.workers_dev,false);assert.equal(config.vars.IMPROVEMENTS_ENABLED,'false');assert.equal(config.triggers.crons.length,1);
+  assert.equal(config.observability.enabled,false);assert.equal(config.workers_dev,false);assert.equal(config.preview_urls,false);assert.deepEqual(config.routes,[]);
+  assert.equal(config.vars.IMPROVEMENTS_ENABLED,'false');assert.deepEqual(config.triggers.crons,[]);assert.equal(config.d1_databases,undefined);
 });

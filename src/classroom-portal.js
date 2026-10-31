@@ -1,5 +1,8 @@
 import { SCENARIOS } from './scenarios.js?release=20261025-learning-plans';
 
+// No availability probes, cookies, class codes, drafts or reviews leave this
+// browser until a separately reviewed source release approves sharing.
+const CLASSROOM_NETWORK_REVIEW_APPROVED = false;
 const main = document.querySelector('#portal-main');
 const teacherEntry = document.body.dataset.portal === 'teacher';
 const home = teacherEntry ? '../' : './';
@@ -14,6 +17,7 @@ let pollTimer=null, pollController=null, pollKey=null, refreshGeneration=0;
 let pageStudentId=null;
 
 async function api(path, method='GET', body, signal) {
+  if (!CLASSROOM_NETWORK_REVIEW_APPROVED) throw Object.assign(new Error('Online classrooms are paused pending privacy, school, insurance and operating review. No classroom request was sent.'),{status:503});
   if (!path.startsWith('/api/')) throw new Error('Invalid classroom request.');
   const controller = new AbortController();
   const abort=()=>controller.abort();
@@ -36,7 +40,7 @@ async function api(path, method='GET', body, signal) {
 }
 
 function canPoll() {
-  return model.mode==='live' && teacherEntry && model.session?.role==='teacher' && model.selectedClass && model.detail && !model.updatesPaused && !document.hidden;
+  return CLASSROOM_NETWORK_REVIEW_APPROVED && model.mode==='live' && teacherEntry && model.session?.role==='teacher' && model.selectedClass && model.detail && !model.updatesPaused && !document.hidden;
 }
 function stopPolling() {
   clearTimeout(pollTimer);pollTimer=null;pollController?.abort();pollController=null;pollKey=null;
