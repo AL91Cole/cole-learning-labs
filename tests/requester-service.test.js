@@ -64,6 +64,61 @@ test('the prepared gateway reconstructs only fixed topics, without forwarding br
   assert.equal((await handleRequesterRequest(context,{privacyApproved:true})).status,200);assert.equal(reads,1);
 });
 
+test('the production gateway and private Worker accept runtime POST framing without forwarding browser metadata',async()=>{
+  const aiCalls=[],budgetCalls=[],transported=[];
+  const privateEnv={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',
+    REQUESTER_BUDGET:{prepare(sql){budgetCalls.push(sql);return {async all(){
+      const today=new Date();
+      return {success:true,results:[0,1].map(offset=>({day:new Date(today.getTime()+offset*86_400_000).toISOString().slice(0,10),reserved_neurons:25}))};
+    }};}},
+    AI:{async run(...args){aiCalls.push(args);return {response:answer.answer};}}};
+  const h=fixture(async request=>{
+    const body=request.method==='POST'?await request.text():undefined,headers=new Headers(request.headers);
+    if(body!==undefined)headers.set('Content-Length',String(new TextEncoder().encode(body).byteLength));
+    transported.push({method:request.method,headers:[...headers],body});
+    return worker.fetch(new Request(request.url,{method:request.method,headers,signal:request.signal,...(body===undefined?{}:{body})}),privateEnv);
+  });
+  const readyResponse=await onRequest({request:h.make({method:'GET'}),env:h.env});
+  assert.equal(readyResponse.status,200);assert.deepEqual(await readyResponse.json(),publicReady);
+  assert.deepEqual(transported[0],{method:'GET',headers:[],body:undefined});
+  assert.equal(aiCalls.length,0);assert.equal(budgetCalls.length,0);
+  const response=await onRequest({request:h.make({headers:{Referer:ORIGIN+'/private','Cf-Connecting-Ip':'192.0.2.2','X-Forwarded-For':'192.0.2.3','User-Agent':'PRIVATE_BROWSER'}}),env:h.env});
+  assert.equal(response.status,200);assert.deepEqual(await response.json(),publicAnswer);
+  assert.deepEqual(transported[1],{method:'POST',headers:[['content-length','44'],['content-type','application/json']],body:'{"scenarioId":"INC-101","topic":"breakfast"}'});
+  assert.equal(budgetCalls.length,1);assert.equal(aiCalls.length,1);
+  assert.equal(aiCalls[0][0],'@cf/meta/llama-3.1-8b-instruct-fp8-fast');
+  assert.equal(aiCalls[0][1].max_tokens,140);assert.equal(aiCalls[0][1].stream,false);
+  assert.doesNotMatch(JSON.stringify(aiCalls),/PRIVATE_BROWSER|192\.0\.2\.|\/private/);
+  assert.equal(h.calls.length,2,'Availability and one inference each use the binding once.');
+});
+
+test('invalid private transport fails closed through the production gateway before budget or AI access',async()=>{
+  let bindingReads=0;
+  const privateEnv={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',
+    get AI(){bindingReads++;throw new Error('Invalid transport reached AI.');},
+    get REQUESTER_BUDGET(){bindingReads++;throw new Error('Invalid transport reached storage.');}};
+  for(const [method,extraHeaders,replaceBody,expected]of [
+    ['GET',{'Content-Length':'0'},undefined,403],
+    ['POST',{'Content-Length':'invalid'},undefined,413],
+    ['POST',{'Content-Length':'601'},undefined,413],
+    ['POST',{'Content-Length':'1'},' '.repeat(601),413],
+    ['POST',{'Content-Length':'44',Cookie:'PRIVATE_IDENTITY'},undefined,403],
+    ['POST',{'Content-Length':'44','Cf-Connecting-Ip':'192.0.2.2'},undefined,403]
+  ]){
+    let privateStatus;
+    const h=fixture(async request=>{
+      const body=request.method==='POST'?(replaceBody??await request.text()):undefined;
+      const result=await worker.fetch(new Request(request.url,{method:request.method,signal:request.signal,
+        headers:{...Object.fromEntries(request.headers),...extraHeaders},...(body===undefined?{}:{body})}),privateEnv);
+      privateStatus=result.status;return result;
+    });
+    const response=await onRequest({request:h.make({method}),env:h.env});
+    assert.equal(privateStatus,expected,JSON.stringify(extraHeaders));
+    assert.equal(response.status,503);assert.deepEqual(await response.json(),{enabled:false,error:'reply_unavailable',fallback:true,accepted:false});
+    assert.equal(h.calls.length,1);assert.equal(bindingReads,0);
+  }
+});
+
 test('foreign origins, credentials, paths, methods and encodings fail before a service invocation',async()=>{
   const h=fixture();
   for(const settings of [{url:'http://www.colelearninglabs.com/api/requester'},{url:'https://preview.pages.dev/api/requester'},

@@ -83,6 +83,22 @@ test('methods and JSON encoding are constrained on the private entry',async()=>{
   assert.equal(h.calls.length,0);
 });
 
+test('only POST may include runtime Content-Length and identity headers remain denied',async()=>{
+  const h=fixture(),body={scenarioId:'INC-101',topic:'breakfast'};
+  const length=String(new TextEncoder().encode(JSON.stringify(body)).byteLength);
+  const accepted=await h.request({body,headers:{'Content-Length':length}});
+  assert.equal(accepted.response.status,200);assert.equal(h.calls.length,1);
+  const deniedEnv={...h.env,get AI(){assert.fail('Rejected transport or identity header accessed AI.');}};
+  assert.equal((await h.request({method:'GET',headers:{'Content-Length':'0'},selectedEnv:deniedEnv})).response.status,403);
+  for(const [name,value]of [['Origin',ORIGIN],['Cookie','identity=fictional'],['Authorization','Bearer fictional'],
+    ['Cf-Access-Jwt-Assertion','fictional'],['Referer',ORIGIN+'/private'],['Cf-Connecting-Ip','192.0.2.1'],
+    ['User-Agent','A private browser'],['X-Forwarded-For','192.0.2.2'],['X-Unknown','unexpected']]){
+    const denied=await h.request({headers:{'Content-Length':length,[name]:value},selectedEnv:deniedEnv});
+    assert.equal(denied.response.status,403,name);
+  }
+  assert.equal(h.calls.length,1);
+});
+
 test('raw questions, private input, records and every extra field are rejected before AI access',async()=>{
   const h=fixture(),env={...h.env,get AI(){assert.fail('Untrusted body reached AI binding.');}};
   const bodies=[null,[],{},'breakfast',{scenarioId:'missing',topic:'breakfast'},
@@ -106,8 +122,10 @@ test('body length is bounded by actual UTF-8 bytes even without a trustworthy Co
     const r=await h.request({body,raw:true,selectedEnv:env});assert.ok([400,413].includes(r.response.status));
   }
   for(const size of ['601','invalid','-1']){
-    const r=await h.request({headers:{'Content-Length':size},selectedEnv:env});assert.equal(r.response.status,403,'The internal contract refuses caller-supplied transport headers before reading a body.');
+    const r=await h.request({headers:{'Content-Length':size},selectedEnv:env});assert.equal(r.response.status,413,'Transport length must be numeric and inside the byte ceiling.');
   }
+  const conflicting=await h.request({body:'x'.repeat(601),raw:true,headers:{'Content-Length':'1'},selectedEnv:env});
+  assert.equal(conflicting.response.status,413,'A short transport length cannot bypass the actual streamed-byte ceiling.');
   const invalidUtf8=await h.request({body:new Uint8Array([0xff,0xff]),raw:true,selectedEnv:env});
   assert.equal(invalidUtf8.response.status,400);assert.equal(h.calls.length,0);
 });
