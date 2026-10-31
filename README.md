@@ -1,3 +1,7 @@
+## Optional aggregate improvement summaries — prepared, collection disabled
+
+The Help improve this lab form previews fixed self-reported choices without reading learner work or tracking a person. A separate receiver, aggregate counters, bounded anonymous global quotas, retention cleanup, and an owner-only local report tool are prepared behind closed source gates. No improvement summary is sent in this release. NYS Education Law §2-d, COPPA, New York child-data protections, school authority, provider processing and retention remain release requirements; no compliance or universal anonymity claim is made. See [the exact data flow and release evidence](docs/LAB-IMPROVEMENTS-PRIVACY.md) and [operator setup](improvements/README.md).
+
 <!-- Current privacy default: cloud replies require explicit opt-in as of October 31, 2026. Earlier preview observations below describe historical behavior. -->
 # Cole Learning Labs
 

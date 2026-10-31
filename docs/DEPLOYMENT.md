@@ -1,3 +1,7 @@
+## Improvement collection remains off
+
+The new local improvement-summary preview sends no improvement summary. Both source gates must remain closed until the [diagnostics release requirements](LAB-IMPROVEMENTS-PRIVACY.md) are satisfied. The separate database, cleanup scheduler, restricted operator reporting, provider logging/retention review and legal/school authority must be verified before any reviewed activation. Neither a hosting flag nor a learner checkbox approves collection. See [operator setup and checks](../improvements/README.md).
+
 # Deploying Cole Learning Labs with Cloudflare Pages
 
 PR #22's optional remote terminal is a separate Docker service, not a Pages Function or static asset. Its [setup guide](../terminal-sandbox/README.md) and [architecture audit](PR22-ARCHITECTURE-AUDIT.md) describe the trusted HTTPS ingress and host work still required. The PR preview can demonstrate new monitor clues without deploying that backend or changing the production domain.
