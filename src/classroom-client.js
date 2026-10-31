@@ -3,6 +3,9 @@ import { SCENARIOS } from './scenarios.js?release=20261025-learning-plans';
 import { inquiryProtectedEvents } from './interview.js?release=20261025-learning-plans';
 import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261025-learning-plans';
 export const CLASSROOM_ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
+// Saved sessions and page settings cannot authorize network sharing while the
+// school, privacy, insurance and operating requirements await review.
+const CLASSROOM_NETWORK_REVIEW_APPROVED = false;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
 export function classroomSelection() {
@@ -45,7 +48,15 @@ function node(tag, text, className = '') {
   return element;
 }
 
-export function attachClassroomLab({ scenarioId, record, onRestore, storageKey = classroomStorageKey() }) {
+export function attachClassroomLab(options) {
+  if (!CLASSROOM_NETWORK_REVIEW_APPROVED) return { schedule() {}, dispose() {} };
+  return attachReviewedClassroomLab(options, { privacyApproved: CLASSROOM_NETWORK_REVIEW_APPROVED });
+}
+
+/** Prepared only for synthetic tests and a separately reviewed source release. */
+export function attachReviewedClassroomLab(options, { privacyApproved = false } = {}) {
+  if (privacyApproved !== true) return { schedule() {}, dispose() {} };
+  const { scenarioId, record, onRestore, storageKey = classroomStorageKey() } = options;
   const selected = classroomSelection();
   if (!selected) return { schedule() {}, dispose() {} };
   const host = document.querySelector('#classroom-status');

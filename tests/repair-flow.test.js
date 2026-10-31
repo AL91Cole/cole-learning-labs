@@ -85,7 +85,8 @@ test('every investigation puts required first-page work before its single Next b
     for(const control of ['run-hypothesis-test','experiment-hypothesis','experiment-symptoms','experiment-result','bench-log'])assert.equal(enclosingDetails(html,control).length,0,scenario.id+' required workbench tools stay visible');
     assert.match(html,/<button\b[^>]*id="run-hypothesis-test"[^>]*>Test my idea<\/button>/,scenario.id+' names the action directly');
     for(const id of ['first-idea-evidence','first-idea-questions','workbench-test-status'])assert.ok(html.includes('id="'+id+'"'),scenario.id+' includes '+id);
-    assert.doesNotMatch(html,/class="lab-options"|id="learning-mode"|Reply privacy|AI replies on/);
+    assert.doesNotMatch(html,/class="lab-options"|id="learning-mode"|AI replies on/);
+    assert.match(html,/data-ai-toggle aria-pressed="false"/);
     assert.match(html,/<div id="work-privacy" hidden>/);
     assert.match(html,/<button\b[^>]*id="workbench-next"[^>]*\bdisabled\b/,scenario.id+' starts page three locked until the saved test is complete');
     for(const control of ['student-question','interview-history','symptoms','plan','save-idea'])assert.equal(enclosingDetails(html,control).length,0,scenario.id+' required first-page work must be immediately available');

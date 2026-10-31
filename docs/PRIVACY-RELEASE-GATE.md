@@ -1,6 +1,6 @@
 # Student and educator privacy release requirements
 
-Owner: Alan Cole. Reviewed for source changes on October 16, 2026. **Status: not approved for real classroom-record processing.** This document records release requirements and open work; it is not a legal opinion, certification, signed school agreement, or completed security program.
+Owner: Alan Cole. Reviewed for source changes on October 31, 2026. **Status: not approved for real classroom-record processing.** This document records release requirements and open work; it is not a legal opinion, certification, signed school agreement, or completed security program.
 
 ## Standing product rule
 
@@ -15,6 +15,10 @@ The current no-roster workflow lets teachers share a public lab URL and students
 The actual Cloudflare `onRequest` entry point has a hardcoded closed release gate. It returns `503 classroom_privacy_review_required` before accessing request context, service configuration, D1, or identity-key retrieval. Environment variables cannot approve the release. Existing authentication, ownership, version, and submission integration tests explicitly call the separate prepared handler; passing those tests does not activate production or establish legal compliance.
 
 Changing this gate requires a reviewed source release after the evidence below is complete. Do not treat a teacher email, class code, user checkbox, hosting flag, alias, encrypted file, or this document as legal authorization. Retain the gate during previews. Any change to data fields, purpose, providers, jurisdictions, retention, identity, surveillance, or live AI must reopen the review before use. Direct Google Classroom integration, roster access, and grade passback require a separate documented data-flow, scope, OAuth verification, and school authorization review.
+
+## Separate aggregate-improvement boundary
+
+The optional self-reported improvement-summary flow is also **not approved for live collection**. Its client and production receiver source gates remain closed. It has no permission to read or upload classroom work. Its fixed-choice preview, prepared aggregate-only storage and anonymous global budgets support minimization, but do not establish anonymous network requests or legal authority. Provider connection metadata is part of the review. Product-improvement use cannot automatically be treated as an internal-operations exemption. See [the diagnostics inventory and release evidence](LAB-IMPROVEMENTS-PRIVACY.md). Releasing diagnostics requires its own documented approval and does not open the classroom-records gate.
 
 ## Required evidence before a classroom release
 

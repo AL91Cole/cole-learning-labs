@@ -21,8 +21,9 @@ test('every reachable runtime module stays local and excludes the retired graphi
   for(const path of ['src/workbench-guidance.js','src/pc-activity.js','src/assembly-model.js','src/assembly-workbench.js','src/assembly-cables.js','src/foundation-model.js','src/foundation-scene.js','src/interview.js','src/report-downloads.js','src/report-crypto.js'])assert.ok(seen.has(path),`Keep the current ${path} behavior`);
   // Includes the requester/coding modules, native network builder, and 30 authored
   // grade/category lesson plans plus their local editor and beginner practice boards.
-  // Keep a bounded source budget and continue rejecting external graphics engines.
-  assert.ok(bytes<1_300_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // The small authored general-answer module and persistent privacy warnings
+  // add less than 10 KB; preserve the engine ban and a bounded source budget.
+  assert.ok(bytes<1_310_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('the published artifact cannot contain a retired engine, scene or graphics-vendor asset',async()=>{

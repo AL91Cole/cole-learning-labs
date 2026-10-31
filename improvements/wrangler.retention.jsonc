@@ -1,0 +1,13 @@
+{
+  "name": "cole-learning-labs-improvement-retention",
+  "main": "retention-worker.js",
+  "compatibility_date": "2026-10-31",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "observability": { "enabled": false },
+  "vars": { "IMPROVEMENTS_ENABLED": "false" },
+  "triggers": { "crons": [] }
+  // After the documented review, add a separately provisioned LAB_IMPROVEMENTS
+  // D1 binding. No database is provisioned or authorized by this example.
+}

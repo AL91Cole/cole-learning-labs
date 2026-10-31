@@ -62,7 +62,7 @@ test('a private teacher-material directory cannot enter the built public website
   for (const filename of PUBLIC_FILES) {
     const target = path.join(root, filename);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, filename === '_routes.json' ? JSON.stringify({ version: 1, include: ['/api/*'], exclude: [] }) : 'PUBLIC_FIXTURE');
+    await writeFile(target, filename === '_routes.json' ? JSON.stringify({ version: 1, include: ['/api/requester'], exclude: [] }) : 'PUBLIC_FIXTURE');
   }
   const privateDirectory = path.join(root, 'private-teacher-materials');
   await mkdir(privateDirectory);

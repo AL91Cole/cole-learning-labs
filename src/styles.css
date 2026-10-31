@@ -622,3 +622,18 @@ body:not(.lab-view) .tour-task h2,body:not(.lab-view) .tutorial-reference h2{fon
 .network-sequence li a{display:inline-block;min-height:44px;padding:8px 0;font-weight:700}
 .network-sequence li p{margin:0;line-height:1.6}
 @media(max-width:700px){.network-sequence ol{grid-template-columns:1fr}}
+
+/* The optional summary remains readable beside dark and light simulations. */
+#lab-improvement-summary .improvement-panel{margin:32px 0;padding:20px 24px;border:1px solid #a8bdc8;border-radius:12px;background:#f7f9fa;color:#152b3d;font-size:1rem;line-height:1.7}
+#lab-improvement-summary summary{min-height:44px;cursor:pointer;align-content:center;font-size:1.1rem;font-weight:700;color:#152b3d}
+#lab-improvement-summary .prose{padding-top:20px;color:#152b3d}
+#lab-improvement-summary p,#lab-improvement-summary label,#lab-improvement-summary .panel-help{font-size:1rem;line-height:1.7;color:#243f50}
+#lab-improvement-summary h2{font-size:1.5rem;color:#152b3d}
+#lab-improvement-summary h3{font-size:1.2rem;color:#152b3d}
+#lab-improvement-summary select{width:100%;min-height:48px;padding:10px 12px;background:#fff;color:#152b3d;border:1px solid #718a99;font-size:1rem}
+#lab-improvement-summary input[type=checkbox]{width:22px;height:22px;vertical-align:middle;accent-color:#006d65}
+#lab-improvement-summary a{color:#006960;text-decoration:underline;text-underline-offset:3px}
+#lab-improvement-summary .button-outline{background:#fff;color:#00645d;border-color:#547c7c}
+#lab-improvement-summary .button:disabled{opacity:.7}
+#lab-improvement-summary .guide-callout{color:#243f50;background:#e9f1e9}
+#lab-improvement-summary :focus-visible{outline:3px solid #00645d;outline-offset:4px}

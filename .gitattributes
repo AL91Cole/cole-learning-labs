@@ -1,0 +1,12 @@
+# Keep reviewed public documents byte-identical across Windows and Linux.
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.docx binary
+*.pptx binary

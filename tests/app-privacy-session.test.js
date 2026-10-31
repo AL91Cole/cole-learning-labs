@@ -39,7 +39,7 @@ function harness() {
   const initialPracticeStates = { 'NET-201': { ...initialWorkspaceState('NET-201'), ip: '10.24.8.26', workspaceEdits: 2 } };
   const initialNetworkState = {...initialNetworkStudioState(),runs:2};
   const initialStudioState = { ...initialCodingStudioState('blank'), code: 'print("Private fictional creative draft");', runs: 1 };
-  const events = new Map(), notices = [], calls = { disposed: 0, scheduled: 0, rendered: 0, sandboxCleared: 0, lessonPlansCleared: 0 };
+  const events = new Map(), notices = [], calls = { disposed: 0, scheduled: 0, rendered: 0, sandboxCleared: 0, lessonPlansCleared: 0, cloudReset: 0, improvementReset: 0 };
   const status = { textContent: '' };
   let mounted;
   const context = vm.createContext({
@@ -51,6 +51,7 @@ function harness() {
     workStatus: currentRecord => currentRecord.notes || '',
     mountWorkControls(options) { mounted = options; },
     clearCodingSandboxWork() { calls.sandboxCleared++; },
+    resetLabImprovements(){calls.improvementReset++;},mountLabImprovements(){return()=>{};},resetRequesterPreference(){calls.cloudReset++;},
     clearLessonPlanWork() { calls.lessonPlansCleared++; },
     renderRoute() { calls.rendered++; }, showNotice(message) { notices.push(message); }
   });
@@ -79,6 +80,8 @@ function harness() {
 }
 
 function assertReset(h) {
+  assert.equal(h.calls.cloudReset,1);
+  assert.equal(h.calls.improvementReset,1);
   const state = h.state();
   assert.equal(state.storageKey, WORK_PREFIX);
   assert.equal(state.manager.persistent, false);
@@ -203,7 +206,7 @@ test('educator lesson drafts warn before leaving and clear on document exit rega
     window:{addEventListener(name,listener){events.set(name,listener);}},
     networkStudioHasWork:()=>false,networkStudioState:{},initialNetworkStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,
     codingStudioHasWork:()=>false,codingStudioState:{},initialCodingStudioState:()=>({}),hasFoundationWork:()=>false,
-    hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},hasLessonPlanWork:()=>dirty,clearLessonPlanWork(){dirty=false;clears++;},
+    hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},resetLabImprovements(){},mountLabImprovements(){return()=>{};},resetRequesterPreference(){},hasLessonPlanWork:()=>dirty,clearLessonPlanWork(){dirty=false;clears++;},
     workStorage:{persistent:true},store:{labs:{}},hasPrivateWork:()=>false,hasCodeDraft:()=>false,
     $:selector=>selector==='#main'?{replaceChildren(){markupCleared++;}}:null,
     foundationRecords:{},labNavigation:null,disposeHardware(){},routeCleanup:null,reportCleanup:null,classroomConnection:null

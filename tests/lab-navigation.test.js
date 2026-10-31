@@ -6,6 +6,7 @@ import { SCENARIOS } from '../src/scenarios.js';
 import { labLanguage } from '../src/lab-language.js';
 import { requesterPersona } from '../src/requester-persona.js';
 import { mountRequesterChat } from '../src/requester-chat.js';
+import { REQUESTER_TASK_NUDGE } from '../src/requester-general.js';
 import { initialHardwareState, applyHardwareAction, verifyHardware } from '../src/hardware.js';
 import { initialWorkspaceState, applyWorkspaceAction, verifyWorkspace } from '../src/workspaces.js';
 import { answerQuestion, questionEvent, readQuestionEvents, inquiryProgress, retainInquiryEvents } from '../src/interview.js';
@@ -81,7 +82,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
   }
   const context = vm.createContext({networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,
-    mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
+    resetLabImprovements(){},mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,cloudEnabled:true,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
     // Production modules share one realm. Transfer VM-created action data into
     // the model's realm so its strict plain-object boundary is tested fairly.
     applyWorkspaceAction:(caseId,previous,action,value)=>applyWorkspaceAction(caseId,previous,action,value===undefined?undefined:structuredClone(value)),
@@ -730,6 +731,23 @@ test('casual character conversation stays in page history without entering repor
   h.context.navigation.dispose();
 });
 
+test('general questions and their gentle nudge stay in temporary chat without cloud input, report text or progress',()=>{
+  const requests=[],h=harness('INC-101',1,answerQuestion,()=>{},{},{preference:{enabled:false},fetcher:(...args)=>{requests.push(args);throw new Error('No cloud request expected.');}});
+  const before=structuredClone(h.record),saved=h.calls.saved;
+  for(const question of ['Why is the sky blue?','What is the capital of France?','Write a basic Python loop','Can cats be astronauts?']){
+    h.ask(question);
+    assert.ok(h.elements.get('#question-response').textContent.endsWith(REQUESTER_TASK_NUDGE));
+    assert.equal(h.elements.get('#reply-source').textContent,'Offline reply · extra chat, not a case clue');
+  }
+  assert.deepEqual(requests,[]);assert.deepEqual(h.record,before);assert.equal(h.calls.saved,saved);
+  assert.equal(inquiryProgress(h.scenario,h.record.events).complete,false);
+  assert.match(h.elements.get('#interview-history').innerHTML,/scatters blue|Paris|range\(3\)|Captain Whiskers/u);
+  assert.doesNotMatch(h.report(),/sky blue|capital of France|Python loop|cats be astronauts|Captain Whiskers|return to the ticket/u);
+  h.ask('What changed?');assert.equal(readQuestionEvents(h.record.events).length,1);assert.equal(inquiryProgress(h.scenario,h.record.events).complete,true);
+  assert.doesNotMatch(h.report(),/sky blue|capital of France|Python loop|cats be astronauts|Captain Whiskers|return to the ticket/u);
+  h.context.navigation.dispose();
+});
+
 test('messenger keeps the newest eight escaped pairs beside the composer without saving extra chat',()=>{
   const h=harness('INC-101'),before=structuredClone(h.record),saved=h.calls.saved,log=h.elements.get('#interview-history');
   log.scrollHeight=900;log.clientHeight=260;log.scrollTop=0;
@@ -778,11 +796,11 @@ test('an available cloud extra reply changes only the current RAM conversation a
   assert.deepEqual(requests.map(request=>request.options.method),['GET','POST']);
   assert.deepEqual(JSON.parse(requests[1].options.body),{scenarioId:'INC-101',topic:'breakfast'});
   assert.doesNotMatch(requests[1].options.body,/What did you|question|notes|history|state/u,'Only an authored topic reaches transport.');
-  assert.equal(h.elements.get('#question-response').textContent,answer);
+  assert.equal(h.elements.get('#question-response').textContent,answer+' '+REQUESTER_TASK_NUDGE);
   assert.match(h.elements.get('#interview-history').innerHTML,/&lt;b&gt;A fictional AI extra response\.&lt;\/b&gt;.*AI reply.*may be wrong.*not case evidence/u);
   assert.doesNotMatch(h.elements.get('#interview-history').innerHTML,/<b>A fictional/u,'Even generated markup must display as escaped text.');
   assert.deepEqual(h.record,before);assert.equal(h.calls.saved,saved);assert.equal(inquiryProgress(h.scenario,h.record.events).complete,false);
-  assert.doesNotMatch(h.report(),/fictional AI extra response|What did you have for breakfast/iu);
+  assert.doesNotMatch(h.report(),/fictional AI extra response|What did you have for breakfast|return to the ticket/iu);
   h.context.navigation.dispose();
 });
 
@@ -916,7 +934,7 @@ test('first-page copy keeps the question above history and removes distracting r
     assert.ok(first.indexOf('id="page-one-next"')>first.indexOf('id="save-idea"'));
     assert.match(first,/<button[^>]*id="page-one-next"[^>]*disabled/u);
     assert.match(html,/<div id="work-privacy" hidden>/u);assert.match(html,/id="saving-options"/u);
-    assert.doesNotMatch(html,/id="interview-mode"|AI replies on|Reply privacy|Teacher lesson plans|Help &amp; practice options/u);
+    assert.doesNotMatch(html,/id="interview-mode"|AI replies on|Teacher lesson plans|Help &amp; practice options/u);
   }
 });
 
@@ -951,7 +969,7 @@ function routeHarness(id='CODE-501',initialPath='',suppliedController) {
     mountWorkControls(options){mounted=options;},workStatus:()=>'',showNotice(){},
     onBind(scenario,record){if(scenario.track==='coding'){editor=new Element();editor.value=record.state.code;}},
     makeNavigation(scenario,route,{onModeChange}={}){if(suppliedController)return suppliedController;const mountedRoute=route||learningRoute(location.hash);let mode=mountedRoute.mode;return {syncRoute(next){routeSyncs.push(next);if(next.page!=='lab'||next.id!==scenario.id||next.sequence!==mountedRoute.sequence)return false;if(next.mode!==mode){onModeChange?.(next.mode);mode=next.mode;}return true;},refreshStatus(){},runHypothesisTest(){},currentTaskResult(){return {ok:false};},dispose(){}};},
-    eventList:()=>'',routeLink:()=>'',labCards(){},bindHome(){},mountStandardsAlignment:()=>()=>{},mountLabTutorial:()=>()=>{},hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,clearCodingSandboxWork(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
+    eventList:()=>'',routeLink:()=>'',labCards(){},bindHome(){},mountStandardsAlignment:()=>()=>{},mountLabTutorial:()=>()=>{},hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,resetLabImprovements(){},mountLabImprovements(){return()=>{};},resetRequesterPreference(){},clearCodingSandboxWork(){},home:()=> 'home',projectPage:()=> 'projects',about:()=> 'about',library:()=> 'labs',educators:()=> 'educators',guide:()=> 'guide',connect:()=> 'connect',privacy:()=> 'privacy'
   });
   vm.runInContext('let routeCleanup=null,store=initialStore,currentLab=null,labNavigation=null,labView=null,reportCleanup=null,classroomConnection=null,classroomSharingPaused=true,storageAvailable=true,storageKey=WORK_PREFIX,libraryTrack="all";\n'+
     'let workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});\n'+lifecycle.join('\n')+'\n'+
@@ -1119,14 +1137,17 @@ test('coding reports identify only the normalized practice-language labels, incl
   for(const scenario of SCENARIOS.filter(item=>item.track!=='coding'))assert.doesNotMatch(harness(scenario.id).report(),/PRACTICE LANGUAGE/u,scenario.id);
 });
 
-test('every lab keeps persona replies and accessible history without student reply settings',()=>{
+test('every lab offers an accessible explicit cloud choice beside the processing disclosure',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
   const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],symptoms:'',plan:'',ideaSaved:false,notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for(const scenario of SCENARIOS){
     const html=context.labPage(scenario);
-    assert.doesNotMatch(html,/data-ai-toggle|data-ai-consent|data-ai-check|Reply privacy/u);
-    assert.match(html,/<section id="requester-options" hidden><p data-ai-status role="status"><\/p><\/section>/u);
+    assert.match(html,/data-ai-toggle aria-pressed="false" aria-describedby="requester-cloud-help"/u);
+    assert.match(html,/Cloud replies are off until you choose them.*external AI service.*connection information.*your typed words stay here.*Reply privacy/u);
+    assert.doesNotMatch(html,/Cloudflare/u);
+    assert.doesNotMatch(html,/data-ai-toggle[^>]*disabled/u);
+    assert.match(html,/<section id="requester-options" aria-label="Optional cloud replies">/u);
     assert.match(html,/<div class="requester-live-reply sr-only" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"><\/p><p id="question-response"><\/p>/u);
     assert.ok(html.includes('Ask '+escapeHtml(requesterPersona(scenario).name)));
     assert.doesNotMatch(html,/<details class="conversation-history"|<summary>Conversation history/u);
