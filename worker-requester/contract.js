@@ -11,12 +11,12 @@ export class RequesterError extends Error{
 export const failRequester=(status,code)=>{throw new RequesterError(status,code);};
 
 /** Read a bounded stream without trusting Content-Length or waiting indefinitely. */
-export async function readBoundedJson(source,{maxBytes=600,deadlineMs=2000,signal}={}){
+export async function readBoundedJson(source,{maxBytes=600,deadlineMs=2000,signal=undefined}={}){
   const declared=source.headers.get('Content-Length');
   if(declared!==null&&(!/^\d+$/u.test(declared)||Number(declared)>maxBytes))failRequester(413,'request_too_large');
   const reader=source.body?.getReader();if(!reader)failRequester(400,'invalid_json');
   let timer,abort,raw='',size=0;
-  const decoder=new TextDecoder('utf-8',{fatal:true});
+  const decoder=new TextDecoder('utf-8',{fatal:true,ignoreBOM:false});
   const deadline=new Promise((_,reject)=>{
     timer=setTimeout(()=>reject(new RequesterError(408,'request_timeout')),Math.max(1,Math.min(2000,deadlineMs)));
     abort=()=>reject(new RequesterError(499,'request_cancelled'));

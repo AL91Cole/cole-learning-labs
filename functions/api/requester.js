@@ -57,10 +57,10 @@ export async function handleRequesterRequest(context,{privacyApproved=false,time
       const keys=Object.keys(data||{}).sort().join(',');
       if(request.method==='GET'){
         if(keys!=='enabled,provider,requiresConsent'||data.enabled!==true||data.provider!=='cloudflare-workers-ai'||data.requiresConsent!==true)fail(502,'invalid_service_reply');
-        return response({enabled:true,provider:'cloudflare-workers-ai',requiresConsent:true});
+        return response({enabled:true,requiresConsent:true});
       }
       if(keys!=='accepted,answer,enabled,kind,provider,ungraded'||data.enabled!==true||data.kind!=='ai'||data.accepted!==false||data.ungraded!==true||data.provider!=='cloudflare-workers-ai'||!validRequesterAnswer(data.answer))fail(502,'invalid_service_reply');
-      return response({enabled:true,answer:data.answer.trim(),kind:'ai',accepted:false,ungraded:true,provider:'cloudflare-workers-ai'});
+      return response({enabled:true,answer:data.answer.trim(),kind:'ai',accepted:false,ungraded:true});
     })();
     return await Promise.race([forward,deadline]);
   }catch(error){
@@ -70,7 +70,14 @@ export async function handleRequesterRequest(context,{privacyApproved=false,time
   }finally{clearTimeout(timer);if(abort)requestSignal?.removeEventListener('abort',abort);}
 }
 
-export const onRequest=context=>{
-  if(!REQUESTER_PRIVATE_GATEWAY_APPROVED)return fallback(503,'requester_private_activation_required');
-  return handleRequesterRequest(context,{privacyApproved:REQUESTER_PRIVATE_GATEWAY_APPROVED});
+export const onRequest=async context=>{
+  if(!REQUESTER_PRIVATE_GATEWAY_APPROVED)return fallback(503,'reply_unavailable');
+  try{
+    const result=await handleRequesterRequest(context,{privacyApproved:REQUESTER_PRIVATE_GATEWAY_APPROVED});
+    if(result.status===200)return result;
+    // Preserve HTTP limits and denials without exposing internal configuration,
+    // binding names, schema details or provider failure categories to callers.
+    void result.body?.cancel().catch(()=>{});
+    return fallback(result.status,'reply_unavailable');
+  }catch{return fallback(503,'reply_unavailable');}
 };

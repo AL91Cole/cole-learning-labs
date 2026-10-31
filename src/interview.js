@@ -6,7 +6,7 @@ import { requesterGeneralReply, requesterGeneralBoundary, withRequesterTaskNudge
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
-const PRIVACY_NOTICE = 'Case replies use local facts. When available, extra cloud replies use a fixed topic code and lab ID. Cloudflare does not receive your typed words or work in that request. Extra chat stays out of saved reports. Built-in replies stay available if the service cannot reply.';
+const PRIVACY_NOTICE = 'Case replies use local facts. When available, extra cloud replies use a fixed topic code and lab ID. The external AI service does not receive your typed words or work in that request. Extra chat stays out of saved reports. Built-in replies stay available if the service cannot reply.';
 const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','NET-207','NET-208','NET-209','NET-210','NET-211','NET-212','NET-213','NET-214','NET-215','NET-216','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','NET-207','NET-208','NET-209','NET-210','NET-211','NET-212','NET-213','NET-214','NET-215','NET-216','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();

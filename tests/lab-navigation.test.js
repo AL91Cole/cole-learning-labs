@@ -1144,7 +1144,8 @@ test('every lab offers an accessible explicit cloud choice beside the processing
   for(const scenario of SCENARIOS){
     const html=context.labPage(scenario);
     assert.match(html,/data-ai-toggle aria-pressed="false" aria-describedby="requester-cloud-help"/u);
-    assert.match(html,/Cloud replies are off until you choose them.*Cloudflare.*your typed words stay here.*Reply privacy/u);
+    assert.match(html,/Cloud replies are off until you choose them.*external AI service.*connection information.*your typed words stay here.*Reply privacy/u);
+    assert.doesNotMatch(html,/Cloudflare/u);
     assert.doesNotMatch(html,/data-ai-toggle[^>]*disabled/u);
     assert.match(html,/<section id="requester-options" aria-label="Optional cloud replies">/u);
     assert.match(html,/<div class="requester-live-reply sr-only" role="status" aria-live="polite" aria-atomic="true"><p id="reply-source"><\/p><p id="question-response"><\/p>/u);

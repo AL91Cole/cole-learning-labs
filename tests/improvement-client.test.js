@@ -118,7 +118,8 @@ test('the panel uses native required choices and discloses the actual privacy li
   assert.equal((h.root.innerHTML.match(/<select\b[^>]*required/gu)||[]).length,3);
   assert.equal((h.root.innerHTML.match(/<label class="lab-field">/gu)||[]).length,3);
   assert.match(h.root.innerHTML,/type="checkbox"/u);assert.match(h.root.innerHTML,/role="status" aria-live="polite"/u);
-  assert.match(h.root.innerHTML,/Cloudflare handles connection information/u);assert.match(h.root.innerHTML,/cannot be individually retrieved or removed/u);
+  assert.match(h.root.innerHTML,/hosting provider handles connection information/u);assert.match(h.root.innerHTML,/cannot be individually retrieved or removed/u);
+  assert.match(h.root.innerHTML,/href="#privacy">Read the privacy information/u);assert.doesNotMatch(h.root.innerHTML,/Cloudflare/u);
   assert.match(h.root.innerHTML,/totals do not measure distinct people/u);assert.match(h.root.innerHTML,/not a grade/u);
   const source=readFileSync(new URL('../src/lab-improvements.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|sendBeacon|serviceWorker|console\.|document\.cookie|location\.|navigator\.|reportText|\.events\b/u);

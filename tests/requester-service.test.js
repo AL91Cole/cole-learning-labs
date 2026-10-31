@@ -9,6 +9,8 @@ const ORIGIN='https://www.colelearninglabs.com';
 const json=(value,status=200,headers={})=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json',...headers}});
 const ready={enabled:true,provider:'cloudflare-workers-ai',requiresConsent:true};
 const answer={enabled:true,answer:'A fictional friendly reply.',kind:'ai',accepted:false,ungraded:true,provider:'cloudflare-workers-ai'};
+const publicReady={enabled:true,requiresConsent:true};
+const {provider:internalProvider,...publicAnswer}=answer;
 function fixture(provider=async request=>json(request.method==='GET'?ready:answer)){
   const calls=[];
   const env={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',
@@ -33,11 +35,11 @@ test('the gateway helper refuses forged source approval, and the production gate
   }
   const h=fixture(),request=h.make();Object.defineProperty(request,'body',{get(){assert.fail('Disabled source gateway inspected learner body.');}});
   const response=await onRequest({request,env:{REQUESTER_ENABLED:'false',get REQUESTER_SERVICE(){assert.fail('Disabled gateway inspected service.');}}});
-  assert.equal(response.status,503);assert.equal((await response.json()).error,'requester_not_enabled');
+  assert.equal(response.status,503);assert.equal((await response.json()).error,'reply_unavailable');
   const privateEnv={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',
     AI:{run(){assert.fail('Availability invoked a model.');}},REQUESTER_BUDGET:{prepare(){assert.fail('Availability queried the budget database.');}}};
   const linked=fixture(request=>worker.fetch(request,privateEnv,poison));
-  const active=await onRequest({request:linked.make({method:'GET'}),env:linked.env});assert.equal(active.status,200);assert.deepEqual(await active.json(),ready);
+  const active=await onRequest({request:linked.make({method:'GET'}),env:linked.env});assert.equal(active.status,200);assert.deepEqual(await active.json(),publicReady);
   assert.equal(linked.calls.length,1);assert.equal(linked.calls[0].url,PRIVATE_REQUESTER_URL);assert.deepEqual([...linked.calls[0].headers],[]);
 });
 
@@ -51,13 +53,13 @@ test('disabled runtime flags prevent body parsing and service-binding access',as
 
 test('the prepared gateway reconstructs only fixed topics, without forwarding browser metadata',async()=>{
   const h=fixture();const result=await h.request({headers:{Referer:ORIGIN+'/private?notes=not-forwarded','Cf-Connecting-Ip':'192.0.2.2','X-Forwarded-For':'192.0.2.3','User-Agent':'PRIVATE_BROWSER'}});
-  assert.equal(result.response.status,200);assert.deepEqual(result.data,answer);assert.equal(h.calls.length,1);
+  assert.equal(result.response.status,200);assert.deepEqual(result.data,publicAnswer);assert.equal(h.calls.length,1);
   const sent=h.calls[0];assert.equal(sent.url,PRIVATE_REQUESTER_URL);assert.equal(sent.method,'POST');
   assert.deepEqual([...sent.headers],[['content-type','application/json']]);
   assert.deepEqual(await sent.json(),{scenarioId:'INC-101',topic:'breakfast'});
   for(const header of ['Access-Control-Allow-Origin','Access-Control-Allow-Credentials','Set-Cookie'])assert.equal(result.response.headers.get(header),null);
   assert.equal(result.response.headers.get('Cache-Control'),'private, no-store');
-  const status=await h.request({method:'GET'});assert.deepEqual(status.data,ready);assert.deepEqual([...h.calls[1].headers],[]);
+  const status=await h.request({method:'GET'});assert.deepEqual(status.data,publicReady);assert.deepEqual([...h.calls[1].headers],[]);
   let reads=0;const request=h.make(),context={env:h.env,get request(){assert.equal(++reads,1,'Cleanup must use the captured request signal.');return request;}};
   assert.equal((await handleRequesterRequest(context,{privacyApproved:true})).status,200);assert.equal(reads,1);
 });
@@ -103,7 +105,7 @@ test('untrusted service replies cannot set browser headers, credentials, markup,
     const r=await h.request();assert.equal(r.response.status,502);assert.equal(r.data.answer,undefined);assert.equal(r.response.headers.get('Set-Cookie'),null);
   }
   const h=fixture(async()=>json(answer,200,{'Set-Cookie':'identity=fictional'})),r=await h.request();
-  assert.deepEqual(r.data,answer);assert.equal(r.response.headers.get('Set-Cookie'),null);
+  assert.deepEqual(r.data,publicAnswer);assert.equal(r.response.headers.get('Set-Cookie'),null);
 });
 
 test('oversized service response streams are canceled, not fully buffered',async()=>{
@@ -119,6 +121,38 @@ test('timeouts, cancellation and service failures make no retry and expose no pr
   const failed=fixture(async()=>{throw new Error('PRIVATE_SERVICE_DETAIL');}),f=await failed.request();
   assert.equal(f.response.status,503);assert.doesNotMatch(JSON.stringify(f.data),/PRIVATE_SERVICE_DETAIL/);assert.equal(failed.calls.length,1);
   const limited=fixture(async()=>json({error:'PRIVATE_SERVICE_DETAIL'},429));assert.equal((await limited.request()).response.status,429);
+});
+
+test('production JSON exposes only the answer contract and one generic failure code, preserving boundary statuses',async()=>{
+  const h=fixture();
+  for(const [settings,expected]of [[{method:'GET'},publicReady],[{},publicAnswer]]){
+    const response=await onRequest({request:h.make(settings),env:h.env});assert.equal(response.status,200);
+    const data=await response.json();assert.deepEqual(data,expected);assert.equal(data.provider,undefined);
+    assert.doesNotMatch(JSON.stringify(data),/cloudflare|workers-ai|requester\.internal/iu);
+  }
+  for(const [settings,env,status]of [
+    [{url:ORIGIN+'/api/requester?unknown=PRIVATE_QUERY'},h.env,403],
+    [{headers:{Origin:'https://attacker.example'}},h.env,403],
+    [{headers:{Cookie:'private=PRIVATE_COOKIE'}},h.env,403],
+    [{body:{scenarioId:'PRIVATE_SCENARIO',topic:'breakfast'}},h.env,400],
+    [{body:{scenarioId:'INC-101',topic:'PRIVATE_TOPIC'}},h.env,400],
+    [{body:'x'.repeat(601),raw:true},h.env,413],
+    [{method:'OPTIONS'},h.env,405],
+    [{},{REQUESTER_ENABLED:'false'},503],
+    [{},{REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true'},503]
+  ]){
+    const response=await onRequest({request:h.make(settings),env});assert.equal(response.status,status);
+    assert.deepEqual(await response.json(),{enabled:false,error:'reply_unavailable',fallback:true,accepted:false});
+  }
+  for(const upstream of [json({...answer,provider:'PRIVATE_PROVIDER'}),json({error:'PRIVATE_BINDING_ERROR'},503),json({error:'PRIVATE_QUOTA'},429)]){
+    const invalid=fixture(async()=>upstream),response=await onRequest({request:invalid.make(),env:invalid.env});
+    assert.ok([502,503,429].includes(response.status));assert.deepEqual(await response.json(),{enabled:false,error:'reply_unavailable',fallback:true,accepted:false});
+  }
+});
+
+test('bounded UTF-8 decoding keeps the original BOM behavior with optional cancellation omitted',async()=>{
+  const bytes=new Uint8Array([0xef,0xbb,0xbf,...new TextEncoder().encode('{"safe":true}')]);
+  assert.deepEqual(await readBoundedJson(new Response(bytes),{signal:undefined}),{safe:true});
 });
 
 test('private worker has no public routes or preview URLs and reuses only the existing reviewed AI and budget bindings',async()=>{
