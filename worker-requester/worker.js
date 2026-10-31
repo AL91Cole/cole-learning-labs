@@ -79,7 +79,12 @@ export async function handleRequesterRequest(request,env,{limiter=rateLimiter,ti
   try{
     if(request.url!==PRIVATE_REQUESTER_URL)fail(403,'private_route_required');
     if(!['GET','POST'].includes(request.method))return response({enabled:false,error:'method_not_allowed',fallback:true,accepted:false},405,{Allow:'GET, POST'});
-    for(const name of request.headers.keys())if(name.toLowerCase()!=='content-type')fail(403,'forwarded_headers_not_allowed');
+    // Workers may add Content-Length when transporting the gateway's fixed JSON
+    // body. It is framing only; readRequesterTopic still bounds declared and actual bytes.
+    for(const name of request.headers.keys()){
+      const header=name.toLowerCase();
+      if(header!=='content-type'&&(request.method!=='POST'||header!=='content-length'))fail(403,'forwarded_headers_not_allowed');
+    }
     if(env?.REQUESTER_ENABLED!=='true'||env?.REQUESTER_BILLING_REVIEWED!=='true')fail(503,'requester_not_enabled');
     if(request.signal.aborted)fail(499,'request_cancelled');
     const body=request.method==='POST'?await readRequesterTopic(request):null;
