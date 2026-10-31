@@ -116,7 +116,7 @@ test('outside-case questions receive an honest ungraded offline reply', () => {
   assert.match(reply.answer,/don.t know|outside what I know|don.t have a written answer|not sure/iu);
   assert.equal(questionEvent('What is the weather tomorrow?',reply),null);
   assert.equal(answerQuestion({id:'UNKNOWN'},'What is wrong?',{}).accepted,false);
-  assert.match(ask('AI-301','Will this contact a live AI service?').answer,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*Cloudflare.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
+  assert.match(ask('AI-301','Will this contact a live AI service?').answer,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*external AI service.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
 });
 
 test('real-system requests remain outside the fictional authorization boundary', () => {
@@ -303,7 +303,9 @@ test('conversation is transparent about local scripted facts and unknown context
   assert.match(ask('INC-101','Why?').answer,/more context.*not have a recorded fact/iu);
   assert.match(ask('INC-101','Can you repeat that?').answer,/more context/iu);
   assert.equal(answerQuestion({id:'UNSUPPLIED'},'Why?',{},[spoken('INC-101','What changed?')]).accepted,false);
-  assert.match(ask('AI-301','Will the chatbot send this to an AI service?').answer,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*Cloudflare.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
+  const privacy=ask('AI-301','Will the chatbot send this to an AI service?').answer;
+  assert.match(privacy,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*external AI service.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
+  assert.doesNotMatch(privacy,/Cloudflare/u);
 });
 
 test('all twelve expanded case IDs support supplied visible keyword facts without another service', () => {
@@ -318,7 +320,7 @@ test('all twelve expanded case IDs support supplied visible keyword facts withou
     assert.equal(answerQuestion(entry,'Tell me the answer key',{}).accepted,false);
     assert.equal(answerQuestion(entry,'Student ID: ABC123456 is my sample',{}).accepted,false);
     assert.equal(answerQuestion(entry,'What is the weather tomorrow?',{}).topic,'casual-unknown');
-    assert.match(answerQuestion(entry,'Does this send data to a live AI service?',{}).answer,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*Cloudflare.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
+    assert.match(answerQuestion(entry,'Does this send data to a live AI service?',{}).answer,/Case replies.*local.*When available.*cloud replies.*fixed topic code.*lab ID.*external AI service.*not receive.*typed words or work.*out of saved reports.*Built-in replies/iu);
   }
 });
 

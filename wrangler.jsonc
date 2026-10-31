@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cole-learning-labs",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-16",
+  "compatibility_flags": [],
+  "send_metrics": false,
+  "upload_source_maps": false,
+  "services": [],
+  "vars": {
+    "NODE_VERSION": "24.22.0",
+    "REQUESTER_ENABLED": "false",
+    "REQUESTER_BILLING_REVIEWED": "false",
+    "CLASSROOM_ENABLED": "false",
+    "IMPROVEMENTS_ENABLED": "false"
+  },
+  "env": {
+    "preview": {
+      "services": [],
+      "vars": {
+        "NODE_VERSION": "24.22.0",
+        "REQUESTER_ENABLED": "false",
+        "REQUESTER_BILLING_REVIEWED": "false",
+        "CLASSROOM_ENABLED": "false",
+        "IMPROVEMENTS_ENABLED": "false"
+      }
+    },
+    "production": {
+      "services": [{
+        "binding": "REQUESTER_SERVICE",
+        "service": "cole-learning-labs-requester"
+      }],
+      "vars": {
+        "NODE_VERSION": "24.22.0",
+        "REQUESTER_ENABLED": "true",
+        "REQUESTER_BILLING_REVIEWED": "true",
+        "CLASSROOM_ENABLED": "false",
+        "IMPROVEMENTS_ENABLED": "false"
+      }
+    }
+  }
+}

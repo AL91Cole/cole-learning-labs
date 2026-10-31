@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CLASSROOM_ACTIVE_KEY,classroomStorageKey,classroomSelection,progressSnapshot,attachClassroomLab} from '../src/classroom-client.js';
+import {CLASSROOM_ACTIVE_KEY,classroomStorageKey,classroomSelection,progressSnapshot,attachClassroomLab,attachReviewedClassroomLab} from '../src/classroom-client.js';
 import {normalizeLabRecord} from '../src/records.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {answerQuestion,inquiryProgress,questionEvent} from '../src/interview.js';
@@ -29,6 +29,19 @@ test('independent practice never checks a classroom API or accesses the DOM', ()
   globalThis.fetch = () => { calls++; throw Error('Unexpected network access'); };
   try { storage(null, () => { const connection = attachClassroomLab({scenarioId:'INC-101'}); connection.schedule(); connection.dispose(); assert.equal(classroomStorageKey(),'cole-learning-labs:v2'); }); assert.equal(calls, 0); }
   finally { globalThis.fetch = old; }
+});
+test('the production classroom source gate ignores stale sessions and forged approval without reading work, DOM or network', () => {
+  const old = globalThis.fetch; let calls = 0;
+  globalThis.fetch = () => { calls++; throw Error('Unexpected classroom request'); };
+  const poison = new Proxy({}, { get() { assert.fail('Closed sharing inspected learner work or page configuration.'); } });
+  try {
+    storage(JSON.stringify({studentId:'12345678-1234-4321-9876-123456789012',classId:'12345678-1234-4321-9876-123456789013'}), () => {
+      for (const connection of [attachClassroomLab(poison),attachClassroomLab({privacyApproved:true,sharingEnabled:true,record:poison}),attachReviewedClassroomLab(poison),attachReviewedClassroomLab(poison,{privacyApproved:'true'})]) {
+        connection.schedule();connection.dispose();
+      }
+    });
+    assert.equal(calls,0);
+  } finally { globalThis.fetch = old; }
 });
 test('classroom storage is isolated by class and anonymous student, with malformed flags rejected', () => {
   const studentId = '12345678-1234-4321-9876-123456789012';
@@ -167,7 +180,7 @@ async function connectedFixture(t,options={}) {
     connection?.dispose();
     for(const name of names){const descriptor=descriptors.get(name);if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}
   });
-  connection=attachClassroomLab({scenarioId:'INC-101',record:fixture.record,onRestore:()=>{restored++;},...(options.storageKey?{storageKey:options.storageKey}:{})});
+  connection=attachReviewedClassroomLab({scenarioId:'INC-101',record:fixture.record,onRestore:()=>{restored++;},...(options.storageKey?{storageKey:options.storageKey}:{})},{privacyApproved:true});
   fixture.connection=connection;
   await fixture.flush();
   return fixture;

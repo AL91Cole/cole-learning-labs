@@ -57,8 +57,8 @@ test('public browser security limits scripts, connections, forms, and embedded c
     for (const name of ['default-src', 'script-src', 'font-src']) {
       assert.deepEqual(csp.get(name), [worksheet && name !== 'font-src' ? "'none'" : "'self'"], `${route}: ${name} must stay within the reviewed local policy`);
     }
-    const connections=localOnly?["'none'"]:route==='/*'?["'self'",'https://cole-learning-labs-requester.alan91cole.workers.dev']:["'self'"];
-    assert.deepEqual(csp.get('connect-src'),connections,`${route}: connections must match the reviewed topic-only requester boundary`);
+    const connections=localOnly?["'none'"]:["'self'"];
+    assert.deepEqual(csp.get('connect-src'),connections,`${route}: connections must stay within the website; the AI Worker is private`);
     assert.deepEqual(csp.get('form-action'),localOnly?["'none'"]:["'self'"],`${route}: forms must match the reviewed local boundary`);
     assert.deepEqual(csp.get('style-src'), localReport ? ["'self'"] : ["'self'", "'unsafe-inline'"], `${route}: unexpected stylesheet policy`);
     for (const name of ['object-src', 'base-uri', 'frame-src', 'frame-ancestors']) {
@@ -119,7 +119,7 @@ test('the browser policy denies surveillance and unnecessary hardware permission
 
 test('independent public labs bypass server functions and remain free of package dependencies', () => {
   const routes = JSON.parse(read('_routes.json'));
-  assert.deepEqual(routes, {version: 1, include: ['/api/*'], exclude: []}, 'only explicit API requests should invoke classroom server functions');
+  assert.deepEqual(routes, {version: 1, include: ['/api/requester'], exclude: []}, 'only the requester gateway invokes Functions; collection paths remain static');
   const pkg = JSON.parse(read('package.json'));
   for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
     assert.deepEqual(Object.keys(pkg[field] || {}), [], `${field} require a reviewed supply chain and locked installation workflow before release`);

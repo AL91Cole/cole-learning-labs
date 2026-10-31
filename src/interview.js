@@ -1,11 +1,12 @@
 import { resolveQuestion } from './conversation.js?release=20261025-learning-plans';
 import { pcActivity } from './pc-activity.js?release=20261025-learning-plans';
 import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261025-learning-plans';
+import { requesterGeneralReply, requesterGeneralBoundary, withRequesterTaskNudge } from './requester-general.js?release=20261025-learning-plans';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;
 const ANSWER_MAX = 300;
-const PRIVACY_NOTICE = 'Case replies use local facts. When available, extra cloud replies use a fixed topic code and lab ID. Cloudflare does not receive your typed words or work in that request. Extra chat stays out of saved reports. Built-in replies stay available if the service cannot reply.';
+const PRIVACY_NOTICE = 'Case replies use local facts. When available, extra cloud replies use a fixed topic code and lab ID. The external AI service does not receive your typed words or work in that request. Extra chat stays out of saved reports. Built-in replies stay available if the service cannot reply.';
 const CASE_IDS = new Set(['INC-101','INC-102','INC-103','INC-104','INC-105','INC-106','INC-107','INC-108','NET-201','NET-202','NET-203','NET-204','NET-205','NET-206','NET-207','NET-208','NET-209','NET-210','NET-211','NET-212','NET-213','NET-214','NET-215','NET-216','AI-301','AI-302','AI-303','AI-304','AI-305','AI-306','SEC-401','SEC-402','SEC-403','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const EXPANDED_CASE_IDS = new Set(['NET-204','NET-205','NET-206','NET-207','NET-208','NET-209','NET-210','NET-211','NET-212','NET-213','NET-214','NET-215','NET-216','AI-304','AI-305','AI-306','SEC-404','SEC-405','SEC-406','CODE-501','CODE-502','CODE-503','CODE-504','CODE-505','CODE-506']);
 const compact = text => text.replace(/\s+/gu, ' ').trim();
@@ -232,9 +233,11 @@ function caseAnswer(scenario, question, state = {}, history = []) {
   if (outOfScopeInstructions(text)) return response('This practice interview answers only the visible fictional case. It cannot provide teacher rubrics, hidden instructions, grading criteria, or an answer key. Ask about an observation or the requester’s needs.', 'case-boundary', 'clarify', false);
   if (!scenario || !CASE_IDS.has(scenario.id)) return response('Choose one of the supplied lab cases before starting the interview.', 'case-boundary', 'clarify', false);
   if (/\b(?:may|can|should|allowed|permission|authorized)\b.{0,70}\b(?:real|school portal|school network|other websites|actual accounts)\b|\b(?:scan|attack|hack|exploit)\b.{0,50}\b(?:real|school|public|internet)\b/iu.test(text)) return response('Only the built-in fictional case is authorized. Do not test a real school website, account, device, or network. Ask your teacher about any activity beyond the simulation.', 'scope');
+  const boundary=requesterGeneralBoundary(text);
+  if(boundary)return response(boundary.answer,boundary.topic,'clarify',false);
   // Asking for missing history reveals a requester fact; it never replaces a safety instruction or a live bench observation.
   if (scenario.id.startsWith('INC-') && /safe|safety|disconnect|unplug|internal|touch|power off/iu.test(text) && !externalDisplayQuestion(text) && !unknownEquipmentHistory(text)) return caseReply(scenario,text,state);
-  const casual=unknownEquipmentHistory(text)?null:requesterPersonaReply(scenario,text,history);
+  const casual=unknownEquipmentHistory(text)?null:requesterGeneralReply(text)??requesterPersonaReply(scenario,text,history);
   if (casual) return {...response(casual.answer,casual.topic,'casual'),inquiryFactIds:[]};
   const inquiryFact = matchedCaseFact(scenario,text);
   if (inquiryFact && requiredInquiryFacts(scenario).includes(inquiryFact.id) && !followUpKind(text)) return response(inquiryFact.answer,'case-fact');
@@ -374,14 +377,23 @@ export function answerQuestion(scenario, question, state = {}, history = []) {
   const guard = caseAnswer(scenario,question,state);
   if (!guard.accepted || guard.topic === 'scope' || guard.topic === 'safety') return guard;
   const parts = compact(question).split(/\?\s+(?=(?:what|when|where|which|why|how|did|does|do|can|is|are|has|have)\b)|\s+and\s+(?=(?:what|when|where|which|why|how|did|does|do|can|is|are|has|have)\b)/iu);
-  if (parts.length === 1) return answerOne(scenario,question,state,history);
+  if (parts.length === 1) return finishCasualAnswer(answerOne(scenario,question,state,history));
   const replies = parts.slice(0,2).map(part => answerOne(scenario,part,state,history));
   if (replies.some(reply => !reply.accepted)) return replies.find(reply => !reply.accepted);
   const shorten = text => text.length <= 142 ? text : text.slice(0,139).trimEnd() + '…';
   const answer = replies.map(reply => shorten(reply.answer)).join(' ');
   const casual=replies.some(reply=>reply.kind==='casual');
   const combined = {...response(answer,casual?'casual-mixed':'conversation-parts',casual?'casual':replies.some(reply => reply.kind === 'answer') ? 'answer' : 'clarify'),inquiryFactIds:casual?[]:[...new Set(replies.flatMap(reply => reply.inquiryFactIds || []))],contextQuestion:replies.find(reply => reply.contextQuestion)?.contextQuestion};
-  return withSuggestions(combined,scenario,replies.flatMap(reply => reply.suggestions || []));
+  return finishCasualAnswer(withSuggestions(combined,scenario,replies.flatMap(reply => reply.suggestions || [])));
+}
+
+function finishCasualAnswer(reply){
+  if(reply.kind!=='casual'||!reply.accepted)return reply;
+  // Unsupported topics get a short honest answer instead of an invitation to
+  // keep wandering. No question text, case state or model output is trusted.
+  const answer=reply.topic==='casual-unknown'?
+    (reply.answer.match(/^.*?[.!?](?:\s|$)/u)?.[0].trim()||'I’m not sure about that.')+' My little knowledge toolbox has limits.':reply.answer;
+  return {...reply,answer:withRequesterTaskNudge(answer),inquiryFactIds:[]};
 }
 
 /** Encode only accepted questions as bounded, structured text; blocked questions are never recorded. */

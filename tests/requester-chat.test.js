@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mountRequesterChat} from '../src/requester-chat.js';
+import {mountRequesterChat,resetRequesterPreference} from '../src/requester-chat.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {answerQuestion} from '../src/interview.js';
 import {initialHardwareState} from '../src/hardware.js';
-import {REQUESTER_ENDPOINT} from '../src/requester-config.js';
+import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from '../src/requester-config.js';
 import {requesterTopic,REQUESTER_TOPICS} from '../src/requester-topics.js';
 import {REQUESTER_DEFINITIONS} from '../src/requester-persona.js';
 import {REQUESTER_LIBRARY_TOPICS} from '../src/requester-library.js';
+import {REQUESTER_TASK_NUDGE} from '../src/requester-general.js';
 
 const scenario=SCENARIOS.find(item=>item.id==='INC-101');
 const casual={accepted:true,kind:'casual',answer:'A built-in reply.'};
@@ -23,25 +24,111 @@ class Control{
   removeEventListener(name,callback){this.listeners.set(name,(this.listeners.get(name)||[]).filter(fn=>fn!==callback));}
   async fire(name='click'){await Promise.all((this.listeners.get(name)||[]).map(callback=>callback({target:this})));await flush();}
 }
-function harness(provider,{timeoutMs=1000,preference={enabled:true}}={}){
+function harness(provider,{timeoutMs=1000,preference={enabled:true},cloudEnabled=true}={}){
   const nodes=new Map(['toggle','status'].map(name=>['[data-ai-'+name+']',new Control()]));
   const calls=[],answers=[];
   const chat=mountRequesterChat({querySelector(selector){assert.ok(nodes.has(selector),selector);return nodes.get(selector);}},{
-    scenario,timeoutMs,preference,fetcher(path,options){calls.push({path,options});return provider(path,options);}
+    scenario,timeoutMs,preference,cloudEnabled,fetcher(path,options){calls.push({path,options});return provider(path,options);}
   });
   const controls=Object.fromEntries([...nodes].map(([selector,node])=>[selector.match(/data-ai-(\w+)/u)[1],node]));
   return {chat,calls,answers,preference,...controls,ready:flush,enrich(question='What did you have for breakfast?',reply=casual){chat.enrich(question,reply,answer=>answers.push(answer));}};
 }
 const enabledProvider=(_path,options)=>Promise.resolve(json(options.method==='GET'?{enabled:true}:extra('An extra reply.')));
 const on=h=>h.toggle.getAttribute('aria-pressed')==='true';
+const nudged=answer=>answer+' '+REQUESTER_TASK_NUDGE;
+
+test('an explicit cloud kill switch makes no availability or reply request, even with stale enabled choices and clicks',async()=>{
+  assert.equal(REQUESTER_CLOUD_ENABLED,true);assert.equal(REQUESTER_ENDPOINT,'/api/requester');
+  for(const enabled of [true,false,undefined,null,0,1,'true','false']){
+    const calls=[],answers=[],toggle=new Control(),status=new Control(),preference={enabled};
+    const chat=mountRequesterChat({querySelector:s=>s==='[data-ai-toggle]'?toggle:status},{scenario,cloudEnabled:false,preference,fetcher:async(path,options)=>{calls.push({path,options});return enabledProvider(path,options);}});
+    await flush();assert.equal(toggle.disabled,true);assert.equal(toggle.getAttribute('aria-pressed'),'false');assert.equal(preference.enabled,false);
+    assert.equal(status.textContent,'Built-in replies are ready. Online replies are unavailable.');
+    await toggle.fire();chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));await flush();
+    resetRequesterPreference();await toggle.fire();chat.enrich('Hello',casual,answer=>answers.push(answer));await flush();
+    assert.deepEqual(calls,[],String(enabled));assert.deepEqual(answers,[]);assert.equal(toggle.disabled,true);
+    assert.equal(status.textContent,'Built-in replies are ready. Online replies are unavailable.');chat.dispose();
+  }
+});
+
+test('only an exact reviewed cloud-enabled option can prepare network requests',async()=>{
+  for(const cloudEnabled of [false,null,0,1,'true','false']){
+    const h=harness(enabledProvider,{cloudEnabled});await h.ready();await h.toggle.fire();h.enrich();await flush();
+    assert.deepEqual(h.calls,[],String(cloudEnabled));assert.equal(h.toggle.disabled,true);assert.equal(on(h),false);h.chat.dispose();
+  }
+});
+
+test('the production default remains offline without a toggle or after a reset and remount',async()=>{
+  resetRequesterPreference();
+  const calls=[],status=new Control();
+  for(let i=0;i<2;i++){
+    const chat=mountRequesterChat({querySelector:s=>s==='[data-ai-status]'?status:null},{scenario,fetcher:async(path,options)=>{calls.push({path,options});return enabledProvider(path,options);}});
+    await flush();chat.enrich('Hello',casual);resetRequesterPreference();chat.dispose();
+  }
+  assert.deepEqual(calls,[]);assert.equal(status.textContent,'Built-in replies are ready.');
+});
+
+test('a reviewed synthetic transport cannot override the fixed website destination',async()=>{
+  const calls=[],status=new Control();
+  const chat=mountRequesterChat({querySelector:s=>s==='[data-ai-status]'?status:null},{scenario,cloudEnabled:true,preference:{enabled:true},endpoint:'https://untrusted.example/collect',fetcher:async(path,options)=>{calls.push({path,options});return enabledProvider(path,options);}});
+  await flush();chat.enrich('Hello',casual);await flush();
+  assert.deepEqual(calls.map(c=>c.path),['/api/requester','/api/requester']);chat.dispose();
+});
+
+test('the enabled production feature waits for an explicit choice before availability checking and forgets it on reset',async()=>{
+  resetRequesterPreference();
+  const calls=[],answers=[],toggle=new Control(),status=new Control();
+  const chat=mountRequesterChat({querySelector:selector=>selector==='[data-ai-toggle]'?toggle:status},{scenario,fetcher:async(path,options)=>{calls.push({path,options});return enabledProvider(path,options);}});
+  await flush();chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));await flush();
+  assert.deepEqual(calls,[]);assert.equal(toggle.getAttribute('aria-pressed'),'false');assert.equal(toggle.disabled,false);
+  await toggle.fire();assert.deepEqual(calls.map(c=>c.options.method),['GET']);assert.deepEqual(answers,[]);
+  chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));await flush();
+  assert.deepEqual(calls.map(c=>c.options.method),['GET','POST']);
+  resetRequesterPreference();chat.enrich('Hello',casual,answer=>answers.push(answer));await flush();
+  assert.equal(toggle.getAttribute('aria-pressed'),'false');assert.deepEqual(calls.map(c=>c.options.method),['GET','POST']);chat.dispose();
+});
+
+test('missing, false and malformed preference values never imply cloud permission',async()=>{
+  for(const enabled of [undefined,false,null,0,1,'true','false']){
+    const h=harness(enabledProvider,{preference:{enabled}});await h.ready();h.enrich();await flush();
+    assert.deepEqual(h.calls,[],String(enabled));assert.equal(on(h),false);h.chat.dispose();
+  }
+});
+
+test('clearing a shared session cancels active cloud work and a remount needs a new choice',async()=>{
+  const pending=deferred(),h=harness((_p,o)=>o.method==='GET'?Promise.resolve(json({enabled:true})):pending.promise);
+  await h.ready();h.enrich();resetRequesterPreference();
+  assert.equal(h.preference.enabled,false);assert.equal(on(h),false);assert.equal(h.calls[1].options.signal.aborted,true);
+  pending.resolve(json(extra('Old shared-session reply.')));await flush();assert.deepEqual(h.answers,[]);h.chat.dispose();
+  const calls=[],status=new Control(),toggle=new Control();
+  const remounted=mountRequesterChat({querySelector:s=>s==='[data-ai-toggle]'?toggle:status},{scenario,cloudEnabled:true,fetcher:async(_p,o)=>{calls.push(o);return json({enabled:true});}});
+  await flush();assert.deepEqual(calls,[]);assert.equal(toggle.getAttribute('aria-pressed'),'false');remounted.dispose();
+});
+
+test('turning off cancels an unfinished availability request immediately',async()=>{
+  const pending=deferred(),h=harness(()=>pending.promise);
+  await h.toggle.fire();assert.equal(h.calls[0].options.signal.aborted,true);
+  pending.resolve(json({enabled:true}));await flush();assert.equal(on(h),false);h.enrich();assert.equal(h.calls.length,1);h.chat.dispose();
+});
+
+test('chunked and multibyte replies are bounded while streaming and cancel the reader',async()=>{
+  for(const chunk of [new Uint8Array(4097),new TextEncoder().encode('€'.repeat(1500))]){
+    let cancelled=false;
+    const h=harness((_p,o)=>Promise.resolve(o.method==='GET'?json({enabled:true}):new Response(new ReadableStream({
+      start(controller){controller.enqueue(chunk);},cancel(){cancelled=true;}
+    }))));
+    await h.ready();h.enrich();await flush();await flush();
+    assert.equal(cancelled,true);assert.equal(h.calls[1].options.signal.aborted,true);assert.equal(on(h),false);assert.deepEqual(h.answers,[]);h.chat.dispose();
+  }
+});
 
 test('a lab without a reply toggle still checks availability and keeps the same private topic transport',async()=>{
   const calls=[],answers=[],status=new Control();
-  const chat=mountRequesterChat({querySelector:selector=>selector==='[data-ai-status]'?status:null},{scenario,preference:{enabled:true},fetcher:async(path,options)=>{calls.push({path,options});return enabledProvider(path,options);}});
+  const chat=mountRequesterChat({querySelector:selector=>selector==='[data-ai-status]'?status:null},{scenario,cloudEnabled:true,preference:{enabled:true},fetcher:async(path,options)=>{calls.push({path,options});return enabledProvider(path,options);}});
   await flush();chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));await flush();
   assert.deepEqual(calls.map(call=>call.options.method),['GET','POST']);
   assert.deepEqual(JSON.parse(calls[1].options.body),{scenarioId:'INC-101',topic:'breakfast'});
-  assert.deepEqual(answers,['An extra reply.']);chat.dispose();
+  assert.deepEqual(answers,[nudged('An extra reply.')]);chat.dispose();
   chat.enrich('What did you have for breakfast?',casual,answer=>answers.push(answer));assert.equal(calls.length,2);
 });
 
@@ -50,7 +137,7 @@ test('mount automatically probes without a question or inference; eligible quest
   assert.deepEqual(h.calls.map(c=>c.options.method),['GET']);
   assert.equal(h.calls[0].options.body,undefined);assert.equal(h.toggle.disabled,false);
   await h.ready();assert.equal(on(h),true);assert.deepEqual(h.answers,[]);
-  h.enrich();await flush();assert.deepEqual(h.calls.map(c=>c.options.method),['GET','POST']);assert.deepEqual(h.answers,['An extra reply.']);h.chat.dispose();
+  h.enrich();await flush();assert.deepEqual(h.calls.map(c=>c.options.method),['GET','POST']);assert.deepEqual(h.answers,[nudged('An extra reply.')]);h.chat.dispose();
 });
 test('typing or asking during a pending probe does not cancel it or replay the earlier question later',async()=>{
   const pending=deferred(),h=harness((_path,o)=>o.method==='GET'?pending.promise:Promise.resolve(json(extra('New reply.'))));
@@ -73,9 +160,29 @@ test('off remains in page memory across lab mounts and turning on rechecks avail
 });
 test('cloud payload contains only an authored topic and case ID, never typed words or browser credentials',async()=>{
   const h=harness(enabledProvider);await h.ready();h.enrich('  What did you have for breakfast?  ');await flush();
-  for(const {path,options} of h.calls){assert.equal(path,REQUESTER_ENDPOINT);assert.equal(options.credentials,'omit');assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');assert.ok(options.signal instanceof AbortSignal);}
+  for(const {path,options} of h.calls){assert.equal(path,REQUESTER_ENDPOINT);assert.equal(options.credentials,'omit');assert.equal(options.referrerPolicy,'no-referrer');assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');assert.ok(options.signal instanceof AbortSignal);}
   const post=h.calls[1].options;assert.deepEqual(post.headers,{'Content-Type':'application/json'});
   assert.deepEqual(JSON.parse(post.body),{scenarioId:'INC-101',topic:'breakfast'});assert.doesNotMatch(post.body,/question|What did you|breakfast\?/u);h.chat.dispose();
+});
+
+test('new local general questions never become raw cloud input even after opting in',async()=>{
+  const h=harness(enabledProvider);await h.ready();
+  for(const question of ['Why is the sky blue?','What is the capital of France?','Write a basic Python loop','Can cats be astronauts?']){
+    const reply=answerQuestion(scenario,question);
+    assert.equal(reply.kind,'casual');h.enrich(question,reply);
+  }
+  h.enrich('Why is the sky blue? My email is learner@example.org',casual);await flush();
+  assert.deepEqual(h.calls.map(c=>c.options.method),['GET']);assert.deepEqual(h.answers,[]);h.chat.dispose();
+});
+
+test('a generated reply gets one bounded display nudge without altering the transport payload',async()=>{
+  for(const answer of ['A'.repeat(600),'Short reply. '+REQUESTER_TASK_NUDGE+' '+REQUESTER_TASK_NUDGE]){
+    const h=harness((_path,options)=>Promise.resolve(json(options.method==='GET'?{enabled:true}:extra(answer))));
+    await h.ready();h.enrich();await flush();
+    assert.equal(h.answers.length,1);assert.ok(h.answers[0].length<=600);assert.ok(h.answers[0].endsWith(REQUESTER_TASK_NUDGE));
+    assert.equal(h.answers[0].split(REQUESTER_TASK_NUDGE).length-1,1);
+    assert.deepEqual(JSON.parse(h.calls[1].options.body),{scenarioId:'INC-101',topic:'breakfast'});h.chat.dispose();
+  }
 });
 test('unmapped, arithmetic, case-context, private and instruction-shaped text stays local',async()=>{
   const h=harness(enabledProvider);await h.ready();
@@ -134,7 +241,7 @@ test('a new local case question cancels old inference and suppresses late output
 test('only the latest remote request may update the conversation',async()=>{
   const first=deferred(),second=deferred();let posts=0;
   const h=harness((_p,o)=>o.method==='GET'?Promise.resolve(json({enabled:true})):(++posts===1?first.promise:second.promise));await h.ready();h.enrich('What is your favorite color?');h.enrich('What is your favorite book?');
-  second.resolve(json(extra('Latest reply.')));await flush();const status=h.status.textContent;first.resolve(json(extra('Old reply.')));await flush();assert.deepEqual(h.answers,['Latest reply.']);assert.equal(h.status.textContent,status);h.chat.dispose();
+  second.resolve(json(extra('Latest reply.')));await flush();const status=h.status.textContent;first.resolve(json(extra('Old reply.')));await flush();assert.deepEqual(h.answers,[nudged('Latest reply.')]);assert.equal(h.status.textContent,status);h.chat.dispose();
 });
 test('turning off or disposing aborts work and suppresses late callbacks',async()=>{
   for(const finish of ['off','dispose']){
