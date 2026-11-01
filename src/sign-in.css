@@ -1,0 +1,11 @@
+.sign-in-page{max-width:940px;padding-top:clamp(2.5rem,7vw,5rem);padding-bottom:4rem;color:#183b49}
+.sign-in-page h1{font-size:clamp(2.5rem,6vw,4rem);line-height:1.15;margin-bottom:1.25rem}
+.sign-in-card{max-width:680px;padding:clamp(1.25rem,4vw,2rem);border:2px solid #b6d5d5;border-radius:1rem;background:#fbfaf5}
+.sign-in-page .sign-in-status{max-width:52ch;font-size:1.1rem;line-height:1.7;color:#183b49;margin:0 0 1.5rem}
+.sign-in-page .sign-in-continue{min-height:48px;padding:.85rem 1.25rem;background:#176568;border:2px solid #176568;color:#fff;font-size:1rem;line-height:1.5;font-weight:700;text-align:center}
+.sign-in-page .sign-in-continue:hover{background:#124e51;border-color:#124e51}
+.sign-in-page .sign-in-help{font-size:1rem;line-height:1.65;color:#42616b;margin:1.25rem 0 0}
+.sign-in-free{margin:1.5rem 0 0}.sign-in-page .sign-in-free a{display:inline-block;min-height:44px;padding:.6rem 0;color:#176568;font-size:1rem;font-weight:700;line-height:1.6}
+.sign-in-page a:focus-visible{outline:3px solid #183d64;outline-offset:4px}
+@media(max-width:520px){.sign-in-page .sign-in-continue{display:flex;width:100%}.sign-in-card{border-radius:.75rem}}
+@media(forced-colors:active){.sign-in-card{border-color:CanvasText}.sign-in-page .sign-in-continue{border-color:ButtonText}.sign-in-page a:focus-visible{outline-color:Highlight}}

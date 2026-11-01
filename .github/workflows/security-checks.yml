@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
     # Check stacked review branches while their earlier PRs remain unmerged.
-    branches: [main, codex/disabled-teacher-memberships, codex/audit-security-usability, codex/elementary-owner-security]
+    branches: [main, codex/disabled-teacher-memberships, codex/audit-security-usability, codex/elementary-owner-security, codex/visual-build-blocks]
   workflow_dispatch:
   # Re-scan unchanged code when CodeQL's security knowledge changes.
   schedule:

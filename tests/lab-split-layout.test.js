@@ -94,7 +94,7 @@ function controller(s){
     $:node,$$:selector=>{assert.ok(groups.has(selector),'Unknown control group '+selector);return groups.get(selector);},
     document:{createElement:()=>new Node(),dispatchEvent(){}},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},
     matchMedia:()=>({matches:true}),recordFor:()=>record,bindWorkPrivacy(){},workStatus:()=> 'Private session',evidenceList:()=>'',
-    renderHardware:renderBench,renderWorkspace:renderBench,cancelHardwareInteraction(){},setHardwareVisible(_workspace,visible){calls.visible.push(visible);},
+    renderHardware:renderBench,renderWorkspace:renderBench,cancelHardwareInteraction(){},cancelCodingWorkbench(){},setHardwareVisible(_workspace,visible){calls.visible.push(visible);},
     save(){calls.saves++;},showNotice(){},openReport(){calls.reports++;},renderRoute(){},attachClassroomLab:()=>null,normalizeLabRecord:(_scenario,value)=>value
   });
   vm.runInContext('let workStorage={},classroomConnection=null,classroomSharingPaused=true,storageKey="test",store={labs:{}},labView={id:s.id,section:1};\n'+source.slice(helperStart,reportEnd)+'\nbindLab(s)',context);

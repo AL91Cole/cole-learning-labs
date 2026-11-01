@@ -76,7 +76,7 @@ function portPoint(diagram,cable,nodeId){
 }
 function cableControls(diagram,node){
  const ports=portsFor(diagram,node.id);
- return `<div class="net-ports" aria-label="${escape(node.label)} cable ports">${ports.map(({cable,port,peer})=>{const connected=!diagram.bench.disconnected.includes(cable.id),label=`${cable.kind==='fiber'?'F':'E'}${diagram.spec.cables.indexOf(cable)+1}`;return `<button type="button" class="net-port ${connected?'net-ready':'net-blocked'}" data-net-port="${escape(port)}" aria-label="${escape(`${node.label}, ${cable.kind} port ${label} to ${diagram.nodes.find(item=>item.id===peer)?.label??peer}. ${connected?'Connected':'Unplugged'}. Select cable end.`)}" aria-pressed="false" title="${escape(`${label}: ${peer}`)}"><span aria-hidden="true">${label}</span><span class="sr-only">${connected?'Connected':'Unplugged'}</span></button>`;}).join('')}</div>`;
+ return `<div class="net-ports" aria-label="${escape(node.label)} cable ports">${ports.map(({cable,port,peer})=>{const connected=!diagram.bench.disconnected.includes(cable.id),label=`${cable.kind==='fiber'?'F':'E'}${diagram.spec.cables.indexOf(cable)+1}`;return `<button type="button" class="net-port ${connected?'net-ready':'net-blocked'}" data-net-port="${escape(port)}" aria-label="${escape(`${node.label}, ${cable.kind} port ${label} to ${diagram.nodes.find(item=>item.id===peer)?.label??peer}. ${connected?'Connected':'Unplugged'}. Select or drag cable end.`)}" aria-pressed="false" title="${escape(`${label}: ${peer}`)}"><span aria-hidden="true">${label}</span><span class="sr-only">${connected?'Connected':'Unplugged'}</span></button>`;}).join('')}</div>`;
 }
 
 function inspector(id,node,diagram){
@@ -97,6 +97,84 @@ function connection(link,diagram,index){
  return `<g class="net-wire net-${tone(link.tone)}${cable?' net-physical':' net-logical'}"${attrs}><path d="M ${x1} ${y1} L ${x2} ${y2}"/><circle cx="${midX}" cy="${midY}" r="12"/><text x="${midX}" y="${midY+4}" text-anchor="middle">${index+1}</text></g>`;
 }
 
+/** Pointer placement only proposes one of the current diagram's authored cable
+ * pairs. The existing bench action still validates and applies the connection. */
+export function mountNetworkPortDrag(visual,{getDiagram,onConnect,onStart,onStatus}={}){
+ const doc=visual?.ownerDocument,view=doc?.defaultView;
+ if(typeof visual?.addEventListener!=='function'||typeof visual?.querySelectorAll!=='function'||typeof visual?.querySelector!=='function'||typeof visual?.contains!=='function'||!doc||typeof getDiagram!=='function')return {cancel(){},consumeClick:()=>false,dispose(){},get active(){return false;}};
+ let drag=null,preview=null,disposed=false,ignoreClick=false,clickTimer=null;
+ const removers=[];
+ const listen=(target,type,handler,options)=>{if(typeof target?.addEventListener!=='function')return;target.addEventListener(type,handler,options);removers.push(()=>target.removeEventListener(type,handler,options));};
+ const say=message=>{if(!disposed)onStatus?.(message);};
+ const cableFor=port=>getDiagram()?.spec?.cables.find(cable=>cable.fromPort===port||cable.toPort===port);
+ const clearTimer=()=>{if(clickTimer!==null){if(view?.clearTimeout)view.clearTimeout(clickTimer);else globalThis.clearTimeout(clickTimer);}clickTimer=null;};
+ const release=current=>{try{if(current?.handle.hasPointerCapture?.(current.pointerId))current.handle.releasePointerCapture(current.pointerId);}catch{/* A removed handle has no gesture left to release. */}};
+ const clearPicture=()=>{preview?.remove();preview=null;for(const port of visual.querySelectorAll('[data-net-port]'))port.classList.remove('net-port-drag-source','net-port-drop-target','net-port-drop-ready');};
+ const cancel=(message)=>{const current=drag;drag=null;clearPicture();release(current);if(current?.moved&&message)say(message);};
+ const targetAt=(x,y)=>{
+  if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+  const target=doc?.elementFromPoint?.(x,y)?.closest?.('[data-net-port]');
+  if(!target||!visual.contains(target)||!cableFor(target.dataset.netPort))return null;
+  return target;
+ };
+ const matching=target=>!!drag&&!!target&&target.dataset.netPort!==drag.port&&
+  [drag.cable.fromPort,drag.cable.toPort].includes(target.dataset.netPort);
+ const draw=(x,y,target)=>{
+  const canvas=visual.querySelector('.net-canvas'),svg=visual.querySelector('.net-connections');
+  const bounds=canvas?.getBoundingClientRect?.(),start=drag?.handle.getBoundingClientRect?.();
+  if(!bounds?.width||!bounds?.height||!start||![bounds.left,bounds.top,start.left,start.top,start.width,start.height].every(Number.isFinite)||typeof doc?.createElementNS!=='function'||!svg?.append)return;
+  if(!preview){preview=doc.createElementNS('http://www.w3.org/2000/svg','path');preview.setAttribute('class','net-cable-preview');preview.setAttribute('aria-hidden','true');svg.append(preview);}
+  const point=(left,top)=>[Math.max(0,Math.min(760,(left-bounds.left)/bounds.width*760)),Math.max(0,Math.min(480,(top-bounds.top)/bounds.height*480))];
+  const from=point(start.left+start.width/2,start.top+start.height/2),to=point(x,y);
+  preview.setAttribute('d',`M ${from[0]} ${from[1]} L ${to[0]} ${to[1]}`);
+  for(const port of visual.querySelectorAll('[data-net-port]')){
+   const peer=port.dataset.netPort!==drag.port&&[drag.cable.fromPort,drag.cable.toPort].includes(port.dataset.netPort);
+   port.classList.toggle('net-port-drag-source',port===drag.handle);port.classList.toggle('net-port-drop-target',peer);port.classList.toggle('net-port-drop-ready',peer&&port===target);
+  }
+ };
+ const down=event=>{
+  if(disposed||drag||event.button!==0||event.isPrimary===false||doc?.hidden||!Number.isFinite(event.pointerId)||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
+  const handle=event.target?.closest?.('[data-net-port]'),cable=handle&&visual.contains(handle)?cableFor(handle.dataset.netPort):null;
+  if(!cable)return;
+  drag={handle,cable,port:handle.dataset.netPort,pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
+  try{handle.setPointerCapture?.(event.pointerId);}catch{/* Document events also handle cancellation. */}
+ };
+ const move=event=>{
+  if(disposed||!drag||drag.pointerId!==event.pointerId||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
+  if(!drag.moved&&Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<6)return;
+  if(!drag.moved){drag.moved=true;onStart?.();}
+  event.preventDefault?.();const target=targetAt(event.clientX,event.clientY);draw(event.clientX,event.clientY,target);
+  say(matching(target)?'Matching port. Release to connect; run a fresh workspace test afterward.':'Drag to the other port with the same cable label. Release elsewhere to cancel.');
+ };
+ const up=event=>{
+  if(disposed||!drag||drag.pointerId!==event.pointerId)return;
+  const current=drag,target=current.moved?targetAt(event.clientX,event.clientY):null,valid=matching(target);
+  cancel();if(!current.moved)return;
+  event.preventDefault?.();ignoreClick=true;clearTimer();
+  clickTimer=view?.setTimeout?view.setTimeout(()=>{ignoreClick=false;clickTimer=null;},0):globalThis.setTimeout(()=>{ignoreClick=false;clickTimer=null;},0);
+  if(!valid){say('Connection canceled. Only the two matching reviewed ports can connect.');return;}
+  const latest=cableFor(current.port),diagram=getDiagram();
+  if(!latest||![latest.fromPort,latest.toPort].includes(target.dataset.netPort)){say('Connection canceled. The reviewed cable changed.');return;}
+  if(!diagram.bench.disconnected.includes(latest.id)){say('This cable is already connected. Select its wire or use Disconnect before rebuilding it.');return;}
+  onConnect?.({fromPort:current.port,toPort:target.dataset.netPort});
+ };
+ const interrupt=event=>{
+  if(!drag)return;
+  if(['pointercancel','lostpointercapture'].includes(event.type)&&event.pointerId!==drag.pointerId)return;
+  if(event.type==='visibilitychange'&&!doc.hidden)return;
+  cancel('Connection preview canceled. The saved plan is unchanged.');
+ };
+ const key=event=>{if(event.key==='Escape'&&drag){event.preventDefault?.();interrupt(event);}};
+ const rejectNative=event=>{event.preventDefault?.();if(event.type==='drop'){cancel();say('Outside drag data is ignored. Use the labeled cable ports or Connect controls.');}};
+ listen(visual,'pointerdown',down);listen(doc,'pointermove',move);listen(doc,'pointerup',up);
+ for(const [target,type]of [[doc,'pointercancel'],[visual,'lostpointercapture'],[doc,'scroll'],[doc,'visibilitychange'],[doc,'cole:lab-section-change'],[doc,'cole:lab-report-open'],[view,'blur'],[view,'resize']])listen(target,type,interrupt,type==='scroll'?true:undefined);
+ listen(doc,'keydown',key);for(const type of ['dragstart','dragover','drop'])listen(visual,type,rejectNative);
+ return {get active(){return !!drag;},cancel,
+  consumeClick(event){if(!ignoreClick||event.detail===0)return false;const port=event.target?.closest?.('[data-net-port]');if(!port||!visual.contains(port))return false;ignoreClick=false;clearTimer();return true;},
+  dispose(){if(disposed)return;cancel();disposed=true;ignoreClick=false;clearTimer();removers.forEach(remove=>remove());}
+ };
+}
+
 /** Render a saved local plan. Selecting a device never applies choices or runs a test. */
 export function renderNetworkVisual(id,saved,selectedId){
  const diagram=visualModel(id,saved);
@@ -104,7 +182,7 @@ export function renderNetworkVisual(id,saved,selectedId){
  const selected=diagram.nodes.find(node=>node.id===selectedId)??diagram.nodes[0];
  const nodes=diagram.nodes.map(node=>`<div class="net-device" data-net-device="${escape(node.id)}" style="left:${position(node.x)}%;top:${position(node.y)}%"><button type="button" class="net-node net-${tone(node.tone)}" data-net-node="${escape(node.id)}" aria-pressed="${node.id===selected.id}" aria-label="${escape(`${node.label}: ${node.status}. Drag to move or select to inspect.`)}">${icon(node.kind)}<strong>${escape(node.label)}</strong><span>${escape(node.status)}</span></button>${cableControls(diagram,node)}</div>`).join('');
  const links=diagram.links??[];
- return `<section class="network-visual" data-network-visual aria-label="Visual network"><div class="net-visual-heading"><p class="net-eyebrow">Visual network</p><h3>${escape(diagram.title)}</h3></div><p class="net-use-note">Drag a device. Select a cable to unplug it. Select its two matching ports to reconnect.</p><p class="net-bench-feedback" data-net-feedback role="status" aria-live="polite">Cables and positions save as you work. Run a fresh test after cable changes.</p><div class="net-viewport" tabindex="0" role="region" aria-label="Network diagram. Scroll horizontally to see every device."><div class="net-canvas"><svg class="net-connections" viewBox="0 0 760 480" preserveAspectRatio="none" aria-hidden="true" focusable="false">${links.map((link,index)=>connection(link,diagram,index)).join('')}</svg>${nodes}</div></div><div class="net-bench-toolbar"><span>E = Ethernet · F = Fiber · dotted = reference or policy</span><button type="button" data-net-reset>Reset positions</button></div><div class="net-packet-panel"><div class="net-packet-actions"><button type="button" data-net-send-packet>Send test packet</button><button type="button" data-net-stop-packet hidden>Stop signal</button></div><p data-net-packet-status role="status" aria-live="polite">Send a local signal through the saved plan. This does not record a workspace test.</p><details class="net-packet-steps"><summary>Signal steps</summary><ol data-net-packet-steps></ol></details></div><div class="net-device-inspector" data-network-inspector aria-live="polite" aria-atomic="true">${inspector(id,selected,diagram)}</div><details class="net-link-details"><summary>Map help and connection details (${links.length})</summary><p class="net-plan-note"><strong>Saved network plan</strong> · Apply my choices updates this picture. Run a fresh test to check the plan.</p><p>${escape(diagram.summary)}</p><p>Ports with the same cable label form one reviewed connection. Other pairings stay blocked. Move arrows are available after selecting a device. Supplied packet and event records stay fixed.</p><ul class="net-legend" aria-label="Connection legend"><li class="net-ready">Ready or expected</li><li class="net-blocked">Blocked or missing</li><li class="net-warning">Needs attention</li><li class="net-neutral">Supplied reference</li></ul><ol>${links.map(link=>{const from=diagram.nodes.find(node=>node.id===link.from),to=diagram.nodes.find(node=>node.id===link.to);return `<li><strong>${escape(from?.label??link.from)} → ${escape(to?.label??link.to)}</strong><span>${escape(link.label)} · ${escape(link.status)}${link.cableId?` · ${escape(link.kind)} cable`:' · fixed reference'}</span></li>`;}).join('')}</ol></details></section>`;
+ return `<section class="network-visual" data-network-visual aria-label="Visual network"><div class="net-visual-heading"><p class="net-eyebrow">Visual network</p><h3>${escape(diagram.title)}</h3></div><p class="net-use-note">Build the cable path: select a wire to unplug it, then drag one labeled port to its matching port. You can also select both ports or use Connect in the device controls. Drag devices to arrange the map.</p><p class="net-bench-feedback" data-net-feedback role="status" aria-live="polite">Cables and positions save as you work. Run a fresh test after cable changes.</p><div class="net-viewport" tabindex="0" role="region" aria-label="Network diagram. Scroll horizontally to see every device."><div class="net-canvas"><svg class="net-connections" viewBox="0 0 760 480" preserveAspectRatio="none" aria-hidden="true" focusable="false">${links.map((link,index)=>connection(link,diagram,index)).join('')}</svg>${nodes}</div></div><div class="net-bench-toolbar"><span>E = Ethernet · F = Fiber · dotted = reference or policy</span><button type="button" data-net-reset>Reset positions</button></div><div class="net-packet-panel"><div class="net-packet-actions"><button type="button" data-net-send-packet>Send test packet</button><button type="button" data-net-stop-packet hidden>Stop signal</button></div><p data-net-packet-status role="status" aria-live="polite">Send a local signal through the saved plan. This does not record a workspace test.</p><details class="net-packet-steps"><summary>Signal steps</summary><ol data-net-packet-steps></ol></details></div><div class="net-device-inspector" data-network-inspector aria-live="polite" aria-atomic="true">${inspector(id,selected,diagram)}</div><details class="net-link-details"><summary>Map help and connection details (${links.length})</summary><p class="net-plan-note"><strong>Saved network plan</strong> · Apply my choices updates this picture. Run a fresh test to check the plan.</p><p>${escape(diagram.summary)}</p><p>Ports with the same cable label form one reviewed connection. Drag between matching ports, or select each port in turn. Escape, scrolling or releasing outside a matching port cancels a drag. Other pairings stay blocked. Move arrows are available after selecting a device. Supplied packet and event records stay fixed.</p><ul class="net-legend" aria-label="Connection legend"><li class="net-ready">Ready or expected</li><li class="net-blocked">Blocked or missing</li><li class="net-warning">Needs attention</li><li class="net-neutral">Supplied reference</li></ul><ol>${links.map(link=>{const from=diagram.nodes.find(node=>node.id===link.from),to=diagram.nodes.find(node=>node.id===link.to);return `<li><strong>${escape(from?.label??link.from)} → ${escape(to?.label??link.to)}</strong><span>${escape(link.label)} · ${escape(link.status)}${link.cableId?` · ${escape(link.kind)} cable`:' · fixed reference'}</span></li>`;}).join('')}</ol></details></section>`;
 }
 
 /** Bind only the map and its inspector, leaving unsaved form choices untouched. */
@@ -114,7 +192,8 @@ export function mountNetworkVisual(root,id,saved,{selectedId,onSelect,onSettings
  if(!diagram?.nodes?.length||!visual?.querySelectorAll||!visual?.querySelector)return ()=>{};
  const panel=visual.querySelector('[data-network-inspector]');
  if(!panel)return ()=>{};
- let selected=diagram.nodes.find(node=>node.id===selectedId)??diagram.nodes[0],drag=null,suppressClick=null,pendingPort=null,stopPackets=()=>{};
+ let selected=diagram.nodes.find(node=>node.id===selectedId)??diagram.nodes[0],drag=null,suppressClick=null,pendingPort=null,stopPackets=()=>{},disposed=false;
+ let portDrag={cancel(){},consumeClick:()=>false,dispose(){},get active(){return false;}};
  const removers=[];
  const buttons=[...visual.querySelectorAll('[data-net-node]')];
  const bindSettings=()=>{
@@ -128,6 +207,7 @@ export function mountNetworkVisual(root,id,saved,{selectedId,onSelect,onSettings
  };
  buttons.forEach(button=>{
   const select=()=>{
+   if(disposed)return;
    if(suppressClick===button.dataset.netNode){suppressClick=null;return;}
    const node=diagram.nodes.find(item=>item.id===button.dataset.netNode);
    if(!node)return;
@@ -141,7 +221,7 @@ export function mountNetworkVisual(root,id,saved,{selectedId,onSelect,onSettings
  if(typeof visual.addEventListener!=='function')return ()=>{removers.forEach(remove=>remove());const settings=panel.querySelector('[data-network-settings]');if(settings)settings.onclick=null;};
  const canvas=visual.querySelector('.net-canvas'),wires=visual.querySelector('.net-connections'),feedback=visual.querySelector('[data-net-feedback]');
  const announce=message=>{if(feedback)feedback.textContent=message;};
- const listen=(element,event,handler)=>{element?.addEventListener(event,handler);removers.push(()=>element?.removeEventListener(event,handler));};
+ const listen=(element,event,handler,options)=>{if(typeof element?.addEventListener!=='function')return;element.addEventListener(event,handler,options);removers.push(()=>element.removeEventListener(event,handler,options));};
  const redraw=()=>{
   const width=canvas?.getBoundingClientRect?.().width;
   diagram.unitX=width>0?760/width:1;
@@ -161,7 +241,10 @@ export function mountNetworkVisual(root,id,saved,{selectedId,onSelect,onSettings
   }
  };
  const refresh=bench=>{diagram=visualModel(id,{...saved,networkBench:bench});selected=diagram.nodes.find(node=>node.id===selected.id)??diagram.nodes[0];redraw();panel.innerHTML=inspector(id,selected,diagram);bindSettings();};
+ const cancelDevice=()=>{const current=drag;drag=null;if(!current)return;try{if(current.handle?.hasPointerCapture?.(current.pointerId))current.handle.releasePointerCapture(current.pointerId);}catch{/* The source may already be removed. */}if(current.moved)refresh(current.bench);};
  const act=(action,value,focusSelector)=>{
+  if(disposed)return {bench:diagram.bench,changed:false};
+  portDrag.cancel();cancelDevice();
   stopPackets('Plan changed. Send a fresh test packet.');
   const result=applyNetworkBenchAction(id,diagram.bench,action,value);
   pendingPort=null;refresh(result.bench);announce(result.message);
@@ -170,8 +253,10 @@ export function mountNetworkVisual(root,id,saved,{selectedId,onSelect,onSettings
   return result;
  };
  const click=e=>{
+  if(disposed||portDrag.consumeClick(e))return;
   const port=e.target.closest?.('[data-net-port]');
   if(port&&visual.contains(port)){
+   const known=diagram.spec.cables.find(item=>item.fromPort===port.dataset.netPort||item.toPort===port.dataset.netPort);if(!known){pendingPort=null;announce('Choose a listed cable port.');return;}
    if(!pendingPort){pendingPort=port.dataset.netPort;redraw();const cable=diagram.spec.cables.find(item=>item.fromPort===pendingPort||item.toPort===pendingPort);announce(`${cable.kind==='fiber'?'Fiber':'Ethernet'} cable end selected. Select its matching port to connect.`);}
    else if(pendingPort===port.dataset.netPort){pendingPort=null;redraw();announce('Cable selection cleared.');}
    else act('connect',{fromPort:pendingPort,toPort:port.dataset.netPort},`[data-net-port="${port.dataset.netPort}"]`);
@@ -183,18 +268,19 @@ export function mountNetworkVisual(root,id,saved,{selectedId,onSelect,onSettings
   if(move&&panel.contains(move))act('move',{nodeId:selected.id,x:selected.x+Number(move.dataset.dx),y:selected.y+Number(move.dataset.dy)},`[data-net-move="${move.dataset.netMove}"]`);
   const cableAction=e.target.closest?.('[data-net-cable-action]');
   if(cableAction&&panel.contains(cableAction)){const item=diagram.spec.cables.find(item=>item.id===cableAction.dataset.netCableId);if(item)act(cableAction.dataset.netCableAction,cableAction.dataset.netCableAction==='connect'?{fromPort:item.fromPort,toPort:item.toPort}:{cableId:item.id},`[data-net-cable-id="${item.id}"]`);}
-  if(e.target.closest?.('[data-net-reset]'))act('reset-layout',{},'[data-net-reset]');
+  const reset=e.target.closest?.('[data-net-reset]');if(reset&&visual.contains(reset))act('reset-layout',{},'[data-net-reset]');
  };
  listen(visual,'click',click);
  for(const button of buttons){
   listen(button,'pointerdown',event=>{
-   if(event.button!==0||event.isPrimary===false||!canvas)return;
+   if(disposed||drag||event.button!==0||event.isPrimary===false||!canvas||!Number.isFinite(event.pointerId)||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
+   portDrag.cancel();
    const node=diagram.nodes.find(item=>item.id===button.dataset.netNode);
-   drag={pointerId:event.pointerId,nodeId:node.id,startX:event.clientX,startY:event.clientY,x:node.x,y:node.y,moved:false,bench:diagram.bench};
-   button.setPointerCapture?.(event.pointerId);
+   drag={pointerId:event.pointerId,nodeId:node.id,startX:event.clientX,startY:event.clientY,x:node.x,y:node.y,moved:false,bench:diagram.bench,handle:button};
+   try{button.setPointerCapture?.(event.pointerId);}catch{/* An outside release cancels via the document listener. */}
   });
   listen(button,'pointermove',event=>{
-   if(!drag||drag.pointerId!==event.pointerId)return;
+   if(disposed||!drag||drag.pointerId!==event.pointerId||!Number.isFinite(event.clientX)||!Number.isFinite(event.clientY))return;
    const dx=event.clientX-drag.startX,dy=event.clientY-drag.startY;
    if(!drag.moved&&Math.hypot(dx,dy)<6)return;
    if(!drag.moved)stopPackets('Device moved. Send a test packet when ready.');
@@ -205,15 +291,21 @@ export function mountNetworkVisual(root,id,saved,{selectedId,onSelect,onSettings
   });
   listen(button,'pointerup',event=>{
    if(!drag||drag.pointerId!==event.pointerId)return;
-   const finished=drag;drag=null;button.releasePointerCapture?.(event.pointerId);
+   const finished=drag;drag=null;try{if(button.hasPointerCapture?.(event.pointerId))button.releasePointerCapture(event.pointerId);}catch{/* The source may already be removed. */}
    if(finished.moved){event.preventDefault();suppressClick=finished.nodeId;const point=diagram.bench.positions[finished.nodeId];diagram.bench=finished.bench;act('move',{nodeId:finished.nodeId,...point});}
   });
-  listen(button,'pointercancel',()=>{if(drag){const bench=drag.bench;drag=null;refresh(bench);announce('Move canceled.');}});
+  for(const type of ['pointercancel','lostpointercapture'])listen(button,type,event=>{if(drag?.pointerId===event.pointerId){cancelDevice();announce('Move canceled. The saved layout is unchanged.');}});
  }
  redraw();
- if(typeof globalThis.ResizeObserver==='function'&&canvas){const observer=new globalThis.ResizeObserver(()=>redraw());observer.observe(canvas);removers.push(()=>observer.disconnect());}
+ portDrag=mountNetworkPortDrag(visual,{getDiagram:()=>diagram,onConnect:value=>act('connect',value,`[data-net-port="${value.toPort}"]`),onStatus:announce,onStart:()=>{cancelDevice();pendingPort=null;redraw();stopPackets('Connection preview. Send a fresh test packet after connecting.');}});
+ const interruptDevice=event=>{if(event.type==='visibilitychange'&&!visual.ownerDocument.hidden)return;if(drag){cancelDevice();announce('Move canceled. The saved layout is unchanged.');}};
+ const doc=visual.ownerDocument;
+ if(doc)listen(doc,'keydown',event=>{if(event.key==='Escape'){cancelDevice();portDrag.cancel('Connection preview canceled. The saved plan is unchanged.');pendingPort=null;redraw();}});
+ for(const [target,type]of [[doc,'pointerup'],[doc,'scroll'],[doc,'visibilitychange'],[doc,'cole:lab-section-change'],[doc,'cole:lab-report-open'],[doc?.defaultView,'blur']])if(target)listen(target,type,interruptDevice,type==='scroll'?true:undefined);
+ listen(visual,'drop',interruptDevice);
+ if(typeof globalThis.ResizeObserver==='function'&&canvas){const observer=new globalThis.ResizeObserver(()=>{if(disposed)return;cancelDevice();portDrag.cancel();redraw();});observer.observe(canvas);removers.push(()=>observer.disconnect());}
  stopPackets=mountPacketVisual(root,visual,id,saved,()=>diagram);
- return ()=>{stopPackets();removers.forEach(remove=>remove());const settings=panel.querySelector('[data-network-settings]');if(settings)settings.onclick=null;};
+ return ()=>{if(disposed)return;disposed=true;portDrag.dispose();cancelDevice();stopPackets();removers.forEach(remove=>remove());const settings=panel.querySelector('[data-network-settings]');if(settings)settings.onclick=null;};
 }
 
 

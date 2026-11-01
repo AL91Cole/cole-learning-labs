@@ -31,7 +31,7 @@ The session endpoint distinguishes lab access from subscription status:
 
 The response includes no email, Google subject or session ID. Its access label is for display; the browser cannot turn that label into a server grant. Every private resource validates the authenticated identity and entitlement independently.
 
-For a verified owner response, the portal offers **Open owner labs**, disables payment choices, and hides checkout/billing buttons. Opening labs rechecks the server session/status first. Owner requests to checkout or the billing portal are rejected before any payment-provider call. The exception does not create, manage or cancel a subscription. Normal subscribers retain their existing fresh payment verification and billing/cancellation behavior.
+The portal uses the same **Sign in** and **Open labs** labels for all approved adults. For a verified owner response, it confirms that lab access is active without a purchase, disables payment choices, and hides checkout/billing buttons. Opening labs rechecks the server session/status first. Owner requests to checkout or the billing portal are rejected before any payment-provider call. The exception does not create, manage or cancel a subscription. Normal subscribers retain their existing fresh payment verification and billing/cancellation behavior.
 
 Owner access grants lab content only. It grants no classroom enrollment, learner records, reporting collection, billing administration, account-management permissions, or additional cloud-AI capability. Students must not use the owner's signed-in browser or share its session.
 
