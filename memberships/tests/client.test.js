@@ -204,14 +204,15 @@ test('invalid media types, metadata, UTF-8 and JSON fail closed without exposing
   const headers = { 'Content-Type': 'application/json' };
   for (const response of [new Response('PRIVATE_PROVIDER_ERROR', { status: 503, headers }),
     new Response('<script>PRIVATE_MARKUP</script>', { headers: { 'Content-Type': 'text/html' } }),
+    new Response('<SCRIPT>PRIVATE_UPPERCASE_MARKUP</SCRIPT>', { headers: { 'Content-Type': 'text/html' } }),
     new Response('{}', { headers: { ...headers, 'Content-Length': 'invalid' } }),
     new Response('{}', { headers: { ...headers, 'Content-Length': '8193' } }),
     new Response('PRIVATE_INVALID_JSON', { headers }),
     new Response(new Uint8Array([0xff, 0xff]), { headers })]) {
     h.routes.set('/api/auth/sign-in/social', () => response);
     await h.controls['sign-in'].emit('click');
-    assert.deepEqual(h.navigation, []); assert.match(h.controls.status.textContent, /unavailable/u);
-    assert.doesNotMatch(h.controls.status.textContent, /PRIVATE_|<script>/u);
+    assert.deepEqual(h.navigation, []);
+    assert.equal(h.controls.status.textContent, 'Sign-in is unavailable. Please try again later.');
   }
 });
 

@@ -164,7 +164,7 @@ test('unknown checkout outcome keeps a durable idempotency key and cannot silent
   const h=fixture(t),original=h.stripe.checkout.sessions.create;
   let first=true;h.stripe.checkout.sessions.create=async(...args)=>{const result=await original(...args);if(first){first=false;throw new Error('fictional provider timeout containing private content');}return result;};
   await rejectStatus(()=>h.checkout(),503);const pending=h.account();assert.ok(pending.checkout_key);assert.equal(pending.checkout_id,null);
-  const resumed=await h.checkout();assert.match(resumed.url,/checkout.stripe.com/u);assert.equal(h.checkouts.size,1);
+  const resumed=await h.checkout();assert.equal(new URL(resumed.url).origin,'https://checkout.stripe.com');assert.equal(h.checkouts.size,1);
   const attempts=h.calls.filter(call=>call.method==='checkout.sessions.create');assert.equal(attempts.length,2);
   assert.equal(attempts[0].options.idempotencyKey,attempts[1].options.idempotencyKey);
   assert.deepEqual(attempts[0].data,attempts[1].data);
