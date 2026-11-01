@@ -32,8 +32,12 @@ function fixture(){
       setAttribute(name,value){attrs[name]=String(value);},removeAttribute(name){delete attrs[name];},
       matches(selector){return matches(this,selector);},
       closest(selector){for(let current=this;current&&current!==root;current=current.parentElement)if(matches(current,selector))return current;return null;},
+      contains(target){for(let current=target;current&&current!==root;current=current.parentElement)if(current===this)return true;return false;},
+      querySelectorAll(selector){return nodes.filter(item=>item!==this&&this.contains(item)&&matches(item,selector));},
+      querySelector(selector){return this.querySelectorAll(selector)[0]||null;},
+      replaceChildren(){this.textContent='';this.innerHTML='';},
       focus(){doc.activeElement=this;},setSelectionRange(start,end,direction){this.selectionStart=start;this.selectionEnd=end;this.selectionDirection=direction;},
-      addEventListener(name,callback){this.listeners.set(name,callback);},fire(name,extra={}){this.listeners.get(name)?.({target:this,preventDefault(){},...extra});}};
+      addEventListener(name,callback){this.listeners.set(name,callback);},removeEventListener(name,callback){if(this.listeners.get(name)===callback)this.listeners.delete(name);},fire(name,extra={}){this.listeners.get(name)?.({target:this,preventDefault(){},...extra});}};
   }
   doc.body=node('body',{},null);doc.activeElement=doc.body;
   root.contains=target=>nodes.includes(target);

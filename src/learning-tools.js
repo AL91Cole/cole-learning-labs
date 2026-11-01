@@ -7,6 +7,12 @@ export function learningRoute(hash) {
   const [page='home',id,step]=path.split('/');
   const mode=learningModes.some(item=>item.id===params.get('mode'))?params.get('mode'):'guided';
   const route={page:page||'home',id,mode,sequence:params.get('sequence')==='opening-day'?'opening-day':null};
+  if(page==='signin'&&path!=='signin')return {page:'unknown',id:undefined,mode:'guided',sequence:null};
+  if(page==='explore'){
+    if(path.split('/').length>2)return {page:'unknown',id:undefined,mode:'guided',sequence:null};
+    const band=[['k1','K–1'],['2-3','2–3'],['4-6','4–6']].find(([code])=>code===params.get('band'))?.[1];
+    if(!id&&band)route.band=band;
+  }
   if(page==='lab')route.section=Math.max(1,['request','workbench','explain'].indexOf(step)+1);
   return route;
 }
@@ -16,7 +22,7 @@ export function labPageHash(id,section,{mode='guided',sequence=null}={}) {
   if(sequence==='opening-day')params.set('sequence',sequence);
   return '#lab/'+encodeURIComponent(id)+'/'+step+'?'+params;
 }
-export function mountLabLearning(root,{scenario,record,mode='guided',sequence,onSave,onTest,getResult}) {
+export function mountLabLearning(root,{scenario,record,mode='guided',sequence,onSave,onTest,getResult,autoStartFirstIdea=true}) {
   const shell=root.querySelector('.lab-shell'),select=root.querySelector('#learning-mode'),learning=root.querySelector('#lab-learning');
   function applyMode(value) {
     mode=learningModes.some(item=>item.id===value)?value:'guided';
@@ -35,6 +41,7 @@ export function mountLabLearning(root,{scenario,record,mode='guided',sequence,on
   const host=root.querySelector('#experiment-tools');host.innerHTML=renderExperiments(scenario,record);
   const experiments=mountExperiments(host,{scenario,record,getState:()=>record.state,getResult,onSave,onTest});
   function beginFirstTest(event){
+    if(!autoStartFirstIdea)return;
     if(event&&!(event.detail?.id===scenario.id&&event.detail.section===2))return;
     const {attempts,draft}=readExperiments(record);
     if(!record.ideaSaved||attempts.length||Object.values(draft).some(value=>typeof value==='string'?value.trim():value!==undefined&&value!==null))return;

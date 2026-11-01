@@ -8,11 +8,11 @@ const source=readFileSync(new URL('../src/foundation-labs.js',import.meta.url),'
 const modelAction=(id,record,action)=>applyFoundationAction(id,record,structuredClone(action));
 const moduleText=source.replace(/^import[^\n]+\n/gm,'').replaceAll('export function ','function ')+';({renderFoundationLab,mountFoundationLab})';
 const renderVisual=()=>'<div aria-label="Fictional learning equipment"></div>';
-const render=vm.runInNewContext(moduleText,{getFoundation,createFoundationRecord,applyFoundationAction:modelAction,foundationSummary,renderFoundationVisual:renderVisual,mountFoundationScene(){assert.fail('Rendering alone must not mount graphics.');}}).renderFoundationLab;
+const render=vm.runInNewContext(moduleText,{OWNER_PREVIEW:false,getFoundation,createFoundationRecord,applyFoundationAction:modelAction,foundationSummary,renderFoundationVisual:renderVisual,mountFoundationScene(){assert.fail('Rendering alone must not mount graphics.');}}).renderFoundationLab;
 
 // A DOM boundary exercises the actual controller and model. Scene geometry,
 // native touch, computed layout and school-device acceptance have separate QA.
-function fixture(id='hardware',record=createFoundationRecord(id)) {
+function fixture(id='hardware',record=createFoundationRecord(id),{ownerPreview=false,actionModel=modelAction}={}) {
   const lab=getFoundation(id),fields=new Map(),listeners=new Map(),dynamic=new Map(),staticButtons=[],markers=[];
   const calls={changed:0,reports:0,mounts:0,updates:0,focus:[],camera:[],mode:[],visible:[],order:[],disposed:0};
   const doc={activeElement:null};let current=record,sceneOptions;
@@ -50,7 +50,7 @@ function fixture(id='hardware',record=createFoundationRecord(id)) {
     addEventListener(name,handler){listeners.set(name,handler);},removeEventListener(name,handler){if(listeners.get(name)===handler)listeners.delete(name);}};
   shell.contains=target=>allButtons().includes(target)||[...fields.values()].includes(target);
   const scene={update(record){calls.updates++;calls.lastSceneRecord=record;},focus(item){calls.focus.push(item);},camera(action){calls.camera.push(action);},setMode(mode){calls.mode.push(mode);},setVisible(visible){calls.visible.push(visible);},cancelInteraction(){calls.order.push('cancel');},dispose(){calls.disposed++;}};
-  const functions=vm.runInNewContext(moduleText,{getFoundation,createFoundationRecord,applyFoundationAction:modelAction,foundationSummary,renderFoundationVisual:renderVisual,mountFoundationScene(host,options){calls.mounts++;assert.equal(host,visual);sceneOptions=options;return scene;}});
+  const functions=vm.runInNewContext(moduleText,{OWNER_PREVIEW:ownerPreview,getFoundation,createFoundationRecord,applyFoundationAction:actionModel,foundationSummary,renderFoundationVisual:renderVisual,mountFoundationScene(host,options){calls.mounts++;assert.equal(host,visual);sceneOptions=options;return scene;}});
   const controller=functions.mountFoundationLab(root,{lab,record:current,onChange(record){current=record;calls.changed++;},onReport(record){calls.reports++;calls.report=record;calls.order.push('report');}});
   function click(field,value='') {
     const target=allButtons().find(button=>Object.hasOwn(button.dataset,field)&&(value===undefined||button.dataset[field]===value));assert.ok(target,`Missing ${field}=${value}`);
@@ -118,6 +118,8 @@ test('every distinct item is required before step 2 and tab, keyboard and forwar
     assert.deepEqual(visible(view),[true,false,false],lab.id);
     const first=lab.items[0];view.click('foundationInspect',first.id);view.click('foundationInspect',first.id);
     assert.deepEqual(view.record.explored,[first.id]);assert.equal(view.button('foundationSection','practice').disabled,true);
+    assert.match(view.fields.get('[data-foundation-step-status]').textContent,new RegExp(`^1 of ${lab.items.length} items explored\\.`),'Repeated inspections do not inflate the visible progress.');
+    assert.match(view.prompt('explore'),new RegExp(`<progress max="${lab.items.length}" value="1" aria-label="Items explored">`));
     for(const item of lab.items.slice(1,-1))view.click('foundationInspect',item.id);
     assert.equal(view.button('foundationNext').disabled,true);view.click('foundationInspect',lab.items.at(-1).id);
     assert.equal(view.button('foundationSection','practice').disabled,false);assert.equal(view.button('foundationSection','check').disabled,true);assert.equal(view.button('foundationNext').disabled,false);
@@ -244,4 +246,42 @@ test('coding operator controls edit without running and clear old bars until the
   const runs=view.record.runCount;view.click('foundationOperator','*');assert.match(view.record.code,/quantity \* price/);assert.equal(view.record.runCount,runs);assert.equal(view.record.results.length,0);assert.doesNotMatch(view.fields.get('[data-foundation-code-results]').innerHTML,/<meter\b/i);
   view.click('foundationRun');assert.ok(view.record.results.every(result=>result.passed));assert.equal((view.fields.get('[data-foundation-code-results]').innerHTML.match(/data-foundation-result="pass"/g)||[]).length,3);assert.match(view.fields.get('[data-foundation-code-results]').innerHTML,/Target 15 · Your result 15/);
   view.click('foundationOperator','+');assert.equal(view.record.results.length,0);assert.equal(view.button('foundationSection','check').disabled,true);view.controller.dispose();
+});
+
+test('owner beginner previews unlock sections, questions and tools without filling answers or completing the course',async()=>{
+  const modelUrl=new URL('../src/foundation-model.js',import.meta.url);
+  const ownerSource=readFileSync(modelUrl,'utf8')
+    .replace(/^import[^\n]*\bOWNER_PREVIEW\b[^\n]*\r?\n/mu,'const OWNER_PREVIEW=true;\n')
+    .replace(/from (['"])(\.\/[^'"]+)\1/gu,(_match,quote,specifier)=>'from '+quote+new URL(specifier,modelUrl).href+quote);
+  const ownerModel=await import('data:text/javascript;base64,'+Buffer.from(ownerSource).toString('base64'));
+  const ownerAction=(id,record,action)=>ownerModel.applyFoundationAction(id,record,structuredClone(action));
+  for(const lab of FOUNDATION_LABS){
+    const view=fixture(lab.id,createFoundationRecord(lab.id),{ownerPreview:true,actionModel:ownerAction});
+    const before=structuredClone(view.record),changed=view.calls.changed;
+    view.tab('check');assert.deepEqual(visible(view),[false,false,true]);
+    assert.doesNotMatch(view.prompt('check'),/Your task works|Practice finished/);
+    assert.equal(view.button('foundationTicket').attrs.href,'#lab/'+lab.nextLab);
+    view.tab('explore');view.click('foundationNext');assert.deepEqual(visible(view),[false,true,false]);
+    view.click('foundationNextQuestion');assert.match(view.prompt(),/Question 2 OF/);
+    view.click('foundationOpenTools');assert.doesNotMatch(view.prompt(),/Question \d OF/);
+    if(lab.track==='coding')assert.equal(view.fields.get('[data-foundation-code-workspace]').hidden,false);
+    view.click('foundationReviewQuestions');assert.match(view.prompt(),/Question 1 OF/);
+    view.key('practice','End');assert.deepEqual(visible(view),[false,false,true]);
+    assert.deepEqual(view.record,before,lab.id+' navigation cannot manufacture course work');assert.equal(view.calls.changed,changed);
+    view.click('foundationReport');assert.equal(view.calls.reports,0);assert.equal(view.record.explanationSaved,false);
+    assert.equal(foundationSummary(lab.id,view.record).complete,false);
+    view.controller.dispose();
+  }
+  const security=fixture('security',createFoundationRecord('security'),{ownerPreview:true,actionModel:ownerAction});
+  security.tab('practice');security.click('foundationOpenTools');
+  security.sceneOptions.onAction('enable-mfa');
+  assert.equal(security.record.simulation.scopeConfirmed,false);assert.equal(security.record.simulation.mfaEnabled,false);assert.deepEqual(security.record.practice,[],'Scope still precedes a security action.');
+  security.click('foundationJob');assert.equal(security.record.simulation.scopeConfirmed,true);security.controller.dispose();
+  const hardware=fixture('hardware',createFoundationRecord('hardware'),{ownerPreview:true,actionModel:ownerAction});
+  const equipment=structuredClone(hardware.record.hardware);hardware.sceneOptions.onAction('boot');
+  assert.deepEqual(hardware.record.hardware,equipment);assert.deepEqual(hardware.record.practice,[],'Unsafe/out-of-order power actions remain blocked.');hardware.controller.dispose();
+  const coding=fixture('coding',createFoundationRecord('coding'),{ownerPreview:true,actionModel:ownerAction});
+  coding.tab('practice');coding.click('foundationOpenTools');coding.input('print(quantity * 3);');coding.click('foundationRun');
+  assert.equal(coding.record.results.length,3);assert.ok(coding.record.results.every(result=>result.passed),'Tests still execute against the actual program.');
+  assert.deepEqual(coding.record.answers,{});assert.deepEqual(coding.record.explored,[]);assert.equal(foundationSummary('coding',coding.record).complete,false);coding.controller.dispose();
 });

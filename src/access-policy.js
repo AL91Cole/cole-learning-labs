@@ -12,13 +12,16 @@ export const FREE_LAB_IDS_BY_TOPIC=Object.freeze({
   coding:Object.freeze(['CODE-501','CODE-502'])
 });
 export const FREE_LAB_IDS=Object.freeze(Object.values(FREE_LAB_IDS_BY_TOPIC).flat());
+// These separate K–6 activities never grant access to the 7–12 member catalog.
+export const ELEMENTARY_LAB_IDS=Object.freeze(['HW','NET','AI','SEC','CODE'].flatMap(topic=>[1,2,3].map(band=>'EX-'+topic+'-'+band)));
 const freeLabIds=new Set(FREE_LAB_IDS);
+const elementaryLabIds=new Set(ELEMENTARY_LAB_IDS);
 const catalogue=new Map(CATALOG.map(lab=>[lab.id,lab]));
 const topics=new Set(Object.keys(FREE_LAB_IDS_BY_TOPIC));
 const foundationIds=new Set([
   ...topics,'HW-100','NET-200','AI-300','SEC-400','CODE-500'
 ]);
-const informationalPages=new Set(['home','projects','about','connect','privacy','guide']);
+const informationalPages=new Set(['home','projects','about','connect','privacy','guide','signin']);
 const practiceTopics=new Set(['network','ai','security']);
 const studioIds=new Set(['network','coding']);
 const sandboxIds=new Set(['blank','pixel-pet','arcade','rover','tiles']);
@@ -34,6 +37,7 @@ export function routeAccess(route){
   if(typeof page!=='string'||(id!==undefined&&typeof id!=='string'))return 'unknown';
   const noId=id===undefined||id==='';
   if(informationalPages.has(page))return noId?'public':'unknown';
+  if(page==='explore')return noId||elementaryLabIds.has(id)?'public':'unknown';
   if(page==='labs')return noId||topics.has(id)?'public':'unknown';
   if(page==='learn')return foundationIds.has(id)?'public':'unknown';
   if(page==='lab')return catalogue.has(id)?(isFreeLab(id)?'public':'member'):'unknown';

@@ -88,13 +88,13 @@ function controller(s){
     ['[data-clue]',s.clues.map(clue=>new Node({clue:clue.id}))],['[data-question]',s.questions.map((_,index)=>new Node({question:String(index)}))]
   ]);
   function renderBench(){calls.renders++;node('#workspace').children=new Map();if(s.track==='coding'){const editor=new Node();editor.value=record.state.code;nodes.set('#coding-editor',editor);}}
-  const context=vm.createContext({s,record,tracks,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200})}),esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
+  const context=vm.createContext({OWNER_PREVIEW:false,s,record,tracks,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200})}),esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
     applyHardwareAction,verifyHardware,applyWorkspaceAction:(id,state,action,value)=>applyWorkspaceAction(id,state,action,value===undefined?undefined:structuredClone(value)),verifyWorkspace,
     retainExperimentEvents:(scenario,events)=>retainExperimentEvents(scenario,structuredClone(events)),experimentEventText,experimentReport,readExperiments,workbenchProgress,
     $:node,$$:selector=>{assert.ok(groups.has(selector),'Unknown control group '+selector);return groups.get(selector);},
     document:{createElement:()=>new Node(),dispatchEvent(){}},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},
     matchMedia:()=>({matches:true}),recordFor:()=>record,bindWorkPrivacy(){},workStatus:()=> 'Private session',evidenceList:()=>'',
-    renderHardware:renderBench,renderWorkspace:renderBench,cancelHardwareInteraction(){},setHardwareVisible(_workspace,visible){calls.visible.push(visible);},
+    renderHardware:renderBench,renderWorkspace:renderBench,cancelHardwareInteraction(){},cancelCodingWorkbench(){},setHardwareVisible(_workspace,visible){calls.visible.push(visible);},
     save(){calls.saves++;},showNotice(){},openReport(){calls.reports++;},renderRoute(){},attachClassroomLab:()=>null,normalizeLabRecord:(_scenario,value)=>value
   });
   vm.runInContext('let workStorage={},classroomConnection=null,classroomSharingPaused=true,storageKey="test",store={labs:{}},labView={id:s.id,section:1};\n'+source.slice(helperStart,reportEnd)+'\nbindLab(s)',context);

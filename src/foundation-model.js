@@ -1,5 +1,6 @@
 import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261025-learning-plans';
 import { executeCoding } from './coding-lab.js?release=20261025-learning-plans';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261025-learning-plans';
 
 const item = (id,label,looks,role) => ({id,label,looks,role});
 const check = (id,prompt,options,answer,explanation) => ({id,prompt,options:options.map(([id,label])=>({id,label})),answer,explanation});
@@ -249,7 +250,7 @@ export function applyFoundationAction(id,previous,action) {
     if(source!==state.code){state.code=source;state.sourceAtRun='';state.results=[];state.practice=[];state.explanationSaved=false;}
     return result('Code updated. Run all three tests to check this version.');
   }
-  if(!readyForPractice(lab,state))return result(state.explored.length<lab.items.length?'Explore each item before starting the practice job.':'Answer all three questions correctly before starting the practice job.','warning');
+  if(!OWNER_PREVIEW&&!readyForPractice(lab,state))return result(state.explored.length<lab.items.length?'Explore each item before starting the practice job.':'Answer all three questions correctly before starting the practice job.','warning');
   if(type==='run-code'||lab.id==='coding'&&type==='practice'&&own(action,'action')==='run-code') {
     if(lab.id!=='coding')return result('Run code is available in the coding foundation.','warning');
     state.runCount=Math.min(state.runCount+1,1000000);state.sourceAtRun=state.code;state.results=runFixtures(state.code);state.practice=state.results.filter(result=>result.passed).map(result=>`fixture-${result.quantity}`);

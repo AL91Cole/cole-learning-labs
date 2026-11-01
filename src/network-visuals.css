@@ -46,6 +46,12 @@
 .net-ports{display:flex;justify-content:center;gap:4px;height:44px;min-height:44px;width:100%}
 .network-visual .net-port{position:relative;display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;min-width:44px;min-height:44px;margin:0;padding:0;border:2px solid var(--net-color);border-radius:8px;background:#102b3c;color:#e3f8f5;font:800 .75rem ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .network-visual .net-port[aria-pressed=true]{outline:3px solid #fff5ae;outline-offset:2px;background:#405443}
+.network-visual .net-port{touch-action:none;user-select:none;cursor:crosshair}
+.network-visual .net-port.net-port-drag-source{outline:3px solid #fff5ae;outline-offset:2px}
+.network-visual .net-port.net-port-drop-target{outline:3px dashed #a6f6dc;outline-offset:3px}
+.network-visual .net-port.net-port-drop-ready{outline-style:solid;background:#245b48;border-color:#caffec}
+.net-connections .net-cable-preview{fill:none;stroke:#fff1a6;stroke-width:4;stroke-dasharray:9 5;vector-effect:non-scaling-stroke;pointer-events:none}
+@media(forced-colors:active){.network-visual .net-port.net-port-drop-target{outline-color:Highlight}.net-connections .net-cable-preview{stroke:Highlight}}
 .net-ports:empty{visibility:hidden}
 .net-connections .net-physical{pointer-events:stroke;cursor:crosshair}
 .net-physical path{stroke-width:5}

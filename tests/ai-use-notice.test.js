@@ -10,11 +10,11 @@ test('the question composer exposes a persistent privacy warning and accessible 
   assert.ok(help);
   for(const phrase of ['fictional details','names','contact details','student IDs','passwords','health information','private incidents'])assert.ok(help.includes(phrase),phrase);
   assert.match(help,/<a href="ai-use-notice.html"[^>]*>AI use and limits<\/a>/u);
-  assert.match(app,/Cloud replies are off until you choose them\. Keep personal and confidential information out of every question\./u);
+  assert.match(app,/Online replies start off\. Keep personal details out\./u);
   const disclosure=app.match(/<p id="requester-cloud-help"[^>]*>(.*?)<\/p>/u)?.[1];
   assert.ok(disclosure);
   assert.match(disclosure,/external AI service.*receives connection information/u);
-  assert.match(disclosure,/your typed words stay here.*href="#privacy">Reply privacy/u);
+  assert.match(disclosure,/made-up lab ID and preset topic; your typed question stays here.*href="#privacy">Reply privacy/u);
   assert.doesNotMatch(disclosure,/Cloudflare/u);
 });
 
