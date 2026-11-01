@@ -8,6 +8,7 @@ import { initialHardwareState, applyHardwareAction, verifyHardware } from '../sr
 import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js';
 import { workbenchGuidance } from '../src/workbench-guidance.js';
 import { pcActivity } from '../src/pc-activity.js';
+import { assemblyBuilderView, renderAssemblyBuilder } from '../src/assembly-builder.js';
 const source=readFileSync(new URL('../src/assembly-workbench.js',import.meta.url),'utf8');
 // A native-DOM boundary exercises the real controller and equipment rules.
 // Pixel geometry, native focus and touch hardware are verified in browser QA.
@@ -40,7 +41,7 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
   };
   Object.defineProperty(root,'innerHTML',{set(html){writes++;markup=html;staticButtons=parse(html);staticButtons.filter(button=>['power-off','unplug','plug-in','boot','open-document'].includes(button.dataset.assemblyAction)).forEach(button=>button.drawer=fields.get('[data-asm-power-reference]'));},get(){return markup;}});
   doc.elementFromPoint=()=>dropTarget;
-  const mount=vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm,'').replace('export function mountAssemblyWorkbench','function mountAssemblyWorkbench')};mountAssemblyWorkbench`,{assemblyActions,assemblyFailure,ASSEMBLY_FASTENERS,ASSEMBLY_TOOLS,assemblyToolAction,ASSEMBLY_CABLES,cableConnection,assemblyCableAction,workbenchGuidance,pcActivity});
+  const mount=vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm,'').replace('export function mountAssemblyWorkbench','function mountAssemblyWorkbench')};mountAssemblyWorkbench`,{assemblyActions,assemblyFailure,ASSEMBLY_FASTENERS,ASSEMBLY_TOOLS,assemblyToolAction,ASSEMBLY_CABLES,cableConnection,assemblyCableAction,workbenchGuidance,pcActivity,assemblyBuilderView,renderAssemblyBuilder});
   let state=stateOverride(applyHardwareAction(caseId,initialHardwareState(caseId),'enable-assembly').state),controller;
   const committed=[];controller=mount(root,{state,onAction(action){committed.push(action);const result=applyHardwareAction(caseId,state,action);state=result.state;controller.update(state);return result;}});
   function click(key,value){const target=all().find(item=>item.dataset[key]===value);assert.ok(target,`Missing ${key}=${value}`);target.focus();listeners.get('click')?.({target});return target;}
@@ -577,6 +578,20 @@ function parityStep(bench,mode,action){
   const actual=structuredClone(bench.state),wanted=structuredClone(expected.state);delete actual.actions;delete wanted.actions;assert.deepEqual(actual,wanted,mode+' '+action);
 }
 const buildSteps=['asm-fit-psu',...[0,1,2,3].map(i=>'asm-tighten-psu-'+i),'asm-fit-board',...[0,1,2,3].map(i=>'asm-tighten-board-'+i),'asm-fit-cpu','asm-close-retention','asm-apply-paste','asm-fit-cooler',...[0,3,1,2].map(i=>'asm-tighten-cooler-'+i),'asm-connect-cpu-fan','asm-fit-ram','asm-close-ram-clips','asm-fit-gpu','asm-close-pcie-latch','asm-tighten-gpu-0','asm-tighten-gpu-1','asm-fit-ssd','asm-tighten-ssd-0','asm-tighten-ssd-1','asm-connect-atx','asm-connect-eps','asm-connect-gpu-power','asm-connect-sata-data','asm-connect-sata-power','asm-connect-front-panel','video-gpu','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1'];
+
+test('builder tray selection performs no install and its live file-check button uses the existing guarded model action',()=>{
+  const bench=fixture({stateOverride:state=>buildSteps.reduce((current,action)=>applyHardwareAction('INC-106',current,action).state,state)});
+  const ready=structuredClone(bench.state),open=()=>bench.root.querySelector('[data-asm-build-open-file="open"]');
+  assert.match(bench.markup,/aria-label="PC building studio"/);assert.equal(open().disabled,true);
+  bench.click('asmPart','ram');assert.deepEqual(bench.state,ready);assert.deepEqual(bench.committed,[]);
+  bench.click('asmBuildOpenFile','open');assert.equal(bench.state.documentOpened,false,'A synthetic early click cannot bypass the model.');
+  bench.click('asmToggle','ac');bench.click('asmToggle','power');
+  assert.equal(bench.state.booted,true);assert.equal(bench.state.documentOpened,false);assert.equal(open().disabled,false);
+  bench.click('asmBuildOpenFile','open');assert.equal(bench.state.documentOpened,true);assert.equal(open().disabled,true);
+  assert.equal(verifyHardware('INC-106',bench.state).ok,true);
+  const count=bench.committed.length;bench.controller.setVisible(false);bench.click('asmBuildOpenFile','open');
+  assert.equal(bench.committed.length,count);bench.controller.dispose();
+});
 const teardownSteps=['power-off','unplug','asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-disconnect-cpu-fan','asm-disconnect-atx','asm-disconnect-eps','asm-disconnect-gpu-power','asm-disconnect-sata-data','asm-disconnect-sata-power','asm-disconnect-front-panel','disconnect-video','asm-disconnect-display','asm-loosen-ssd-0','asm-loosen-ssd-1','asm-remove-ssd','asm-loosen-gpu-0','asm-loosen-gpu-1','asm-open-pcie-latch','asm-remove-gpu','asm-open-ram-clips','asm-remove-ram',...[2,1,3,0].map(i=>'asm-loosen-cooler-'+i),'asm-remove-cooler','asm-clean-paste','asm-open-retention','asm-remove-cpu',...[0,1,2,3].map(i=>'asm-loosen-board-'+i),'asm-remove-board',...[0,1,2,3].map(i=>'asm-loosen-psu-'+i),'asm-remove-psu'];
 for(const mode of ['visual','controls'])test(mode+' interface independently builds, tears down, and rebuilds the complete guarded PC',()=>{
   const bench=fixture();bench.click('asmComplete','toggle');
