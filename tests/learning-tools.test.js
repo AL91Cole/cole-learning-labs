@@ -110,6 +110,17 @@ function explainAttempt(view){
   view.input('explain','Restoring the power path supports my idea because the requested task now works.');
 }
 
+test('preview navigation does not start or save an experiment even when a written first idea already exists',t=>{
+  const view=viewFixture(t,'#lab/INC-102/workbench?mode=guided'),scenario=SCENARIOS.find(item=>item.id==='INC-102'),record=firstIdeaRecord(scenario);
+  let saves=0,tests=0;
+  const dispose=mountLabLearning(view.root,{scenario,record,autoStartFirstIdea:false,onSave:()=>saves++,onTest:()=>tests++,getResult:()=>verifyHardware(scenario.id,record.state)});
+  const before=structuredClone(record);
+  for(const section of [1,2,3,2])view.emit('cole:lab-section-change',{id:scenario.id,section});
+  assert.deepEqual(record,before);assert.equal(saves,0);assert.equal(tests,0);
+  assert.equal(readExperiments(record).attempts.length,0);assert.equal(readExperiments(record).draft.before,undefined);
+  dispose();assert.equal(view.documentListeners.size,0);
+});
+
 test('entering page two seeds the saved first idea, selected clues and original baseline once',t=>{
   const view=viewFixture(t,'#lab/INC-102/request?mode=guided'),scenario=SCENARIOS.find(item=>item.id==='INC-102'),record=firstIdeaRecord(scenario),initial=observationSnapshot(scenario,record.state);
   let saves=0;

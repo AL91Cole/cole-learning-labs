@@ -136,12 +136,15 @@ test('the real private app uses the local-only compile option while public build
   const result=await buildOwnerPreview({...h.options,
     prepare:options=>prepareProtectedAssets({...options,sourceRoot:ROOT}),
     bundler:async options=>{seen.push(options);return bundleTier(options);}});
-  assert.ok(seen.length>0);assert.ok(seen.every(options=>options.member===true&&options.localOnly===true));
+  assert.ok(seen.length>0);assert.ok(seen.every(options=>options.member===true&&options.localOnly===true&&options.ownerPreview===true));
   const javascript=await readFile(path.join(result.directory,'learn/src/app.js'),'utf8');assert.match(javascript,/INC-103/u);
+  assert.ok(javascript.includes('Owner preview navigation.'),'The guarded full owner artifact contains the preview navigation UI.');
   const pkg=JSON.parse(await readFile(path.join(ROOT,'package.json'),'utf8'));
   const approvedPrivateContext=process.env.CF_PAGES==='1'&&process.env.CF_PAGES_BRANCH===OWNER_PREVIEW_BRANCH;
   assert.ok(pkg.scripts.build==='node scripts/build.mjs'||approvedPrivateContext&&pkg.scripts.build==='node scripts/build-owner-preview.mjs');
   assert.match(await readFile(path.join(ROOT,'src/requester-config.js'),'utf8'),/REQUESTER_CLOUD_ENABLED = true/u);
+  assert.equal((await import('../src/owner-preview.js')).OWNER_PREVIEW,false,'The reviewed source default stays closed.');
+  assert.equal(result.files.includes('learn/src/owner-preview.js'),false,'Only the compiled application may contain this build context.');
   assert.ok(result.files.every(name=>!name.endsWith('.map')));
 });
 
@@ -159,7 +162,7 @@ test('owner static compilation works using only root build dependencies without 
     await import(new URL('scripts/build-owner-preview.mjs',base));
     const {prepareProtectedAssets}=await import(new URL('memberships/build.mjs',base));
     const {bundleTier}=await import(new URL('scripts/tier-bundles.mjs',base));
-    const result=await prepareProtectedAssets({sourceRoot:root,bundler:options=>bundleTier({...options,localOnly:true})});
+    const result=await prepareProtectedAssets({sourceRoot:root,bundler:options=>bundleTier({...options,localOnly:true,ownerPreview:true})});
     if(!result.assets.has('/learn/src/app.js'))throw new Error('Missing full owner app.');
     console.log('Root build packages only.');
   `;

@@ -79,6 +79,7 @@ test('member artifact retains authored premium resources in a separate self-cont
   assert.ok(decode(free.javascript).includes('PC repair studio'),'The existing free hardware investigations retain their generic visual repair controls.');
   assert.deepEqual(member.metadata,free.metadata);
   for(const result of [free,member]){
+    assert.equal(decode(result.javascript).includes('Owner preview navigation.'),false,'Ordinary public/member applications omit owner preview navigation.');
     assert.ok(result.inputs.includes('src/elementary-labs.js'),'Both delivery tiers include the separate free K–6 activity module.');
     assert.ok(result.inputs.includes('src/block-workshop.js'),'Both delivery tiers include the optional elementary block workshop.');
     for(const id of ELEMENTARY_LAB_IDS)assert.ok(decode(result.javascript).includes(JSON.stringify(id)),`${id}: free authored activity must remain in both delivery artifacts.`);
@@ -127,6 +128,31 @@ test('a typed local-only build disables cloud replies without changing default t
   await assert.rejects(()=>bundleTier({sourceRoot:root,member:true,localOnly:true}),/reviewed source boolean/u);
 });
 
+test('only the full local owner build receives navigation convenience; public and ordinary members stay closed',async t=>{
+  const root=await fixture(t,"export {OWNER_PREVIEW} from './owner-preview.js';"),filename=path.join(root,'src/owner-preview.js');
+  const source=await readFile(path.join(ROOT,'src/owner-preview.js'),'utf8');
+  assert.equal((await import('../src/owner-preview.js')).OWNER_PREVIEW,false);
+  // Even a stale source true cannot enable the normal public/member artifact.
+  await writeFile(filename,source.replace('OWNER_PREVIEW=false','OWNER_PREVIEW=true'));
+  for(const member of [false,true]){
+    const normal=await bundleTier({sourceRoot:root,member}),explicit=await bundleTier({sourceRoot:root,member,ownerPreview:false});
+    assert.deepEqual(explicit.javascript,normal.javascript);
+    const compiled=await import('data:text/javascript;base64,'+Buffer.from(normal.javascript).toString('base64')+'#ownerPreview=true');
+    assert.equal(compiled.OWNER_PREVIEW,false,'Browser URL claims cannot change the compiled navigation context.');
+  }
+  const owner=await bundleTier({sourceRoot:root,member:true,localOnly:true,ownerPreview:true});
+  assert.equal((await import('data:text/javascript;base64,'+Buffer.from(owner.javascript).toString('base64'))).OWNER_PREVIEW,true);
+  assert.equal(await readFile(filename,'utf8'),source.replace('OWNER_PREVIEW=false','OWNER_PREVIEW=true'));
+  for(const options of [{},{member:true},{localOnly:true},{member:true,localOnly:true,entry:'secure-reports.js'}]){
+    await assert.rejects(()=>bundleTier({sourceRoot:'missing-source',...options,ownerPreview:true}),/full local-only main application/u);
+  }
+  for(const value of [null,1,'true',{}])await assert.rejects(()=>bundleTier({sourceRoot:'missing-source',ownerPreview:value}),/boolean owner-preview/u);
+  await writeFile(filename,'export const OWNER_PREVIEW=Boolean(true);');
+  for(const options of [{},{member:true,localOnly:true,ownerPreview:true}]){
+    await assert.rejects(()=>bundleTier({sourceRoot:root,...options}),/reviewed source boolean/u);
+  }
+});
+
 test('local report reader uses the same self-contained canonical compilation boundary',async t=>{
   const root=await fixture(t);await writeFile(path.join(root,'src/secure-reports.js'),'export const localOnly=true;');
   const result=await bundleTier({sourceRoot:root,entry:'secure-reports.js'});
@@ -145,7 +171,7 @@ test('unreviewed catalog fields cannot become public teaser metadata',async t=>{
 
 test('canonical source graph rejects bare, external, encoded and outside imports',async t=>{
   const root=await fixture(t);
-  for(const specifier of ['node:fs','https://example.test/module.js','../outside.js','./coding-lab.js?secret=private','./%63oding-lab.js']){
+  for(const specifier of ['node:fs','https://example.test/module.js','../outside.js','./coding-lab.js?secret=private','./owner-preview.js?ownerPreview=true','./%63oding-lab.js']){
     await writeFile(path.join(root,'src/app.js'),'import '+JSON.stringify(specifier)+';');
     await assert.rejects(()=>bundleTier({sourceRoot:root}),/forbidden|reviewed|Unreviewed/u,specifier);
   }

@@ -95,7 +95,7 @@ export async function buildOwnerPreview({sourceRoot=PROJECT_ROOT,environment=pro
   const requested=path.resolve(sourceRoot),info=await lstat(requested);
   if(info.isSymbolicLink()||!info.isDirectory())throw new Error('Owner source root must be a canonical directory.');
   const root=await realpath(requested),output=path.join(root,'dist');
-  const {assets}=await prepare({sourceRoot:root,bundler:options=>bundler({...options,localOnly:true})});
+  const {assets}=await prepare({sourceRoot:root,bundler:options=>bundler({...options,localOnly:true,ownerPreview:true})});
   if(!(assets instanceof Map)||!assets.has('/learn/index.html')||!assets.has('/learn/src/app.js'))throw new Error('Owner assets are incomplete.');
   const files=new Map([['index.html',ROOT_HTML],['404.html',NOT_FOUND],['_headers',OWNER_PREVIEW_HEADERS],
     ['_routes.json',JSON.stringify(OWNER_PREVIEW_ROUTES,null,2)+'\n'],['robots.txt','User-agent: *\nDisallow: /\n']]);

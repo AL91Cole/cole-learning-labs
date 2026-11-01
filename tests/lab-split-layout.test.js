@@ -88,7 +88,7 @@ function controller(s){
     ['[data-clue]',s.clues.map(clue=>new Node({clue:clue.id}))],['[data-question]',s.questions.map((_,index)=>new Node({question:String(index)}))]
   ]);
   function renderBench(){calls.renders++;node('#workspace').children=new Map();if(s.track==='coding'){const editor=new Node();editor.value=record.state.code;nodes.set('#coding-editor',editor);}}
-  const context=vm.createContext({s,record,tracks,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200})}),esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
+  const context=vm.createContext({OWNER_PREVIEW:false,s,record,tracks,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200})}),esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
     applyHardwareAction,verifyHardware,applyWorkspaceAction:(id,state,action,value)=>applyWorkspaceAction(id,state,action,value===undefined?undefined:structuredClone(value)),verifyWorkspace,
     retainExperimentEvents:(scenario,events)=>retainExperimentEvents(scenario,structuredClone(events)),experimentEventText,experimentReport,readExperiments,workbenchProgress,
     $:node,$$:selector=>{assert.ok(groups.has(selector),'Unknown control group '+selector);return groups.get(selector);},

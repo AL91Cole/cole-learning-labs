@@ -29,7 +29,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/report-crypto.js', 'src/report-downloads.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
   'src/secure-reports.css', 'src/accessibility.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css',
-  'src/access-policy.js', 'src/lab-catalog.js', ...PUBLIC_METADATA_FILES
+  'src/access-policy.js', 'src/lab-catalog.js', 'src/owner-preview.js', ...PUBLIC_METADATA_FILES
 ]);
 // Source review does not grant public delivery. The complete member application
 // is packaged separately and is never copied into the public website output.

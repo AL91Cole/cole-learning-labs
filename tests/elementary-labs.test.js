@@ -113,12 +113,12 @@ test('workshop jumps, prediction checks and reset retain independent drafts; dis
   const instances=[],workshopButton={dataset:{elementaryAction:'reset'},disabled:false,closest(){return this;}};
   const focusCalls=[],scrollCalls=[],heading={focus:options=>focusCalls.push(options),scrollIntoView:options=>scrollCalls.push(options)};
   const workshopHost={contains:button=>button===workshopButton,querySelector(selector){assert.equal(selector,'h3');return heading;}};
-  const context=vm.createContext({renderBlockWorkshop:()=>'<h2>Build with blocks</h2>',
+  const context=vm.createContext({OWNER_PREVIEW:false,renderBlockWorkshop:()=>'<h2>Build with blocks</h2>',
     mountBlockWorkshop(host,{band}){
       const instance={host,band,program:[],disposals:0};instances.push(instance);
       return {dispose(){instance.disposals++;instance.program.length=0;}};
     }});
-  vm.runInContext(source.replace(/^import[^\n]+\r?\n/u,'').replace(/^export /gmu,''),context);
+  vm.runInContext(source.replace(/^import[^\n]+\r?\n/gmu,'').replace(/^export /gmu,''),context);
   for(const [id,band]of [['EX-CODE-1','K–1'],['EX-CODE-2','2–3'],['EX-CODE-3','4–6']]){
     const view=fixture(id,{mount:context.mountElementaryLab,workshopHost}),instance=instances.at(-1),count=instances.length;
     assert.equal(instance.host,workshopHost);assert.equal(instance.band,band);instance.program.push('PRETEND_BLOCK');
@@ -215,7 +215,29 @@ test('rendering, checking, resetting and disposing never consult network, browse
   }finally{for(const [name,descriptor] of descriptors){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}}
   const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/u);
-  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./block-workshop.js?release=20261025-learning-plans'],'Only the reviewed local block workshop is imported.');
+  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./block-workshop.js?release=20261025-learning-plans','./owner-preview.js?release=20261025-learning-plans'],'Only the reviewed local workshop and build-time navigation flag are imported.');
   const workshop=await readFile(new URL('../src/block-workshop.js',import.meta.url),'utf8');
   assert.doesNotMatch(workshop,/^import\b|\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/mu,'The workshop adds no imported runtime, persistence or network capability.');
+});
+
+test('owner challenge navigation keeps skipped challenges unfinished and counts only actual successful checks',async()=>{
+  const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
+  const context=vm.createContext({OWNER_PREVIEW:true,renderBlockWorkshop:()=>'',mountBlockWorkshop(){assert.fail('No workshop host is mounted in this fixture.');}});
+  vm.runInContext(source.replace(/^import[^\n]+\r?\n/gmu,'').replace(/^export /gmu,''),context);
+  for(const lab of ELEMENTARY_LABS){
+    const view=fixture(lab.id,{mount:context.mountElementaryLab});
+    assert.equal(view.progress,0);assert.equal(view.complete,false);assert.equal(view.output,null);
+    view.click('next');assert.equal(view.progress,0);assert.match(view.body.markup,new RegExp(lab.tasks[1].prompt.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&')));
+    view.click('preview-3');assert.equal(view.progress,0);assert.equal(view.complete,false);assert.equal(view.output,null);
+    view.click('choose',solutions[lab.id][2]);view.click('check');assert.equal(view.progress,1);assert.equal(view.complete,false,'Checking the last challenge cannot credit skipped earlier challenges.');
+    view.click('preview-1');assert.equal(view.progress,1);assert.equal(view.output,null);
+    view.click('choose',solutions[lab.id][0]);view.click('check');assert.equal(view.progress,2);assert.equal(view.complete,false);
+    view.click('preview-3');assert.equal(view.button('check').disabled,true,'A reviewed checked challenge retains its actual outcome.');assert.equal(view.progress,2);
+    view.click('preview-2');view.click('choose',solutions[lab.id][1]);view.click('check');assert.equal(view.progress,3);assert.equal(view.complete,true);
+    view.click('preview-1');assert.ok(view.body.prompt,'The owner can review the original challenge after all three were actually checked.');assert.equal(view.progress,3);assert.equal(view.complete,true);
+    view.click('reset');assert.equal(view.progress,0);assert.equal(view.complete,false);assert.equal(view.output,null);view.controller.dispose();
+  }
+  const standard=fixture('EX-SEC-3'),before=standard.body.markup;
+  const forged={dataset:{elementaryAction:'preview-3'},closest(){return this;}};standard.body.buttons.push(forged);standard.listeners.get('click')({target:forged});
+  assert.equal(standard.body.markup,before,'A forged preview control cannot enable preview in the standard build.');standard.controller.dispose();
 });

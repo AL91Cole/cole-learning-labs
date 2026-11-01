@@ -1,4 +1,5 @@
 import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261025-learning-plans';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261025-learning-plans';
 
 // Authored, fictional activities. Each mount owns its choices; nothing is saved
 // or sent. These local practice checks are not grades or identity verification.
@@ -146,7 +147,7 @@ const blankState=()=>({index:0,choice:'',checked:false,complete:false,tested:fal
 function bodyFor(lab,state){
   const round=lab.tasks[state.index];
   const options=round.choices.map(option=>`<button type="button" class="elementary-choice" data-elementary-action="choose" data-elementary-choice="${esc(option.id)}" aria-pressed="${state.choice===option.id}"${state.checked?' disabled':''}>${option.icon?partIcon(option.icon):''}<span>${esc(option.label)}</span></button>`).join('');
-  return `<div class="elementary-progress"><span>${state.index+(state.checked?1:0)} of ${lab.tasks.length} ${lab.kind==='order'?'steps':'challenges'} finished</span><progress max="${lab.tasks.length}" value="${state.index+(state.checked?1:0)}" aria-label="Practice progress"></progress></div><figure class="elementary-picture">${illustration(lab,round,state)}<figcaption>Fictional picture model · ${esc(topics[lab.track])}</figcaption></figure>${state.complete?'<section class="elementary-finished"><h2 data-elementary-finished tabindex="-1">Practice finished.</h2><p>You tried each challenge and checked the result. This is practice, not a grade.</p><p>Try again or choose another activity below.</p></section>':`<h2 data-elementary-prompt tabindex="-1">${esc(round.prompt)}</h2>${round.code?`<pre class="elementary-code"><code>${esc(round.code)}</code></pre>`:''}<div class="elementary-choices" role="group" aria-label="Choose an answer">${options}</div><div class="elementary-actions"><button type="button" class="button" data-elementary-action="check"${state.checked?' disabled':''}>${lab.kind==='predict'?'Run the model':'Check choice'}</button>${state.checked?'<button type="button" class="button button-outline" data-elementary-action="next">Next challenge →</button>':''}</div>`}${state.tested?`<p class="elementary-observation">Model showed: <output data-elementary-output>${esc(state.result)}</output></p>`:''}`;
+  return `${OWNER_PREVIEW?'<nav aria-label="Preview challenges" class="elementary-actions">'+lab.tasks.map((_,index)=>'<button type="button" class="button button-outline" data-elementary-action="preview-'+(index+1)+'"'+(state.index===index?' aria-current="step"':'')+'>Challenge '+(index+1)+'</button>').join('')+'</nav>':''}<div class="elementary-progress"><span>${state.finished??state.index+(state.checked?1:0)} of ${lab.tasks.length} ${lab.kind==='order'?'steps':'challenges'} finished</span><progress max="${lab.tasks.length}" value="${state.finished??state.index+(state.checked?1:0)}" aria-label="Practice progress"></progress></div><figure class="elementary-picture">${illustration(lab,round,state)}<figcaption>Fictional picture model · ${esc(topics[lab.track])}</figcaption></figure>${state.complete&&!OWNER_PREVIEW?'<section class="elementary-finished"><h2 data-elementary-finished tabindex="-1">Practice finished.</h2><p>You tried each challenge and checked the result. This is practice, not a grade.</p><p>Try again or choose another activity below.</p></section>':`<h2 data-elementary-prompt tabindex="-1">${esc(round.prompt)}</h2>${round.code?`<pre class="elementary-code"><code>${esc(round.code)}</code></pre>`:''}<div class="elementary-choices" role="group" aria-label="Choose an answer">${options}</div><div class="elementary-actions"><button type="button" class="button" data-elementary-action="check"${state.checked?' disabled':''}>${lab.kind==='predict'?'Run the model':'Check choice'}</button>${(OWNER_PREVIEW||state.checked)&&state.index<lab.tasks.length-1?'<button type="button" class="button button-outline" data-elementary-action="next">Next challenge →</button>':''}</div>`}${state.tested?`<p class="elementary-observation">Model showed: <output data-elementary-output>${esc(state.result)}</output></p>`:''}`;
 }
 
 export function renderElementaryCatalogue({band}={}){
@@ -177,10 +178,11 @@ export function mountElementaryLab(root,{id}={}){
   const workshop=workshopRoot?mountBlockWorkshop(workshopRoot,{band:lab.band}):null;
   const workshopHeading=workshopRoot?.querySelector?.('h3');
   if(workshopHeading)workshopHeading.tabIndex=-1;
-  let state=blankState(),disposed=false;
+  let rounds=lab.tasks.map((_,index)=>({...blankState(),index})),state=rounds[0],disposed=false;
   function paint(message,{tone='info',focus}={}){
     if(disposed)return;
-    body.innerHTML=bodyFor(lab,state);shell.dataset.elementaryComplete=String(state.complete);
+    const complete=rounds.every(round=>round.checked),finished=rounds.filter(round=>round.checked).length;
+    body.innerHTML=bodyFor(lab,{...state,complete,finished});shell.dataset.elementaryComplete=String(complete);
     feedback.textContent=message;feedback.dataset.tone=tone;
     if(focus==='choice')body.querySelectorAll('[data-elementary-choice]')[0]?.focus();
     else if(focus)body.querySelector(focus)?.focus();
@@ -191,8 +193,9 @@ export function mountElementaryLab(root,{id}={}){
     if(!button||!shell.contains(button)||button.disabled||workshopRoot?.contains(button))return;
     const action=button.dataset.elementaryAction,round=lab.tasks[state.index];
     if(action==='workshop'){workshopHeading?.focus({preventScroll:true});workshopHeading?.scrollIntoView({block:'start'});return;}
-    if(action==='reset'){state=blankState();paint('A fresh practice is ready. Choose an answer, then check it.',{focus:'[data-elementary-prompt]'});return;}
-    if(state.complete)return;
+    if(action==='reset'){rounds=lab.tasks.map((_,index)=>({...blankState(),index}));state=rounds[0];paint('A fresh practice is ready. Choose an answer, then check it.',{focus:'[data-elementary-prompt]'});return;}
+    if(OWNER_PREVIEW&&/^preview-[123]$/u.test(action)){const next=Number(action.slice(-1))-1;if(next<lab.tasks.length){state=rounds[next];paint('Previewing challenge '+(next+1)+'. Skipped challenges stay unfinished.',{focus:'[data-elementary-prompt]'});}return;}
+    if(rounds.every(round=>round.checked))return;
     if(action==='choose'){
       if(state.checked||!round.choices.some(option=>option.id===button.dataset.elementaryChoice))return;
       state.choice=button.dataset.elementaryChoice;state.tested=false;state.result='';
@@ -200,8 +203,8 @@ export function mountElementaryLab(root,{id}={}){
       [...body.querySelectorAll('[data-elementary-choice]')].find(option=>option.dataset.elementaryChoice===selected)?.focus();return;
     }
     if(action==='next'){
-      if(!state.checked||state.index>=lab.tasks.length-1)return;
-      state={...blankState(),index:state.index+1};paint('Try the next challenge.',{focus:'[data-elementary-prompt]'});return;
+      if((!OWNER_PREVIEW&&!state.checked)||state.index>=lab.tasks.length-1)return;
+      state=rounds[state.index+1];paint('Try the next challenge.',{focus:'[data-elementary-prompt]'});return;
     }
     if(action!=='check'||state.checked)return;
     const selected=round.choices.find(option=>option.id===state.choice);
@@ -211,10 +214,10 @@ export function mountElementaryLab(root,{id}={}){
       state.result=resultFor(round.model);state.tested=true;correct=selected.label===state.result;
     }else correct=selected.id===round.answer;
     if(!correct){paint(lab.kind==='predict'?`The model showed ${state.result}. Compare it with your prediction, then choose and test again.`:'That step does not fit yet. Look at the picture and the question, then try a different choice.',{tone:'retry',focus:'[data-elementary-action="check"]'});return;}
-    state.checked=true;state.complete=state.index===lab.tasks.length-1;
-    paint(round.explanation+(state.complete?' Practice finished; this is not a grade.':''),{tone:'success',focus:state.complete?'[data-elementary-finished]':'[data-elementary-action="next"]'});
+    state.checked=true;const complete=rounds.every(round=>round.checked);
+    paint(round.explanation+(complete?' Practice finished; this is not a grade.':''),{tone:'success',focus:complete?'[data-elementary-finished]':'[data-elementary-action="next"]'});
   }
   shell.addEventListener('click',click);
   paint('Choose an answer, then check it.');
-  return {dispose(){if(disposed)return;disposed=true;shell.removeEventListener('click',click);state=null;workshop?.dispose();}};
+  return {dispose(){if(disposed)return;disposed=true;shell.removeEventListener('click',click);state=null;rounds.length=0;workshop?.dispose();}};
 }

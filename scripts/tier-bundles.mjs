@@ -143,6 +143,11 @@ function localRequesterContext(source){
   if(node.type!=='Literal'||typeof node.value!=='boolean')throw new Error('Local requester context must be a reviewed source boolean.');
   return replaceParts(source,[{start:node.start,end:node.end,value:'false'}]);
 }
+function ownerPreviewContext(source,enabled){
+  const node=declaration(tree(source),'OWNER_PREVIEW');
+  if(node.type!=='Literal'||typeof node.value!=='boolean')throw new Error('Owner preview context must be a reviewed source boolean.');
+  return replaceParts(source,[{start:node.start,end:node.end,value:enabled?'true':'false'}]);
+}
 function walk(node,visit){
   if(!node||typeof node!=='object')return;
   if(typeof node.type==='string')visit(node);
@@ -197,11 +202,13 @@ function validateMetadata(value){
 }
 const inside=(root,target)=>{const relative=path.relative(root,target);return relative!==''&&!relative.startsWith('..'+path.sep)&&relative!=='..'&&!path.isAbsolute(relative);};
 
-/** Compile two isolated delivery artifacts. The helper writes no files and does
+/** Compile an isolated delivery artifact. The helper writes no files and does
  * not execute source modules, create services, authenticate anyone or deploy. */
-export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='app.js',localOnly=false}={}){
+export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='app.js',localOnly=false,ownerPreview=false}={}){
   if(typeof sourceRoot!=='string'||typeof member!=='boolean')throw new Error('A canonical source directory and boolean tier are required.');
   if(typeof localOnly!=='boolean')throw new Error('A boolean local-only build option is required.');
+  if(typeof ownerPreview!=='boolean')throw new Error('A boolean owner-preview build option is required.');
+  if(ownerPreview&&(!member||!localOnly||entry!=='app.js'))throw new Error('Owner preview navigation requires the full local-only main application.');
   if(!['app.js','secure-reports.js'].includes(entry))throw new Error('Only reviewed application or local report-reader entries may be bundled.');
   const root=path.resolve(sourceRoot),info=await lstat(root);
   if(info.isSymbolicLink()||!info.isDirectory()||await realpath(root)!==root)throw new Error('Tier source root must be a canonical real directory.');
@@ -264,6 +271,9 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
         // Trusted build configuration only; browser state and environment flags
         // cannot opt a compiled local preview back into cloud requests.
         else if(localOnly&&filename==='requester-config.js')contents=localRequesterContext(source);
+        // Always force the reviewed context, including false in ordinary full
+        // member bundles. It is never inferred from a URL, user or environment.
+        else if(filename==='owner-preview.js')contents=ownerPreviewContext(source,ownerPreview);
         else if(filename==='lab-catalog.js')contents='export const CATALOG=Object.freeze('+JSON.stringify(metadata)+');';
         else if(!member&&filename==='scenarios.js')contents=publicScenarios;
         else if(!member&&Object.hasOwn(publicStubs,filename))contents=Object.entries(publicStubs[filename]).map(([name,value])=>'export const '+name+'='+value+';').join('\n');

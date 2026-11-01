@@ -11,7 +11,7 @@ function fixture(){
   const node=()=>({innerHTML:'',classList:{add(){},remove(){}},setAttribute(){},replaceChildren(){this.innerHTML='';}});
   const $=selector=>{if(!nodes.has(selector))nodes.set(selector,node());return nodes.get(selector);};
   const forbidden=()=>assert.fail('Elementary routes must not mount reporting, cloud replies, collection, classroom connections or device-saving controls.');
-  const context=vm.createContext({MEMBER_CONTENT:false,routeAccess,learningRoute,ELEMENTARY_LABS:ELEMENTARY_LAB_IDS.map(id=>({id,title:'Activity '+id})),
+  const context=vm.createContext({OWNER_PREVIEW:false,MEMBER_CONTENT:false,routeAccess,learningRoute,ELEMENTARY_LABS:ELEMENTARY_LAB_IDS.map(id=>({id,title:'Activity '+id})),
     location:{hash:'#explore'},document:{body:node(),title:''},window:{scrollTo(){},addEventListener:(name,listener)=>events.set(name,listener)},$,$$:()=>[],
     labNavigation:null,currentLab:null,routeCleanup:null,reportCleanup:null,classroomConnection:null,
     store:{labs:{}},foundationRecords:{},practiceStates:{},workStorage:{persistent:true},labView:null,

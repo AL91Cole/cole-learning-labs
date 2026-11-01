@@ -56,7 +56,7 @@ class Element {
   close() {}
 }
 
-function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQuestion, prepareRecord = () => {}, routeOptions = {}, requesterOptions = {}) {
+function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQuestion, prepareRecord = () => {}, routeOptions = {}, requesterOptions = {}, ownerPreview = false) {
   const scenario = SCENARIOS.find(item => item.id === id);
   const record = {questions:[],evidence:[],symptoms:'',plan:'',ideaSaved:false,notes:'',reflection:'',events:[],verified:false,closed:false,state:scenario.track === 'hardware' ? initialHardwareState(id) : initialWorkspaceState(id)};
   prepareRecord(record);
@@ -82,7 +82,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     // The real renderer replaces inputs; this draft detects unexpected replacement.
     root.children = new Map(); root.querySelector('[data-unsaved-workbench-draft]').value = '';
   }
-  const context = vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
+  const context = vm.createContext({OWNER_PREVIEW:ownerPreview,MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,
     resetLabImprovements(){},mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,cloudEnabled:true,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
     // Production modules share one realm. Transfer VM-created action data into
@@ -166,6 +166,36 @@ function finishedHarness(id='INC-101',initialSection=1,prepare=()=>{}){
     prepare(record);saveSuccessfulTest(SCENARIOS.find(item=>item.id===id),record);
   });
 }
+
+test('protected owner navigation can preview every investigation step without changing records or awarding completion',()=>{
+  for(const scenario of SCENARIOS){
+    const h=harness(scenario.id,3,answerQuestion,()=>{},{},{},true);
+    assert.deepEqual(h.visible(),[false,false,true],scenario.id+' opens a direct explanation link without intake');
+    const before=structuredClone(h.record),saved=h.calls.saved,rendered=h.calls.rendered;
+    assert.deepEqual(h.groups.get('[data-lab-section]').map(tab=>tab.disabled),[false,false,false]);
+    for(const section of [1,2,3,2,1]){h.section(section);assert.equal(h.elements.get('.lab-shell').dataset.section,String(section));}
+    h.elements.get('#page-one-next').fire('click');assert.deepEqual(h.visible(),[false,true,false]);
+    h.elements.get('#workbench-next').fire('click');assert.deepEqual(h.visible(),[false,false,true]);
+    h.key(2,'Home');assert.deepEqual(h.visible(),[true,false,false]);
+    assert.deepEqual(h.record,before,scenario.id+' previewing cannot fill or alter investigation work');
+    assert.equal(h.calls.saved,saved);assert.equal(h.calls.rendered,rendered,'Navigation retains the mounted tool.');
+    assert.ok(h.groups.get('[data-lab-section]').every(tab=>!tab.classList.contains('is-complete')));
+    assert.equal(h.record.closed,false);assert.equal(h.record.verified,false);
+    h.controller.dispose();
+  }
+});
+
+test('an owner task check can run without written intake but records only its actual failed result',()=>{
+  const h=harness('CODE-501',2,answerQuestion,()=>{},{},{},true);
+  assert.equal(h.controller.runHypothesisTest(),true);
+  assert.equal(h.record.verified,false);assert.equal(h.record.closed,false);
+  assert.deepEqual(h.record.evidence,[]);assert.deepEqual(h.record.questions,[]);
+  assert.equal(h.record.plan,'');assert.equal(h.record.symptoms,'');assert.equal(h.record.ideaSaved,false);
+  assert.ok(h.record.events.some(event=>event.message.startsWith('Owner preview task check / Observed: Not fixed yet.')));
+  assert.equal(readExperiments(h.record).attempts.length,0);
+  h.elements.get('#close-ticket').fire('click');assert.equal(h.record.closed,false,'Preview does not waive finishing requirements.');
+  h.controller.dispose();
+});
 
 test('a fresh first page blocks every route forward until the question, two clues and saved answers are complete',()=>{
   const h=harness('INC-102'),next=h.elements.get('#page-one-next');
@@ -961,7 +991,7 @@ function routeHarness(id='CODE-501',initialPath='',suppliedController) {
   const location={hash:'#lab/'+id+initialPath};
   const initialStore={version:2,labs:{}};
   // Full-case navigation and draft preservation belong to the member build.
-  const context=vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
+  const context=vm.createContext({OWNER_PREVIEW:false,MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     SCENARIOS,learningRoute,labPageHash,retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),
     mountLabLearning(_root,options){learning=options;const {mode}=options;learningCalls.mounts++;const dispose=()=>{learningCalls.disposals++;};dispose.setMode=value=>learningCalls.modes.push(value);return dispose;},
     mountInvestigationPreview:()=>null,mountTeachingPage:()=>()=>{},renderCapstone:()=>'capstone',mountCapstone:()=>()=>{},capstoneReport:()=>'capstone report',checkCapstoneState:()=>({ok:false}),normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,

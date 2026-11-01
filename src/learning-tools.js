@@ -22,7 +22,7 @@ export function labPageHash(id,section,{mode='guided',sequence=null}={}) {
   if(sequence==='opening-day')params.set('sequence',sequence);
   return '#lab/'+encodeURIComponent(id)+'/'+step+'?'+params;
 }
-export function mountLabLearning(root,{scenario,record,mode='guided',sequence,onSave,onTest,getResult}) {
+export function mountLabLearning(root,{scenario,record,mode='guided',sequence,onSave,onTest,getResult,autoStartFirstIdea=true}) {
   const shell=root.querySelector('.lab-shell'),select=root.querySelector('#learning-mode'),learning=root.querySelector('#lab-learning');
   function applyMode(value) {
     mode=learningModes.some(item=>item.id===value)?value:'guided';
@@ -41,6 +41,7 @@ export function mountLabLearning(root,{scenario,record,mode='guided',sequence,on
   const host=root.querySelector('#experiment-tools');host.innerHTML=renderExperiments(scenario,record);
   const experiments=mountExperiments(host,{scenario,record,getState:()=>record.state,getResult,onSave,onTest});
   function beginFirstTest(event){
+    if(!autoStartFirstIdea)return;
     if(event&&!(event.detail?.id===scenario.id&&event.detail.section===2))return;
     const {attempts,draft}=readExperiments(record);
     if(!record.ideaSaved||attempts.length||Object.values(draft).some(value=>typeof value==='string'?value.trim():value!==undefined&&value!==null))return;

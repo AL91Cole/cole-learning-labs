@@ -1,4 +1,5 @@
 import {MEMBER_CONTENT,routeAccess} from './access-policy.js?release=20261025-learning-plans';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261025-learning-plans';
 import {CATALOG} from './lab-catalog.js?release=20261025-learning-plans';
 import {renderSignIn} from './sign-in.js?release=20261025-learning-plans';
 import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261025-learning-plans';
@@ -195,11 +196,11 @@ function bindLab(s,route=null,{onModeChange=null}={}){
     const requested=Number(section);
     let index=Number.isInteger(requested)&&requested>=1&&requested<=3?requested-1:0;
     const progress=firstPageProgress(s,r);
-    if(index>0&&!progress.ready){
+    if(!OWNER_PREVIEW&&index>0&&!progress.ready){
       if(moveFocus){$('#page-one-progress').textContent=progress.message;showNotice(progress.message);$('#page-one-progress').focus({preventScroll:true});}
       index=0;
     }
-    if(index===2&&!workbenchProgress(s,r,currentTaskResult()).ready){
+    if(!OWNER_PREVIEW&&index===2&&!workbenchProgress(s,r,currentTaskResult()).ready){
       index=progress.ready&&labView?.section!==1?1:0;
       if(moveFocus)showNotice(workbenchProgress(s,r,currentTaskResult()).message);
     }
@@ -243,14 +244,14 @@ function bindLab(s,route=null,{onModeChange=null}={}){
     $$('[data-clue]').forEach(button=>{const clue=s.clues.find(c=>c.id===button.dataset.clue);const available=!clue.requiresFact||inquiry.found.includes(clue.requiresFact);button.setAttribute('aria-disabled',String(!available));button.querySelector('span').textContent=available?(r.evidence.includes(clue.id)?'Added':'+'):'Ask first';});
     $('#clues-progress').textContent=progress.clues+' of 2 clues read'+(progress.clues>=2?' · Done':'');
     $('#page-one-progress').textContent=progress.message;
-    $('#page-one-next').disabled=!progress.ready;
+    $('#page-one-next').disabled=!OWNER_PREVIEW&&!progress.ready;
     $('#idea-status').textContent=progress.saved?'First idea saved in this lab.':'Save both answers when you are ready.';
     $('#experiment-symptoms').textContent=r.symptoms||'Describe the symptoms on page 1.';
     $('#experiment-hypothesis').textContent=r.plan||'Save your first idea on page 1.';
     $('#first-idea-evidence').innerHTML=evidenceList(s,r);
     $('#first-idea-questions').innerHTML=interviewList(r,s);
-    tabs.forEach((button,index)=>{const locked=index>0&&(!progress.ready||(index===2&&!testing.ready));button.disabled=locked;button.setAttribute('aria-disabled',String(locked));});
-    $('#workbench-next').disabled=!progress.ready||!testing.ready;
+    tabs.forEach((button,index)=>{const locked=!OWNER_PREVIEW&&index>0&&(!progress.ready||(index===2&&!testing.ready));button.disabled=locked;button.setAttribute('aria-disabled',String(locked));});
+    $('#workbench-next').disabled=!OWNER_PREVIEW&&(!progress.ready||!testing.ready);
     $('#workbench-test-status').textContent=testing.message;
     const checks={inquiry:progress.asked&&inquiry.complete,clues:progress.clues>=2,plan:progress.saved,notes:r.notes.trim().length>=15,reflection:r.reflection.trim().length>=15,verified:r.verified===true};
     const done=[progress.ready,testing.ready,r.closed];
@@ -312,7 +313,7 @@ function bindLab(s,route=null,{onModeChange=null}={}){
     error.textContent=message;error.hidden=!message;
     if(message)input.setAttribute('aria-invalid','true');else input.removeAttribute('aria-invalid');
   }
-  ['symptoms','plan','notes','reflection'].forEach(field=>$('#'+field).addEventListener('input',event=>{r[field]=event.target.value;r.closed=false;if(r[field].trim().length>=(field==='symptoms'||field==='plan'?12:15))writingError(field);if(field==='symptoms'||field==='plan'){r.ideaSaved=false;r.verified=false;$('#experiment-result').textContent='Your first idea changed. Save it, then test again.';$('#experiment-result').dataset.kind='info';$('#workbench-test-status').textContent='Test your saved idea before you explain the result.';}save();refreshStatus();if((field==='symptoms'||field==='plan')&&labView?.section>1)jumpToSection(1,false);}));
+  ['symptoms','plan','notes','reflection'].forEach(field=>$('#'+field).addEventListener('input',event=>{r[field]=event.target.value;r.closed=false;if(r[field].trim().length>=(field==='symptoms'||field==='plan'?12:15))writingError(field);if(field==='symptoms'||field==='plan'){r.ideaSaved=false;r.verified=false;$('#experiment-result').textContent='Your first idea changed. Save it, then test again.';$('#experiment-result').dataset.kind='info';$('#workbench-test-status').textContent='Test your saved idea before you explain the result.';}save();refreshStatus();if(!OWNER_PREVIEW&&(field==='symptoms'||field==='plan')&&labView?.section>1)jumpToSection(1,false);}));
   $('#idea-form').addEventListener('submit',event=>{
     event.preventDefault();
     const progress=firstPageProgress(s,r);
@@ -327,18 +328,19 @@ function bindLab(s,route=null,{onModeChange=null}={}){
     save();refreshStatus();
   });
   function runHypothesisTest(prediction=r.plan,{firstIdea=true}={}){
-    if(!firstPageProgress(s,r).ready){jumpToSection(1,true);showNotice(firstPageProgress(s,r).message);return false;}
-    if(typeof prediction!=='string'||prediction.trim().length<12){$('#experiment-result').textContent='Write a full sentence for your idea before testing.';return false;}
+    if(!OWNER_PREVIEW&&!firstPageProgress(s,r).ready){jumpToSection(1,true);showNotice(firstPageProgress(s,r).message);return false;}
+    const previewCheck=OWNER_PREVIEW&&(typeof prediction!=='string'||prediction.trim().length<12);
+    if(!OWNER_PREVIEW&&(typeof prediction!=='string'||prediction.trim().length<12)){$('#experiment-result').textContent='Write a full sentence for your idea before testing.';return false;}
     if(s.track!=='hardware')action('run-check',s.track==='coding'?{code:$('#coding-editor').value}:undefined);
     const result=s.track==='hardware'?verifyHardware(s.id,r.state):verifyWorkspace(s.id,r.state);
     r.verified=result.ok;r.closed=false;
     const observed=(result.ok?'The task works. ':result.needsDocument?'':'Not fixed yet. ')+result.message;
-    logEvent({kind:result.ok?'success':'warning',message:'Hypothesis test — '+prediction.trim().slice(0,140)+' / Observed: '+observed});
+    logEvent({kind:result.ok?'success':'warning',message:(previewCheck?'Owner preview task check':'Hypothesis test — '+prediction.trim().slice(0,140))+' / Observed: '+observed});
     const next=result.ok?' Explain what worked in Check & explain.':result.needsDocument?' Then select Test my idea again.':' Use the Experiment notebook below to try your next idea.';
     if(firstIdea){$('#experiment-result').textContent=observed+next;$('#experiment-result').dataset.kind=result.ok?'success':'warning';}
     $('#workbench-test-status').textContent=result.ok?'Your fix works. Continue to Check & explain.':result.needsDocument?'Open the lesson file on the monitor, then test again.':'Still stuck? Use the Experiment notebook to plan another test.';
     $('#verify-result').textContent=(result.ok?'✓ ':'Try again: ')+result.message;
-    if(firstIdea)document.dispatchEvent?.(new CustomEvent('cole:lab-test-result',{detail:{id:s.id,firstIdea:true}}));
+    if(firstIdea&&!previewCheck)document.dispatchEvent?.(new CustomEvent('cole:lab-test-result',{detail:{id:s.id,firstIdea:true}}));
     save();refreshStatus();return true;
   }
   $('#run-hypothesis-test').addEventListener('click',()=>runHypothesisTest());
@@ -490,6 +492,7 @@ function membershipGate(route,{unknown=false}={}){
 }
 function checkCapstoneState(id,state){const s=SCENARIOS.find(item=>item.id===id);return s?.track==='hardware'?verifyHardware(id,state):verifyWorkspace(id,state);}
 function renderRoute(preserveDraft=true){const route=learningRoute(location.hash);if(preserveDraft!==false&&labNavigation?.syncRoute(route))return false;labNavigation=null;disposeHardware($('#workspace'));if(preserveDraft!==false)preserveCodeDraft();reportCleanup?.();reportCleanup=null;classroomConnection?.dispose();classroomConnection=null;routeCleanup?.();routeCleanup=null;currentLab=null;document.body.classList.remove('lab-view');let {page,id}=route;let html,title;const access=routeAccess(route);if(page==='membership'||(access==='member'&&!MEMBER_CONTENT)||access==='unknown'){const unknown=access==='unknown'&&page!=='membership';page='membership';html=membershipGate(route,{unknown});title=unknown?'Activity unavailable':'Membership required';}else if(page==='explore'){html=id?renderElementaryLab(id):renderElementaryCatalogue({band:route.band});title=id?(ELEMENTARY_LABS.find(lab=>lab.id===id)?.title||'Technology activity'):'K–6 technology activities';}else if(page==='practice'){const scenario=practiceScenarioFor(id);if(scenario){document.body.classList.add('lab-view');html=renderPracticeWorkbench(scenario,practiceStates[id]);title=scenario.title+' · Practice';}else{html='<section class="wrap page-intro"><h1>Choose a practice workbench.</h1><a href="#labs">All labs →</a></section>';title='Practice workbenches';}}else if(page==='studio'&&id==='network'){document.body.classList.add('lab-view');html=renderNetworkStudio(networkStudioState);title='Network Studio';}else if(page==='studio'&&id==='coding'){document.body.classList.add('lab-view');html=renderCodingStudio(codingStudioState);title='Coding Studio';}else if(page==='learn'){const foundation=getFoundation(id);if(foundation){id=foundation.id;document.body.classList.add('lab-view');html=renderFoundationLab(foundation,foundationRecordFor(id));title=`${foundation.code} · ${foundation.title}`;}else{html=`<section class="wrap page-intro"><h1>Choose a beginner lab.</h1><p>Pick one of the five topics to start learning.</p>${routeLink('labs','All virtual labs →')}</section>`;title='Beginner lab not found';}}else if(page==='lab'){const s=SCENARIOS.find(x=>x.id===id);if(s){document.body.classList.add('lab-view');html=(route.sequence?'<div class="capstone-return"><strong>Classroom opening day</strong><a href="#capstone">← Return to your five work orders</a></div>':'')+labPage(s);title=`${s.id} · ${s.title}`;}else{html=`<section class="wrap page-intro"><h1>That ticket is not on this bench.</h1><p>Choose one of the available investigations.</p>${routeLink('labs','All virtual labs →')}</section>`;title='Lab not found';}}else if(page==='signin'){html=renderSignIn();title='Sign in';}else if(page==='sandbox'){html=renderCodingSandbox({starterId:id});title='Coding sandbox';}else if(page==='capstone'){html=renderCapstone(store.labs,checkCapstoneState);title='Classroom opening day';}else{const pages={home:[home,'Alan Cole'],projects:[projectPage,'Projects'],about:[about,'About Alan Cole'],labs:[library,'Virtual labs'],educators:[educators,'For educators'],guide:[guide,'Student guide'],connect:[connect,'Connect'],privacy:[privacy,'Privacy & accessibility']};if(!Object.hasOwn(pages,page))page='home';if(page==='labs'&&Object.hasOwn(tracks,id))libraryTrack=id;[html,title]=[pages[page][0](),pages[page][1]];}
+if(OWNER_PREVIEW&&['lab','learn','explore','practice','studio','sandbox','capstone'].includes(page))html='<aside class="wrap owner-preview-notice" role="note"><p><strong>Owner preview navigation.</strong> Move between steps without completing answers. Skipped work is not marked complete.</p></aside>'+html;
 const improvementActivity=['lab','learn','practice','studio'].includes(page)?page+'/'+id:['sandbox','capstone'].includes(page)?page:null;
 if(improvementActivity)html+='<div id="lab-improvement-summary" class="wrap"></div>';
 $('#main').innerHTML=html;document.title=`${title} · Cole Learning Labs`;$$('#site-nav a').forEach(a=>{const active=a.hash===`#${['lab','learn','sandbox','studio','practice'].includes(page)?'labs':page}`;if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});$('#site-nav').classList.remove('open');$('#menu-toggle').setAttribute('aria-expanded','false');$('#menu-toggle').setAttribute('aria-label','Open navigation menu');
@@ -500,7 +503,7 @@ if(page==='sandbox')routeCleanup=mountCodingSandbox($('#main'),{starterId:id});
 if(page==='practice'&&practiceScenarioFor(id))routeCleanup=mountPracticeWorkbench($('#main'),{scenario:practiceScenarioFor(id),getState:()=>practiceStates[id],onChange:state=>{practiceStates[id]=state;},onNavigate:next=>{location.hash='#practice/'+next;}});
 if(page==='studio'&&id==='network')routeCleanup=mountNetworkStudio($('#main'),{getState:()=>networkStudioState,onChange:state=>{networkStudioState=state;}});
 if(page==='studio'&&id==='coding')routeCleanup=mountCodingStudio($('#main'),{getState:()=>codingStudioState,onChange:state=>{codingStudioState=state;}});
-if(page==='labs'){labCards();$$('.track-filters [data-track]').forEach(b=>b.addEventListener('click',()=>{filterLibraryTrack(b.dataset.track);}));$('#grade-filter').addEventListener('change',e=>{libraryGrade=e.target.value;labCards();});$('#duration-filter').addEventListener('change',e=>{libraryMinutes=e.target.value;labCards();});$('#lab-search').addEventListener('input',e=>{libraryQuery=e.target.value;labCards();});}if(currentLab){const labController=bindLab(currentLab,route,{onModeChange:mode=>cleanupLearning.setMode?.(mode)}),s=currentLab,r=store.labs[s.id];labNavigation=labController;const cleanupLearning=mountLabLearning($('#main'),{scenario:s,record:r,mode:route.mode,sequence:route.sequence,onSave:()=>{save();$('#bench-log').innerHTML=eventList(r);$('#action-count').textContent=r.events.length+' actions';labController.refreshStatus();},onTest:prediction=>labController.runHypothesisTest(prediction,{firstIdea:false}),getResult:()=>labController.currentTaskResult()});routeCleanup=()=>{labController.dispose();cleanupLearning?.();};}
+if(page==='labs'){labCards();$$('.track-filters [data-track]').forEach(b=>b.addEventListener('click',()=>{filterLibraryTrack(b.dataset.track);}));$('#grade-filter').addEventListener('change',e=>{libraryGrade=e.target.value;labCards();});$('#duration-filter').addEventListener('change',e=>{libraryMinutes=e.target.value;labCards();});$('#lab-search').addEventListener('input',e=>{libraryQuery=e.target.value;labCards();});}if(currentLab){const labController=bindLab(currentLab,route,{onModeChange:mode=>cleanupLearning.setMode?.(mode)}),s=currentLab,r=store.labs[s.id];labNavigation=labController;const cleanupLearning=mountLabLearning($('#main'),{scenario:s,record:r,autoStartFirstIdea:!OWNER_PREVIEW,mode:route.mode,sequence:route.sequence,onSave:()=>{save();$('#bench-log').innerHTML=eventList(r);$('#action-count').textContent=r.events.length+' actions';labController.refreshStatus();},onTest:prediction=>labController.runHypothesisTest(prediction,{firstIdea:false}),getResult:()=>labController.currentTaskResult()});routeCleanup=()=>{labController.dispose();cleanupLearning?.();};}
 if(page==='learn'&&getFoundation(id)){const foundation=getFoundation(id),controller=mountFoundationLab($('#main'),{lab:foundation,record:foundationRecordFor(id),onChange:record=>{foundationRecords[id]=record;},onReport:()=>{if(!foundationSummary(id,foundationRecords[id]).complete)return;openReport({id:foundation.code,title:foundation.title,grade:foundation.grade||'7–12'}, {},foundationReport(id,foundationRecords[id]));}});routeCleanup=()=>controller.dispose();$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
 if(page==='educators'){const disposeTeaching=mountTeachingPage($('#main'),SCENARIOS,{notify:showNotice}),disposeStandards=mountStandardsAlignment($('#standards-alignment'));routeCleanup=()=>{disposeTeaching?.();disposeStandards?.();};}
 if(page==='capstone'){const s=SCENARIOS.find(item=>item.id==='CODE-503'),r=recordFor(s);bindWorkPrivacy(s);routeCleanup=mountCapstone($('#main'),{record:r,onSave:save,onReport:()=>openReport({id:'CAP-601',title:'Classroom opening day',grade:'7–12'},r,capstoneReport(store.labs,checkCapstoneState))});$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
