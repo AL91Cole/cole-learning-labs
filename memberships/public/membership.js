@@ -37,7 +37,7 @@ export function mountMembership(root,{
     renewal.disabled=!allowed||!pricingApproved||pending||!session||ownerAccess();
     portal.disabled=!allowed||pending||!session||ownerAccess();portal.hidden=ownerAccess();
     logout.disabled=!allowed||pending||!session;
-    if(openLabs){openLabs.disabled=!allowed||pending||!labAccess();openLabs.textContent=ownerAccess()?'Open owner labs':'Open member labs';}
+    if(openLabs){openLabs.disabled=!allowed||pending||!labAccess();openLabs.textContent='Open labs';}
     if(planSelector)planSelector.disabled=!allowed||!pricingApproved||pending||!session||ownerAccess();
     checkout.textContent=!pricingApproved?'Purchases unavailable':session?.membership?.active?'Membership active':'Continue to secure checkout';
   }
@@ -120,7 +120,7 @@ export function mountMembership(root,{
     if(disposed)return;
     session=validSession(result)?result:null;sync();
     if(labAccess())navigate(ORIGIN+'/learn/');
-    else say('Verified owner access or an active educator membership is required to open these labs.');
+    else say('Current authorized access is required to open these labs.');
   }
   const onChoice=()=>sync();
   for(const control of [adult,renewal])control.addEventListener('change',onChoice);
@@ -130,7 +130,7 @@ export function mountMembership(root,{
   const ready=allowed?request('/api/member/session').then(result=>{
     if(disposed)return;
     if(validSession(result)){
-      session=result;say(ownerAccess()?'Owner lab access is active. No subscription or payment is needed.':session.membership.active?'Your educator membership is active.':'Signed in. Review the membership terms before continuing.');
+      session=result;say(ownerAccess()?'Your lab access is active. No purchase is needed.':session.membership.active?'Your educator membership is active.':'Signed in. Review the membership terms before continuing.');
     }else say('Sign in to your educator account when you are ready.');
     sync();
   }):Promise.resolve();

@@ -10,11 +10,15 @@ Test anonymous requests to the future owner branch and a known hash preview befo
 
 Access handles the owner's authentication cookies, email identity and connection/security metadata. This is not anonymous browsing. Student accounts, classroom collection, improvement sharing and online AI remain unavailable in the owner artifact.
 
-## Owner entry while memberships are disabled
+## Shared sign-in entry while memberships are disabled
 
-The **Owner sign in** links in the site navigation, footer and membership notice point directly to `https://codex-private-owner-preview.cole-learning-labs.pages.dev/learn/`. The existing Access session is used, or the owner completes the existing email verification on the sign-in page. No password, email code, owner email or token is embedded in this link or the public site. The browser never grants content access itself. People outside the approved owner policy cannot use the link to unlock paid content.
+The **Sign in** links in the site navigation, footer and membership notice all open the same internal `#signin` account page in the current tab. There is no separate owner navigation item or account page. The shared page clearly states that subscriber sign-in is still being prepared. Its single **Continue to sign in** link uses the fixed existing destination `https://codex-private-owner-preview.cole-learning-labs.pages.dev/learn/` for currently authorized access. It never accepts a destination, identity, role or entitlement from query parameters or browser state.
+
+The existing Access session is used, or the owner completes the existing email verification on the protected sign-in page. No password, email code, owner email or token is embedded in the link or public site. The shared page collects no credentials and makes no automatic request. The browser never grants content access itself. People outside the approved owner policy cannot use this entry to unlock paid content; the current Access policy is not expanded into subscriber authorization.
 
 This entry needs no membership registration, subscription, payment or new authentication service. Keep the full artifact behind its existing owner policy and guard checks. The public navigation change reaches production only after the source PRs are reviewed and merged; the separately approved protected preview can be refreshed independently.
+
+When the separately reviewed subscriber service launches, the same shared page can be connected to its common account flow. That prepared server already distinguishes owner entitlement from active subscriber entitlement after authentication, so owner access needs no separate public login button or payment. Connecting that service requires its own release review and is not part of this UI change.
 
 ## Builder boundaries
 

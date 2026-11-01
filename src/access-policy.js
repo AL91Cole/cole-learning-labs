@@ -21,7 +21,7 @@ const topics=new Set(Object.keys(FREE_LAB_IDS_BY_TOPIC));
 const foundationIds=new Set([
   ...topics,'HW-100','NET-200','AI-300','SEC-400','CODE-500'
 ]);
-const informationalPages=new Set(['home','projects','about','connect','privacy','guide']);
+const informationalPages=new Set(['home','projects','about','connect','privacy','guide','signin']);
 const practiceTopics=new Set(['network','ai','security']);
 const studioIds=new Set(['network','coding']);
 const sandboxIds=new Set(['blank','pixel-pet','arcade','rover','tiles']);

@@ -274,6 +274,7 @@ test('member labs open only after a fresh active server session check and always
   }
   const h = fixture(t, { session: signedIn(true), mount: { enabled: true } }); await h.ready();
   assert.equal(h.controls['open-labs'].disabled, false);
+  assert.equal(h.controls['open-labs'].textContent,'Open labs');
   h.controls['open-labs'].value = 'https://evil.example.test';
   await h.controls['open-labs'].emit('click');
   assert.deepEqual(h.calls.map(call => call.path), ['/api/member/session', '/api/member/session']);
@@ -281,15 +282,15 @@ test('member labs open only after a fresh active server session check and always
   h.routes.set('/api/member/session', () => Response.json(signedIn(false)));
   await h.controls['open-labs'].emit('click');
   assert.deepEqual(h.navigation, [ORIGIN + '/learn/']); assert.equal(h.controls['open-labs'].disabled, true);
-  assert.match(h.controls.status.textContent, /active educator membership is required/u);
+  assert.equal(h.controls.status.textContent,'Current authorized access is required to open these labs.');
 });
 
 test('verified owner access opens the fixed lab path without pricing or payment requests and is rechecked before navigation',async t=>{
   const owner={...signedIn(false),labAccess:'owner'};
   const h=fixture(t,{session:owner,mount:{enabled:true,pricingApproved:false}});await h.ready();
-  assert.equal(h.controls['open-labs'].disabled,false);assert.equal(h.controls['open-labs'].textContent,'Open owner labs');
+  assert.equal(h.controls['open-labs'].disabled,false);assert.equal(h.controls['open-labs'].textContent,'Open labs');
   assert.equal(h.controls.checkout.hidden,true);assert.equal(h.controls.portal.hidden,true);
-  assert.match(h.controls.status.textContent,/No subscription or payment is needed/u);
+  assert.equal(h.controls.status.textContent,'Your lab access is active. No purchase is needed.');
   h.controls.adult.checked=h.controls.renewal.checked=true;
   for(const name of ['checkout','portal','sign-in'])await h.controls[name].emit('click');
   assert.equal(h.posts().length,0);
