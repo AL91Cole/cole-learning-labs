@@ -25,12 +25,14 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // Fifteen self-contained K–6 activities add about 34 KB of authored models.
   // The reviewed block workshop and isolated member PC layout add about 28 KB;
   // public compilation omits the member layout and remains below 1 MB.
+  // Generic repair views, bounded investigation blocks and network port dragging
+  // add about 31 KB. Public compilation retains its separate sub-1-MB check.
   // Keep the bounded source graph; public compilation has its own tighter cap.
-  assert.ok(bytes<1_400_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  assert.ok(bytes<1_430_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{
-  for(const filename of ['src/assembly-builder.js','src/coding-sandbox.js','src/coding-studio.js','src/network-studio.js','src/scenarios.js','src/expanded-labs.js','src/coding-lab.js','src/lesson-plans.js','src/capstone.js']){
+  for(const filename of ['src/assembly-builder.js','src/coding-workbench.js','src/coding-sandbox.js','src/coding-studio.js','src/network-studio.js','src/scenarios.js','src/expanded-labs.js','src/coding-lab.js','src/lesson-plans.js','src/capstone.js']){
     assert.ok(PUBLIC_SOURCE_FILES.includes(filename),`${filename}: retain source review`);
     assert.ok(MEMBER_FILES.includes(filename),`${filename}: retain protected member implementation`);
     assert.equal(PUBLIC_FILES.includes(filename),false,`${filename}: cannot be an unprotected public file`);

@@ -21,6 +21,14 @@ const groupFor = id => {
   return GROUPS.find(([key])=>id.includes(`-${key}`))?.[0]||'board';
 };
 
+// Shared repair presentation contains no ticket brief, fault answer or paid task.
+// Existing guidance chooses the available controls; the model owns every change.
+function repairStudioView(state,{groups,selected,guidance}) {
+  if(!['INC-101','INC-102','INC-103','INC-104','INC-105'].includes(state.caseId))return null;
+  return {label:'PC repair studio',placement:'<span class="asm-placement" data-asm-placement></span>',close:'</div></div>',
+    open:`<div class="asm-build-guide"><span class="asm-build-eyebrow">REPAIR STUDIO / OBSERVE · CHANGE · CHECK</span><ol aria-label="Current repair observations">${[['observe','Observe'],['safe','Work safely'],['verify','Verify']].map(([id,label],index)=>`<li data-asm-repair-stage="${id}"><span class="asm-stage-number" aria-hidden="true">${index+1}</span><div><strong>${label}</strong><span data-asm-repair-${id}></span></div></li>`).join('')}</ol><p data-asm-repair-next role="status"></p></div><div class="asm-build-workspace"><aside class="asm-build-tray" aria-label="Repair parts and connections"><div class="asm-build-heading"><span>01 / INSPECTION TRAY</span><h4>Choose a control.</h4><p>These sections match this investigation. Select one to inspect its current state; selection does not repair it.</p></div><div class="asm-build-parts">${groups.filter(([id])=>guidance.groups.includes(id)).map(([id,label])=>`<button type="button" data-asm-part="${escape(id)}" aria-pressed="${id===selected}"><strong>${escape(label)}</strong><span data-asm-repair-part="${escape(id)}"></span></button>`).join('')}</div><p class="asm-tray-note">Use the picture or the labeled controls. Cable and part dragging is optional.</p></aside><aside class="asm-build-test" aria-label="Live repair test results"><div class="asm-build-heading"><span>03 / TEST READOUT</span><h4>Check the result.</h4><p>Power, startup and the original file are separate observations. This panel never makes a repair.</p></div><dl class="asm-build-results"><div><dt>Power path</dt><dd data-asm-result-power></dd></div><div><dt>Startup</dt><dd data-asm-result-startup></dd></div><div><dt>Original file check</dt><dd data-asm-result-file></dd></div></dl><p class="asm-build-case" data-asm-repair-case></p><button type="button" data-asm-build-open-file="open">Open original lesson file</button></aside><div class="asm-build-center">`};
+}
+
 /** Native SVG restores the PR #6 schematic; the existing model still owns every repair. */
 export function mountAssemblyWorkbench(root,{state,onAction}) {
   let current=state,guidance=workbenchGuidance(state),activity=pcActivity(state),allTools=false,disposed=false,visible=!root.closest?.('[hidden]'),drag=null,suppressClick=false;
@@ -31,10 +39,11 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
   const doc=root.ownerDocument;
   root.onclick=null;root.onkeydown=null;root.onchange=null;
   const powerControls=`<div class="asm-power" role="group" aria-label="Virtual PC power controls"><div class="asm-power-pair"><div class="asm-power-switch"><button type="button" class="asm-round-power" data-asm-toggle="power" aria-label="Power on and test startup" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v9m-5-7a8 8 0 1 0 10 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><span>Power ·<strong data-asm-on>Off</strong></span></div><button type="button" class="asm-ac-toggle" data-asm-toggle="ac" aria-label="Connect AC"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 3v5m8-5v5M5 8h14v4a7 7 0 0 1-14 0V8Zm7 11v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-asm-ac-label>Connect AC</span></button></div><div class="asm-machine-status"><strong data-asm-power></strong><span data-asm-next></span></div></div>`;
-  const builderView=assemblyBuilderView(state,{groups:GROUPS,selected,powerControls}),isBuild=!!builderView;
+  const builderView=assemblyBuilderView(state,{groups:GROUPS,selected})||repairStudioView(state,{groups:GROUPS,selected,guidance}),isBuild=!!builderView;
   root.innerHTML=`<section class="asm-bench asm-repair${isBuild?' asm-build':''}" aria-label="${escape(builderView?.label||'Schematic repair workbench')}">
     <header class="asm-ticket-guide"><h3 data-asm-ticket-title></h3><p data-asm-instruction></p></header>
-    ${builderView?.open||powerControls}
+    ${powerControls}
+    ${builderView?.open||''}
     <div class="asm-top-controls"><section class="asm-toolbox" aria-label="Workbench tools"><div class="asm-tool-buttons" role="group" aria-label="Choose a workbench tool">${ASSEMBLY_TOOLS.map(tool=>`<button type="button" data-asm-tool="${tool.id}" aria-pressed="${tool.id==='inspect'}">${escape(tool.label)}</button>`).join('')}</div></section>
     <div class="asm-picture-tabs" aria-label="Equipment picture"><strong>Virtual PC</strong><button type="button" data-asm-complete="toggle" aria-pressed="false">All parts &amp; tools</button><button type="button" data-asm-expand="picture" data-asm-expand-picture="toggle" aria-expanded="false">Expand picture</button></div></div>
     <div class="asm-layout"><div class="asm-visual"><div class="asm-schematic" data-asm-scene aria-label="Labeled virtual PC schematic"></div></div></div>
@@ -151,7 +160,22 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     const partStates={panel:`Side panel ${a.panelInstalled?'fitted':'set aside'}. ${a.panelScrews.filter(Boolean).length}/2 screws secured.`,board:`Motherboard ${current.boardInstalled?'on its standoffs':'in the tray'}. ${a.boardScrews.filter(Boolean).length}/4 screws secured.`,cpu:`CPU ${current.cpuInstalled?'seated':'in the tray'}. Retention ${a.retentionOpen?'open':'closed'}.`,paste:`Thermal interface: ${a.paste==='pea'?'fresh pea-sized paste':a.paste==='clean'?'clean surfaces':a.paste==='excess'?'too much paste':'used paste — clean and reapply'}.`,cooler:`Cooler ${current.coolerInstalled?'fitted':'in the tray'}. ${a.coolerScrews.filter(Boolean).length}/4 screws secured. Fan lead ${a.cpuFanConnected?'connected':'disconnected'}.`,ram:`Memory ${current.ramSeated?'seated':'in the tray / not fully seated'}. Clips ${a.ramClipsOpen?'open':'closed'}.`,gpu:`Graphics card ${current.gpuInstalled?'fitted':'in the tray'}. ${a.gpuScrews.filter(Boolean).length}/2 bracket screws. Latch ${a.pcieLatchOpen?'open':'closed'}.`,ssd:`Original SSD ${current.originalDriveInstalled?'in its bay':'safely in the tray'}. ${a.ssdScrews.filter(Boolean).length}/2 screws. OS and files preserved.`,cables:`ATX ${current.atxConnected?'✓':'○'} · CPU ${current.cpuPowerConnected?'✓':'○'} · GPU ${current.gpuPowerConnected?'✓':'○'} · SATA data ${current.sataDataConnected?'✓':'○'} · SATA power ${current.sataPowerConnected?'✓':'○'} · Front panel ${current.frontPanelConnected?'✓':'○'}`,display:`HDMI PC end ${current.pcVideoConnected!==false?'connected':'disconnected'}; monitor end ${current.signalConnected?'connected':'disconnected'}. PC output: ${current.videoPort}. Monitor source: ${current.monitorInput}.`};
     partStates.psu=`Power supply ${a.psuInstalled?'fitted':'in the tray'}. ${a.psuScrews.filter(Boolean).length}/4 mounting screws. Disconnect all PSU power leads before removal.`;
     selectedState=partStates[selected];$('[data-asm-part-state]').textContent=selectedState;
-    if(isBuild)renderAssemblyBuilder(root,current,{activity,selected});
+    if(isBuild&&current.caseId==='INC-106')renderAssemblyBuilder(root,current,{activity,selected});
+    else if(isBuild){
+      const set=(selector,text)=>{const field=$(selector);if(field)field.textContent=text;};
+      const safe=!current.pcOn&&!current.acConnected;
+      set('[data-asm-repair-observe]',activity.display.label);
+      set('[data-asm-repair-safe]',safe?(a.panelInstalled?'Power disconnected · case closed':'Case open · internal work allowed'):current.pcOn?'Internal work locked · power off first':'Internal work locked · disconnect AC');
+      set('[data-asm-repair-verify]',activity.documentOpened?'Original file opened':activity.display.desktop?'Desktop visible · check file':'Desktop not confirmed');
+      set('[data-asm-repair-next]',guidance.instruction);
+      set('[data-asm-placement]',NAMES[selected]+' selected · read the current state below.');
+      for(const [id,description]of Object.entries(partStates))set(`[data-asm-repair-part="${id}"]`,description);
+      set('[data-asm-result-power]',activity.power.label);
+      set('[data-asm-result-startup]',activity.startup.label+(activity.startup.reason?'. '+activity.startup.reason:''));
+      set('[data-asm-result-file]',activity.documentOpened?'Verified · original lesson file opened':activity.display.desktop?'Desktop visible · original file not checked yet':'Not checked · reach the classroom desktop first');
+      set('[data-asm-repair-case]',a.panelInstalled?'Side panel fitted. Keep it closed for external checks.':'Case open. Secure the panel and screws before testing startup.');
+      const open=$('[data-asm-build-open-file="open"]');if(open)open.disabled=!activity.display.desktop||activity.documentOpened;
+    }
     const currentOperation = id => {
       const screw=/^asm-(tighten|loosen)-(panel|psu|board|cooler|gpu|ssd)-(\d)$/.exec(id);
       if(screw)return (screw[1]==='loosen')===a[screw[2]+'Screws'][Number(screw[3])];
