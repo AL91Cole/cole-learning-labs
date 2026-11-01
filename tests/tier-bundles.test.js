@@ -42,6 +42,7 @@ async function fixture(t,app="export {checkFixture} from './coding-lab.js';"){
 test('public artifact contains reviewed starter cases but excludes paid authored scenarios and feature templates',async()=>{
   const result=await compile(false),javascript=decode(result.javascript);
   assert.ok(result.javascript instanceof Uint8Array);assert.equal(result.metadata.length,42);
+  assert.ok(result.javascript.length<1_000_000,'The compiled public application must remain below 1 MB.');
   assert.deepEqual(result.metadata.filter(row=>row.access==='free').map(row=>row.id),FREE_LAB_IDS);
   for(const row of result.metadata)assert.deepEqual(Object.keys(row).sort(),['access','grade','id','minutes','title','track']);
   assert.ok(javascript.includes('The monitor has power and its input is set to HDMI.'));
@@ -54,7 +55,9 @@ test('public artifact contains reviewed starter cases but excludes paid authored
     'Assemble the fictional classroom PC, start it, and open the lesson file.',
     'Keep source text in its lane',
     'CLASSROOM-TOOL-4.2',
-    'The PC runs, but the display signal path is incomplete.'
+    'The PC runs, but the display signal path is incomplete.',
+    'PC building studio',
+    'BUILD STUDIO / FIT'
   ])assert.equal(javascript.includes(marker),false,marker);
   assert.ok(result.inputs.every(filename=>/^src\/[a-z0-9-]+\.js$/u.test(filename)));
   assert.equal(new Set(result.inputs).size,result.inputs.length);
@@ -66,9 +69,12 @@ test('member artifact retains authored premium resources in a separate self-cont
   assert.ok(javascript.includes('The fictional prize desk mixes up scores of 50 and 100.'));
   assert.ok(javascript.includes('MY CREATIVE STUDIO'));
   assert.ok(javascript.includes('Give a pretend pet some energy.'));
+  assert.ok(javascript.includes('PC building studio'),'The new PC builder layout remains available in the protected member artifact.');
+  assert.ok(javascript.includes('BUILD STUDIO / FIT'),'The authored build guide remains available in the protected member artifact.');
   assert.deepEqual(member.metadata,free.metadata);
   for(const result of [free,member]){
     assert.ok(result.inputs.includes('src/elementary-labs.js'),'Both delivery tiers include the separate free K–6 activity module.');
+    assert.ok(result.inputs.includes('src/block-workshop.js'),'Both delivery tiers include the optional elementary block workshop.');
     for(const id of ELEMENTARY_LAB_IDS)assert.ok(decode(result.javascript).includes(JSON.stringify(id)),`${id}: free authored activity must remain in both delivery artifacts.`);
     const ast=parse(decode(result.javascript),{ecmaVersion:'latest',sourceType:'module'});
     assert.equal(ast.body.some(statement=>statement.type==='ImportDeclaration'),false);

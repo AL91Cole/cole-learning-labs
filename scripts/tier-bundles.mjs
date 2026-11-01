@@ -19,6 +19,9 @@ const falseValue='()=>false';
 const noOperation='()=>{}';
 const unavailable='()=>"Membership required."';
 const publicStubs=Object.freeze({
+  'assembly-builder.js':{
+    assemblyBuilderView:'()=>null',renderAssemblyBuilder:noOperation,assemblyBuildProgress:'()=>null'
+  },
   'coding-sandbox.js':{
     SANDBOX_STARTERS:'Object.freeze([])',hasCodingSandboxWork:falseValue,clearCodingSandboxWork:noOperation,
     runCodingSandbox:'()=>({ok:false,output:[],message:"Membership required."})',codingSandboxSnippet:'()=>""',
