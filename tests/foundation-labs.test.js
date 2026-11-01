@@ -118,6 +118,8 @@ test('every distinct item is required before step 2 and tab, keyboard and forwar
     assert.deepEqual(visible(view),[true,false,false],lab.id);
     const first=lab.items[0];view.click('foundationInspect',first.id);view.click('foundationInspect',first.id);
     assert.deepEqual(view.record.explored,[first.id]);assert.equal(view.button('foundationSection','practice').disabled,true);
+    assert.match(view.fields.get('[data-foundation-step-status]').textContent,new RegExp(`^1 of ${lab.items.length} items explored\\.`),'Repeated inspections do not inflate the visible progress.');
+    assert.match(view.prompt('explore'),new RegExp(`<progress max="${lab.items.length}" value="1" aria-label="Items explored">`));
     for(const item of lab.items.slice(1,-1))view.click('foundationInspect',item.id);
     assert.equal(view.button('foundationNext').disabled,true);view.click('foundationInspect',lab.items.at(-1).id);
     assert.equal(view.button('foundationSection','practice').disabled,false);assert.equal(view.button('foundationSection','check').disabled,true);assert.equal(view.button('foundationNext').disabled,false);

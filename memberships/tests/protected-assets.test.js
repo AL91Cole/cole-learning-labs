@@ -176,7 +176,8 @@ test('the real member build contains premium cases only behind private paths wit
   assert.ok(inputs.every(name=>name.startsWith('src/')));
   assert.match(new TextDecoder().decode(assets.get('/learn/src/app.js').bytes),/INC-103/u);
   for(const path of ['/learn/classroom.html','/learn/teacher/index.html','/learn/src/classroom-portal.js',
-    '/learn/src/scenarios.js','/learn/src/expanded-labs.js','/learn/_headers','/learn/_routes.json'])assert.equal(assets.has(path),false,path);
+    '/learn/src/scenarios.js','/learn/src/expanded-labs.js','/learn/_headers','/learn/_routes.json',
+    '/learn/.well-known/security.txt'])assert.equal(assets.has(path),false,path);
   for(const [name,asset]of assets){
     assert.ok(name.startsWith('/learn/'),name);
     if(/text|javascript|json/u.test(asset.contentType))assert.doesNotMatch(new TextDecoder().decode(asset.bytes),/\?release=/u,name);

@@ -49,3 +49,17 @@ test('homepage and explicit member-document redirects stay relative without a br
     ...['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html','/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html'].map(route=>route+' /#membership 302')]);
   assert.equal(rules.some(rule=>rule.includes('*')||rule.includes('https://')),false);
 });
+
+test('deployment noindex headers apply only to this project alternate hosts',()=>{
+  const scopes=read('_headers').split(/\r?\n/u).filter(line=>line&&!/^\s|#/u.test(line));
+  const alternateScopes=scopes.filter(scope=>scope.startsWith('https://'));
+  assert.deepEqual(alternateScopes,['https://cole-learning-labs.pages.dev/*','https://:version.cole-learning-labs.pages.dev/*']);
+  const source=read('_headers');
+  for(const scope of alternateScopes){
+    const block=source.slice(source.indexOf(scope)+scope.length).split(/\r?\n(?=\S)/u)[0];
+    assert.match(block,/^\s+X-Robots-Tag: noindex\s*$/mu);
+  }
+  const globalBlock=source.slice(source.indexOf('/*')+2).split(/\r?\n(?=\S)/u)[0];
+  assert.doesNotMatch(globalBlock,/X-Robots-Tag/iu,'The preferred production site remains indexable.');
+  assert.equal(alternateScopes.some(scope=>scope.includes('colelearninglabs.com')),false);
+});

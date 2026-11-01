@@ -46,13 +46,14 @@ test('publish output includes browser resources and API routing while excluding 
   assert.ok(files.includes('404.html'), 'Pages needs a top-level 404 to disable homepage fallback for missing paths');
   assert.ok(files.includes('src/app.js') && files.includes('assets/favicon.svg'));
   assert.ok(files.includes('_headers') && files.includes('_routes.json'));
+  assert.equal(await readFile(path.join(result.directory,'.well-known/security.txt'),'utf8'),await readFile(new URL('../.well-known/security.txt',import.meta.url),'utf8'));
   assert.equal(files.some(filename => privateFiles.includes(filename)), false);
   for (const filename of files) assert.equal((await readFile(path.join(result.directory, filename), 'utf8')).includes('PRIVATE_FIXTURE_DO_NOT_PUBLISH'), false);
   assert.equal(await readFile(path.join(root, 'functions/api/[[path]].js'), 'utf8'), 'PRIVATE_FIXTURE_DO_NOT_PUBLISH', 'Functions stay at project root for Cloudflare compilation.');
   assert.deepEqual(JSON.parse(await readFile(path.join(result.directory, '_routes.json'), 'utf8')), { version: 1, include: ['/api/requester'], exclude: [] });
 });
 
-for (const unexpected of ['src/.env', 'src/unreviewed.js', 'assets/unreviewed.svg', 'assets/secret.json', 'teacher/extra.html']) {
+for (const unexpected of ['src/.env', 'src/unreviewed.js', 'assets/unreviewed.svg', 'assets/secret.json', 'teacher/extra.html', '.well-known/private.json']) {
   test(`an unreviewed file in a public directory fails closed: ${unexpected}`, async t => {
     const { root } = await fixture(t);
     await mkdir(path.join(root, 'dist'));
