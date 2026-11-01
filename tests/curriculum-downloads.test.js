@@ -37,7 +37,7 @@ test('member curriculum cannot inherit a public shared download cache policy',()
 });
 test('README repository pathway totals are derived from the complete source catalogue',()=>{
   const md=read('README.md').toString();
-  assert.ok(md.includes(`${FOUNDATION_LABS.length} beginner labs`));
+  assert.ok(md.includes(`${FOUNDATION_LABS.length} beginner courses`));
   assert.ok(md.includes(`${SCENARIOS.length} troubleshooting investigations`));
   const labels={hardware:'Hardware & ServiceDesk',network:'Network & Operating Systems',ai:'AI Literacy & Audit',security:'Ethical Hacking & Penetration Testing',coding:'Coding Sandbox'};
   for(const [track,label] of Object.entries(labels)){

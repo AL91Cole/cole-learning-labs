@@ -7,6 +7,11 @@ export function learningRoute(hash) {
   const [page='home',id,step]=path.split('/');
   const mode=learningModes.some(item=>item.id===params.get('mode'))?params.get('mode'):'guided';
   const route={page:page||'home',id,mode,sequence:params.get('sequence')==='opening-day'?'opening-day':null};
+  if(page==='explore'){
+    if(path.split('/').length>2)return {page:'unknown',id:undefined,mode:'guided',sequence:null};
+    const band=[['k1','K–1'],['2-3','2–3'],['4-6','4–6']].find(([code])=>code===params.get('band'))?.[1];
+    if(!id&&band)route.band=band;
+  }
   if(page==='lab')route.section=Math.max(1,['request','workbench','explain'].indexOf(step)+1);
   return route;
 }

@@ -8,7 +8,7 @@ const ORIGIN = 'https://members.colelearninglabs.com';
 const GOOGLE = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=fictional&state=fictional';
 const CHECKOUT = 'https://checkout.stripe.com/c/pay/cs_test_fictional#fidkdWxOYHwnPyd1blpxYHZxWjA0';
 const PORTAL = 'https://billing.stripe.com/p/session/test_fictional';
-const signedIn = (active = false) => ({ signedIn: true, csrfToken: 'A'.repeat(43), membership: { active } });
+const signedIn = (active = false) => ({ signedIn: true, csrfToken: 'A'.repeat(43), membership: { active },labAccess:active?'subscriber':'none' });
 
 class Control {
   checked = false; disabled = false; value = ''; textContent = ''; dataset = {};
@@ -282,4 +282,32 @@ test('member labs open only after a fresh active server session check and always
   await h.controls['open-labs'].emit('click');
   assert.deepEqual(h.navigation, [ORIGIN + '/learn/']); assert.equal(h.controls['open-labs'].disabled, true);
   assert.match(h.controls.status.textContent, /active educator membership is required/u);
+});
+
+test('verified owner access opens the fixed lab path without pricing or payment requests and is rechecked before navigation',async t=>{
+  const owner={...signedIn(false),labAccess:'owner'};
+  const h=fixture(t,{session:owner,mount:{enabled:true,pricingApproved:false}});await h.ready();
+  assert.equal(h.controls['open-labs'].disabled,false);assert.equal(h.controls['open-labs'].textContent,'Open owner labs');
+  assert.equal(h.controls.checkout.hidden,true);assert.equal(h.controls.portal.hidden,true);
+  assert.match(h.controls.status.textContent,/No subscription or payment is needed/u);
+  h.controls.adult.checked=h.controls.renewal.checked=true;
+  for(const name of ['checkout','portal','sign-in'])await h.controls[name].emit('click');
+  assert.equal(h.posts().length,0);
+  await h.controls['open-labs'].emit('click');
+  assert.deepEqual(h.calls.map(call=>call.path),['/api/member/session','/api/member/session']);
+  assert.deepEqual(h.navigation,[ORIGIN+'/learn/']);
+  h.routes.set('/api/member/session',()=>Response.json(signedIn(false)));
+  await h.controls['open-labs'].emit('click');
+  assert.deepEqual(h.navigation,[ORIGIN+'/learn/']);assert.equal(h.controls['open-labs'].disabled,true);
+  assert.equal(h.controls.portal.hidden,false);
+});
+
+test('browser roles, local UI values and inconsistent session replies cannot grant owner lab access',async t=>{
+  for(const session of [{...signedIn(false),role:'owner'}, {...signedIn(false),owner:true},
+    {...signedIn(true),labAccess:'owner'}, {...signedIn(false),labAccess:'administrator'}]){
+    const h=fixture(t,{session,mount:{enabled:true}});await h.ready();
+    h.root.dataset.owner='true';h.controls['open-labs'].value='owner';
+    await h.controls['open-labs'].emit('click');
+    assert.deepEqual(h.navigation,[]);assert.equal(h.calls.length,1);
+  }
 });

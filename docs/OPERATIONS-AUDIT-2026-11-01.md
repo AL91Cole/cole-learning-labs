@@ -1,8 +1,8 @@
 # Operations review — November 1, 2026
 
-This record separates checked evidence from proposed operator work. It preserves the agreed free/member tiers, the disabled membership release, and the classroom and improvement-collection locks. It does not authorize a merge, deployment, DNS edit, subscription, new service, or account-setting change. No provider account settings were changed during this review.
+This record preserves the original read-only review as a historical baseline, followed by a dated record of later, explicitly authorized operator changes. Sections through **Decisions still needed before provider work** describe that baseline: statements such as “no record changed” or “unverified” apply to that stage, not to the later applied follow-up. The follow-up distinguishes changes verified in provider settings from source changes still awaiting review and release. The agreed free/member tiers, disabled membership release, and classroom and improvement-collection locks remain intact. This document itself does not authorize further changes, a PR merge, a deployment, a purchase, or a new service.
 
-## Evidence and limits
+## Baseline evidence and limits (historical)
 
 The reviewed repository baseline is `5612e23ebdd5ea27fca88812e71f5defa716c895`. GitHub `main` was `527622a556e671c3b369812b720d9b15c9dc4503` (PR #34). [PR #35](https://github.com/AL91Cole/cole-learning-labs/pull/35) remained open and unmerged. Later audit work is isolated on `codex/audit-security-usability`; a proposed source change does not establish production behavior.
 
@@ -104,3 +104,54 @@ Possible notification candidates are production Pages deployment failure, the ba
 | Optional notifications | Account eligibility, explicit no-additional-charge confirmation, exact basic alert types, existing approved recipient. |
 
 The free/member content decision remains intact. Membership pricing and release remain disabled; purchasing cannot authorize student accounts or classroom collection. Broader K–12 content planning is separate from these operator actions.
+
+## Applied follow-up — November 1, 2026
+
+The operator subsequently completed and checked the changes below with the user's authorization. This updates the corresponding baseline findings; it does not imply that every dashboard claim in the pasted audit was verified. Actual owner identity, the DMARC report address, account/team identifiers, login redirect details, PINs and credentials are deliberately omitted from this public record.
+
+### Provider changes and related checks
+
+| Area | Applied change and observed result | Scope and remaining limits |
+| --- | --- | --- |
+| Domain mail | A DMARC TXT record with `p=none` and `rua` to an approved, existing business alias was published. | This is monitoring, not quarantine or rejection. The actual recipient and aggregate reports stay out of the repository. Sender alignment and delivery still need review before any stronger policy. |
+| Google DKIM | An existing Google DKIM public key was observed in DNS; no signing/key change was made. | The key was already present before the DMARC edit. Active signing and successful SPF/DKIM/DMARC alignment were **not** verified. A DNS key alone does not complete that verification. |
+| Production Pages alias | Both HTTP and HTTPS requests to `cole-learning-labs.pages.dev` returned 301 redirects to `https://www.colelearninglabs.com`, with path and query preservation checked. | Include subdomains is off. Branch and hash previews remain outside this production-only redirect. |
+| Credential protection | The original leaked-credential expression was preserved unchanged in an immediate custom Block rule before the rate-limit slot was reassigned. | Retain this protection when reviewing or rolling back the rate-rule change. No credential material or detection payload is recorded here. |
+| AI edge flood rule | With explicit user approval, the existing Free edge rate-limit slot was changed to the exact `/api/requester` path: 1,500 requests per 10 seconds per IP, Block for 10 seconds. Its active state was checked. | Chosen with shared school IP bursts in mind; it is not a verified whole-class capacity target. It counts availability checks as well as replies. Static pages are outside the path rule. The stricter application/D1 budgets were unchanged. |
+| Preview access | Access covers `*.cole-learning-labs.pages.dev` on all paths. Its Allow policy uses only the exact, privately approved owner email, one-time-PIN login and a six-hour session. No Bypass policy was configured. | Ten anonymous checks across a branch alias and a hash alias, including direct HTML/script/style/download paths, returned the expected Access 302 login redirects. Owner login to the canary preview was verified in Chrome. Production hostnames are outside this preview scope. |
+| Preview build guards | Only two encrypted preview settings were saved: `CLL_OWNER_ACCESS_ISSUER` and `CLL_OWNER_ACCESS_CANARY_HOST`. | Values are not committed. No Functions routing or service binding was changed by this operation. The settings alone do not publish or activate the full owner artifact. |
+| Deployment notification | The production Pages deployment-failure alert was saved and read back as enabled. | Uses the approved existing business recipient and the included alert type. It does not detect every site failure. |
+| DDoS notification | The account's Basic HTTP DDoS attack alert was saved and read back as enabled with the approved existing business recipient. | No advanced DDoS configuration or paid notification option was selected. |
+
+The zone and Access entitlement were checked as Free. No new plan or paid add-on was added. This records the choices made; it is not a guarantee against usage charges or an account-wide spending ceiling.
+
+Latest read-only production checks returned 200 for `www`, 301 from the apex to `www`, and the expected nested-path 301 from the production Pages alias over both HTTP and HTTPS. The requester availability GET returned 200; disabled improvement/classroom API probes returned 404. A DNS-over-HTTPS lookup confirmed the published DMARC monitoring policy, `p=none`. These status checks do not establish every request variant or complete email authentication.
+
+Before any full owner upload, the Access application inventory showed only the wildcard preview application, with no more-specific override application. The Pages custom-domain list contained only the apex and `www`, both active with SSL, and no preview custom domain. This inventory was checked while the full static owner branch remained unpublished.
+
+The certificate/access notification wizard did **not** offer a Universal SSL alert. It offered other categories, including advanced certificate, mTLS, service-token and SSL-for-SaaS alerts. Those alternatives were left unchanged; no SSL lifecycle notification is claimed as enabled.
+
+### Source work and activation status
+
+- The one-year, host-only HSTS policy, public COOP/CORP headers and `security.txt` remain source changes in unmerged [PR #36](https://github.com/AL91Cole/cole-learning-labs/pull/36). They have not been published by this follow-up. No `includeSubDomains`, preload request or preload submission was added. The baseline apex-header limitation remains a separate deployment concern.
+- The current review branch contains 15 authored, local K–6 activities, grouped into K–1, 2–3 and 4–6. They add no learner account, free-text input, saving, reporting, cloud-AI request or collection path. The public structured collection has 30 activities; the full structured collection has 62. Existing grades 7–12 case grades and the 10-free/32-member investigation split remain intact.
+- The prepared membership service, independent owner entitlement and live billing remain disabled. The separate static owner-preview builder is reviewable, but its full private branch has **not** been published. [Owner access boundaries](OWNER-LAB-ACCESS.md), [static preview safeguards](OWNER-STATIC-PREVIEW.md).
+- No student-data collection, connected classroom or billing activation was performed, and no PR was merged. The existing private requester and its shared D1 admission ledger remain separate from these operations.
+
+The primary root test run completed with **1,638 total: 1,633 passed, zero failed and five Windows link-test skips**. A subsequent free-tier wording update passed 18 targeted UI, policy, gateway and storage checks. Syntax checks covered 84 application/server modules; the ordinary public build produced 43 approved assets. Review-build browser checks covered K–1 retry, completion, reset and a fresh remount; a grades 2–3 counter returning 5; and a grades 4–6 least-access choice. These checks concern the review build, not publication of the new activities. They do not replace Linux link tests, production checks, school review or an independent security review.
+
+### Operational limits and rollback
+
+DMARC monitoring does not stop all spoofing, a DNS DKIM key does not prove signing, an IP rule can affect unrelated people behind a shared address, and an Access login redirect does not establish who a later policy will permit. No live AI load test or school-capacity acceptance test was performed. Existing shared budgets reduce inference starts but do not cap all hosting, storage, authentication or unrelated account usage. None of these changes establishes legal compliance or a security warranty.
+
+Before any full static owner upload, recheck the Access Allow policy and all preview-host coverage, including more-specific applications and alternate domains. After upload, check the newly assigned hash as well as the branch alias and direct files. A prior hash canary and a build-time guard cannot prevent a later account-setting change. Keep actual policy exports and rollback values in approved private operator records.
+
+If a rollback is needed, scope it to the changed setting:
+
+- For mail, retain the exact prior/current DMARC state privately and restore only the approved prior state if monitoring must be rolled back. No DKIM signing/key change was made and no DKIM rollback is required. Do not substitute enforcement for the current monitoring policy without a separate delivery review.
+- For redirects, disable or restore only the reviewed production-alias entries/rule if the destination or scope is wrong. Preserve the canonical site's DNS and the independent preview Access protection; retest both schemes, paths and queries.
+- For rate limiting, restore the recorded prior rate configuration if required while preserving the custom leaked-credential Block protection until its replacement is verified. Do not reset, remove or weaken the D1 budget ledger as a workaround.
+- For Access, do not broaden the Allow policy, add Bypass/Everyone, or remove protection while any full preview deployment remains reachable. First replace/remove the relevant full deployments under a reviewed deployment-ID plan and verify the bytes are no longer served. Keep a failed or unavailable guard closed.
+- For notifications, change only the two new basic alerts if needed. Preserve existing budget or unrelated alerts, and do not substitute a paid or advanced certificate alert for the unavailable Universal SSL option.
+
+No rollback was executed as part of this record.

@@ -13,6 +13,7 @@ import {renderLabLearning} from '../src/teaching.js';
 import {renderExperiments} from '../src/experiments.js';
 import {routeAccess} from '../src/access-policy.js';
 import {CATALOG} from '../src/lab-catalog.js';
+import {ELEMENTARY_LABS} from '../src/elementary-labs.js';
 
 const appUrl=new URL('../src/app.js',import.meta.url);
 const source=await readFile(appUrl,'utf8');
@@ -26,7 +27,7 @@ function extract(start,end) {
 }
 function pages() {
   // Preserve the full investigation UI checks in its protected member context.
-  const context=vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryMinutes:'all',libraryQuery:'',
+  const context=vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryMinutes:'all',libraryQuery:'',
     currentLab:null,labView:null,workStorage:{},recordFor:normalizeLabRecord,inquiryProgress,labLanguage,requesterPersona,
     workStatus:()=> 'Private session',eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',
     renderVirtualLabHubMarkup(){assert.fail('Choosing a lab must not create a 3D classroom hub.');}});

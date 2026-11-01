@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {CATALOG} from '../src/lab-catalog.js';
-import {FREE_LAB_IDS_BY_TOPIC,FREE_LAB_IDS,isFreeLab,routeAccess,MEMBER_CONTENT} from '../src/access-policy.js';
+import {FREE_LAB_IDS_BY_TOPIC,FREE_LAB_IDS,ELEMENTARY_LAB_IDS,isFreeLab,routeAccess,MEMBER_CONTENT} from '../src/access-policy.js';
+import {ELEMENTARY_LABS} from '../src/elementary-labs.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
 
@@ -40,6 +41,19 @@ test('all beginner courses and their first investigations stay public',()=>{
     assert.equal(isFreeLab(foundation.nextLab),true);
     assert.equal(routeAccess({page:'lab',id:foundation.nextLab}),'public');
   }
+});
+
+test('the separate K–6 catalogue and all 15 authored activities are public without expanding the 7–12 free allowlist',()=>{
+  assert.equal(ELEMENTARY_LAB_IDS.length,15);assert.equal(Object.isFrozen(ELEMENTARY_LAB_IDS),true);
+  assert.deepEqual([...ELEMENTARY_LAB_IDS].sort(),ELEMENTARY_LABS.map(lab=>lab.id).sort());
+  assert.equal(routeAccess({page:'explore'}),'public');
+  for(const id of ELEMENTARY_LAB_IDS){
+    assert.equal(routeAccess({page:'explore',id}),'public');
+    assert.equal(routeAccess({page:'lab',id}),'unknown');
+    assert.equal(isFreeLab(id),false,'The 7–12 cloud gateway must not accept elementary activity IDs.');
+  }
+  for(const id of ['EX-HW-0','EX-HW-4','ex-hw-1','EX-HW-1/extra','EX%2DHW%2D1','__proto__','INC-101'])assert.equal(routeAccess({page:'explore',id}),'unknown');
+  assert.equal(FREE_LAB_IDS.length,10);assert.equal(CATALOG.filter(lab=>lab.access==='member').length,32);
 });
 
 test('every direct investigation and supported practice route follows the fixed free allowlist',()=>{

@@ -22,8 +22,9 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // Includes the requester/coding modules, native network builder, and 30 authored
   // grade/category lesson plans plus their local editor and beginner practice boards.
   // Delivery policy and safe catalog metadata add a small reviewed source cost.
+  // Fifteen self-contained K–6 activities add about 34 KB of authored models.
   // Keep the bounded source graph; public compilation has its own tighter cap.
-  assert.ok(bytes<1_330_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  assert.ok(bytes<1_370_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{

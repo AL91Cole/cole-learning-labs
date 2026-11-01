@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 import {parse} from 'acorn';
 import {bundleTier} from '../scripts/tier-bundles.mjs';
-import {FREE_LAB_IDS} from '../src/access-policy.js';
+import {FREE_LAB_IDS,ELEMENTARY_LAB_IDS} from '../src/access-policy.js';
 
 const ROOT=fileURLToPath(new URL('../',import.meta.url));
 const decode=bytes=>new TextDecoder().decode(bytes);
@@ -68,6 +68,8 @@ test('member artifact retains authored premium resources in a separate self-cont
   assert.ok(javascript.includes('Give a pretend pet some energy.'));
   assert.deepEqual(member.metadata,free.metadata);
   for(const result of [free,member]){
+    assert.ok(result.inputs.includes('src/elementary-labs.js'),'Both delivery tiers include the separate free K–6 activity module.');
+    for(const id of ELEMENTARY_LAB_IDS)assert.ok(decode(result.javascript).includes(JSON.stringify(id)),`${id}: free authored activity must remain in both delivery artifacts.`);
     const ast=parse(decode(result.javascript),{ecmaVersion:'latest',sourceType:'module'});
     assert.equal(ast.body.some(statement=>statement.type==='ImportDeclaration'),false);
     assert.equal(decode(result.javascript).includes('sourceMappingURL='),false);
@@ -91,6 +93,26 @@ test('build context forces member authority rather than accepting a source flag 
   }
   await assert.rejects(()=>bundleTier({sourceRoot:root,member:'true'}),/boolean tier/u);
   await assert.rejects(()=>bundleTier({sourceRoot:root,entry:'../outside.js'}),/Only reviewed/u);
+});
+
+test('a typed local-only build disables cloud replies without changing default tier behavior or source flags',async t=>{
+  const root=await fixture(t,"export {MEMBER_CONTENT} from './access-policy.js';export {REQUESTER_CLOUD_ENABLED,REQUESTER_OPEN_QUESTION_REVIEW_APPROVED,REQUESTER_ENDPOINT} from './requester-config.js';");
+  const filename=path.join(root,'src/requester-config.js'),source="export const REQUESTER_CLOUD_ENABLED=true;export const REQUESTER_OPEN_QUESTION_REVIEW_APPROVED=false;export const REQUESTER_ENDPOINT='/api/requester';";
+  await writeFile(filename,source);
+  for(const member of [false,true]){
+    const normal=await bundleTier({sourceRoot:root,member}),explicit=await bundleTier({sourceRoot:root,member,localOnly:false});
+    assert.deepEqual(explicit.javascript,normal.javascript,'Default and explicit false must produce identical browser bytes.');
+    const local=await bundleTier({sourceRoot:root,member,localOnly:true});
+    for(const [result,cloud]of [[normal,true],[local,false]]){
+      const compiled=await import('data:text/javascript;base64,'+Buffer.from(result.javascript).toString('base64'));
+      assert.equal(compiled.MEMBER_CONTENT,member);assert.equal(compiled.REQUESTER_CLOUD_ENABLED,cloud);
+      assert.equal(compiled.REQUESTER_OPEN_QUESTION_REVIEW_APPROVED,false);assert.equal(compiled.REQUESTER_ENDPOINT,'/api/requester');
+    }
+  }
+  assert.equal(await readFile(filename,'utf8'),source,'Compilation must not modify the source configuration.');
+  for(const value of [null,1,'true',{}])await assert.rejects(()=>bundleTier({sourceRoot:root,localOnly:value}),/boolean local-only/u);
+  await writeFile(filename,source.replace('REQUESTER_CLOUD_ENABLED=true','REQUESTER_CLOUD_ENABLED=Boolean(true)'));
+  await assert.rejects(()=>bundleTier({sourceRoot:root,member:true,localOnly:true}),/reviewed source boolean/u);
 });
 
 test('local report reader uses the same self-contained canonical compilation boundary',async t=>{
