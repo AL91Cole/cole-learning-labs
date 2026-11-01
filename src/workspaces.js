@@ -3,6 +3,7 @@ import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.
 import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,disposeExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261025-learning-plans';
 import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261025-learning-plans';
 import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-learning-plans';
+import {disposeCodingWorkbench} from './coding-workbench.js?release=20261025-learning-plans';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });
@@ -477,11 +478,11 @@ function security(id,state) {
 }
 
 /** Stop native workspace controllers before their DOM is removed. */
-export function disposeWorkspace(root) { disposeLearningActivity(root);disposeExpanded(root); }
+export function disposeWorkspace(root,{keepCodingDraft=false}={}) { disposeLearningActivity(root);disposeExpanded(root);if(!keepCodingDraft)disposeCodingWorkbench(root); }
 
 /** Render only documented, fixed simulation controls. All state changes go to onAction. */
 export function renderWorkspace(root, scenario, state, onAction) {
-  if(!supportsExpandedLab(scenario.id)) disposeWorkspace(root);
+  if(!supportsExpandedLab(scenario.id)) disposeWorkspace(root,{keepCodingDraft:supportsCodingLab(scenario.id)});
   if(supportsExpandedLab(scenario.id))return renderExpanded(root,scenario,state,onAction);if(supportsCodingLab(scenario.id))return renderCoding(root,scenario,state,onAction);
   const restoreView=captureWorkspaceView(root,scenario.id);
   state = normalizeWorkspaceState(scenario.id, state);

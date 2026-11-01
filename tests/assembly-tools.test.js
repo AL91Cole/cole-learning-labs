@@ -9,6 +9,7 @@ import { initialHardwareState, applyHardwareAction } from '../src/hardware.js';
 
 import { workbenchGuidance } from '../src/workbench-guidance.js';
 import { pcActivity } from '../src/pc-activity.js';
+import { assemblyBuilderView, renderAssemblyBuilder } from '../src/assembly-builder.js';
 const detailed = id => applyHardwareAction(id, initialHardwareState(id), 'enable-assembly').state;
 function attempt(state, action) {
   const before = structuredClone(state);
@@ -81,7 +82,7 @@ function workbench(id = 'INC-106') {
   Object.defineProperty(root, 'innerHTML', { set(html) { writes++; buttons = parse(html); } });
   const scene = { update() {}, select() {}, setTool(tool) { calls.tools.push(tool); }, cancelInteraction() { calls.canceled++; }, pause() { calls.pauses++; }, resume() {}, dispose() { calls.disposed++; } };
   const mount = vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm, '').replace('export function mountAssemblyWorkbench', 'function mountAssemblyWorkbench').replace(/import\('\.\/assembly-scene\.js\?release=[^']+'\)/, 'sceneLoader()')}; mountAssemblyWorkbench`, {
-    ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure, ASSEMBLY_CABLES, cableConnection, assemblyCableAction, workbenchGuidance, pcActivity,
+    ASSEMBLY_TOOLS, assemblyToolAction, ASSEMBLY_FASTENERS, assemblyActions, assemblyFailure, ASSEMBLY_CABLES, cableConnection, assemblyCableAction, workbenchGuidance, pcActivity, assemblyBuilderView, renderAssemblyBuilder,
     sceneLoader: async () => ({ mountAssemblyScene(_host, options) { calls.mounts++; sceneOptions = options; return scene; } })
   });
   let state = detailed(id), controller;

@@ -8,6 +8,7 @@ import { initialHardwareState, applyHardwareAction, verifyHardware } from '../sr
 import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/assembly-cables.js';
 import { workbenchGuidance } from '../src/workbench-guidance.js';
 import { pcActivity } from '../src/pc-activity.js';
+import { assemblyBuilderView, renderAssemblyBuilder } from '../src/assembly-builder.js';
 const source=readFileSync(new URL('../src/assembly-workbench.js',import.meta.url),'utf8');
 // A native-DOM boundary exercises the real controller and equipment rules.
 // Pixel geometry, native focus and touch hardware are verified in browser QA.
@@ -26,7 +27,7 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
     Object.defineProperty(element,'hidden',{get:()=>hidden,set(value){hidden=!!value;if(hidden&&doc.activeElement===element)doc.activeElement=null;}});return element;
   }
   function parse(html){return [...html.matchAll(/<(button|g)\b([^>]*)>/g)].map(([,tag,attrs])=>{const data=Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([,key,value])=>[key.replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));const element=node(data,tag);element.disabled=/\bdisabled(?:\s|$)/.test(attrs);for(const[,name,value]of attrs.matchAll(/\s([\w:-]+)="([^"]*)"/g))element.setAttribute(name,value);return element;});}
-  for(const key of ['on','ac-label','monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-title','part-state','actions','feedback','power','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','power-reference','fastener','cable','cable-target','cable-state'])fields.set(`[data-asm-${key}]`,node({},'div'));
+  for(const key of ['on','ac-label','monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-title','part-state','actions','feedback','power','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','power-reference','fastener','cable','cable-target','cable-state','repair-observe','repair-safe','repair-verify','repair-next','repair-case','placement','result-power','result-startup','result-file'])fields.set(`[data-asm-${key}]`,node({},'div'));
   fields.get('[data-asm-select]').drawer=fields.get('[data-asm-component-drawer]');
   Object.defineProperty(fields.get('[data-asm-actions]'),'innerHTML',{set(html){actions=parse(html);actions.forEach(button=>button.drawer=fields.get('[data-asm-component-drawer]'));},get(){return'';}});
   Object.defineProperty(fields.get('[data-asm-tool-controls]'),'innerHTML',{set(html){tools=parse(html);this.markup=html;},get(){return this.markup||'';}});
@@ -40,7 +41,7 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
   };
   Object.defineProperty(root,'innerHTML',{set(html){writes++;markup=html;staticButtons=parse(html);staticButtons.filter(button=>['power-off','unplug','plug-in','boot','open-document'].includes(button.dataset.assemblyAction)).forEach(button=>button.drawer=fields.get('[data-asm-power-reference]'));},get(){return markup;}});
   doc.elementFromPoint=()=>dropTarget;
-  const mount=vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm,'').replace('export function mountAssemblyWorkbench','function mountAssemblyWorkbench')};mountAssemblyWorkbench`,{assemblyActions,assemblyFailure,ASSEMBLY_FASTENERS,ASSEMBLY_TOOLS,assemblyToolAction,ASSEMBLY_CABLES,cableConnection,assemblyCableAction,workbenchGuidance,pcActivity});
+  const mount=vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm,'').replace('export function mountAssemblyWorkbench','function mountAssemblyWorkbench')};mountAssemblyWorkbench`,{assemblyActions,assemblyFailure,ASSEMBLY_FASTENERS,ASSEMBLY_TOOLS,assemblyToolAction,ASSEMBLY_CABLES,cableConnection,assemblyCableAction,workbenchGuidance,pcActivity,assemblyBuilderView,renderAssemblyBuilder});
   let state=stateOverride(applyHardwareAction(caseId,initialHardwareState(caseId),'enable-assembly').state),controller;
   const committed=[];controller=mount(root,{state,onAction(action){committed.push(action);const result=applyHardwareAction(caseId,state,action);state=result.state;controller.update(state);return result;}});
   function click(key,value){const target=all().find(item=>item.dataset[key]===value);assert.ok(target,`Missing ${key}=${value}`);target.focus();listeners.get('click')?.({target});return target;}
@@ -220,6 +221,11 @@ test('every ticket shows one round native power toggle beside its labeled AC plu
     assert.doesNotMatch(bench.picture,/data-asm-picture="case-(?:power|ac)"/);
     const strip=bench.markup.match(/<div class="asm-power"[\s\S]*?<div class="asm-top-controls">/)?.[0];
     assert.ok(strip);assert.doesNotMatch(strip,/data-assembly-action=/);
+    assert.equal((bench.markup.match(/class="asm-power"/gu)||[]).length,1,'Every workbench has exactly one shared Power/AC group.');
+    const powerPosition=bench.markup.indexOf('<div class="asm-power"');
+    assert.ok(powerPosition<bench.markup.indexOf('data-asm-scene'),'Power and AC appear above the monitor picture.');
+    const workspacePosition=bench.markup.indexOf('<div class="asm-build-workspace"');
+    if(workspacePosition>=0)assert.ok(powerPosition<workspacePosition,'Power controls remain above the entire studio workspace.');
     for(const toggle of ['power','ac']){
       assert.equal((strip.match(new RegExp('data-asm-toggle="'+toggle+'"','g'))||[]).length,1);
       const control=bench.root.querySelector('[data-asm-toggle="'+toggle+'"]');
@@ -231,6 +237,86 @@ test('every ticket shows one round native power toggle beside its labeled AC plu
     assert.equal(bench.fields.get('[data-asm-power-reference]').open,false);assert.deepEqual(bench.committed,[]);
     bench.controller.dispose();
   }
+});
+
+test('repair studios expose only investigation sections and selection leaves current equipment unchanged',()=>{
+  const expected={
+    'INC-101':['cables','display'],'INC-102':['panel','cables','display'],
+    'INC-103':['panel','ram','cables','display'],'INC-104':['panel','cables','display'],
+    'INC-105':['panel','ssd','cables','display']
+  };
+  for(const [caseId,sections]of Object.entries(expected)){
+    const bench=fixture({caseId}),before=structuredClone(bench.state);
+    assert.match(bench.markup,/aria-label="PC repair studio"/u);
+    const trayStart=bench.markup.indexOf('<aside class="asm-build-tray"'),tray=bench.markup.slice(trayStart,bench.markup.indexOf('</aside>',trayStart));
+    assert.deepEqual([...tray.matchAll(/data-asm-part="([^"]+)"/gu)].map(match=>match[1]),sections);
+    for(const section of sections)bench.click('asmPart',section);
+    assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);
+    assert.match(bench.fields.get('[data-asm-placement]').textContent,/selected · read the current state below/u);
+    assert.equal(bench.fields.get('[data-asm-result-file]').textContent,'Not checked · reach the classroom desktop first');
+    for(const stage of ['observe','safe','verify'])assert.ok(bench.fields.get(`[data-asm-repair-${stage}]`).textContent);
+    bench.controller.dispose();
+  }
+  for(const caseId of ['INC-107','INC-108']){
+    const bench=fixture({caseId});assert.match(bench.markup,/aria-label="Schematic repair workbench"/u);bench.controller.dispose();
+  }
+});
+
+test('the free display repair studio uses real cable dragging and checks the original file explicitly',()=>{
+  const bench=fixture({caseId:'INC-101'}),read=name=>bench.fields.get(`[data-asm-${name}]`).textContent;
+  assert.equal(read('result-startup'),'Original OS loaded');assert.equal(read('repair-verify'),'Desktop not confirmed');
+  bench.click('asmTool','cables');bench.choose('[data-asm-cable]','hdmi-pc');
+  const before=structuredClone(bench.state);bench.begin('cable-hdmi-pc');assert.deepEqual(bench.state,before);
+  bench.release('port-hdmi-gpu');assert.equal(bench.state.videoPort,'gpu');assert.equal(bench.state.documentOpened,false);
+  assert.equal(read('repair-verify'),'Desktop visible · check file');assert.equal(verifyHardware('INC-101',bench.state).ok,false);
+  bench.click('asmBuildOpenFile','open');assert.equal(verifyHardware('INC-101',bench.state).ok,true);
+  assert.equal(read('result-file'),'Verified · original lesson file opened');bench.controller.dispose();
+});
+
+test('the free power repair studio retains startup failure, safe case access and a separate file check',()=>{
+  const bench=fixture({caseId:'INC-102'}),read=name=>bench.fields.get(`[data-asm-${name}]`).textContent;
+  assert.equal(read('repair-safe'),'Power disconnected · case closed');
+  bench.click('asmToggle','ac');bench.click('asmToggle','power');
+  assert.equal(bench.state.booted,false);assert.equal(read('repair-safe'),'Internal work locked · power off first');
+  bench.click('asmBuildOpenFile','open');assert.equal(bench.state.documentOpened,false);
+  reconnectMotherboardPower(bench);bench.click('asmToggle','ac');bench.click('asmToggle','power');
+  assert.equal(bench.state.booted,true);assert.equal(read('repair-verify'),'Desktop visible · check file');
+  bench.click('asmBuildOpenFile','open');assert.equal(verifyHardware('INC-102',bench.state).ok,true);bench.controller.dispose();
+});
+
+test('repair-studio RAM dragging seats the module without bypassing its clips or power safety',()=>{
+  const bench=fixture({caseId:'INC-103'});
+  bench.click('asmTool','move');const unsafe=structuredClone(bench.state);
+  bench.begin('ram');bench.release('ram');assert.deepEqual(bench.state,unsafe,'A loose tray module cannot bypass the powered, covered case.');
+  bench.click('asmToggle','power');bench.click('asmToggle','ac');bench.click('asmPart','panel');
+  for(const action of ['asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel'])bench.click('assemblyAction',action);
+  bench.click('asmPart','ram');bench.begin('ram');bench.release('ram');
+  assert.equal(bench.state.ramSeated,true);assert.equal(bench.state.assembly.ramClipsOpen,true);
+  assert.equal(verifyHardware('INC-103',bench.state).ok,false,'Placing a part alone is not a successful repair.');
+  bench.partAction('asm-close-ram-clips');bench.click('asmPart','panel');
+  for(const action of ['asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1'])bench.click('assemblyAction',action);
+  bench.click('asmToggle','ac');bench.click('asmToggle','power');bench.click('asmBuildOpenFile','open');
+  assert.equal(verifyHardware('INC-103',bench.state).ok,true);bench.controller.dispose();
+});
+
+for(const caseId of ['INC-104','INC-105'])test(caseId+' storage repair keeps original-drive fittings, cable drag and native connection controls authoritative',()=>{
+  const bench=fixture({caseId});bench.click('asmToggle','power');bench.click('asmToggle','ac');bench.click('asmPart','panel');
+  for(const action of ['asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel'])bench.click('assemblyAction',action);
+  if(caseId==='INC-105'){
+    bench.click('asmPart','ssd');bench.click('asmTool','move');bench.begin('ssd');bench.release('ssd');
+    assert.equal(bench.state.originalDriveInstalled,true);assert.deepEqual(bench.state.assembly.ssdScrews,[false,false]);
+    assert.equal(verifyHardware(caseId,bench.state).ok,false,'Dropping the SSD does not secure its screws or reconnect its leads.');
+    for(const action of ['asm-tighten-ssd-0','asm-tighten-ssd-1'])bench.partAction(action);
+  }
+  bench.click('asmTool','cables');bench.choose('[data-asm-cable]','sata-data');
+  const before=structuredClone(bench.state);bench.begin('cable-sata-data');assert.deepEqual(bench.state,before);
+  bench.release('port-ssd-data');assert.equal(bench.state.sataDataConnected,true);assert.equal(bench.state.sataPowerConnected,false);
+  bench.choose('[data-asm-cable]','sata-power');bench.choose('[data-asm-cable-target]','ssd-power');bench.click('asmCableAction','connect');
+  assert.equal(bench.state.sataPowerConnected,true);assert.equal(bench.state.documentOpened,false);
+  bench.click('asmPart','panel');for(const action of ['asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1'])bench.click('assemblyAction',action);
+  bench.click('asmToggle','ac');bench.click('asmToggle','power');
+  assert.equal(bench.state.booted,true);assert.equal(bench.fields.get('[data-asm-repair-verify]').textContent,'Desktop visible · check file');
+  bench.click('asmBuildOpenFile','open');assert.equal(verifyHardware(caseId,bench.state).ok,true);bench.controller.dispose();
 });
 
 test('native top power and AC toggles retain focus, announce state and obey running-PC safety',()=>{
@@ -577,6 +663,20 @@ function parityStep(bench,mode,action){
   const actual=structuredClone(bench.state),wanted=structuredClone(expected.state);delete actual.actions;delete wanted.actions;assert.deepEqual(actual,wanted,mode+' '+action);
 }
 const buildSteps=['asm-fit-psu',...[0,1,2,3].map(i=>'asm-tighten-psu-'+i),'asm-fit-board',...[0,1,2,3].map(i=>'asm-tighten-board-'+i),'asm-fit-cpu','asm-close-retention','asm-apply-paste','asm-fit-cooler',...[0,3,1,2].map(i=>'asm-tighten-cooler-'+i),'asm-connect-cpu-fan','asm-fit-ram','asm-close-ram-clips','asm-fit-gpu','asm-close-pcie-latch','asm-tighten-gpu-0','asm-tighten-gpu-1','asm-fit-ssd','asm-tighten-ssd-0','asm-tighten-ssd-1','asm-connect-atx','asm-connect-eps','asm-connect-gpu-power','asm-connect-sata-data','asm-connect-sata-power','asm-connect-front-panel','video-gpu','asm-fit-panel','asm-tighten-panel-0','asm-tighten-panel-1'];
+
+test('builder tray selection performs no install and its live file-check button uses the existing guarded model action',()=>{
+  const bench=fixture({stateOverride:state=>buildSteps.reduce((current,action)=>applyHardwareAction('INC-106',current,action).state,state)});
+  const ready=structuredClone(bench.state),open=()=>bench.root.querySelector('[data-asm-build-open-file="open"]');
+  assert.match(bench.markup,/aria-label="PC building studio"/);assert.equal(open().disabled,true);
+  bench.click('asmPart','ram');assert.deepEqual(bench.state,ready);assert.deepEqual(bench.committed,[]);
+  bench.click('asmBuildOpenFile','open');assert.equal(bench.state.documentOpened,false,'A synthetic early click cannot bypass the model.');
+  bench.click('asmToggle','ac');bench.click('asmToggle','power');
+  assert.equal(bench.state.booted,true);assert.equal(bench.state.documentOpened,false);assert.equal(open().disabled,false);
+  bench.click('asmBuildOpenFile','open');assert.equal(bench.state.documentOpened,true);assert.equal(open().disabled,true);
+  assert.equal(verifyHardware('INC-106',bench.state).ok,true);
+  const count=bench.committed.length;bench.controller.setVisible(false);bench.click('asmBuildOpenFile','open');
+  assert.equal(bench.committed.length,count);bench.controller.dispose();
+});
 const teardownSteps=['power-off','unplug','asm-loosen-panel-0','asm-loosen-panel-1','asm-remove-panel','asm-disconnect-cpu-fan','asm-disconnect-atx','asm-disconnect-eps','asm-disconnect-gpu-power','asm-disconnect-sata-data','asm-disconnect-sata-power','asm-disconnect-front-panel','disconnect-video','asm-disconnect-display','asm-loosen-ssd-0','asm-loosen-ssd-1','asm-remove-ssd','asm-loosen-gpu-0','asm-loosen-gpu-1','asm-open-pcie-latch','asm-remove-gpu','asm-open-ram-clips','asm-remove-ram',...[2,1,3,0].map(i=>'asm-loosen-cooler-'+i),'asm-remove-cooler','asm-clean-paste','asm-open-retention','asm-remove-cpu',...[0,1,2,3].map(i=>'asm-loosen-board-'+i),'asm-remove-board',...[0,1,2,3].map(i=>'asm-loosen-psu-'+i),'asm-remove-psu'];
 for(const mode of ['visual','controls'])test(mode+' interface independently builds, tears down, and rebuilds the complete guarded PC',()=>{
   const bench=fixture();bench.click('asmComplete','toggle');

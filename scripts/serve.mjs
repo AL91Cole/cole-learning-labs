@@ -26,7 +26,8 @@ const ROUTES = new Map([
 const MEMBER_PATHS = new Set(['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html',
   '/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html']);
 const BASE_HEADERS = Object.freeze({
-  'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer'
+  'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
+  'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Resource-Policy': 'same-origin'
 });
 
 export function previewContentType(filename) {

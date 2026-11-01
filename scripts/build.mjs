@@ -6,6 +6,7 @@ import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 import { bundleTier } from './tier-bundles.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
+const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 
 // A new public file needs an explicit review here. Never publish the checkout root.
 export const PUBLIC_SOURCE_FILES = Object.freeze([
@@ -13,8 +14,10 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
   'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
-  'src/assembly-model.js', 'src/assembly-tools.js', 'src/assembly-cables.js', 'src/assembly-workbench.js', 'src/workbench-guidance.js', 'src/pc-activity.js', 'src/assembly.css',
+  'src/assembly-model.js', 'src/assembly-tools.js', 'src/assembly-cables.js', 'src/assembly-workbench.js', 'src/assembly-builder.js', 'src/workbench-guidance.js', 'src/pc-activity.js', 'src/assembly.css',
   'src/foundation-model.js', 'src/foundation-labs.js', 'src/foundation-scene.js', 'src/foundations.css',
+  'src/elementary-labs.js', 'src/elementary-labs.css',
+  'src/block-workshop.js', 'src/block-workshop.css', 'src/sign-in.js', 'src/sign-in.css',
   'src/teaching.js', 'src/teaching.css', 'src/lesson-plans.js', 'src/lesson-plans.css', 'src/experiments.js', 'src/experiments.css', 'src/learning-tools.js', 'src/capstone.js', 'src/capstone.css', 'src/requester-general.js',
   'src/app.js', 'src/lab-tutorial.js', 'src/coding-sandbox.js', 'src/standards.js', 'src/lab-language.js', 'src/requester-persona.js', 'src/requester-library.js', 'src/requester-chat.js', 'src/requester-topics.js', 'src/requester-config.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js', 'src/workbench-interactions.js',
   'src/lab-improvements.js', 'src/improvement-schema.js', 'src/improvement-config.js',
@@ -22,24 +25,26 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/coding-studio.css', 'src/coding-studio.js', 'src/interactive-tools.css', 'src/interactive-tools.js', 'src/network-bench.js', 'src/network-diagrams.js', 'src/network-labs.js', 'src/network-packets.js', 'src/network-studio-model.js', 'src/network-studio.css', 'src/network-studio.js', 'src/network-visuals.css', 'src/network-visuals.js', 'src/practice-workbench.css', 'src/practice-workbench.js',
   'src/learning-activities.js', 'src/learning-activities.css', 'src/ai-activities.js', 'src/ai-activities.css', 'src/security-activities.js', 'src/security-activities.css',
   'src/coding-visuals.js', 'src/coding-visuals.css', 'src/coding-projects.css',
-  'src/expanded-labs.js', 'src/expanded-labs.css', 'src/coding-lab.js', 'src/coding-lab.css', 'src/interview.css',
+  'src/expanded-labs.js', 'src/expanded-labs.css', 'src/coding-lab.js', 'src/coding-lab.css', 'src/coding-workbench.js', 'src/coding-workbench.css', 'src/interview.css',
   'src/report-crypto.js', 'src/report-downloads.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
   'src/secure-reports.css', 'src/accessibility.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css',
-  'src/access-policy.js', 'src/lab-catalog.js'
+  'src/access-policy.js', 'src/lab-catalog.js', 'src/owner-preview.js', ...PUBLIC_METADATA_FILES
 ]);
 // Source review does not grant public delivery. The complete member application
 // is packaged separately and is never copied into the public website output.
-export const MEMBER_FILES = PUBLIC_SOURCE_FILES;
+// Public disclosure metadata is not a member learning resource.
+export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)));
 export const PUBLIC_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
+  ...PUBLIC_METADATA_FILES,
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
   'src/app.js', 'src/secure-reports.js',
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
 const FILES = new Set(PUBLIC_SOURCE_FILES);
-const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher'];
+const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', '.well-known'];
 
 async function directoryOnly(filename) {
   const info = await lstat(filename);

@@ -1,4 +1,5 @@
 import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261025-learning-plans';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261025-learning-plans';
 import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261025-learning-plans';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -31,9 +32,9 @@ export function renderFoundationLab(candidate,record) {
   const current=record||createFoundationRecord(lab.id);
   return `<section class="foundation-lab" aria-labelledby="foundation-title">
     <header class="foundation-heading"><a href="#labs">← All labs</a><p class="foundation-eyebrow">Start here · ${esc(lab.code||lab.id)} · Grades ${esc(lab.grade)}</p><h1 id="foundation-title">${esc(lab.title)}</h1><p>${esc(lab.goal)}</p></header>
-    <div class="foundation-tabs" role="tablist" aria-label="Beginner lab steps">${sections.map((id,i)=>`<button type="button" id="foundation-tab-${id}" data-foundation-section="${id}" role="tab" aria-controls="foundation-panel-${id}" aria-selected="${i===0}" tabindex="${i===0?0:-1}"${i>0?' disabled aria-disabled="true"':''}><span>${i+1}</span> ${esc(sectionLabels[i])}</button>`).join('')}</div>
+    <div class="foundation-tabs" role="tablist" aria-label="Beginner lab steps">${sections.map((id,i)=>`<button type="button" id="foundation-tab-${id}" data-foundation-section="${id}" role="tab" aria-controls="foundation-panel-${id}" aria-selected="${i===0}" tabindex="${i===0?0:-1}"${i>0&&!OWNER_PREVIEW?' disabled aria-disabled="true"':''}><span>${i+1}</span> ${esc(sectionLabels[i])}</button>`).join('')}</div>
     <div class="foundation-body foundation-flow">
-      <p class="foundation-step-status" data-foundation-step-status role="status">Explore each item to unlock practice.</p>
+      <p class="foundation-step-status" data-foundation-step-status role="status">Explore the items, then try the practice.</p>
       <section id="foundation-panel-explore" data-foundation-panel="explore" role="tabpanel" aria-labelledby="foundation-tab-explore" tabindex="0"><div class="foundation-prompt" data-foundation-explore></div></section>
       <section id="foundation-panel-practice" data-foundation-panel="practice" role="tabpanel" aria-labelledby="foundation-tab-practice" tabindex="-1" hidden><div class="foundation-prompt" data-foundation-practice></div>
       </section>
@@ -44,7 +45,7 @@ export function renderFoundationLab(candidate,record) {
         <div class="foundation-code-workspace" data-foundation-code-workspace hidden><label for="foundation-code">Your practice code</label><textarea id="foundation-code" data-foundation-code maxlength="4000" rows="6" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="foundation-code-help">${esc(current.code)}</textarea><p id="foundation-code-help">Change the calculation, then run it.</p><div class="foundation-code-chips" role="group" aria-label="Try an operator"><button type="button" data-foundation-operator="+">Add (+)</button><button type="button" data-foundation-operator="*">Multiply (*)</button></div><button type="button" class="foundation-primary" data-foundation-run>Run all practice inputs</button><div data-foundation-code-results role="status" aria-live="polite"></div></div>
         <div class="foundation-caption" hidden><h2 data-foundation-item-title>Choose an item in the picture or the buttons.</h2><p data-foundation-looks></p><p data-foundation-role></p></div>
       </section>
-      <div class="foundation-step-actions"><button type="button" data-foundation-back hidden>← Explore &amp; learn</button><button type="button" class="foundation-primary" data-foundation-next disabled>Next: Practice &amp; test →</button></div>
+      <div class="foundation-step-actions"><button type="button" data-foundation-back hidden>← Explore &amp; learn</button><button type="button" class="foundation-primary" data-foundation-next${OWNER_PREVIEW?'':' disabled'}>Next: Practice &amp; test →</button></div>
       <p class="foundation-small">Your work stays on this page. Save your report before leaving. Use made-up details.</p>
     </div></section><dialog id="lab-dialog"><div id="dialog-content"></div><button type="button" id="dialog-close" class="button button-outline">Close</button></dialog>`;
 }
@@ -68,13 +69,13 @@ export function mountFoundationLab(root,{lab:candidate,record,onChange=()=>{},on
   }
   function prompts() {
     const progress=summary(),nextItem=lab.items.find(item=>!current.explored.includes(item.id));
-    $('[data-foundation-explore]').innerHTML=nextItem?`<p class="foundation-eyebrow">1. Explore &amp; learn</p><h2>Find ${esc(nextItem.label)}</h2><p>Choose its picture to reveal its job.</p><progress max="${progress.exploreTotal}" value="${progress.explored}" aria-label="Items explored"></progress><p class="foundation-small">${progress.explored} / ${progress.exploreTotal} explored</p>`:'<p class="foundation-eyebrow">1. Explore &amp; learn</p><h2>You found every item.</h2><p>Select Next below to try the practice.</p>';
+    $('[data-foundation-explore]').innerHTML=nextItem?`<p class="foundation-eyebrow">1. Explore &amp; learn</p><h2>Find ${esc(nextItem.label)}</h2><p>Choose its picture to reveal its job.</p><progress max="${progress.exploreTotal}" value="${progress.explored}" aria-label="Items explored"></progress><p class="foundation-small">${progress.explored} of ${progress.exploreTotal} items explored</p>`:'<p class="foundation-eyebrow">1. Explore &amp; learn</p><h2>You found every item.</h2><p>Select Next below to try the practice.</p>';
     const prompt=$('[data-foundation-practice]');
-    const readyToPractice=progress.explored===progress.exploreTotal;
+    const readyToPractice=OWNER_PREVIEW||progress.explored===progress.exploreTotal;
     const firstWrong=lab.checks.findIndex(check=>!correct(current,check));
-    if(firstWrong>=0&&checkIndex>firstWrong)checkIndex=firstWrong;
+    if(!OWNER_PREVIEW&&firstWrong>=0&&checkIndex>firstWrong)checkIndex=firstWrong;
     const check=lab.checks[checkIndex];
-    if(!readyToPractice)prompt.innerHTML='<h2>Read every item first.</h2><p>Then try one question at a time.</p>';
+    if(!readyToPractice)prompt.innerHTML='<h2>Explore each item first.</h2><p>Then try one question at a time.</p>';
     else if(check){
       const done=correct(current,check);
       prompt.innerHTML=`<p class="foundation-eyebrow">2. Practice &amp; test · Question ${checkIndex+1} OF ${lab.checks.length}</p><h2>${esc(check.prompt)}</h2>${done?`<p class="foundation-correct">${esc(check.explanation)}</p><button type="button" class="foundation-primary" data-foundation-next-question>${checkIndex===lab.checks.length-1?'Start the practice task':'Next question'} →</button>`:`<div class="foundation-answer-options" role="group" aria-label="Choose an answer">${check.options.map(option=>`<button type="button" data-foundation-answer="${esc(option.id)}" aria-pressed="${current.answers?.[check.id]===option.id}">${esc(option.label)}</button>`).join('')}</div>`}`;
@@ -82,30 +83,32 @@ export function mountFoundationLab(root,{lab:candidate,record,onChange=()=>{},on
       const job=lab.jobs.find(job=>!current.practice.includes(job.id));
       prompt.innerHTML=job?`<p class="foundation-eyebrow">2. Practice &amp; test · Step ${current.practice.length+1} OF ${lab.jobs.length}</p><h2>${esc(job.prompt)}</h2>${lab.track==='coding'?'<p>Change the calculation below. Run all three inputs.</p>':lab.track==='hardware'?`<button type="button" class="foundation-primary" data-foundation-job>${esc(job.label)}</button>`:practiceBoard(lab,current)}`:'<p class="foundation-eyebrow">2. Practice &amp; test</p><h2>Your practice task works.</h2><p>Select Next below to explain what you learned.</p>'+practiceBoard(lab,current);
     }
+    if(OWNER_PREVIEW&&check){if(!correct(current,check))prompt.innerHTML+='<button type="button" class="foundation-primary" data-foundation-next-question>'+(checkIndex===lab.checks.length-1?'Open practice tools':'Next question')+' (preview) →</button>';prompt.innerHTML+='<button type="button" data-foundation-open-tools>Open practice tools</button>';}
+    if(OWNER_PREVIEW&&!check)prompt.innerHTML+='<button type="button" data-foundation-review-questions>Review questions</button>';
     if(lab.track==='coding')$('[data-foundation-code-results]').innerHTML=codingResults(current);
-    const outcomes=[['Read every item',progress.explored===progress.exploreTotal],['Answer each question',progress.checked===progress.checkTotal],['Finish and check the practice task',progress.practiceComplete]];
-    $('[data-foundation-check]').innerHTML=`<p class="foundation-eyebrow">3. Check &amp; explain</p><h2>${progress.complete?'Practice finished.':'Your task works. What did you learn?'}</h2><p>${esc(lab.goal)}</p><ul class="foundation-outcomes">${outcomes.map(([label,done])=>`<li><span aria-hidden="true">${done?'✓':'○'}</span> ${label} <b>${done?'Done':'To do'}</b></li>`).join('')}</ul>`;
+    const outcomes=[['Explore every item',progress.explored===progress.exploreTotal],['Answer each question',progress.checked===progress.checkTotal],['Finish and check the practice task',progress.practiceComplete]];
+    $('[data-foundation-check]').innerHTML=`<p class="foundation-eyebrow">3. Check &amp; explain</p><h2>${progress.complete?'Practice finished.':progress.practiceComplete?'Your task works. What did you learn?':'Check your progress. What did you learn?'}</h2><p>${esc(lab.goal)}</p><ul class="foundation-outcomes">${outcomes.map(([label,done])=>`<li><span aria-hidden="true">${done?'✓':'○'}</span> ${label} <b>${done?'Done':'To do'}</b></li>`).join('')}</ul>`;
     for(const field of ['notes','reflection'])if($('[data-foundation-'+field+']').value!==(current[field]||''))$('[data-foundation-'+field+']').value=current[field]||'';
     $('[data-foundation-explanation-status]').textContent=progress.complete?'Both answers saved. Review and save your report.':'Write both answers, then select Finish practice & open report.';
   }
   function navigation(){
     const progress=summary(),explored=progress.explored===progress.exploreTotal;
-    if(section==='check'&&!progress.practiceComplete)section=explored?'practice':'explore';
-    if(section==='practice'&&!explored)section='explore';
+    if(!OWNER_PREVIEW&&section==='check'&&!progress.practiceComplete)section=explored?'practice':'explore';
+    if(!OWNER_PREVIEW&&section==='practice'&&!explored)section='explore';
     shell.dataset.section=section;
     all('[data-foundation-panel]').forEach(panel=>{const active=panel.dataset.foundationPanel===section;panel.hidden=!active;panel.tabIndex=active?0:-1;});
     all('[data-foundation-section]').forEach(tab=>{
-      const active=tab.dataset.foundationSection===section,unlocked=tab.dataset.foundationSection==='explore'||(tab.dataset.foundationSection==='practice'?explored:progress.practiceComplete);
+      const active=tab.dataset.foundationSection===section,unlocked=OWNER_PREVIEW||tab.dataset.foundationSection==='explore'||(tab.dataset.foundationSection==='practice'?explored:progress.practiceComplete);
       tab.disabled=!unlocked;tab.setAttribute('aria-disabled',String(!unlocked));tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;
     });
     const taskReady=section==='practice'&&checkIndex>=lab.checks.length;
     const stageVisible=section!=='check'&&(!taskReady||lab.track==='hardware'||lab.track==='coding');$('[data-foundation-stage]').hidden=!stageVisible;scene?.setMode?.(section);scene?.setVisible?.(stageVisible);
-    $('[data-foundation-code-workspace]').hidden=section!=='practice'||lab.track!=='coding'||!explored||checkIndex<lab.checks.length;
+    $('[data-foundation-code-workspace]').hidden=section!=='practice'||lab.track!=='coding'||(!OWNER_PREVIEW&&!explored)||checkIndex<lab.checks.length;
     const next=$('[data-foundation-next]'),back=$('[data-foundation-back]');
-    next.hidden=section==='check';next.disabled=section==='explore'?!explored:!progress.practiceComplete;next.textContent=section==='explore'?'Next: Practice & test →':'Next: Check & explain →';
+    next.hidden=section==='check';next.disabled=!OWNER_PREVIEW&&(section==='explore'?!explored:!progress.practiceComplete);next.textContent=section==='explore'?'Next: Practice & test →':'Next: Check & explain →';
     back.hidden=section==='explore';back.textContent=section==='practice'?'← Explore & learn':'← Practice & test';
-    $('[data-foundation-step-status]').textContent=section==='explore'?(explored?'Step 1 complete. Continue below.':`Read ${progress.exploreTotal-progress.explored} more item${progress.exploreTotal-progress.explored===1?'':'s'} to unlock practice.`):section==='practice'?(progress.practiceComplete?'Step 2 complete. Continue below.':'Answer the questions. Then follow and check each practice step.'):'Write what you tried and what you learned.';
-    const ticket=$('[data-foundation-ticket]');ticket.setAttribute('aria-disabled',String(!progress.complete));ticket.tabIndex=progress.complete?0:-1;if(progress.complete)ticket.setAttribute('href','#lab/'+lab.nextLab);else ticket.removeAttribute('href');
+    $('[data-foundation-step-status]').textContent=OWNER_PREVIEW?'Preview: choose any step or open the practice tools. Skipped work stays unfinished.':section==='explore'?(explored?'All items explored. Select Next to practice.':`${progress.explored} of ${progress.exploreTotal} items explored. Choose ${progress.exploreTotal-progress.explored} more item${progress.exploreTotal-progress.explored===1?'':'s'} to reach practice.`):section==='practice'?(progress.practiceComplete?'Step 2 complete. Continue below.':'Answer the questions. Then follow and check each practice step.'):'Write what you tried and what you learned.';
+    const ticket=$('[data-foundation-ticket]'),canVisit=OWNER_PREVIEW||progress.complete;ticket.setAttribute('aria-disabled',String(!canVisit));ticket.tabIndex=canVisit?0:-1;if(canVisit)ticket.setAttribute('href','#lab/'+lab.nextLab);else ticket.removeAttribute('href');
   }
   function render(){caption();prompts();navigation();scene?.update(current);}
   function commit(action,{focus}={}) {
@@ -123,8 +126,8 @@ export function mountFoundationLab(root,{lab:candidate,record,onChange=()=>{},on
   function activate(next,{focusTab=false}={}) {
     if(!sections.includes(next))return;
     const progress=summary();
-    if(next!=='explore'&&progress.explored<progress.exploreTotal){say('Read every item in Explore & learn before you continue.');return;}
-    if(next==='check'&&!progress.practiceComplete){say('Finish and check the practice task before you continue.');return;}
+    if(!OWNER_PREVIEW&&next!=='explore'&&progress.explored<progress.exploreTotal){say('Explore each item before continuing to practice.');return;}
+    if(!OWNER_PREVIEW&&next==='check'&&!progress.practiceComplete){say('Finish and check the practice task before you continue.');return;}
     scene?.cancelInteraction?.();section=next;
     navigation();
     if(focusTab)$(`[data-foundation-section="${section}"]`)?.focus({preventScroll:true});
@@ -133,14 +136,16 @@ export function mountFoundationLab(root,{lab:candidate,record,onChange=()=>{},on
   }
   function click(event) {
     const target=event.target.closest?.('button,[data-foundation-ticket]');if(!target||!shell.contains(target)||disposed)return;
-    if(Object.hasOwn(target.dataset,'foundationTicket')){if(!summary().complete){event.preventDefault?.();say('Finish your practice and save both answers first.');}return;}
+    if(Object.hasOwn(target.dataset,'foundationTicket')){if(!OWNER_PREVIEW&&!summary().complete){event.preventDefault?.();say('Finish your practice and save both answers first.');}return;}
     if(target.dataset.foundationSection){activate(target.dataset.foundationSection,{focusTab:true});return;}
     if(target.dataset.foundationGo){activate(target.dataset.foundationGo,{focusTab:true});return;}
     if(Object.hasOwn(target.dataset,'foundationNext')){activate(section==='explore'?'practice':'check');return;}
     if(Object.hasOwn(target.dataset,'foundationBack')){activate(section==='check'?'practice':'explore');return;}
     if(target.dataset.foundationInspect){inspect(target.dataset.foundationInspect);return;}
+    if(OWNER_PREVIEW&&Object.hasOwn(target.dataset,'foundationOpenTools')){checkIndex=lab.checks.length;prompts();navigation();say('Preview tools are open. No questions were answered for you.');(lab.track==='coding'?$('[data-foundation-code]'):$('[data-foundation-job]'))?.focus({preventScroll:true});return;}
+    if(OWNER_PREVIEW&&Object.hasOwn(target.dataset,'foundationReviewQuestions')){checkIndex=0;prompts();navigation();return;}
     if(target.dataset.foundationAnswer){const check=lab.checks[checkIndex];if(!check)return;const value=target.dataset.foundationAnswer;if(!check.options.some(option=>option.id===value))return;const result=commit({type:'answer',check:check.id,value});const focus=correct(result.state,check)?'[data-foundation-next-question]':`[data-foundation-answer="${value}"]`;$(focus)?.focus({preventScroll:true});return;}
-    if(Object.hasOwn(target.dataset,'foundationNextQuestion')){if(!lab.checks[checkIndex]||!correct(current,lab.checks[checkIndex]))return;do{checkIndex++;}while(checkIndex<lab.checks.length&&correct(current,lab.checks[checkIndex]));prompts();navigation();say(checkIndex<lab.checks.length?'Choose an answer to this question.':'Follow the practice steps in order.');all('[data-foundation-answer]')[0]?.focus({preventScroll:true});$('[data-foundation-job]')?.focus({preventScroll:true});if(lab.track==='coding'&&checkIndex===lab.checks.length)$('[data-foundation-code]')?.focus({preventScroll:true});return;}
+    if(Object.hasOwn(target.dataset,'foundationNextQuestion')){if(!lab.checks[checkIndex]||(!OWNER_PREVIEW&&!correct(current,lab.checks[checkIndex])))return;do{checkIndex++;}while(checkIndex<lab.checks.length&&correct(current,lab.checks[checkIndex]));prompts();navigation();say(checkIndex<lab.checks.length?'Choose an answer to this question.':'Follow the practice steps in order.');all('[data-foundation-answer]')[0]?.focus({preventScroll:true});$('[data-foundation-job]')?.focus({preventScroll:true});if(lab.track==='coding'&&checkIndex===lab.checks.length)$('[data-foundation-code]')?.focus({preventScroll:true});return;}
     if(target.dataset.foundationChoice){commit({type:'practice',action:target.dataset.foundationChoice},{focus:`[data-foundation-choice="${target.dataset.foundationChoice}"]`});return;}
     if(Object.hasOwn(target.dataset,'foundationJob')){const job=lab.jobs.find(job=>!current.practice.includes(job.id));if(job)commit({type:'practice',action:job.action},{focus:'[data-foundation-job]'});return;}
     if(target.dataset.foundationOperator){if(lab.track!=='coding'||!['+','*'].includes(target.dataset.foundationOperator))return;const editor=$('[data-foundation-code]'),source=editor.value.replace(/quantity\s*[+*]\s*price/g,'quantity '+target.dataset.foundationOperator+' price');editor.value=source;commit({type:'code',source});editor.focus({preventScroll:true});return;}

@@ -5,8 +5,9 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
-import {routeAccess} from '../src/access-policy.js';
+import {isFreeLab,routeAccess} from '../src/access-policy.js';
 import {CATALOG} from '../src/lab-catalog.js';
+import {ELEMENTARY_LABS} from '../src/elementary-labs.js';
 
 const source=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
 const styles=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
@@ -20,7 +21,7 @@ class Control{
   click(){this.listeners.get('click')?.({target:this});}
   focus(){this.focused++;}
 }
-function harness(){
+function harness({memberContent=true}={}){
   const hero=['video','power','keyboard'].map(heroCheck=>new Control({heroCheck}));
   const guardian=['before','after'].map(guardianView=>new Control({guardianView}));
   const elements=new Map(['#practice-entries','#network-sequence','#hero-demo-feedback','#guardian-before','#guardian-after','#guardian-demo-feedback','#lab-count','#lab-results','#clear-filters','#grade-filter','#duration-filter','#lab-search'].map(id=>[id,new Control()]));
@@ -29,8 +30,9 @@ function harness(){
   const record={state:{pcOn:false},events:[],verified:false,closed:false},store={labs:{'INC-101':record}},before=structuredClone(store);
   let renders=0;
   const forbidden=()=>assert.fail('Public previews must not create lab records, change equipment, save progress, or call a network service.');
-  // Full-catalog filter behavior is exercised in the protected member view.
-  const context=vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
+  // Full-catalog filter behavior defaults to the protected member view.
+  const scenarios=memberContent?SCENARIOS:SCENARIOS.filter(lab=>isFreeLab(lab.id));
+  const context=vm.createContext({MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
     $:selector=>{assert.ok(elements.has(selector),selector);return elements.get(selector);},
     $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;if(selector==='.track-filters [data-track]')return pathwayButtons;assert.fail(selector);},
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,
@@ -42,13 +44,50 @@ function harness(){
 
 test('the homepage explains its counts, real privacy boundaries, and manual report handoff',()=>{
   const h=harness(),html=h.context.home();
-  assert.match(html,new RegExp(`<b>${FOUNDATION_LABS.length+SCENARIOS.length}</b><span>learning activities`));
-  assert.match(html,new RegExp(`<b>${FOUNDATION_LABS.length}</b><span>starter modules`));
-  assert.match(html,new RegExp(`<b>${SCENARIOS.length}</b><span>ticket investigations`));
+  assert.match(html,new RegExp(`<b>${ELEMENTARY_LABS.length+FOUNDATION_LABS.length+SCENARIOS.length}</b><span>learning activities`));
+  assert.match(html,new RegExp(`<b>${FOUNDATION_LABS.length}</b><span>beginner courses · Grades 7–12`));
+  assert.match(html,new RegExp(`<b>${SCENARIOS.length}</b><span>investigations · Grades 7–12`));
+  assert.match(html,/>62<\/b><span>learning activities/u);
+  assert.match(html,/5 pathways · Grades K–12/u);
+  assert.match(html,/Includes 15 free K–6 activities/u);
   for(const copy of ['No account required for public labs','Practice stays on this device','School IT review available','Built-in replies remain available','downloaded reports','approved LMS'])assert.ok(html.includes(copy),copy);
   assert.match(html,/preview your report.*\.txt.*review it for personal information.*upload/iu);
   assert.doesNotMatch(html,/zero PII|FERPA.compliant|COPPA.compliant|automatically.*Google Classroom|guaranteed school approval/iu);
+  const beginnerStart=html.indexOf('id="basics-heading"'),portfolioStart=html.indexOf('class="project-feature"');
+  assert.ok(beginnerStart>=0&&beginnerStart<portfolioStart,'Beginner activities appear before the portfolio projects.');
+  const free=harness({memberContent:false}),library=free.context.library();
+  assert.match(free.context.home(),/>30<\/b><span>free learning activities/u);
+  assert.match(free.context.home(),/>10<\/b><span>investigations · Grades 7–12/u);
+  const progress=library.match(/<span class="tag" aria-describedby="lab-progress-help">([^<]+)<\/span>/u)?.[1];
+  assert.ok(progress);assert.match(progress,/^0 of 10 free investigations/u);
+  assert.match(library,/<p id="lab-progress-help" class="panel-help">[^<]*not a grade\.<\/p>/u,'The completion count has a visible explanation, including for keyboard and touch users.');
+  assert.match(h.context.library(),/<span class="tag" aria-describedby="lab-progress-help">0 of 42 investigations/u);
   assert.deepEqual(h.store,h.before);
+});
+
+test('home and library provide distinct K–6 grade-band entry cards alongside the established grades 7–12 labs',()=>{
+  const h=harness({memberContent:false});
+  for(const html of [h.context.home(),h.context.library()]){
+    assert.match(html,/id="elementary-entry-heading"/u);
+    for(const code of ['k1','2-3','4-6'])assert.ok(html.includes('href="#explore?band='+code+'"'));
+    for(const label of ['Kindergarten–grade 1','Grades 2–3','Grades 4–6'])assert.ok(html.includes(label));
+    assert.equal((html.match(/>5 free activities<\/p>/gu)||[]).length,3);
+    assert.ok(html.includes('See all K–6 activities'));
+    assert.ok(html.includes('Grades 7–12'),'The existing course catalogue keeps its real grade range.');
+  }
+  assert.deepEqual(h.store,h.before);
+});
+
+test('library and unavailable membership notice list all 15 free K–6 activities with the existing older free tier',()=>{
+  const h=harness({memberContent:false});
+  vm.runInContext(cut('function membershipGate(','\nfunction checkCapstoneState('),h.context);
+  const library=h.context.library(),gate=h.context.membershipGate({page:'membership'});
+  assert.match(library,/All 15 K–6 activities are free/u);
+  assert.match(gate,/Free access includes all 15 K–6 activities/u);
+  for(const html of [library,gate]){
+    for(const copy of ['all five beginner courses','grades 7–12','the practice workbench','two investigations per topic'])assert.ok(html.includes(copy),copy);
+  }
+  assert.match(gate,/<button class="button" type="button" disabled>Subscriptions unavailable<\/button>/u);
 });
 
 test('all three native preview buttons give relevant immediate observations without touching a lab record',()=>{

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {CATALOG} from '../src/lab-catalog.js';
-import {FREE_LAB_IDS_BY_TOPIC,FREE_LAB_IDS,isFreeLab,routeAccess,MEMBER_CONTENT} from '../src/access-policy.js';
+import {FREE_LAB_IDS_BY_TOPIC,FREE_LAB_IDS,ELEMENTARY_LAB_IDS,isFreeLab,routeAccess,MEMBER_CONTENT} from '../src/access-policy.js';
+import {ELEMENTARY_LABS} from '../src/elementary-labs.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
 
@@ -42,6 +43,19 @@ test('all beginner courses and their first investigations stay public',()=>{
   }
 });
 
+test('the separate K–6 catalogue and all 15 authored activities are public without expanding the 7–12 free allowlist',()=>{
+  assert.equal(ELEMENTARY_LAB_IDS.length,15);assert.equal(Object.isFrozen(ELEMENTARY_LAB_IDS),true);
+  assert.deepEqual([...ELEMENTARY_LAB_IDS].sort(),ELEMENTARY_LABS.map(lab=>lab.id).sort());
+  assert.equal(routeAccess({page:'explore'}),'public');
+  for(const id of ELEMENTARY_LAB_IDS){
+    assert.equal(routeAccess({page:'explore',id}),'public');
+    assert.equal(routeAccess({page:'lab',id}),'unknown');
+    assert.equal(isFreeLab(id),false,'The 7–12 cloud gateway must not accept elementary activity IDs.');
+  }
+  for(const id of ['EX-HW-0','EX-HW-4','ex-hw-1','EX-HW-1/extra','EX%2DHW%2D1','__proto__','INC-101'])assert.equal(routeAccess({page:'explore',id}),'unknown');
+  assert.equal(FREE_LAB_IDS.length,10);assert.equal(CATALOG.filter(lab=>lab.access==='member').length,32);
+});
+
 test('every direct investigation and supported practice route follows the fixed free allowlist',()=>{
   for(const lab of CATALOG){
     const expected=isFreeLab(lab.id)?'public':'member';
@@ -56,7 +70,7 @@ test('open sandboxes, studios, capstone and educator learning resources are memb
   for(const id of [undefined,'','blank','pixel-pet','arcade','rover','tiles'])assert.equal(routeAccess({page:'sandbox',id}),'member');
   for(const id of ['network','coding'])assert.equal(routeAccess({page:'studio',id}),'member');
   for(const page of ['capstone','educators'])assert.equal(routeAccess({page}),'member');
-  for(const page of ['home','projects','about','connect','privacy','guide','labs'])assert.equal(routeAccess({page}),'public');
+  for(const page of ['home','projects','about','connect','privacy','guide','labs','signin'])assert.equal(routeAccess({page}),'public');
   for(const id of Object.keys(FREE_LAB_IDS_BY_TOPIC))assert.equal(routeAccess({page:'labs',id}),'public');
 });
 
@@ -68,6 +82,6 @@ test('malformed, unknown and case-changed IDs cannot become public content',()=>
   for(const route of [null,undefined,[],{},'lab/INC-101',
     {page:'Lab',id:'INC-101'},{page:'unknown'},{page:'learn',id:'coding/extra'},
     {page:'sandbox',id:'unknown'},{page:'studio'},{page:'studio',id:'hardware'},
-    {page:'privacy',id:'extra'},{page:'labs',id:'unknown'},
+    {page:'privacy',id:'extra'},{page:'labs',id:'unknown'},{page:'signin',id:'owner'},{page:'signin',id:'CODE-503'},
     {page:'capstone',id:'INC-101'},{page:'educators',id:'extra'},{page:'home',id:null}])assert.equal(routeAccess(route),'unknown');
 });

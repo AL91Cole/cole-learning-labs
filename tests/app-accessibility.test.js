@@ -52,7 +52,7 @@ function reportHarness(){
   const document=makeDocument(),opener=new Element(document),panel=new Element(document),dialog=new Element(document),elements=new Map([['#dialog-content',panel],['#lab-dialog',dialog],['#workspace',new Element(document)]]);opener.focus();
   Object.defineProperty(panel,'innerHTML',{set(markup){panel.markup=markup;for(const match of markup.matchAll(/<[^>]+\bid="([^"]+)"[^>]*>/gu))elements.set('#'+match[1],new Element(document,match[0]));}});
   let releases=0;
-  const context=vm.createContext({document,reportCleanup:null,esc:escapeHtml,$:selector=>elements.get(selector),cancelHardwareInteraction(){},reportText:()=> 'A fictional report.',reportFilename:id=>id+'.txt',createReportURLs:()=>({clear(){releases++;},release(){}}),createTextReport(){assert.fail('Opening the dialog must not export.');},canShareTextReport:()=>false,shareTextReport(){assert.fail('Opening the dialog must not share.');}});
+  const context=vm.createContext({document,reportCleanup:null,esc:escapeHtml,$:selector=>elements.get(selector),cancelHardwareInteraction(){},cancelCodingWorkbench(){},reportText:()=> 'A fictional report.',reportFilename:id=>id+'.txt',createReportURLs:()=>({clear(){releases++;},release(){}}),createTextReport(){assert.fail('Opening the dialog must not export.');},canShareTextReport:()=>false,shareTextReport(){assert.fail('Opening the dialog must not share.');}});
   const start=source.indexOf('function openReport('),end=source.indexOf('\nfunction curriculumDownloads(',start);assert.ok(start>=0&&end>start);
   vm.runInContext(source.slice(start,end),context);context.openReport({id:'INC-101',title:'The Blank Monitor'},{});
   return {context,document,opener,panel,dialog,elements,get releases(){return releases;}};

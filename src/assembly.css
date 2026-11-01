@@ -92,3 +92,103 @@
 @media(max-width:900px){.asm-picture-workspace{grid-template-columns:minmax(0,1fr)}.asm-picture-context{position:static;border-left:0;border-top:1px solid #416173;max-height:none}.asm-picture-action-list{grid-template-columns:repeat(2,minmax(0,1fr))}.asm-schematic[data-expanded=true] .asm-picture-workspace{grid-template-columns:minmax(1200px,1fr) 250px}}
 
 .asm-schematic{width:100%;max-width:none}.asm-picture-context{box-sizing:border-box}
+
+/* Complete-build studio only; repair-ticket controls retain their existing skin. */
+.asm-build{--asm-edge:#d8d4c8;--asm-accent:#166652;color:#253b40;background:#f6f3eb;border-radius:16px;box-shadow:0 16px 45px #253b4010}
+.asm-build .asm-ticket-guide{padding:20px 22px;background:#fffdf8;border-bottom:0}
+.asm-build .asm-ticket-guide h3{color:#253b40;font-size:1.4rem}
+.asm-build .asm-ticket-guide p{color:#536469;max-width:78ch}
+.asm-build-guide{padding:0 20px 18px}
+.asm-build-eyebrow{display:block;margin-bottom:10px;color:#766345;font:750 .66rem/1.6 ui-monospace,Consolas,monospace;letter-spacing:.08em}
+.asm-build-guide ol{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0;margin:0}
+.asm-build-guide li{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #d8d4c8;border-radius:10px;background:#eeece5;min-width:0}
+.asm-stage-number{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid #c2c9bf;border-radius:50%;color:#65706c;background:#fffdf8;font-weight:750}
+.asm-build-guide li strong,.asm-build-guide li div>span{display:block}
+.asm-build-guide li strong{font-size:1rem;color:#35484a}
+.asm-build-guide li div>span{font-size:.8rem;color:#5c6b69;line-height:1.5}
+.asm-build-guide li[data-state=current]{border-color:#bc8737;background:#fff5df;box-shadow:inset 0 3px #e5b45f}
+.asm-build-guide li[data-state=current] .asm-stage-number{background:#885c1f;border-color:#885c1f;color:white}
+.asm-build-guide li[data-state=complete]{background:#e6f1e9;border-color:#99bdaa}
+.asm-build-guide li[data-state=complete] .asm-stage-number{background:#246653;border-color:#246653;color:white}
+.asm-build-guide>p{margin:12px 0 0;color:#405b57;font-size:.95rem;line-height:1.6}
+.asm-build-workspace{display:grid;grid-template-columns:minmax(150px,.75fr) minmax(0,3fr) minmax(210px,1fr);align-items:start;gap:14px;padding:0 16px 18px}
+.asm-build-tray{grid-column:1;grid-row:1;min-width:0;border:1px solid #d8d4c8;border-radius:12px;background:#fffdf8;overflow:hidden}
+.asm-build-center{grid-column:2;grid-row:1;min-width:0;border:1px solid #d8d4c8;border-radius:12px;background:#fffdf8;overflow:hidden}
+.asm-build-test{grid-column:3;grid-row:1;min-width:0;border:1px solid #d8d4c8;border-radius:12px;background:#fffdf8;overflow:hidden}
+.asm-build-heading{padding:16px 14px 12px}
+.asm-build-heading>span{color:#6b624e;font:750 .66rem/1.6 ui-monospace,Consolas,monospace;letter-spacing:.09em}
+.asm-build-heading h4{margin:5px 0 7px;color:#253b40;font-size:1.15rem}
+.asm-build-heading p,.asm-tray-note{margin:0;color:#596c6c;font-size:.82rem;line-height:1.6}
+.asm-build-parts{display:grid;gap:6px;padding:0 8px 12px}
+.asm-build button,.asm-build select{color:#314c50;background:#fffdf8;border-color:#c8cfc7;box-shadow:0 1px 0 #253b400a}
+.asm-build button:hover{background:#edf4ee;border-color:#719c84}
+.asm-build button:focus-visible,.asm-build select:focus-visible{outline-color:#126c5c}
+.asm-build button[aria-pressed=true]{background:#e5f1e8;border-color:#48856c;color:#194e3d}
+.asm-build-parts button{display:block;width:100%;text-align:left;padding:10px;min-width:0;border-radius:8px}
+.asm-build-parts strong,.asm-build-parts span{display:block;overflow-wrap:anywhere}
+.asm-build-parts strong{font-size:.88rem}
+.asm-build-parts span{margin-top:4px;font-size:.74rem;color:#5f716a}
+.asm-tray-note{padding:12px;border-top:1px solid #e4e1d7;background:#f7f6ef}
+.asm-build .asm-top-controls{display:block}
+.asm-build .asm-toolbox,.asm-build .asm-picture-tabs{background:#f3f1e8;border-color:#d8d4c8}
+.asm-build .asm-tool-buttons{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.asm-build .asm-tool-buttons button{font-size:.83rem;min-height:44px}
+.asm-build .asm-picture-tabs{border-left:0;gap:8px;padding:8px}
+.asm-build .asm-picture-tabs strong{color:#3f5555;font-size:.85rem}
+.asm-build .asm-picture-tabs button{font-size:.78rem;min-height:44px;flex:1 1 110px}
+.asm-build .asm-visual{padding:8px}
+.asm-build .asm-picture-workspace{grid-template-columns:minmax(0,1fr)}
+.asm-build .asm-picture-context{position:static;max-height:none;border-left:0;border-top:1px solid #416173;color:#dfedf2}
+.asm-build .asm-picture-context p{color:#cfe2eb}
+.asm-build .asm-picture-context .asm-picture-feedback{color:#c4f3e5}
+.asm-build .asm-picture-context button{background:#f4f7ef;color:#214f47;border-color:#b1c6b8}
+.asm-build .asm-picture-context button:hover{background:#dceee0}
+.asm-build .asm-picture-tabs [data-asm-complete][aria-pressed=true]{background:#e5f1e8;color:#194e3d;border-color:#48856c}
+.asm-build .asm-picture-action-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+.asm-build .asm-schematic[data-expanded=true] .asm-picture-workspace{grid-template-columns:minmax(1200px,1fr)}
+.asm-build .asm-activity,.asm-build .asm-feedback,.asm-build .asm-current,.asm-build .asm-monitor-readout{color:#385451;background:#f6f7ef;border-color:#d8d4c8;margin:8px;border-radius:8px}
+.asm-build .asm-activity strong,.asm-build .asm-current h4{color:#245c4c}
+.asm-build .asm-current p,.asm-build .asm-monitor-readout p{color:#47615b}
+.asm-placement{display:block;margin:5px 0;color:#795a2b;font-size:.84rem;line-height:1.6}
+.asm-build>.asm-power{display:flex;gap:18px;margin:0 16px 16px;padding:14px;background:#fffdf8;border:1px solid #d8d4c8;border-radius:10px}
+.asm-build>.asm-power .asm-power-pair{gap:16px;align-items:center}
+.asm-build>.asm-power .asm-power-switch{border-color:#d8d4c8}
+.asm-build>.asm-power .asm-power-switch>span,.asm-build>.asm-power .asm-power-switch strong{color:#2d5149;font-size:.95rem}
+.asm-build>.asm-power .asm-ac-toggle{justify-content:center;font-size:.95rem;min-height:48px}
+.asm-build>.asm-power .asm-machine-status strong{color:#285d4f;font-size:.95rem}
+.asm-build>.asm-power .asm-machine-status [data-asm-next]{color:#665b44;font-size:.9rem}
+.asm-build-results{margin:0;padding:0 14px}
+.asm-build-results>div{padding:13px 0;border-bottom:1px solid #e1dfd3}
+.asm-build-results dt{color:#6b624e;font-size:.73rem;font-weight:750;text-transform:uppercase;letter-spacing:.04em}
+.asm-build-results dd{margin:6px 0 0;color:#2c5148;font-size:.9rem;line-height:1.6;overflow-wrap:anywhere}
+.asm-build-case{margin:12px 14px;color:#675a40;font-size:.82rem;line-height:1.6}
+.asm-build-test>button{width:calc(100% - 28px);margin:0 14px 14px;background:#246653;color:white;border-color:#246653;font-size:.87rem}
+.asm-build-test>button:hover{background:#194f40;color:white}
+.asm-build-test>button:disabled{background:#eeeee4;color:#6d7469;border-color:#d3d8cd}
+.asm-build .asm-all-tools,.asm-build .asm-drawer,.asm-build .asm-help{color:#395754;background:#fffdf8;border-color:#d8d4c8}
+.asm-build .asm-drawer summary,.asm-build .asm-help summary,.asm-build .asm-all-tools summary,.asm-build .asm-monitor-readout summary{color:#33564e}
+.asm-build .asm-drawer p,.asm-build .asm-help p,.asm-build .asm-help li,.asm-build .asm-tool-controls label,.asm-build .asm-all-tools p{color:#49635c}
+.asm-build .asm-actions .asm-action-ready{background:#e5f1e8;color:#194e3d;border-color:#48856c}
+@media(max-width:1150px){
+  .asm-build-workspace{grid-template-columns:minmax(145px,.7fr) minmax(0,3fr)}
+  .asm-build-test{grid-column:1/-1;grid-row:2}
+  .asm-build-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+}
+@media(max-width:720px){
+  .asm-build .asm-ticket-guide{padding:16px}
+  .asm-build-guide{padding:0 12px 14px}
+  .asm-build-guide ol{gap:5px}
+  .asm-build-guide li{padding:9px 6px;gap:6px;align-items:flex-start}
+  .asm-stage-number{width:24px;height:24px;font-size:.82rem}
+  .asm-build-guide li strong{font-size:.86rem}
+  .asm-build-guide li div>span{font-size:.72rem}
+  .asm-build-workspace{display:flex;flex-direction:column;padding:0 10px 12px;gap:10px}
+  .asm-build-tray,.asm-build-center,.asm-build-test{width:100%;box-sizing:border-box}
+  .asm-build-tray{order:0}.asm-build-center{order:1}.asm-build-test{order:2}
+  .asm-build-parts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .asm-build-heading{padding:12px}
+  .asm-build-results{display:block}
+  .asm-build>.asm-power{margin:0 10px 12px;padding:12px}
+  .asm-build .asm-picture-action-list{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:420px){.asm-build-guide li{display:block}.asm-stage-number{margin-bottom:6px}.asm-build>.asm-power .asm-ac-toggle{width:100%}}

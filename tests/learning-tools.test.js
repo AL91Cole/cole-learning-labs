@@ -24,6 +24,20 @@ test('routes accept reviewed mode and sequence values while ignoring unrelated q
   assert.equal(learningRoute('#lab/INC-101?mode=challenge&mode=unknown').mode,'challenge');
 });
 
+test('elementary routes retain only fixed grade-band choices and reject extra path components',()=>{
+  for(const [code,band]of [['k1','K–1'],['2-3','2–3'],['4-6','4–6']]){
+    assert.deepEqual(learningRoute('#explore?band='+code+'&student=PRIVATE_MARKER'),{page:'explore',id:undefined,mode:'guided',sequence:null,band});
+  }
+  assert.deepEqual(learningRoute('#explore/EX-HW-1'),{page:'explore',id:'EX-HW-1',mode:'guided',sequence:null});
+  for(const value of ['unknown','K–1','__proto__','PRIVATE_MARKER'])assert.equal(learningRoute('#explore?band='+encodeURIComponent(value)).band,undefined);
+  for(const hash of ['#explore/EX-HW-1/extra','#explore/EX-HW-1/','#explore//EX-HW-1','#explore/EX-HW-1/extra/more'])assert.equal(learningRoute(hash).page,'unknown');
+});
+
+test('shared sign-in navigation ignores identity and redirect claims and rejects alternate account paths',()=>{
+  assert.deepEqual(learningRoute('#signin?email=PRIVATE_MARKER&owner=true&returnTo=https://evil.example.test'),{page:'signin',id:undefined,mode:'guided',sequence:null});
+  for(const hash of ['#signin/owner','#signin/subscriber','#signin/','#signin//CODE-503','#signin/CODE-503/extra'])assert.equal(learningRoute(hash).page,'unknown');
+});
+
 
 test('all investigation pages deep-link with reviewed support and sequence settings',()=>{
   for(const scenario of SCENARIOS)for(const [index,step] of ['request','workbench','explain'].entries()) {
@@ -95,6 +109,17 @@ function explainAttempt(view){
   view.input('observed','The original lesson file opened in the classroom desktop.');
   view.input('explain','Restoring the power path supports my idea because the requested task now works.');
 }
+
+test('preview navigation does not start or save an experiment even when a written first idea already exists',t=>{
+  const view=viewFixture(t,'#lab/INC-102/workbench?mode=guided'),scenario=SCENARIOS.find(item=>item.id==='INC-102'),record=firstIdeaRecord(scenario);
+  let saves=0,tests=0;
+  const dispose=mountLabLearning(view.root,{scenario,record,autoStartFirstIdea:false,onSave:()=>saves++,onTest:()=>tests++,getResult:()=>verifyHardware(scenario.id,record.state)});
+  const before=structuredClone(record);
+  for(const section of [1,2,3,2])view.emit('cole:lab-section-change',{id:scenario.id,section});
+  assert.deepEqual(record,before);assert.equal(saves,0);assert.equal(tests,0);
+  assert.equal(readExperiments(record).attempts.length,0);assert.equal(readExperiments(record).draft.before,undefined);
+  dispose();assert.equal(view.documentListeners.size,0);
+});
 
 test('entering page two seeds the saved first idea, selected clues and original baseline once',t=>{
   const view=viewFixture(t,'#lab/INC-102/request?mode=guided'),scenario=SCENARIOS.find(item=>item.id==='INC-102'),record=firstIdeaRecord(scenario),initial=observationSnapshot(scenario,record.state);

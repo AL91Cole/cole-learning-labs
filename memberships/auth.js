@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { verifyGoogleIdToken } from 'better-auth/social-providers';
+import { MembershipError } from './security.js';
 
 export const MEMBERSHIP_ORIGIN = 'https://members.colelearninglabs.com';
 export const MEMBERSHIP_AUTH_PATH = '/api/auth';
@@ -178,6 +179,45 @@ export async function getAdultSession(request, env, { authFactory = createMember
     now() - created >= MEMBERSHIP_SESSION_SECONDS * 1000) return null;
   return { user: { id: user.id, email: user.email, emailVerified: true },
     session: { id: session.id, createdAt: new Date(created), expiresAt: new Date(expires) } };
+}
+
+/** Owner access is an optional private server configuration, never a session
+ * role supplied by a browser. Call only after getAdultSession validates its
+ * signed cookie. Re-read the current linked Google account, verified user and
+ * session together before each owner grant; no identity or result is cached. */
+export async function getOwnerLabAccess(session, env, { now = Date.now } = {}) {
+  const emailSetting = env?.MEMBERSHIP_OWNER_EMAIL;
+  const subjectSetting = env?.MEMBERSHIP_OWNER_GOOGLE_SUBJECT;
+  if (emailSetting === undefined && subjectSetting === undefined) return false;
+  const ownerEmails = membershipAllowedEmails(emailSetting);
+  if (ownerEmails.size !== 1 || typeof emailSetting !== 'string' || /[,\n]/u.test(emailSetting) ||
+    emailSetting !== emailSetting.trim() || typeof subjectSetting !== 'string' ||
+    !/^[A-Za-z0-9_-]{1,255}$/u.test(subjectSetting)) throw new MembershipError(503);
+  const email = [...ownerEmails][0];
+  if (typeof session?.user?.email !== 'string' || session.user.email.toLowerCase() !== email) return false;
+  // A configured owner candidate with an invalid binding must fail closed,
+  // rather than falling through into customer/payment processing.
+  if (session.user.emailVerified !== true || !membershipAllowedEmails(env.MEMBERSHIP_ALLOWED_EMAILS).has(email) ||
+    typeof session.user.id !== 'string' || !session.user.id || session.user.id.length > 200 ||
+    typeof session.session?.id !== 'string' || !session.session.id || session.session.id.length > 200 ||
+    typeof env.MEMBERSHIP_DB?.prepare !== 'function') throw new MembershipError(403);
+  const result = await env.MEMBERSHIP_DB.prepare(`SELECT a.accountId, a.providerId, u.email, u.emailVerified,
+    s.id AS sessionId, s.createdAt, s.expiresAt
+    FROM membership_auth_account AS a
+    JOIN membership_auth_user AS u ON u.id = a.userId
+    JOIN membership_auth_session AS s ON s.userId = u.id
+    WHERE a.userId = ? AND a.providerId = 'google' AND s.id = ? LIMIT 2`)
+    .bind(session.user.id, session.session.id).all();
+  if (result?.success !== true || !Array.isArray(result.results)) throw new MembershipError(503);
+  const identity = result.results[0], selectedNow = now();
+  const created = new Date(identity?.createdAt).getTime(), expires = new Date(identity?.expiresAt).getTime();
+  if (result.results.length !== 1 || identity.providerId !== 'google' || identity.accountId !== subjectSetting ||
+    typeof identity.email !== 'string' || identity.email.toLowerCase() !== email || identity.emailVerified !== 1 ||
+    identity.sessionId !== session.session.id || !Number.isFinite(created) || !Number.isFinite(expires) ||
+    created > selectedNow || expires <= selectedNow || selectedNow - created >= MEMBERSHIP_SESSION_SECONDS * 1000) {
+    throw new MembershipError(403);
+  }
+  return true;
 }
 
 async function boundedAuthJson(request, maxBytes = 512) {
