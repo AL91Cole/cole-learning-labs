@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cole-learning-labs-memberships",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-31",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "send_metrics": false,
+  "upload_source_maps": false,
+  "observability": {"enabled": false},
+  "triggers": {"crons": []},
+  "assets": {"directory":"./public","binding":"MEMBERSHIP_PUBLIC_ASSETS","run_worker_first":true},
+  "vars": {
+    "MEMBERSHIP_ENABLED": "false",
+    "MEMBERSHIP_PROCESSING_REVIEWED": "false",
+    "MEMBERSHIP_DEPLOYMENT_MODE": "test"
+  },
+  "env": {
+    "preview": {
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [],
+      "vars": {"MEMBERSHIP_ENABLED":"false","MEMBERSHIP_PROCESSING_REVIEWED":"false","MEMBERSHIP_DEPLOYMENT_MODE":"test"}
+    },
+    "production": {
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [],
+      "vars": {"MEMBERSHIP_ENABLED":"false","MEMBERSHIP_PROCESSING_REVIEWED":"false","MEMBERSHIP_DEPLOYMENT_MODE":"test"}
+    }
+  }
+}
