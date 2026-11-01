@@ -99,7 +99,8 @@ test('pointer handles really insert palette blocks and reorder the existing prog
 test('touch, outside release, Escape, scroll, blur and capture loss cancel without changing the draft',()=>{
   const h=fixture('K–1'),original=h.source;
   const ordinary=h.down(h.palette.get('right'),{pointerType:'touch'});assert.equal(ordinary.prevented,false,'Touch scrolling outside handles is not intercepted.');
-  for(const cancel of [()=>h.up(null,500),()=>h.shell.fire('keydown',{key:'Escape'}),()=>h.doc.fire('scroll'),()=>h.view.fire('blur'),()=>h.doc.fire('pointercancel',{pointerId:7}),()=>h.shell.fire('lostpointercapture',{pointerId:7})]){
+  h.doc.activeElement={outsideWorkshop:true};
+  for(const cancel of [()=>h.up(null,500),()=>h.doc.fire('keydown',{key:'Escape',target:h.doc.activeElement}),()=>h.doc.fire('scroll'),()=>h.view.fire('blur'),()=>h.doc.fire('pointercancel',{pointerId:7}),()=>h.shell.fire('lostpointercapture',{pointerId:7})]){
     const handle=h.handles.get('left');h.down(handle,{pointerType:'touch'});h.move(h.list.items[0],5);cancel();
     assert.equal(h.source,original);assert.equal(handle.captured.size,0);assert.equal(h.shell.classList.contains('is-block-dragging'),false);
     h.doc.fire('pointerup',{pointerId:7,clientX:20,clientY:5});assert.equal(h.source,original);

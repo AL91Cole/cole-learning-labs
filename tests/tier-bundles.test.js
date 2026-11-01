@@ -57,7 +57,10 @@ test('public artifact contains reviewed starter cases but excludes paid authored
     'CLASSROOM-TOOL-4.2',
     'The PC runs, but the display signal path is incomplete.',
     'PC building studio',
-    'BUILD STUDIO / FIT'
+    'BUILD STUDIO / FIT',
+    'Choose the prize message',
+    'Calculate token energy',
+    'Add each numbered leg'
   ])assert.equal(javascript.includes(marker),false,marker);
   assert.ok(result.inputs.every(filename=>/^src\/[a-z0-9-]+\.js$/u.test(filename)));
   assert.equal(new Set(result.inputs).size,result.inputs.length);
@@ -71,6 +74,9 @@ test('member artifact retains authored premium resources in a separate self-cont
   assert.ok(javascript.includes('Give a pretend pet some energy.'));
   assert.ok(javascript.includes('PC building studio'),'The new PC builder layout remains available in the protected member artifact.');
   assert.ok(javascript.includes('BUILD STUDIO / FIT'),'The authored build guide remains available in the protected member artifact.');
+  assert.ok(javascript.includes('Choose the prize message'),'Authored member block contracts remain in the protected member artifact.');
+  assert.ok(decode(free.javascript).includes('Choose the room mode'),'The existing free coding investigations retain their guided blocks.');
+  assert.ok(decode(free.javascript).includes('PC repair studio'),'The existing free hardware investigations retain their generic visual repair controls.');
   assert.deepEqual(member.metadata,free.metadata);
   for(const result of [free,member]){
     assert.ok(result.inputs.includes('src/elementary-labs.js'),'Both delivery tiers include the separate free K–6 activity module.');

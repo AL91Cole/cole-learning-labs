@@ -1,5 +1,6 @@
 import {codingVisualHTML} from './coding-visuals.js?release=20261025-learning-plans';
 import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-learning-plans';
+import {renderCodingWorkbench,mountCodingWorkbench} from './coding-workbench.js?release=20261025-learning-plans';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
@@ -71,12 +72,12 @@ export const CODING_SCENARIOS = [
 ];
 
 const definitions = {
-  CODE501:{input:'quantity',values:[2,5,0],starter:'let total = quantity + 3;\nprint(total);',expected:value=>[String(value*3)]},
-  CODE502:{input:'temperature',values:[18,20,25,30],starter:'if (temperature > 20) {\n  print("Heating");\n} else {\n  print("Cooling");\n}',expected:value=>[value<20?'Heating':value<=25?'Comfortable':'Cooling']},
-  CODE503:{input:'stations',values:[1,3,5],starter:'for (let station = 0; station < stations; station++) {\n  console.log("Ready " + station);\n}',expected:value=>Array.from({length:value},(_,index)=>'Ready '+(index+1))},
-  CODE504:{input:'snacks',values:[0,2,5],starter:'let energy = snacks + 4;\nconsole.log("Energy " + energy);',expected:value=>['Energy '+value*4]},
-  CODE505:{input:'points',values:[0,49,50,99,100,140],starter:'if (points > 100) {\n  console.log("Badge");\n} else if (points > 50) {\n  console.log("Sticker");\n} else {\n  console.log("Try again");\n}',expected:value=>[value<50?'Try again':value<100?'Sticker':'Badge']},
-  CODE506:{input:'steps',values:[0,1,4,6],starter:'let energy = 0;\nfor (let leg = 0; leg < steps; leg++) {\n  energy = energy + leg;\n}\nconsole.log(energy);',expected:value=>[String(value*(value+1)/2)]}
+  CODE501:{input:'quantity',values:[2,5,0],starter:'let total = quantity + 3;\nprint(total);',expected:value=>[String(value*3)],blocks:{"input":"quantity","blocks":[{"id":"bcalculate","kind":"calculate","label":"Calculate total","target":"total","defaults":{"operator":"+","factor":3}},{"id":"bshow","kind":"show","label":"Show total","target":"total","prefix":""}]}},
+  CODE502:{input:'temperature',values:[18,20,25,30],starter:'if (temperature > 20) {\n  print("Heating");\n} else {\n  print("Cooling");\n}',expected:value=>[value<20?'Heating':value<=25?'Comfortable':'Cooling'],blocks:{"input":"temperature","blocks":[{"id":"bmodes","kind":"classify","label":"Choose the room mode","messages":["Heating","Comfortable","Cooling"],"lower":[18,19,20,21],"upper":[24,25,26,30],"defaults":{"lowOp":">","low":20,"highOp":"<","high":25}}]}},
+  CODE503:{input:'stations',values:[1,3,5],starter:'for (let station = 0; station < stations; station++) {\n  console.log("Ready " + station);\n}',expected:value=>Array.from({length:value},(_,index)=>'Ready '+(index+1)),blocks:{"input":"stations","blocks":[{"id":"bchecklist","kind":"list","label":"Repeat the readiness line","target":"station","iterator":"station","prefix":"Ready ","defaults":{"start":0,"endOffset":-1}}]}},
+  CODE504:{input:'snacks',values:[0,2,5],starter:'let energy = snacks + 4;\nconsole.log("Energy " + energy);',expected:value=>['Energy '+value*4],blocks:{"input":"snacks","blocks":[{"id":"benergy","kind":"calculate","label":"Calculate token energy","target":"energy","defaults":{"operator":"+","factor":4}},{"id":"bshow","kind":"show","label":"Show labeled energy","target":"energy","prefix":"Energy "}]}},
+  CODE505:{input:'points',values:[0,49,50,99,100,140],starter:'if (points > 100) {\n  console.log("Badge");\n} else if (points > 50) {\n  console.log("Sticker");\n} else {\n  console.log("Try again");\n}',expected:value=>[value<50?'Try again':value<100?'Sticker':'Badge'],blocks:{"input":"points","blocks":[{"id":"bprizes","kind":"classify","label":"Choose the prize message","messages":["Try again","Sticker","Badge"],"lower":[49,50,51],"upper":[99,100,101,140],"defaults":{"lowOp":"<","low":50,"highOp":"<=","high":100}}]}},
+  CODE506:{input:'steps',values:[0,1,4,6],starter:'let energy = 0;\nfor (let leg = 0; leg < steps; leg++) {\n  energy = energy + leg;\n}\nconsole.log(energy);',expected:value=>[String(value*(value+1)/2)],blocks:{"input":"steps","blocks":[{"id":"breset","kind":"set","label":"Start the energy total","target":"energy","defaults":{"value":0}},{"id":"baccumulate","kind":"sum","label":"Add each numbered leg","target":"energy","iterator":"leg","defaults":{"start":0,"endOffset":-1}},{"id":"bshow","kind":"show","label":"Show the final total","target":"energy","prefix":""}]}}
 };
 const pythonStarters={
   CODE501:'total = quantity + 3\nprint(total)',
@@ -90,6 +91,7 @@ const starterFor=(id,language)=>language==='python'?pythonStarters[key(id)]||'':
 
 export const supportsCodingLab = id => Object.hasOwn(definitions,key(id));
 export const codingFixtureCount = id => definitions[key(id)]?.values.length||0;
+export const codingBlockContract = id => definitions[key(id)]?.blocks||null;
 class CodeError extends Error { constructor(message,line=1) { super(message);this.line=line; } }
 const fail = (message,line) => { throw new CodeError(message,line); };
 
@@ -399,7 +401,7 @@ export function renderCoding(root,scenario,saved,onAction) {
   root.innerHTML='<section class="code-lab" aria-label="Coding simulation"><header class="code-lab-bar"><span aria-hidden="true">● ● ●</span><strong>CODE STUDIO / '+esc(scenario.id)+'</strong><span>ON-DEVICE PRACTICE</span></header><div class="code-lab-content">'+
     '<section class="code-mission" aria-label="Current mission progress"><span class="code-eyebrow">YOUR CHALLENGE</span><h3>'+esc(scenario.goal)+'</h3><p data-code-progress-label>'+(state.tested?mission.passed+' / '+mission.total+' test inputs match':'Edit → run → compare')+'</p><progress data-code-progress value="'+mission.passed+'" max="'+(mission.total||1)+'" aria-label="Coding fixtures passing">'+mission.passed+' of '+mission.total+'</progress></section>'+
     '<p class="code-scope">Safe on-device practice · limited JavaScript or Python · fictional inputs. <a href="#sandbox">Build your own project →</a></p>'+
-    '<details class="workspace-help"><summary>How this lab works</summary>'+codingGuide+'</details>'+storyCard(scenario.id)+
+    '<details class="workspace-help"><summary>How this lab works</summary>'+codingGuide+'</details>'+storyCard(scenario.id)+renderCodingWorkbench({config:definition.blocks})+
     '<div class="code-workspace"><form data-code-form class="code-editor-panel"><label for="coding-language"><b>Practice language</b></label><select id="coding-language" data-code-language aria-describedby="code-language-help">'+CODING_LANGUAGES.map(item=>'<option value="'+item.id+'"'+(item.id===state.language?' selected':'')+'>'+item.label+'</option>').join('')+'</select><p id="code-language-help">Switching keeps your draft and clears results. Reset starter loads the selected language.</p>'+
     '<label for="coding-editor"><b>Your code</b><small>Input: <code>'+esc(definition.input)+'</code> · up to 4,000 characters</small></label><textarea id="coding-editor" name="code" rows="14" maxlength="4000" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="code-save-help code-language-help code-program-error">'+esc(state.code)+'</textarea><p id="code-save-help">Run all fixtures tests this draft with every input card.</p><div class="code-actions"><button type="button" data-code-run>Run all fixtures</button><button type="submit">Save code</button><button type="button" data-code-reset>Reset starter</button></div><p data-code-status role="status"></p></form>'+
     '<section class="code-console-panel"><h3>Try the input cards</h3><div class="code-input-cards" role="group" aria-label="Choose a test input">'+fixtureCards+'</div><details class="code-fixture-picker"><summary>Choose from input list</summary><label for="code-fixture">Inspect a test fixture</label><select id="code-fixture" data-code-fixture>'+definition.values.map((value,index)=>'<option value="'+index+'"'+(index===state.fixtureIndex?' selected':'')+'>'+esc(definition.input)+' = '+value+'</option>').join('')+'</select></details>'+
@@ -451,5 +453,6 @@ export function renderCoding(root,scenario,saved,onAction) {
       root.querySelector('[data-code-card-status="'+index+'"]').textContent=current?(runs[index].passed?'MATCH':'CHECK'):'TRY INPUT';
     });
   });
+  mountCodingWorkbench(root,{id:scenario.id,config:definition.blocks,language:state.language,preview:code=>fixtureRuns(scenario.id,code,state.language),onUse:code=>{editor.value=code;editor.dispatchEvent?.(new (root.ownerDocument?.defaultView?.Event||Event)('input',{bubbles:true}));editor.focus?.();}});
   restoreView();
 }

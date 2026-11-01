@@ -51,7 +51,7 @@ test('the builder has no view or readout effects in the other seven repair inves
 
 test('the authored studio keeps native selection controls and visible test results separate from optional disclosures',()=>{
   const state=initial(),before=structuredClone(state);
-  const view=assemblyBuilderView(state,{groups:[['board','Motherboard'],['psu','Power supply'],['paste','Thermal paste']],selected:'board',powerControls:'<div data-power-controls></div>'});
+  const view=assemblyBuilderView(state,{groups:[['board','Motherboard'],['psu','Power supply'],['paste','Thermal paste']],selected:'board'});
   assert.equal(view.label,'PC building studio');assert.equal(view.close,'</div></div>');
   assert.match(view.open,/<button type="button" data-asm-part="board" aria-pressed="true">/u);
   assert.match(view.open,/<button type="button" data-asm-part="psu" aria-pressed="false">/u);
@@ -60,6 +60,7 @@ test('the authored studio keeps native selection controls and visible test resul
   assert.match(view.open,/<button type="button" data-asm-build-open-file="open">Open original lesson file<\/button>/u);
   assert.equal((view.open.match(/<details\b/gu)||[]).length,0);
   assert.equal((view.open.match(/data-assembly-action=/gu)||[]).length,0,'The tray selects existing controls and grants no install action.');
+  assert.equal((view.open.match(/data-asm-toggle=/gu)||[]).length,0,'The helper never embeds a second Power/AC group.');
   assert.deepEqual(state,before);
 });
 

@@ -73,7 +73,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     ['[data-question]',scenario.questions.map((_,index) => new Element({question:String(index)}))],
     ['[data-clue]',scenario.clues.map(clue => new Element({clue:clue.id}))]
   ]);
-  const calls = {saved:0,rendered:0,reports:0,benchCancelled:0,workspaceDisposed:[],hardwareVisible:[],forcedRenders:[],notices:[],modeChanges:[]}; let workspaceAction;
+  const calls = {saved:0,rendered:0,reports:0,benchCancelled:0,codingCancelled:[],workspaceDisposed:[],hardwareVisible:[],forcedRenders:[],notices:[],modeChanges:[]}; let workspaceAction;
   const location={hash:labPageHash(id,initialSection,routeOptions)},historyEntries=[location.hash];let historyIndex=0;
   elements.get('#learning-mode').value=routeOptions.mode||'guided';
   const history={pushState(_state,_title,url){historyEntries.splice(++historyIndex);historyEntries.push(url);location.hash=url;},replaceState(_state,_title,url){historyEntries[historyIndex]=url;location.hash=url;}};
@@ -95,6 +95,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     bindWorkPrivacy() {},recordFor:() => record,workStatus:() => 'Private session',evidenceList:() => '',
     renderHardware(root,_id,_state,callback) { assert.equal(scenario.track,'hardware'); renderBench(root,callback); },
     cancelHardwareInteraction(root) { assert.equal(root,elements.get('#workspace')); calls.benchCancelled++; },
+    cancelCodingWorkbench(root) { assert.equal(root,elements.get('#workspace')); calls.codingCancelled.push(root); },
     setHardwareVisible(root,visible) { assert.equal(root,elements.get('#workspace')); assert.equal(typeof visible,'boolean'); calls.hardwareVisible.push(visible); },
     disposeWorkspace(root) { calls.workspaceDisposed.push(root); },
     renderWorkspace(root,_scenario,_state,callback) { assert.notEqual(scenario.track,'hardware'); renderBench(root,callback); root.selects=Object.entries(_state).filter(([,value])=>typeof value==='string').map(([name,value])=>Object.assign(new Element(),{name,value})); if(scenario.track==='coding'){const editor=new Element();editor.value=_state.code;elements.set('#coding-editor',editor);} },
@@ -1202,4 +1203,15 @@ test('guided network disposal releases its exact mounted workbench while page hi
   assert.deepEqual(h.calls.workspaceDisposed,[],'Same-ticket page history keeps the diagram controller mounted.');
   h.controller.dispose();assert.deepEqual(h.calls.workspaceDisposed,[workspace],'Leaving the guided route releases observers, packet animation and diagram listeners for this workbench.');
   assert.deepEqual(h.record,before,'Cleanup never changes saved equipment or learner evidence.');
+});
+
+test('leaving the coding workbench cancels a held block without discarding editor or investigation drafts',()=>{
+  const h=readyHarness('CODE-501',2),workspace=h.elements.get('#workspace'),editor=h.elements.get('#coding-editor');
+  editor.value='print(quantity);';const before=structuredClone(h.record),cancelled=h.calls.codingCancelled.length;
+  h.section(1);
+  assert.equal(h.calls.codingCancelled.length,cancelled+1);assert.equal(h.calls.codingCancelled.at(-1),workspace);
+  h.section(2);
+  assert.equal(h.calls.codingCancelled.length,cancelled+1,'Returning to the same mounted editor does not cancel or reset its draft.');
+  assert.equal(editor.value,'print(quantity);');assert.deepEqual(h.record,before);
+  assert.deepEqual(h.calls.workspaceDisposed,[],'Section navigation retains the controller; only the unfinished gesture is canceled.');
 });

@@ -186,7 +186,7 @@ export function mountBlockWorkshop(root,{band}={}){
   function interrupt(event){if(drag&&(!['pointercancel','lostpointercapture'].includes(event.type)||event.pointerId===drag.pointerId)){cancelDrag();say('Move canceled. The program is unchanged.');}}
   function key(event){if(event.key==='Escape'&&drag){event.preventDefault();interrupt(event);}}
   function rejectNative(event){event.preventDefault();if(event.type==='drop'){cancelDrag();say('Outside drag data is ignored. Use a block handle or Add.');}}
-  const listeners=[[shell,'click',click],[shell,'change',change],[shell,'pointerdown',down],[shell,'lostpointercapture',interrupt],[shell,'keydown',key],[shell,'dragstart',rejectNative],[shell,'dragover',rejectNative],[shell,'drop',rejectNative],
+  const listeners=[[shell,'click',click],[shell,'change',change],[shell,'pointerdown',down],[shell,'lostpointercapture',interrupt],[doc,'keydown',key],[shell,'dragstart',rejectNative],[shell,'dragover',rejectNative],[shell,'drop',rejectNative],
     [doc,'pointermove',move],[doc,'pointerup',up],[doc,'pointercancel',interrupt],[doc,'scroll',interrupt],[view,'blur',interrupt]];
   for(const [target,type,handler] of listeners)target?.addEventListener?.(type,handler);
   list.innerHTML=programHTML(program,band);find('[data-block-count]').textContent=`${program.length} of 12 blocks`;result();

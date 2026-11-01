@@ -10,6 +10,12 @@ Test anonymous requests to the future owner branch and a known hash preview befo
 
 Access handles the owner's authentication cookies, email identity and connection/security metadata. This is not anonymous browsing. Student accounts, classroom collection, improvement sharing and online AI remain unavailable in the owner artifact.
 
+## Owner entry while memberships are disabled
+
+The **Owner sign in** links in the site navigation, footer and membership notice point directly to `https://codex-private-owner-preview.cole-learning-labs.pages.dev/learn/`. The existing Access session is used, or the owner completes the existing email verification on the sign-in page. No password, email code, owner email or token is embedded in this link or the public site. The browser never grants content access itself. People outside the approved owner policy cannot use the link to unlock paid content.
+
+This entry needs no membership registration, subscription, payment or new authentication service. Keep the full artifact behind its existing owner policy and guard checks. The public navigation change reaches production only after the source PRs are reviewed and merged; the separately approved protected preview can be refreshed independently.
+
 ## Builder boundaries
 
 The shared branch retains the ordinary command:

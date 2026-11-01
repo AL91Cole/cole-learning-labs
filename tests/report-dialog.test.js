@@ -38,7 +38,7 @@ class Element {
 }
 function harness({ inspect, encrypt, content = 'Synthetic fictional evidence.', copyError, shareHandler, canShare = true, urlError = false } = {}) {
   const elements = new Map(), created = [], revoked = [], clipboard = [], notices = [], shared = [], timers = [];
-  const document = {};
+  const gestureEvents=[],document = {dispatchEvent(event){gestureEvents.push(event.type);}};
   document.body = new Element('', document); document.activeElement = document.body;
   const panel = new Element('', document), dialog = new Element('', document);
   Object.defineProperty(panel, 'innerHTML', { set(markup) {
@@ -51,7 +51,9 @@ function harness({ inspect, encrypt, content = 'Synthetic fictional evidence.', 
   if (shareHandler) { browser.canShare = () => canShare; browser.share = async data => { shared.push(data); return shareHandler(data); }; }
   const context = vm.createContext({
     reportCleanup: null, reportText: () => content,
-    cancelHardwareInteraction() {},
+    cancelHardwareInteraction() {gestureEvents.push('hardware-cancel');},
+    cancelCodingWorkbench() {gestureEvents.push('coding-cancel');},
+    CustomEvent:class{constructor(type){this.type=type;}},
     reportFilename, createTextReport,
     canShareTextReport: artifact => canShareTextReport(artifact, browser),
     shareTextReport: artifact => shareTextReport(artifact, browser),
@@ -67,12 +69,13 @@ function harness({ inspect, encrypt, content = 'Synthetic fictional evidence.', 
   const choose = async (text, name = 'synthetic.cllpub') => { get('report-public-key').files = [{ name, size: text.length, text: async () => text }]; await get('report-public-key').fire('change'); };
   const confirm = async () => { get('report-key-confirm').checked = true; await get('report-key-confirm').fire('change'); };
   const approvePlain = async (value = true) => { get('plain-report-confirm').checked = value; await get('plain-report-confirm').fire('change'); };
-  return { get, choose, confirm, approvePlain, context, panel, dialog, document, created, revoked, clipboard, notices, shared, timers };
+  return { get, choose, confirm, approvePlain, context, panel, dialog, document, created, revoked, clipboard, notices, shared, timers, gestureEvents };
 }
 
 test('opening a report creates no plaintext download or clipboard write, and escapes hostile report text', async () => {
   const content = 'Synthetic </textarea><img src=x onerror=alert(1)> & "quoted" text';
   const h = harness({ content });
+  assert.deepEqual(h.gestureEvents,['hardware-cancel','coding-cancel','cole:lab-report-open'],'Opening a report cancels unfinished equipment, block and network gestures before the overlay takes focus.');
   assert.equal(h.created.length, 0); assert.equal(h.clipboard.length, 0);
   assert.equal(h.get('copy-report').disabled, true);
   assert.equal(h.get('select-report').disabled, true); assert.equal(h.get('share-report').hidden, true);

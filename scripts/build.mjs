@@ -25,7 +25,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/coding-studio.css', 'src/coding-studio.js', 'src/interactive-tools.css', 'src/interactive-tools.js', 'src/network-bench.js', 'src/network-diagrams.js', 'src/network-labs.js', 'src/network-packets.js', 'src/network-studio-model.js', 'src/network-studio.css', 'src/network-studio.js', 'src/network-visuals.css', 'src/network-visuals.js', 'src/practice-workbench.css', 'src/practice-workbench.js',
   'src/learning-activities.js', 'src/learning-activities.css', 'src/ai-activities.js', 'src/ai-activities.css', 'src/security-activities.js', 'src/security-activities.css',
   'src/coding-visuals.js', 'src/coding-visuals.css', 'src/coding-projects.css',
-  'src/expanded-labs.js', 'src/expanded-labs.css', 'src/coding-lab.js', 'src/coding-lab.css', 'src/interview.css',
+  'src/expanded-labs.js', 'src/expanded-labs.css', 'src/coding-lab.js', 'src/coding-lab.css', 'src/coding-workbench.js', 'src/coding-workbench.css', 'src/interview.css',
   'src/report-crypto.js', 'src/report-downloads.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
   'src/secure-reports.css', 'src/accessibility.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css',
