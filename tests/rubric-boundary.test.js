@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { Script } from 'node:vm';
 import { SCENARIOS } from '../src/scenarios.js';
-import { buildSite, PUBLIC_FILES } from '../scripts/build.mjs';
+import { buildSite, PUBLIC_FILES, PUBLIC_SOURCE_FILES } from '../scripts/build.mjs';
 
 const forbiddenKeys = /^(?:rubrics?|answer_?keys?|grading_?criteria|mark_?schemes?|teacher_?notes|private_?criteria)$/i;
 function inspectPublicValues(value, location = 'catalogue') {
@@ -16,7 +16,7 @@ function inspectPublicValues(value, location = 'catalogue') {
   }
 }
 
-test('all public lab cases exclude teacher grading and answer-key fields', () => {
+test('authored learner cases exclude private teacher grading and answer-key fields', () => {
   assert.equal(SCENARIOS.length, 42);
   inspectPublicValues(SCENARIOS);
   for (const scenario of SCENARIOS) {
@@ -59,10 +59,10 @@ test('a private teacher-material directory cannot enter the built public website
   t.after(() => rm(directory, { recursive: true, force: true }));
   const root = path.join(directory, 'project');
   await mkdir(root);
-  for (const filename of PUBLIC_FILES) {
+  for (const filename of PUBLIC_SOURCE_FILES) {
     const target = path.join(root, filename);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, filename === '_routes.json' ? JSON.stringify({ version: 1, include: ['/api/requester'], exclude: [] }) : 'PUBLIC_FIXTURE');
+    await copyFile(new URL('../'+filename,import.meta.url),target);
   }
   const privateDirectory = path.join(root, 'private-teacher-materials');
   await mkdir(privateDirectory);

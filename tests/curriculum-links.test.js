@@ -6,10 +6,10 @@ import vm from 'node:vm';
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
 const start=source.indexOf('function curriculumDownloads('),end=source.indexOf('\nfunction educators(',start);
 assert.ok(start>=0&&end>start);
-const context=vm.createContext({});
+const context=vm.createContext({MEMBER_CONTENT:true});
 vm.runInContext(source.slice(start,end)+'\nglobalThis.curriculumLinks=curriculumDownloads;',context);
 
-test('student companions offer working web alternatives before the optional original PDFs',async()=>{
+test('protected member companions offer working web alternatives before the optional original PDFs',async()=>{
   const html=context.curriculumLinks();
   for(const [web,pdf] of [['student-workbook.html','assets/cole-learning-labs-student-workbook.pdf'],['practice-quizzes.html','assets/cole-learning-labs-pop-quizzes.pdf']]){
     assert.match(html,new RegExp('href="'+web.replaceAll('.','\\.')+'"'));
@@ -22,6 +22,14 @@ test('student companions offer working web alternatives before the optional orig
   assert.match(html,/not automatically saved, uploaded or graded/u);
   assert.match(html,/check the print preview/u);
   assert.match(html,/not a tagged PDF/u);
+});
+
+test('the public guide offers a membership notice instead of companion download links',()=>{
+  const publicContext=vm.createContext({MEMBER_CONTENT:false});
+  vm.runInContext(source.slice(start,end)+'\nglobalThis.curriculumLinks=curriculumDownloads;',publicContext);
+  const html=publicContext.curriculumLinks();
+  assert.match(html,/href="#membership"/u);
+  assert.doesNotMatch(html,/href="(?:student-workbook|practice-quizzes|assets\/)/u);
 });
 
 test('both the student guide and educator page include the same companion choices',()=>{

@@ -42,14 +42,12 @@ function request(server, pathname, method = 'GET') {
   });
 }
 
-test('preview serves approved pages, clean routes, and versioned modules without building output', async t => {
+test('preview serves only approved free-artifact pages, clean routes and versioned modules', async t => {
   const { server } = await fixture(t);
   for (const [pathname, filename, type] of [
     ['/', 'index.html', 'text/html; charset=utf-8'],
-    ['/classroom', 'classroom.html', 'text/html; charset=utf-8'],
     ['/school-it/', 'school-it.html', 'text/html; charset=utf-8'],
     ['/secure-reports', 'secure-reports.html', 'text/html; charset=utf-8'],
-    ['/teacher/', 'teacher/index.html', 'text/html; charset=utf-8'],
     ['/src/app.js?release=test', 'src/app.js', 'text/javascript; charset=utf-8'],
     ['/src/styles.css', 'src/styles.css', 'text/css; charset=utf-8']
   ]) {
@@ -59,6 +57,16 @@ test('preview serves approved pages, clean routes, and versioned modules without
     assert.equal(response.headers['content-type'], type, pathname);
     assert.equal(response.headers['cache-control'], 'no-store');
     assert.equal(response.headers['x-content-type-options'], 'nosniff');
+  }
+});
+
+test('legacy member documents redirect to the membership gate even if source copies exist',async t=>{
+  const {root,server}=await fixture(t);
+  for(const filename of ['classroom.html','teacher/index.html','student-workbook.html','practice-quizzes.html'])await put(root,filename,PRIVATE_CANARY);
+  for(const pathname of ['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html','/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html']){
+    const response=await request(server,pathname);
+    assert.equal(response.status,302,pathname);assert.equal(response.headers.location,'/#membership',pathname);
+    assert.doesNotMatch(response.body,new RegExp(PRIVATE_CANARY));
   }
 });
 
@@ -152,18 +160,18 @@ test('HEAD preserves approved resource headers without bytes and static writes a
   assert.equal(write.headers.allow, 'GET, HEAD');
 });
 
-test('curriculum MIME mappings are explicit and reviewed document entries download as attachments', async t => {
+test('curriculum MIME mappings remain explicit while paid document files are absent from public delivery', async t => {
   assert.equal(previewContentType('workbook.pdf'), 'application/pdf');
   assert.equal(previewContentType('workbook.DOCX'), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   assert.equal(previewContentType('slides.pptx'), 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
   assert.equal(previewContentType('unrecognized.bin'), 'application/octet-stream');
-  const { server } = await fixture(t);
-  for (const filename of PUBLIC_FILES.filter(filename => /\.(?:pdf|docx|pptx)$/i.test(filename))) {
+  const { root,server } = await fixture(t);
+  assert.deepEqual(PUBLIC_FILES.filter(filename => /\.(?:pdf|docx|pptx)$/i.test(filename)),[]);
+  for (const filename of ['assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']) {
+    await put(root,filename,PRIVATE_CANARY);
     const response = await request(server, `/${filename}`);
-    assert.equal(response.status, 200, filename);
-    assert.equal(response.headers['content-type'], previewContentType(filename));
-    assert.equal(response.headers['content-disposition'], `attachment; filename="${path.basename(filename)}"`);
-    assert.equal(response.body, `PUBLIC_PREVIEW_FIXTURE:${filename}`);
+    assert.equal(response.status,404,filename);
+    assert.doesNotMatch(response.body,new RegExp(PRIVATE_CANARY));
   }
 });
 

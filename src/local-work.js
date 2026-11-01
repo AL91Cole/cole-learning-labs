@@ -1,6 +1,8 @@
 import {normalizeLabRecord} from './records.js?release=20261025-learning-plans';
 
 export const WORK_PREFIX = 'cole-learning-labs:v2';
+// A reduced public catalog must never overwrite previously saved full-catalog work.
+export const PUBLIC_WORK_PREFIX = 'cole-learning-labs:public:v1';
 export const CLEAR_WORK_KEY = 'cole-learning-labs:clear-local-work';
 const ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
 
@@ -26,7 +28,7 @@ export function normalizeWorkCollection(scenarios, value) {
 
 // No work is read or persisted until the learner explicitly resumes or enables it.
 export function createWorkStorage({storage, key, scenarios}) {
-  if (key !== WORK_PREFIX && !/^cole-learning-labs:v2:classroom:[a-f0-9-]{36}:[a-f0-9-]{36}$/i.test(key)) throw new Error('Invalid work storage scope.');
+  if (key !== WORK_PREFIX && key !== PUBLIC_WORK_PREFIX && !/^cole-learning-labs:v2:classroom:[a-f0-9-]{36}:[a-f0-9-]{36}$/i.test(key)) throw new Error('Invalid work storage scope.');
   let persistent = false;
   let available = true;
   const read = () => {
@@ -62,7 +64,7 @@ export function createWorkStorage({storage, key, scenarios}) {
         const keys = [];
         for (let i=0; i<storage.length; i++) {
           const name = storage.key(i);
-          if (name === WORK_PREFIX || name?.startsWith(WORK_PREFIX+':') || name === ACTIVE_KEY) keys.push(name);
+          if (name === WORK_PREFIX || name?.startsWith(WORK_PREFIX+':') || name === PUBLIC_WORK_PREFIX || name === ACTIVE_KEY) keys.push(name);
         }
         for (const name of keys) storage.removeItem(name);
         // A content-free signal tells other open tabs to stop saving old work.

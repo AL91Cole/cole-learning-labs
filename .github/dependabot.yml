@@ -1,5 +1,14 @@
 version: 2
 updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    # Build-only parsers and bundlers do not run in the student browser.
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -23,3 +32,13 @@ updates:
     open-pull-requests-limit: 5
     # Optional terminal-service updates require review and passing checks.
     # Nothing auto-merges.
+  - package-ecosystem: npm
+    directory: /memberships
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    # Adult membership dependencies have separate checks and no deployment job.
+    # Nothing auto-merges or enables billing.

@@ -1,3 +1,13 @@
 # Normalize known homepage aliases. Relative destinations preserve preview hosts.
 /index.html / 301
 /index / 301
+/classroom /#membership 302
+/classroom/ /#membership 302
+/classroom.html /#membership 302
+/teacher /#membership 302
+/teacher/ /#membership 302
+/teacher/index.html /#membership 302
+/student-workbook /#membership 302
+/student-workbook.html /#membership 302
+/practice-quizzes /#membership 302
+/practice-quizzes.html /#membership 302

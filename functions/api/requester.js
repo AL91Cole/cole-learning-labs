@@ -1,5 +1,6 @@
 /** Same-origin fictional-topic broker. No AI or database binding belongs in Pages. */
 import {PRIVATE_REQUESTER_URL,RequesterError,failRequester,readRequesterTopic,readBoundedJson,validRequesterAnswer} from '../../worker-requester/contract.js';
+import {isFreeLab} from '../../src/access-policy.js';
 
 // This reviewed path sends only authored fictional topic codes. It does not
 // approve classroom records or improvement collection, which remain closed.
@@ -33,6 +34,9 @@ export async function handleRequesterRequest(context,{privacyApproved=false,time
     // Disabling the service must stop body parsing as well as binding calls.
     if(env?.REQUESTER_ENABLED!=='true'||env?.REQUESTER_BILLING_REVIEWED!=='true')fail(503,'requester_not_enabled');
     const topic=request.method==='POST'?await readRequesterTopic(request,{deadlineMs:bodyTimeoutMs}):null;
+    // The public gateway cannot become an alternate reply endpoint for a
+    // member-only investigation. The private member site has no AI proxy.
+    if(topic&&!isFreeLab(topic.payload.scenarioId))fail(403,'reply_unavailable');
     const service=env.REQUESTER_SERVICE;
     if(typeof service?.fetch!=='function')fail(503,'requester_not_configured');
     controller=new AbortController();

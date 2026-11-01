@@ -5,6 +5,8 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
+import {routeAccess} from '../src/access-policy.js';
+import {CATALOG} from '../src/lab-catalog.js';
 
 const source=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
 const styles=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
@@ -27,7 +29,8 @@ function harness(){
   const record={state:{pcOn:false},events:[],verified:false,closed:false},store={labs:{'INC-101':record}},before=structuredClone(store);
   let renders=0;
   const forbidden=()=>assert.fail('Public previews must not create lab records, change equipment, save progress, or call a network service.');
-  const context=vm.createContext({SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
+  // Full-catalog filter behavior is exercised in the protected member view.
+  const context=vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
     $:selector=>{assert.ok(elements.has(selector),selector);return elements.get(selector);},
     $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;if(selector==='.track-filters [data-track]')return pathwayButtons;assert.fail(selector);},
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,
@@ -106,7 +109,7 @@ test('pathway changes keep the existing toolbar and focus instead of replacing t
   assert.deepEqual(ids,SCENARIOS.filter(item=>item.track==='hardware').map(item=>item.id));
   assert.equal(h.elements.get('#practice-entries').innerHTML,'');assert.equal(h.elements.get('#network-sequence').innerHTML,'');
   h.context.filterLibraryTrack('network');assert.match(h.elements.get('#practice-entries').innerHTML,/#studio\/network/u);assert.match(h.elements.get('#network-sequence').innerHTML,/10 labs/u);
-  h.context.filterLibraryTrack('ai');assert.match(h.elements.get('#practice-entries').innerHTML,/#practice\/AI-305/u);assert.doesNotMatch(h.elements.get('#practice-entries').innerHTML,/#studio\/network/u);assert.equal(h.elements.get('#network-sequence').innerHTML,'');
+  h.context.filterLibraryTrack('ai');assert.match(h.elements.get('#practice-entries').innerHTML,/#practice\/AI-301/u);assert.doesNotMatch(h.elements.get('#practice-entries').innerHTML,/#studio\/network/u);assert.equal(h.elements.get('#network-sequence').innerHTML,'');
   assert.deepEqual(h.store,h.before);
 });
 

@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_FILES } from './build.mjs';
+import { PUBLIC_FILES, buildSite } from './build.mjs';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -23,6 +23,8 @@ const ROUTES = new Map([
   ['/student-workbook', 'student-workbook.html'], ['/practice-quizzes', 'practice-quizzes.html'],
   ['/teacher', 'teacher/index.html'], ['/teacher/', 'teacher/index.html']
 ]);
+const MEMBER_PATHS = new Set(['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html',
+  '/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html']);
 const BASE_HEADERS = Object.freeze({
   'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer'
 });
@@ -80,8 +82,9 @@ async function notFound(req, res, sourceRoot) {
   res.end(req.method === 'HEAD' ? undefined : body);
 }
 
-export function createPreviewServer({ sourceRoot = PROJECT_ROOT } = {}) {
+export function createPreviewServer({ sourceRoot = path.join(PROJECT_ROOT,'dist') } = {}) {
   assertPublicCurriculumPaths(PUBLIC_FILES);
+  if(path.resolve(sourceRoot)===PROJECT_ROOT)throw new Error('Preview the compiled free artifact, never the source checkout.');
   return http.createServer(async (req, res) => {
     let pathname;
     try { pathname = requestPath(req.url); }
@@ -94,6 +97,9 @@ export function createPreviewServer({ sourceRoot = PROJECT_ROOT } = {}) {
     }
     if (!['GET', 'HEAD'].includes(req.method)) {
       res.writeHead(405, { ...BASE_HEADERS, Allow: 'GET, HEAD' }); res.end('Method not allowed'); return;
+    }
+    if(MEMBER_PATHS.has(pathname)){
+      res.writeHead(302,{...BASE_HEADERS,Location:'/#membership'});res.end();return;
     }
     const filename = ROUTES.get(pathname) || pathname.slice(1);
     // Preview the same reviewed files as production, never the checkout root.
@@ -114,7 +120,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   if (process.argv.length > 2) {
     console.error('Preview accepts no path or host arguments.'); process.exitCode = 1;
   } else {
-    const server = createPreviewServer();
+    const built=await buildSite();
+    const server = createPreviewServer({sourceRoot:built.directory});
     server.listen(4173, '127.0.0.1', () => console.log('Local: http://127.0.0.1:4173'));
   }
 }
