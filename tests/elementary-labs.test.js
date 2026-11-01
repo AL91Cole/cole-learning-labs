@@ -15,7 +15,12 @@ function fixture(id='EX-HW-1'){
       this.markup=markup;this.buttons=[...markup.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/gu)].map(match=>{
         const attrs=Object.fromEntries([...match[1].matchAll(/([\w-]+)="([^"]*)"/gu)].map(attr=>[attr[1],decode(attr[2])]));
         const button=element({elementaryAction:attrs['data-elementary-action'],elementaryChoice:attrs['data-elementary-choice']});
-        button.disabled=/\bdisabled\b/u.test(match[1]);button.attributes=attrs;button.textContent=decode(match[2].replace(/<[^>]*>/gu,''));return button;
+        // The authored choice label is its final span; control labels are plain
+        // text. This fixture recognizes that shape rather than sanitizing HTML.
+        const label=attrs['data-elementary-choice']?match[2].match(/<span>([^<]*)<\/span>$/u)?.[1]:match[2];
+        assert.equal(typeof label,'string','Expected the authored button-label shape.');
+        assert.equal(label.includes('<'),false,'Control labels must remain plain text.');
+        button.disabled=/\bdisabled\b/u.test(match[1]);button.attributes=attrs;button.textContent=decode(label);return button;
       });
       this.prompt=markup.includes('data-elementary-prompt')?element():null;
       this.finished=markup.includes('data-elementary-finished')?element():null;

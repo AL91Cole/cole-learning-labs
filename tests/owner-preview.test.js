@@ -24,7 +24,7 @@ async function fixture(t){
   await mkdir(path.join(root,'dist'));await writeFile(path.join(root,'dist','old.txt'),'OLD_FREE_BUILD');
   const assets=new Map([
     ['/learn/',{bytes:encode('alias'),contentType:'text/html; charset=utf-8'}],
-    ['/learn/index.html',{bytes:encode('<!doctype html><link rel="canonical" href="https://members.colelearninglabs.com/learn/"><script type="module" src="src/app.js"></script>PRIVATE_PREVIEW_CONTENT'),contentType:'text/html; charset=utf-8'}],
+    ['/learn/index.html',{bytes:encode('<!doctype html><link rel="canonical" href="https://members.colelearninglabs.com/learn/"><meta property="og:url" content="https://colelearninglabs.com/"><script type="module" src="src/app.js"></script>PRIVATE_PREVIEW_CONTENT'),contentType:'text/html; charset=utf-8'}],
     ['/learn/src/app.js',{bytes:encode('const authoredLocalOnly=true;'),contentType:'application/javascript; charset=utf-8'}],
     ['/learn/src/member-app.css',{bytes:encode('body{color:green}'),contentType:'text/css; charset=utf-8'}]
   ]);
@@ -100,7 +100,8 @@ test('static owner output contains only reviewed learn assets and blocks every F
   const h=await fixture(t),result=await buildOwnerPreview(h.options);assert.equal(h.guards(),2);
   assert.equal(await readFile(path.join(result.directory,'learn/src/app.js'),'utf8'),'const authoredLocalOnly=true;');
   assert.ok((await readFile(path.join(result.directory,'index.html'),'utf8')).includes('href="/learn/"'));
-  assert.ok(!(await readFile(path.join(result.directory,'learn/index.html'),'utf8')).includes('members.colelearninglabs.com'));
+  assert.equal(await readFile(path.join(result.directory,'learn/index.html'),'utf8'),
+    '<!doctype html><script type="module" src="src/app.js"></script>PRIVATE_PREVIEW_CONTENT');
   assert.deepEqual(JSON.parse(await readFile(path.join(result.directory,'_routes.json'),'utf8')),OWNER_PREVIEW_ROUTES);
   const headers=await readFile(path.join(result.directory,'_headers'),'utf8');
   for(const value of ['private, no-store','X-Robots-Tag: noindex','connect-src \'none\'','script-src \'self\'',
