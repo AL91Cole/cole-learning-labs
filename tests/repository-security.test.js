@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {PUBLIC_FILES,PUBLIC_SOURCE_FILES,MEMBER_FILES} from '../scripts/build.mjs';
 
 const read = filename => readFileSync(new URL(`../${filename}`, import.meta.url), 'utf8');
 const WORKSHEET_ROUTES = ['/student-workbook', '/student-workbook.html', '/practice-quizzes', '/practice-quizzes.html'];
@@ -44,9 +45,9 @@ test('public browser security limits scripts, connections, forms, and embedded c
   assert.equal(publicHeaders.get('x-content-type-options'), 'nosniff');
   assert.equal(publicHeaders.get('referrer-policy'), 'no-referrer');
   assert.equal(publicHeaders.get('x-frame-options'), 'DENY', 'all public pages must deny clickjacking frames');
-  assert.match(publicHeaders.get('strict-transport-security') || '', /^max-age=(\d+)(?:;|$)/);
-  const age = Number(publicHeaders.get('strict-transport-security').match(/max-age=(\d+)/)[1]);
-  assert.ok(age >= 15552000, 'HTTPS must remain required for at least 180 days');
+  assert.equal(publicHeaders.get('strict-transport-security'), 'max-age=31536000', 'Require HTTPS for one year on the visited host without opting subdomains into preload.');
+  assert.equal(publicHeaders.get('cross-origin-opener-policy'),'same-origin');
+  assert.equal(publicHeaders.get('cross-origin-resource-policy'),'same-origin');
 
   for (const [route, headers] of rules) {
     if (!headers.has('content-security-policy')) continue;
@@ -67,6 +68,44 @@ test('public browser security limits scripts, connections, forms, and embedded c
     assert.deepEqual(csp.get('img-src'), worksheet ? ["'self'"] : ["'self'", 'data:'], `${route}: unexpected image provider`);
     assert.ok(csp.has('upgrade-insecure-requests'), `${route}: insecure resource upgrade is required`);
   }
+});
+
+test('public isolation retains local resource delivery and has no opener-dependent browser integration', () => {
+  for(const filename of ['index.html','404.html','school-it.html','ai-use-notice.html','secure-reports.html']){
+    const source=read(filename),origin='https://www.colelearninglabs.com';
+    for(const [tag]of source.matchAll(/<(?:script|link|img)\b[^>]*>/giu)){
+      // Canonical/SEO links are navigational metadata, not resource requests.
+      if(/^<link\b/iu.test(tag)&&!/(?:rel=["'](?:stylesheet|icon|preload|modulepreload)["'])/iu.test(tag))continue;
+      const reference=tag.match(/\b(?:src|href)=["']([^"']+)["']/iu)?.[1];
+      if(reference)assert.equal(new URL(reference,origin+'/'+filename).origin,origin,`${filename}: cross-origin resource would be rejected by the reviewed browser policy`);
+    }
+  }
+  for(const filename of ['src/app.js','src/secure-reports.js','src/report-downloads.js','src/work-controls.js']){
+    assert.doesNotMatch(read(filename),/\b(?:window|globalThis)\s*\.\s*(?:opener|open)\b/u,`${filename}: popup/opener integrations need a separate isolation review`);
+  }
+});
+
+test('the public disclosure file advertises a private reporting channel with a current bounded expiry',()=>{
+  const filename='.well-known/security.txt',source=read(filename);
+  assert.ok(PUBLIC_SOURCE_FILES.includes(filename));assert.ok(PUBLIC_FILES.includes(filename));
+  assert.equal(MEMBER_FILES.includes(filename),false,'Public contact metadata must not enter the private learning bundle.');
+  const fields=new Map();
+  for(const line of source.trim().split(/\r?\n/u)){
+    const match=line.match(/^([A-Za-z-]+): (.+)$/u);assert.ok(match,'Disclosure metadata must be a valid field.');
+    assert.equal(fields.has(match[1]),false,'Disclosure fields must not be duplicated.');fields.set(match[1],match[2]);
+  }
+  assert.deepEqual([...fields.keys()],['Contact','Expires','Canonical','Policy','Preferred-Languages']);
+  assert.equal(fields.get('Contact'),'https://github.com/AL91Cole/cole-learning-labs/security/advisories');
+  assert.equal(fields.get('Policy'),'https://github.com/AL91Cole/cole-learning-labs/security/policy');
+  assert.equal(fields.get('Canonical'),'https://www.colelearninglabs.com/.well-known/security.txt');
+  assert.equal(fields.get('Preferred-Languages'),'en');
+  assert.match(fields.get('Expires'),/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u);
+  const expiry=Date.parse(fields.get('Expires')),now=Date.now();
+  assert.ok(expiry>now,'Refresh the disclosure file before its contact details expire.');
+  assert.ok(expiry<now+365*86400000,'Review disclosure contact details within one year.');
+  const headers=headerRules(read('_headers')).get('/.well-known/security.txt');
+  assert.equal(headers.get('content-type'),'text/plain; charset=utf-8');
+  assert.match(headers.get('cache-control'),/max-age=3600/u);
 });
 
 test('HTML worksheets cannot run scripts, connect, submit, be framed, or be retained by a shared cache', () => {

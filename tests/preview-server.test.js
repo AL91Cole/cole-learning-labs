@@ -48,6 +48,7 @@ test('preview serves only approved free-artifact pages, clean routes and version
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/school-it/', 'school-it.html', 'text/html; charset=utf-8'],
     ['/secure-reports', 'secure-reports.html', 'text/html; charset=utf-8'],
+    ['/.well-known/security.txt', '.well-known/security.txt', 'text/plain; charset=utf-8'],
     ['/src/app.js?release=test', 'src/app.js', 'text/javascript; charset=utf-8'],
     ['/src/styles.css', 'src/styles.css', 'text/css; charset=utf-8']
   ]) {
@@ -57,6 +58,8 @@ test('preview serves only approved free-artifact pages, clean routes and version
     assert.equal(response.headers['content-type'], type, pathname);
     assert.equal(response.headers['cache-control'], 'no-store');
     assert.equal(response.headers['x-content-type-options'], 'nosniff');
+    assert.equal(response.headers['cross-origin-opener-policy'], 'same-origin');
+    assert.equal(response.headers['cross-origin-resource-policy'], 'same-origin');
   }
 });
 
@@ -73,7 +76,7 @@ test('legacy member documents redirect to the membership gate even if source cop
 test('existing private files, repository metadata, and unreviewed browser files are never served', async t => {
   const { root, server } = await fixture(t);
   const hidden = [
-    '.env', 'README.md', 'package.json', 'docs/TEACHER-RUBRICS.md',
+    '.env', 'README.md', 'package.json', 'docs/TEACHER-RUBRICS.md', '.well-known/private.json', '.well-known/security.txt.bak',
     'private-teacher-materials/criteria.json', 'Teacher/Resources/INC-101_Worked_Report.txt',
     'assets/ColeLearningLabs_Pop_Quiz_Answer_Keys.pdf', 'assets/unreviewed.pdf',
     'teacher/secret.html', 'src/unreviewed.html', 'scripts/build.mjs', 'dist/index.html'

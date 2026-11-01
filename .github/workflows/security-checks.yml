@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    # Also check the audit follow-up while the membership PR is under review.
+    branches: [main, codex/disabled-teacher-memberships]
   workflow_dispatch:
   # Re-scan unchanged code when CodeQL's security knowledge changes.
   schedule:

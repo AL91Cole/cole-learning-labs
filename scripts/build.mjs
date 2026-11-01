@@ -6,6 +6,7 @@ import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 import { bundleTier } from './tier-bundles.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
+const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 
 // A new public file needs an explicit review here. Never publish the checkout root.
 export const PUBLIC_SOURCE_FILES = Object.freeze([
@@ -26,20 +27,22 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/report-crypto.js', 'src/report-downloads.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
   'src/secure-reports.css', 'src/accessibility.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css',
-  'src/access-policy.js', 'src/lab-catalog.js'
+  'src/access-policy.js', 'src/lab-catalog.js', ...PUBLIC_METADATA_FILES
 ]);
 // Source review does not grant public delivery. The complete member application
 // is packaged separately and is never copied into the public website output.
-export const MEMBER_FILES = PUBLIC_SOURCE_FILES;
+// Public disclosure metadata is not a member learning resource.
+export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)));
 export const PUBLIC_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
+  ...PUBLIC_METADATA_FILES,
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
   'src/app.js', 'src/secure-reports.js',
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
 const FILES = new Set(PUBLIC_SOURCE_FILES);
-const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher'];
+const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', '.well-known'];
 
 async function directoryOnly(filename) {
   const info = await lstat(filename);
