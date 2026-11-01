@@ -1,6 +1,6 @@
 # Cole Learning Labs: proposed K–12 development plan
 
-Prepared November 1, 2026. This is a design and review sequence, not a published K–5 curriculum, activation approval, launch date or promise of legal compliance. The existing content remains grades 7–12. The audit follow-up implements only the security and small usability changes described below.
+Prepared November 1, 2026. This is a design and review sequence, not activation approval, a launch date or a promise of legal compliance. The follow-up review build now includes fifteen K–6 activities across K–1, 2–3 and 4–6, alongside the existing grades 7–12 courses and investigations. The elementary activities use pictures, fixed choices and bounded local models, with no text entry, accounts, storage, reporting, AI or collection. They are initial implementations for educator and accessibility evaluation; the broader redesign and school-release steps below remain separate.
 
 ## Decisions carried forward
 
@@ -10,7 +10,7 @@ Prepared November 1, 2026. This is a design and review sequence, not a published
 - Develop younger-age prototypes with invented characters and synthetic work. No student accounts, advertising, behavioral analytics, recordings or live AI are needed for the proposed elementary activities.
 - Add no paid provider feature, domain, account, subscription or upgrade in this work. Future deployment capacity and costs need a separate review before any resource is created.
 
-An eventual elementary offer needs its own explicit content/access decision. The current ten-case free allowlist does not automatically grant new activities or permit students to use adult-only tools. Early elementary prototypes should remain isolated evaluation builds until that decision and the relevant reviews are complete.
+The owner has approved including the initial fifteen elementary activities in free access. The older ten-case free allowlist remains unchanged, and students gain no access to adult-only tools or billing accounts. Future elementary activities need their own content/access decision. Initial activities should be evaluated with synthetic work and approved staff before school use; the relevant review steps still apply.
 
 ## Phase 1: correct the current experience
 

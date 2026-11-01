@@ -1,6 +1,6 @@
 # Free and member learning access
 
-The approved free offer is all five beginner courses, the practice workbench and two investigation labs per topic. The current release uses the first two existing cases in each topic:
+The approved free offer includes fifteen K–6 activities, all five older beginner courses, the practice workbench and two older investigation labs per topic. The older investigation samples use the first two existing cases in each topic:
 
 | Topic | Free cases |
 | --- | --- |
@@ -11,6 +11,8 @@ The approved free offer is all five beginner courses, the practice workbench and
 | Coding | CODE-501, CODE-502 |
 
 That is ten free investigations and 32 member investigations in the 42-case catalogue. The five beginner courses remain free and each currently hands off to a free investigation. Practice workbenches for free networking, AI and cybersecurity cases remain public; their member-case variants require member access. Hardware practice is available within the free hardware activities.
+
+The separate `#explore` catalogue contains fifteen free activities: five topics in each of the K–1, 2–3 and 4–6 bands. Exact `#explore/EX-...` IDs are allowlisted; unknown IDs, extra route components and unsupported bands stay closed. Elementary choices belong only to the mounted activity and reset on leaving. These pages mount no text-entry, device-saving, report, classroom, improvement-sharing or cloud-AI control. They do not relabel the existing grades 7–12 courses or change the older ten-case free allowlist. Hosting and browser/OS metadata processing still exist; this is not a universal anonymity or school-approval claim.
 
 Both freeform studios, every open coding sandbox, the capstone sequence and educator learning resources are member content. Portfolio, contact, privacy, accessibility information and the introductory student guide remain public. Information about a member activity can be public without delivering that activity.
 
@@ -24,4 +26,4 @@ Public work uses the separate optional device-saving key `cole-learning-labs:pub
 
 Existing source and earlier versions of this public repository have already been public. Access restrictions on the hosted service do not retroactively make that source confidential.
 
-Student collection, classroom services, live billing and prices remain independently disabled pending their separate reviews. Membership authentication and billing are for approved adult purchasers; this access policy does not authorize student accounts or collection. A member release still requires server-verified current paid access and the existing membership release approvals.
+Student collection, classroom services, live billing and prices remain independently disabled pending their separate reviews. Membership authentication and billing are for approved adult purchasers; this access policy does not authorize student accounts or collection. A member release still requires server-verified current paid access and the existing membership release approvals. The separately prepared [private owner entitlement](OWNER-LAB-ACCESS.md) can grant the owner content access without payment only after exact server-verified identity checks; it does not enable public memberships, lift usage budgets or unlock classroom processing.

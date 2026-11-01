@@ -1,4 +1,4 @@
-import {getAdultSession,handleMembershipAuth} from './auth.js';
+import {getAdultSession,handleMembershipAuth,getOwnerLabAccess} from './auth.js';
 import {createCheckout,createPortal,getMembershipStatus,verifyPremium,processWebhook,BillingError} from './billing.js';
 import {MEMBER_ORIGIN,MembershipError,deny,json,unavailable,secureResponse,reviewedUrl,requireSameOrigin,requireSameOriginRead,boundedBytes,boundedJson,csrfToken,verifyCsrf,createBackstop,reserveAdmission} from './security.js';
 import {PROTECTED_ASSETS} from './protected-assets.js';
@@ -87,9 +87,11 @@ export async function handleMembershipRequest(request,env,{
       requireMethod(request,'GET');requireSameOriginRead(request);
       await admission(env.MEMBERSHIP_DB,'read');
       const session=requireSession(await auth.getAdultSession(request,env));
-      // Every document, script, stylesheet, image and download performs a fresh
-      // paid-entitlement check. Never consult or fall back to public assets.
-      if(await freshPrivateEntitlement(env,session,billing,request.signal)!==true)deny(403);
+      // Every private asset needs current authentication and either a current
+      // exact owner binding or its own fresh paid check. Owner access never
+      // invokes billing. Never fall back to public assets or browser claims.
+      const owner=await getOwnerLabAccess(session,env);
+      if(!owner&&await freshPrivateEntitlement(env,session,billing,request.signal)!==true)deny(403);
       if(request.signal.aborted)deny(499);
       requireSession(session);
       if(!protectedAssets.has(path))deny(404);
@@ -128,18 +130,23 @@ export async function handleMembershipRequest(request,env,{
     if(read)requireSameOriginRead(request);else requireSameOrigin(request);
     await admission(env.MEMBERSHIP_DB,read?'read':'billing');
     const session=requireSession(await auth.getAdultSession(request,env));
+    const owner=await getOwnerLabAccess(session,env);
     if(path==='/api/member/session'){
-      const status=await billing.getMembershipStatus({env,member:session.user});
-      return json({signedIn:true,csrfToken:await csrfToken(env,session),membership:status});
+      const status=owner?{active:false,plan:null,renewsAt:null,cancelAtPeriodEnd:false}:await billing.getMembershipStatus({env,member:session.user});
+      return json({signedIn:true,csrfToken:await csrfToken(env,session),membership:status,
+        labAccess:owner?'owner':status.active===true?'subscriber':'none'});
     }
     if(resource!==null){
       if(!/^[a-z][a-z0-9-]{0,63}$/u.test(resource)||!resources.has(resource))deny(404);
-      if(!await billing.verifyPremium({env,member:session.user}))deny(403);
+      if(!owner&&await billing.verifyPremium({env,member:session.user})!==true)deny(403);
       if(request.signal.aborted)deny(499);
       const load=resources.get(resource),response=await load();
       if(!(response instanceof Response)||response.status!==200)deny(503);
       return secureResponse(response);
     }
+    // This owner exception grants content access only. It cannot create a
+    // customer, start a subscription, or open a payment-management session.
+    if(owner)deny(403);
     await verifyCsrf(request,env,session);
     const body=await boundedJson(request);
     if(path==='/api/member/checkout')return json(await billing.createCheckout({env,member:session.user,body}));

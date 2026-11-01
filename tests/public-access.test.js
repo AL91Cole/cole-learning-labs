@@ -6,7 +6,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {buildSite,PUBLIC_FILES} from '../scripts/build.mjs';
 import {createPreviewServer} from '../scripts/serve.mjs';
 import {CATALOG} from '../src/lab-catalog.js';
-import {FREE_LAB_IDS} from '../src/access-policy.js';
+import {FREE_LAB_IDS,ELEMENTARY_LAB_IDS} from '../src/access-policy.js';
 import {createWorkStorage,WORK_PREFIX,PUBLIC_WORK_PREFIX} from '../src/local-work.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {handleRequesterRequest} from '../functions/api/requester.js';
@@ -23,7 +23,7 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
   assert.deepEqual((await readdir(new URL('../dist/src/',import.meta.url))).filter(file=>file.endsWith('.js')).sort(),['app.js','secure-reports.js']);
   assert.equal(PUBLIC_FILES.some(file=>file.startsWith('memberships/')||file.endsWith('.pdf')),false);
-  for(const path of ['/src/scenarios.js','/src/expanded-labs.js','/src/coding-lab.js','/src/coding-sandbox.js','/src/lesson-plans.js',
+  for(const path of ['/src/scenarios.js','/src/expanded-labs.js','/src/coding-lab.js','/src/coding-sandbox.js','/src/lesson-plans.js','/src/elementary-labs.js',
     '/memberships/worker.js','/memberships/dist/worker.mjs','/learn/src/app.js','/assets/cole-learning-labs-pop-quizzes.pdf']){
     const result=await request(server,path);assert.equal(result.status,404,path);
     assert.equal(result.body.includes('MY CREATIVE STUDIO'),false);
@@ -38,12 +38,12 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');assert.ok(html.includes('src/app.js'));
 });
 
-test('the public cloud reply gateway rejects every member case before touching the private service',async()=>{
+test('the public cloud reply gateway rejects every member case and elementary activity before touching the private service',async()=>{
   const env={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',get REQUESTER_SERVICE(){assert.fail('Member case reached public AI binding.');}};
-  for(const lab of CATALOG.filter(row=>row.access==='member')){
+  for(const lab of [...CATALOG.filter(row=>row.access==='member').map(row=>({...row,expectedStatus:403})),...ELEMENTARY_LAB_IDS.map(id=>({id,title:'Elementary activity',expectedStatus:400}))]){
     const request=new Request('https://www.colelearninglabs.com/api/requester',{method:'POST',headers:{Origin:'https://www.colelearninglabs.com',
       'Sec-Fetch-Site':'same-origin','Content-Type':'application/json'},body:JSON.stringify({scenarioId:lab.id,topic:'breakfast'})});
-    const result=await handleRequesterRequest({request,env},{privacyApproved:true});assert.equal(result.status,403,lab.id);
+    const result=await handleRequesterRequest({request,env},{privacyApproved:true});assert.equal(result.status,lab.expectedStatus,lab.id);
     assert.equal((await result.text()).includes(lab.title),false);
   }
 });

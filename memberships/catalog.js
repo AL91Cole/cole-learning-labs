@@ -10,7 +10,7 @@ export const MEMBERSHIP_OFFER = Object.freeze({
   name:'Cole Learning Labs Teacher Membership',
   audience:'Approved adult educators and school purchasers',
   status:'pricing-pending',
-  description:'Adult access to the full lab collection, studios, open coding sandboxes and teaching resources. Five beginner courses, practice workbenches for free cases and two labs per topic remain free. No student accounts or results collection are included.',
+  description:'Adult access to the full lab collection, studios, open coding sandboxes and teaching resources. All 15 K–6 activities, five beginner courses, practice workbenches for free cases and two labs per topic remain free. No student accounts or results collection are included.',
   termsVersion:BILLING_TERMS_VERSION,
   plans:Object.freeze([
     Object.freeze({id:'teacher-monthly',label:'Monthly membership',interval:'month',amount:null,currency:'usd'}),

@@ -24,6 +24,15 @@ test('routes accept reviewed mode and sequence values while ignoring unrelated q
   assert.equal(learningRoute('#lab/INC-101?mode=challenge&mode=unknown').mode,'challenge');
 });
 
+test('elementary routes retain only fixed grade-band choices and reject extra path components',()=>{
+  for(const [code,band]of [['k1','K–1'],['2-3','2–3'],['4-6','4–6']]){
+    assert.deepEqual(learningRoute('#explore?band='+code+'&student=PRIVATE_MARKER'),{page:'explore',id:undefined,mode:'guided',sequence:null,band});
+  }
+  assert.deepEqual(learningRoute('#explore/EX-HW-1'),{page:'explore',id:'EX-HW-1',mode:'guided',sequence:null});
+  for(const value of ['unknown','K–1','__proto__','PRIVATE_MARKER'])assert.equal(learningRoute('#explore?band='+encodeURIComponent(value)).band,undefined);
+  for(const hash of ['#explore/EX-HW-1/extra','#explore/EX-HW-1/','#explore//EX-HW-1','#explore/EX-HW-1/extra/more'])assert.equal(learningRoute(hash).page,'unknown');
+});
+
 
 test('all investigation pages deep-link with reviewed support and sequence settings',()=>{
   for(const scenario of SCENARIOS)for(const [index,step] of ['request','workbench','explain'].entries()) {
