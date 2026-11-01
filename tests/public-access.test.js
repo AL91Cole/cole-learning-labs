@@ -23,7 +23,7 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
   assert.deepEqual((await readdir(new URL('../dist/src/',import.meta.url))).filter(file=>file.endsWith('.js')).sort(),['app.js','secure-reports.js']);
   assert.equal(PUBLIC_FILES.some(file=>file.startsWith('memberships/')||file.endsWith('.pdf')),false);
-  for(const path of ['/src/scenarios.js','/src/expanded-labs.js','/src/coding-lab.js','/src/coding-workbench.js','/src/coding-sandbox.js','/src/lesson-plans.js','/src/elementary-labs.js','/src/block-workshop.js','/src/assembly-builder.js',
+  for(const path of ['/src/scenarios.js','/src/expanded-labs.js','/src/coding-lab.js','/src/coding-workbench.js','/src/sign-in.js','/src/coding-sandbox.js','/src/lesson-plans.js','/src/elementary-labs.js','/src/block-workshop.js','/src/assembly-builder.js',
     '/memberships/worker.js','/memberships/dist/worker.mjs','/learn/src/app.js','/assets/cole-learning-labs-pop-quizzes.pdf']){
     const result=await request(server,path);assert.equal(result.status,404,path);
     assert.equal(result.body.includes('MY CREATIVE STUDIO'),false);
@@ -36,6 +36,9 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   assert.equal(app.body.includes('MY CREATIVE STUDIO'),false);
   assert.equal(app.body.includes('Memberships are being prepared.'),true);
   const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');assert.ok(html.includes('src/app.js'));
+  assert.equal((html.match(/href="#signin">Sign in<\/a>/gu)||[]).length,2,'Navigation and footer use the shared internal entry.');
+  assert.equal(html.includes('Owner sign in'),false);assert.equal(html.includes('codex-private-owner-preview'),false,'The ordinary navigation does not jump straight to a separate owner page.');
+  assert.ok(app.body.includes('Subscriber sign-in is being prepared. Existing authorized access remains available.'));
 });
 
 test('the public cloud reply gateway rejects every member case and elementary activity before touching the private service',async()=>{

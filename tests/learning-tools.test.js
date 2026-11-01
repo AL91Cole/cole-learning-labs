@@ -33,6 +33,11 @@ test('elementary routes retain only fixed grade-band choices and reject extra pa
   for(const hash of ['#explore/EX-HW-1/extra','#explore/EX-HW-1/','#explore//EX-HW-1','#explore/EX-HW-1/extra/more'])assert.equal(learningRoute(hash).page,'unknown');
 });
 
+test('shared sign-in navigation ignores identity and redirect claims and rejects alternate account paths',()=>{
+  assert.deepEqual(learningRoute('#signin?email=PRIVATE_MARKER&owner=true&returnTo=https://evil.example.test'),{page:'signin',id:undefined,mode:'guided',sequence:null});
+  for(const hash of ['#signin/owner','#signin/subscriber','#signin/','#signin//CODE-503','#signin/CODE-503/extra'])assert.equal(learningRoute(hash).page,'unknown');
+});
+
 
 test('all investigation pages deep-link with reviewed support and sequence settings',()=>{
   for(const scenario of SCENARIOS)for(const [index,step] of ['request','workbench','explain'].entries()) {

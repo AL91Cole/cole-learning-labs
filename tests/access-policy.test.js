@@ -70,7 +70,7 @@ test('open sandboxes, studios, capstone and educator learning resources are memb
   for(const id of [undefined,'','blank','pixel-pet','arcade','rover','tiles'])assert.equal(routeAccess({page:'sandbox',id}),'member');
   for(const id of ['network','coding'])assert.equal(routeAccess({page:'studio',id}),'member');
   for(const page of ['capstone','educators'])assert.equal(routeAccess({page}),'member');
-  for(const page of ['home','projects','about','connect','privacy','guide','labs'])assert.equal(routeAccess({page}),'public');
+  for(const page of ['home','projects','about','connect','privacy','guide','labs','signin'])assert.equal(routeAccess({page}),'public');
   for(const id of Object.keys(FREE_LAB_IDS_BY_TOPIC))assert.equal(routeAccess({page:'labs',id}),'public');
 });
 
@@ -82,6 +82,6 @@ test('malformed, unknown and case-changed IDs cannot become public content',()=>
   for(const route of [null,undefined,[],{},'lab/INC-101',
     {page:'Lab',id:'INC-101'},{page:'unknown'},{page:'learn',id:'coding/extra'},
     {page:'sandbox',id:'unknown'},{page:'studio'},{page:'studio',id:'hardware'},
-    {page:'privacy',id:'extra'},{page:'labs',id:'unknown'},
+    {page:'privacy',id:'extra'},{page:'labs',id:'unknown'},{page:'signin',id:'owner'},{page:'signin',id:'CODE-503'},
     {page:'capstone',id:'INC-101'},{page:'educators',id:'extra'},{page:'home',id:null}])assert.equal(routeAccess(route),'unknown');
 });
