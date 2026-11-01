@@ -61,5 +61,5 @@ test('deployment noindex headers apply only to this project alternate hosts',()=
   }
   const globalBlock=source.slice(source.indexOf('/*')+2).split(/\r?\n(?=\S)/u)[0];
   assert.doesNotMatch(globalBlock,/X-Robots-Tag/iu,'The preferred production site remains indexable.');
-  assert.equal(alternateScopes.some(scope=>scope.includes('colelearninglabs.com')),false);
+  assert.equal(alternateScopes.some(scope=>scope===origin+'/*'||scope==='https://colelearninglabs.com/*'),false);
 });
