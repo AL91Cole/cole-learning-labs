@@ -27,7 +27,7 @@ test('tour opens one short task with optional reference and no investigation cre
   assert.match(html,/Experiment notebook/);
   assert.match(html,/Downloading a report does not submit it/);
   assert.match(html,/closing or reloading/i);
-  assert.match(html,/href="#sandbox"/);
+  assert.match(html,/href="#membership"/);
   assert.match(html,/disconnect AC, then remove the side panel/);
   assert.match(html,/monitor <strong>Input<\/strong>/);
   assert.ok(html.replace(/<[^>]*>/g,' ').split(/\s+/).length<650);

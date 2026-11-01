@@ -1,6 +1,7 @@
 import {getAdultSession,handleMembershipAuth} from './auth.js';
 import {createCheckout,createPortal,getMembershipStatus,verifyPremium,processWebhook,BillingError} from './billing.js';
 import {MEMBER_ORIGIN,MembershipError,deny,json,unavailable,secureResponse,reviewedUrl,requireSameOrigin,requireSameOriginRead,boundedBytes,boundedJson,csrfToken,verifyCsrf,createBackstop,reserveAdmission} from './security.js';
+import {PROTECTED_ASSETS} from './protected-assets.js';
 
 // Source review, operator/privacy approval and an explicit test rollout are separate.
 // Environment flags, credentials, URLs and execution context cannot unlock this entry.
@@ -10,6 +11,43 @@ const ASSETS=new Map([['/','/index.html'],['/index.html','/index.html'],['/membe
 const AUTH_PATHS=new Set(['/api/auth/sign-in/social','/api/auth/callback/google','/api/auth/sign-out']);
 const RESOURCES=new Map(); // No premium content is approved for sale or delivery yet.
 const defaultBilling={createCheckout,createPortal,getMembershipStatus,verifyPremium,processWebhook};
+const LEARN_CSP="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; frame-src 'none'; object-src 'none'; worker-src 'none'";
+const privateChecks=new WeakMap();
+
+function briefRetry(signal,milliseconds){
+  return new Promise((resolve,reject)=>{
+    const abort=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort);reject(new MembershipError(499));};
+    const timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},milliseconds);
+    if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true});
+  });
+}
+
+/** Co-ordinate only concurrent work in this isolate. Each asset still performs
+ * its own provider check; no paid decision or payload is cached or shared. */
+async function freshPrivateEntitlement(env,session,billing,signal){
+  let queues=privateChecks.get(env);if(!queues){queues=new Map();privateChecks.set(env,queues);}
+  let queue=queues.get(session.user.id);
+  if(!queue){queue={pending:0,tail:Promise.resolve()};queues.set(session.user.id,queue);}
+  if(queue.pending>=4)deny(429);
+  queue.pending++;
+  const previous=queue.tail;let release;queue.tail=new Promise(resolve=>{release=resolve;});
+  try{
+    await previous;
+    for(let attempt=0;attempt<3;attempt++){
+      if(signal.aborted)deny(499);requireSession(session);
+      try{return await billing.verifyPremium({env,member:session.user});}
+      catch(error){
+        if(!(error instanceof BillingError)||error.status!==409||attempt===2)throw error;
+        // A different isolate may hold the database lease. Retry only that
+        // typed contention response, never infer access from it or other errors.
+        await briefRetry(signal,100*(attempt+1));
+      }
+    }
+  }finally{
+    release();queue.pending--;
+    if(queue.pending===0){queues.delete(session.user.id);if(queues.size===0)privateChecks.delete(env);}
+  }
+}
 
 function reviewedRuntime(env){
   if(env?.MEMBERSHIP_ENABLED!=='true'||env?.MEMBERSHIP_PROCESSING_REVIEWED!=='true'||env?.MEMBERSHIP_DEPLOYMENT_MODE!=='test')deny(503);
@@ -24,7 +62,7 @@ const requireSession=session=>{
 /** Prepared testable handler. Options are trusted test dependencies, never input. */
 export async function handleMembershipRequest(request,env,{
   reviewApproved=false,auth={getAdultSession,handleMembershipAuth},billing=defaultBilling,
-  admission=reserveAdmission,limiter=backstop,resources=RESOURCES
+  admission=reserveAdmission,limiter=backstop,resources=RESOURCES,protectedAssets=PROTECTED_ASSETS
 }={}){
   if(reviewApproved!==true)return unavailable();
   let release;
@@ -42,8 +80,26 @@ export async function handleMembershipRequest(request,env,{
       if(result.status!==200){void result.body?.cancel().catch(()=>{});deny(404);}
       return secureResponse(result);
     }
-    if(!path.startsWith('/api/'))deny(404);
+    const learn=path.startsWith('/learn/');
+    if(!path.startsWith('/api/')&&!learn)deny(404);
     release=limiter.acquire();if(!release)deny(429);
+    if(learn){
+      requireMethod(request,'GET');requireSameOriginRead(request);
+      await admission(env.MEMBERSHIP_DB,'read');
+      const session=requireSession(await auth.getAdultSession(request,env));
+      // Every document, script, stylesheet, image and download performs a fresh
+      // paid-entitlement check. Never consult or fall back to public assets.
+      if(await freshPrivateEntitlement(env,session,billing,request.signal)!==true)deny(403);
+      if(request.signal.aborted)deny(499);
+      requireSession(session);
+      if(!protectedAssets.has(path))deny(404);
+      const asset=protectedAssets.get(path);
+      if(!(asset?.bytes instanceof Uint8Array)||typeof asset.contentType!=='string'||
+        !/^(?:text\/(?:html|css)|application\/(?:javascript|json|pdf)|image\/(?:svg\+xml|png))(?:; charset=utf-8)?$/u.test(asset.contentType))deny(503);
+      const response=secureResponse(new Response(asset.bytes,{headers:{'Content-Type':asset.contentType}}));
+      if(asset.contentType.startsWith('text/html'))response.headers.set('Content-Security-Policy',LEARN_CSP);
+      return response;
+    }
     if(AUTH_PATHS.has(path)){
       const callback=path==='/api/auth/callback/google';
       requireMethod(request,callback?'GET':'POST');

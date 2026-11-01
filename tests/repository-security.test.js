@@ -117,11 +117,17 @@ test('the browser policy denies surveillance and unnecessary hardware permission
   }
 });
 
-test('independent public labs bypass server functions and remain free of package dependencies', () => {
+test('public labs bypass server functions and use only reviewed locked build dependencies', () => {
   const routes = JSON.parse(read('_routes.json'));
   assert.deepEqual(routes, {version: 1, include: ['/api/requester'], exclude: []}, 'only the requester gateway invokes Functions; collection paths remain static');
   const pkg = JSON.parse(read('package.json'));
-  for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
+  for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
     assert.deepEqual(Object.keys(pkg[field] || {}), [], `${field} require a reviewed supply chain and locked installation workflow before release`);
   }
+  assert.deepEqual(pkg.devDependencies,{acorn:'8.19.0',esbuild:'0.28.2'});
+  const lock=JSON.parse(read('package-lock.json'));
+  assert.deepEqual(lock.packages[''].devDependencies,pkg.devDependencies);
+  const workflow=read('.github/workflows/security-checks.yml');
+  assert.match(workflow,/npm ci --ignore-scripts/u);
+  assert.match(workflow,/npm audit/u);
 });

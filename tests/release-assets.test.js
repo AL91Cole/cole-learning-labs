@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_FILES } from '../scripts/build.mjs';
+import { PUBLIC_FILES, PUBLIC_SOURCE_FILES } from '../scripts/build.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const ORIGIN = 'https://release-test.invalid/';
-const ENTRIES = PUBLIC_FILES.filter(filename => filename.endsWith('.html'));
+const ENTRIES = PUBLIC_SOURCE_FILES.filter(filename => filename.endsWith('.html'));
 const read = filename => readFileSync(path.join(ROOT, filename), 'utf8');
 
 function attributes(tag) {
@@ -60,13 +60,21 @@ function asset(reference, importer, extension) {
   return filename.replaceAll(path.sep, '/');
 }
 
-test('all public entry scripts and styles use the entry-defined asset release', () => {
+test('all reviewed source entry scripts and styles retain the entry-defined asset release', () => {
   assert.match(RELEASE || '', /^\d{8}-[a-z0-9-]+$/, 'app.js must define a nonempty named release');
   for (const entry of ENTRIES) {
     const dependencies = htmlDependencies(read(entry));
     assert.ok(dependencies.length, `${entry}: no scripts or styles were found`);
     for (const reference of dependencies) asset(reference, entry, /\.(?:m?js|css)$/);
   }
+});
+
+test('source-only learning entry pages are excluded from the public file manifest',()=>{
+  for(const filename of ['classroom.html','teacher/index.html','student-workbook.html','practice-quizzes.html']){
+    assert.ok(ENTRIES.includes(filename),`${filename}: keep source dependency review`);
+    assert.equal(PUBLIC_FILES.includes(filename),false,`${filename}: require protected delivery`);
+  }
+  for(const filename of ['index.html','404.html','school-it.html','ai-use-notice.html','secure-reports.html'])assert.ok(PUBLIC_FILES.includes(filename),`${filename}: public information or local privacy utility remains available`);
 });
 
 test('the static 404 resolves navigation and assets from a nested missing URL', () => {

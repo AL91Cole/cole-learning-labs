@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import { createWorkStorage, CLEAR_WORK_KEY, WORK_PREFIX } from '../src/local-work.js';
+import { createWorkStorage, CLEAR_WORK_KEY, WORK_PREFIX, PUBLIC_WORK_PREFIX } from '../src/local-work.js';
 import { SCENARIOS } from '../src/scenarios.js';
 import { normalizeLabRecord } from '../src/records.js';
 import {initialNetworkStudioState} from '../src/network-studio-model.js';
@@ -43,6 +43,8 @@ function harness() {
   const status = { textContent: '' };
   let mounted;
   const context = vm.createContext({
+    // This fixture starts in an existing classroom/member saving scope.
+    MEMBER_CONTENT:true,PUBLIC_WORK_PREFIX,
     SCENARIOS, normalizeLabRecord, createWorkStorage, CLEAR_WORK_KEY, WORK_PREFIX, deviceStorage: storage,
     initialKey: classroomKey, initialStore, initialPracticeStates, initialStudioState, initialCodingStudioState, initialNetworkState, initialNetworkStudioState,
     initialConnection: { dispose() { calls.disposed++; }, schedule() { calls.scheduled++; } },

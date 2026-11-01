@@ -3,11 +3,12 @@ import { lstat, mkdir, mkdtemp, open, readdir, realpath, rename, rm, writeFile }
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
+import { bundleTier } from './tier-bundles.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 // A new public file needs an explicit review here. Never publish the checkout root.
-export const PUBLIC_FILES = Object.freeze([
+export const PUBLIC_SOURCE_FILES = Object.freeze([
   'index.html', '404.html', 'classroom.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'teacher/index.html', 'student-workbook.html', 'practice-quizzes.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
@@ -24,9 +25,20 @@ export const PUBLIC_FILES = Object.freeze([
   'src/expanded-labs.js', 'src/expanded-labs.css', 'src/coding-lab.js', 'src/coding-lab.css', 'src/interview.css',
   'src/report-crypto.js', 'src/report-downloads.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
   'src/secure-reports.css', 'src/accessibility.css',
-  'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css'
+  'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css',
+  'src/access-policy.js', 'src/lab-catalog.js'
 ]);
-const FILES = new Set(PUBLIC_FILES);
+// Source review does not grant public delivery. The complete member application
+// is packaged separately and is never copied into the public website output.
+export const MEMBER_FILES = PUBLIC_SOURCE_FILES;
+export const PUBLIC_FILES = Object.freeze([
+  'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html',
+  '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
+  'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
+  'src/app.js', 'src/secure-reports.js',
+  ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
+]);
+const FILES = new Set(PUBLIC_SOURCE_FILES);
 const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher'];
 
 async function directoryOnly(filename) {
@@ -86,10 +98,17 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT } = {}) {
   const root = await realpath(requested);
   const output = path.join(root, 'dist');
   for (const directory of PUBLIC_DIRECTORIES) await validatePublicTree(root, directory);
-  const content = new Map();
-  for (const filename of PUBLIC_FILES) content.set(filename, await sourceBytes(root, filename));
+  const sources = new Map();
+  for (const filename of PUBLIC_SOURCE_FILES) sources.set(filename, await sourceBytes(root, filename));
+  const content = new Map(PUBLIC_FILES.map(filename=>[filename,sources.get(filename)]));
   const routes = JSON.parse(content.get('_routes.json').toString('utf8'));
   if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester'], exclude: [] })) throw new Error('Only the reviewed requester gateway may invoke API Functions; collection routes must stay excluded.');
+  const tier = await bundleTier({sourceRoot:root,member:false});
+  content.set('src/app.js',Buffer.from(tier.javascript));
+  // This public privacy tool has no course content; bundle its own reviewed
+  // local graph so raw source modules are never an alternate content endpoint.
+  const localTool = await bundleTier({sourceRoot:root,member:false,entry:'secure-reports.js'});
+  content.set('src/secure-reports.js',Buffer.from(localTool.javascript));
   await safeBuildDirectory(root, output, 'dist');
 
   let staging = await mkdtemp(path.join(root, '.publish-stage-'));

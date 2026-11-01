@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { buildSite, PUBLIC_FILES } from '../scripts/build.mjs';
+import { buildSite, PUBLIC_FILES, PUBLIC_SOURCE_FILES } from '../scripts/build.mjs';
 
 async function fixture(t) {
   // Restricted hosts may supply a writable scratch directory without touching source.
@@ -11,10 +11,10 @@ async function fixture(t) {
   t.after(() => rm(directory, { recursive: true, force: true }));
   const root = path.join(directory, 'project');
   await mkdir(root);
-  for (const filename of PUBLIC_FILES) {
+  for (const filename of PUBLIC_SOURCE_FILES) {
     const target = path.join(root, filename);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, filename === '_routes.json' ? JSON.stringify({ version: 1, include: ['/api/requester'], exclude: [] }) : `Reviewed fixture: ${filename}`);
+    await copyFile(new URL('../'+filename,import.meta.url),target);
   }
   return { root, directory };
 }
@@ -35,12 +35,14 @@ test('publish output includes browser resources and API routing while excluding 
   for (const filename of privateFiles) {
     const target = path.join(root, filename);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, 'PRIVATE_FIXTURE_DO_NOT_PUBLISH');
+    await writeFile(target,filename==='package.json'?JSON.stringify({private:true,type:'module',description:'PRIVATE_FIXTURE_DO_NOT_PUBLISH'}):'PRIVATE_FIXTURE_DO_NOT_PUBLISH');
   }
   const result = await buildSite({ sourceRoot: root });
   assert.equal(result.directory, path.join(root, 'dist'));
   const files = await list(result.directory);
-  assert.ok(files.includes('index.html') && files.includes('teacher/index.html'));
+  assert.ok(files.includes('index.html'));
+  assert.equal(files.includes('teacher/index.html'),false,'The legacy teacher document cannot bypass member delivery.');
+  assert.deepEqual(files,[...PUBLIC_FILES].sort());
   assert.ok(files.includes('404.html'), 'Pages needs a top-level 404 to disable homepage fallback for missing paths');
   assert.ok(files.includes('src/app.js') && files.includes('assets/favicon.svg'));
   assert.ok(files.includes('_headers') && files.includes('_routes.json'));

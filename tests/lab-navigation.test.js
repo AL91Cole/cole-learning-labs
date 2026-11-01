@@ -10,11 +10,13 @@ import { REQUESTER_TASK_NUDGE } from '../src/requester-general.js';
 import { initialHardwareState, applyHardwareAction, verifyHardware } from '../src/hardware.js';
 import { initialWorkspaceState, applyWorkspaceAction, verifyWorkspace } from '../src/workspaces.js';
 import { answerQuestion, questionEvent, readQuestionEvents, inquiryProgress, retainInquiryEvents } from '../src/interview.js';
-import { createWorkStorage, WORK_PREFIX } from '../src/local-work.js';
+import { createWorkStorage, WORK_PREFIX, PUBLIC_WORK_PREFIX } from '../src/local-work.js';
 import { normalizeLabRecord,workbenchProgress } from '../src/records.js';
 
 import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult,saveExperiment} from '../src/experiments.js';
 import {learningRoute,labPageHash} from '../src/learning-tools.js';
+import {routeAccess} from '../src/access-policy.js';
+import {CATALOG} from '../src/lab-catalog.js';
 
 const source = await readFile(new URL('../src/app.js', import.meta.url), 'utf8');
 const helperStart = source.indexOf('function evidenceList(');
@@ -80,7 +82,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     // The real renderer replaces inputs; this draft detects unexpected replacement.
     root.children = new Map(); root.querySelector('[data-unsaved-workbench-draft]').value = '';
   }
-  const context = vm.createContext({networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
+  const context = vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,
     resetLabImprovements(){},mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,cloudEnabled:true,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
     // Production modules share one realm. Transfer VM-created action data into
@@ -957,7 +959,8 @@ function routeHarness(id='CODE-501',initialPath='',suppliedController) {
   Object.defineProperty(main,'innerHTML',{get:()=>markup,set(value){order.push('replace DOM');markup=value;editor=null;}});
   const location={hash:'#lab/'+id+initialPath};
   const initialStore={version:2,labs:{}};
-  const context=vm.createContext({networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
+  // Full-case navigation and draft preservation belong to the member build.
+  const context=vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     SCENARIOS,learningRoute,labPageHash,retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),
     mountLabLearning(_root,options){learning=options;const {mode}=options;learningCalls.mounts++;const dispose=()=>{learningCalls.disposals++;};dispose.setMode=value=>learningCalls.modes.push(value);return dispose;},
     mountInvestigationPreview:()=>null,mountTeachingPage:()=>()=>{},renderCapstone:()=>'capstone',mountCapstone:()=>()=>{},capstoneReport:()=>'capstone report',checkCapstoneState:()=>({ok:false}),normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,

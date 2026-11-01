@@ -24,7 +24,7 @@ export function mountMembership(root,{
 }={}){
   const find=selector=>root.querySelector(selector);
   const adult=find('[data-adult]'),renewal=find('[data-renewal]'),signin=find('[data-sign-in]'),
-    checkout=find('[data-checkout]'),portal=find('[data-portal]'),logout=find('[data-sign-out]'),status=find('[data-status]');
+    checkout=find('[data-checkout]'),portal=find('[data-portal]'),logout=find('[data-sign-out]'),openLabs=find('[data-open-labs]'),status=find('[data-status]');
   let disposed=false,pending=false,session=null,stopActive=null;
   const allowed=enabled===true&&origin===ORIGIN&&typeof fetcher==='function';
   const say=value=>{if(!disposed)status.textContent=value;};
@@ -34,6 +34,7 @@ export function mountMembership(root,{
     renewal.disabled=!allowed||!pricingApproved||pending||!session;
     portal.disabled=!allowed||pending||!session;
     logout.disabled=!allowed||pending||!session;
+    if(openLabs)openLabs.disabled=!allowed||pending||session?.membership?.active!==true;
     if(planSelector)planSelector.disabled=!allowed||!pricingApproved||pending||!session;
     checkout.textContent=!pricingApproved?'Purchases unavailable':session?.membership?.active?'Membership active':'Continue to secure checkout';
   }
@@ -107,13 +108,23 @@ export function mountMembership(root,{
     if(result?.success===true){session=null;renewal.checked=false;adult.checked=false;say('Signed out.');sync();}
     else say('Sign-out could not be confirmed. Please try again.');
   }
+  const validSession=result=>result?.signedIn===true&&typeof result.csrfToken==='string'&&/^[A-Za-z0-9_-]{43}$/u.test(result.csrfToken)&&result.membership&&typeof result.membership.active==='boolean';
+  async function openMemberLabs(){
+    if(!allowed||pending||session?.membership?.active!==true)return;
+    const result=await request('/api/member/session');
+    if(disposed)return;
+    session=validSession(result)?result:null;sync();
+    if(session?.membership?.active===true)navigate(ORIGIN+'/learn/');
+    else say('An active educator membership is required to open member labs.');
+  }
   const onChoice=()=>sync();
   for(const control of [adult,renewal])control.addEventListener('change',onChoice);
   signin.addEventListener('click',signIn);checkout.addEventListener('click',startCheckout);portal.addEventListener('click',manageBilling);logout.addEventListener('click',signOut);
+  openLabs?.addEventListener('click',openMemberLabs);
   sync();
   const ready=allowed?request('/api/member/session').then(result=>{
     if(disposed)return;
-    if(result?.signedIn===true&&typeof result.csrfToken==='string'&&/^[A-Za-z0-9_-]{43}$/u.test(result.csrfToken)&&result.membership&&typeof result.membership.active==='boolean'){
+    if(validSession(result)){
       session=result;say(session.membership.active?'Your educator membership is active.':'Signed in. Review the membership terms before continuing.');
     }else say('Sign in to your educator account when you are ready.');
     sync();
@@ -123,6 +134,7 @@ export function mountMembership(root,{
     disposed=true;stopActive?.();session=null;
     for(const control of [adult,renewal])control.removeEventListener('change',onChoice);
     signin.removeEventListener('click',signIn);checkout.removeEventListener('click',startCheckout);portal.removeEventListener('click',manageBilling);logout.removeEventListener('click',signOut);
+    openLabs?.removeEventListener('click',openMemberLabs);
   }};
 }
 if(typeof document!=='undefined'){

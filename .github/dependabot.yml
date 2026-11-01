@@ -1,5 +1,14 @@
 version: 2
 updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    # Build-only parsers and bundlers do not run in the student browser.
   - package-ecosystem: github-actions
     directory: /
     schedule:

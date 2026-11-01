@@ -23,7 +23,7 @@ class Control {
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 async function drain() { for (let index = 0; index < 16; index++) await Promise.resolve(); await new Promise(setImmediate); }
 function fixture(t, options = {}) {
-  const controls = Object.fromEntries(['adult', 'renewal', 'sign-in', 'checkout', 'portal', 'sign-out', 'status', 'plan'].map(name => [name, new Control()]));
+  const controls = Object.fromEntries(['adult', 'renewal', 'sign-in', 'checkout', 'portal', 'sign-out', 'open-labs', 'status', 'plan'].map(name => [name, new Control()]));
   controls.plan.value = 'teacher-annual';
   const root = { dataset: {}, querySelector(selector) { return controls[selector.slice(6, -1)]; } };
   const calls = [], navigation = [], routes = new Map([
@@ -66,7 +66,7 @@ test('both release gates stay false and every default-preview control remains un
   for (const type of ['change', 'click']) for (const control of Object.values(h.controls)) await control.emit(type);
   assert.equal(h.calls.length, 0); assert.deepEqual(h.navigation, []);
   assert.match(h.controls.status.textContent, /Preview only/u);
-  for (const name of ['sign-in', 'checkout', 'portal', 'sign-out', 'renewal', 'plan']) assert.equal(h.controls[name].disabled, true, name);
+  for (const name of ['sign-in', 'checkout', 'portal', 'sign-out', 'open-labs', 'renewal', 'plan']) assert.equal(h.controls[name].disabled, true, name);
 });
 
 test('review fixtures require an actual boolean release approval and the exact isolated membership origin', async t => {
@@ -264,4 +264,22 @@ test('disposing a stalled reader cancels it immediately and settles the interact
   h.mounted.dispose(); await drain();
   assert.equal(cancelled, true); assert.equal(completed, true); await click;
   assert.deepEqual(h.navigation, []);
+});
+
+test('member labs open only after a fresh active server session check and always use the fixed private path', async t => {
+  for (const session of [{ signedIn: false }, signedIn(false)]) {
+    const h = fixture(t, { session, mount: { enabled: true } }); await h.ready();
+    assert.equal(h.controls['open-labs'].disabled, true); await h.controls['open-labs'].emit('click');
+    assert.equal(h.calls.length, 1); assert.deepEqual(h.navigation, []);
+  }
+  const h = fixture(t, { session: signedIn(true), mount: { enabled: true } }); await h.ready();
+  assert.equal(h.controls['open-labs'].disabled, false);
+  h.controls['open-labs'].value = 'https://evil.example.test';
+  await h.controls['open-labs'].emit('click');
+  assert.deepEqual(h.calls.map(call => call.path), ['/api/member/session', '/api/member/session']);
+  assert.deepEqual(h.navigation, [ORIGIN + '/learn/']);
+  h.routes.set('/api/member/session', () => Response.json(signedIn(false)));
+  await h.controls['open-labs'].emit('click');
+  assert.deepEqual(h.navigation, [ORIGIN + '/learn/']); assert.equal(h.controls['open-labs'].disabled, true);
+  assert.match(h.controls.status.textContent, /active educator membership is required/u);
 });

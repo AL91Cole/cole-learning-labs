@@ -34,8 +34,10 @@ jobs:
           node-version: '24'
           check-latest: true
           package-manager-cache: false
-      # Public browser labs remain dependency-free. The optional Docker service
-      # has its own locked dependencies and separate verification below.
+      - name: Install the locked build tools without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Audit build dependencies
+        run: npm audit --audit-level=low
       - name: Check JavaScript syntax
         run: npm run check
       - name: Verify privacy lock, security boundaries, and lab behavior
@@ -61,6 +63,8 @@ jobs:
           package-manager-cache: false
       - name: Install the isolated locked membership packages without lifecycle scripts
         run: npm ci --prefix memberships --ignore-scripts
+      - name: Install the locked free/member asset build tools
+        run: npm ci --ignore-scripts
       - name: Audit membership runtime dependencies
         run: npm audit --prefix memberships --omit=dev --audit-level=low
       - name: Check disabled source and runtime boundaries

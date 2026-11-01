@@ -637,3 +637,5 @@ body:not(.lab-view) .tour-task h2,body:not(.lab-view) .tutorial-reference h2{fon
 #lab-improvement-summary .button:disabled{opacity:.7}
 #lab-improvement-summary .guide-callout{color:#243f50;background:#e9f1e9}
 #lab-improvement-summary :focus-visible{outline:3px solid #00645d;outline-offset:4px}
+/* The access boundary is enforced by separate delivery; these styles label it. */
+.membership-notice{max-width:46rem;padding:1.5rem;margin:1.5rem 0;border:1px solid #d8bd81;border-radius:1rem;background:#fff9ea;color:#253e39}.membership-notice p{font-size:1rem}.membership-notice button:disabled{opacity:1;background:#e6e9e5;color:#4b5b54;border-color:#b6c1b9;cursor:not-allowed}.membership-teaser{padding:2rem;border:1px solid #cbd7d1;border-radius:1rem}.membership-gate .button-row{margin-top:1.5rem}

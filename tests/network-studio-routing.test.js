@@ -4,12 +4,15 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {initialNetworkStudioState,applyNetworkStudioAction,networkStudioHasWork} from '../src/network-studio-model.js';
 import {learningRoute} from '../src/learning-tools.js';
+import {routeAccess} from '../src/access-policy.js';
+import {CATALOG} from '../src/lab-catalog.js';
 const source=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
 const route=source.slice(source.indexOf('function renderRoute('),source.indexOf("\n$('#menu-toggle').addEventListener"));
 function harness(){
  const events=new Map(),nodes=new Map(),calls={mounts:[],disposed:0};
  const $=selector=>{if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',value:'',classList:{add(){},remove(){}},setAttribute(){},addEventListener(){},replaceChildren(){this.innerHTML='';}});return nodes.get(selector);};
- const context=vm.createContext({networkStudioState:initialNetworkStudioState(),networkStudioHasWork,initialNetworkStudioState,codingStudioState:{},initialCodingStudioState:()=>({}),codingStudioHasWork:()=>false,practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,foundationRecords:{},hasFoundationWork:()=>false,hasPrivateWork:()=>false,hasCodeDraft:()=>false,hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,resetLabImprovements(){},mountLabImprovements(){return()=>{};},resetRequesterPreference(){},clearCodingSandboxWork(){},
+ // This is the protected member studio, not the reduced public application.
+ const context=vm.createContext({MEMBER_CONTENT:true,routeAccess,CATALOG,networkStudioState:initialNetworkStudioState(),networkStudioHasWork,initialNetworkStudioState,codingStudioState:{},initialCodingStudioState:()=>({}),codingStudioHasWork:()=>false,practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,foundationRecords:{},hasFoundationWork:()=>false,hasPrivateWork:()=>false,hasCodeDraft:()=>false,hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,resetLabImprovements(){},mountLabImprovements(){return()=>{};},resetRequesterPreference(){},clearCodingSandboxWork(){},
  location:{hash:'#studio/network'},learningRoute,currentLab:null,labNavigation:null,routeCleanup:null,reportCleanup:null,classroomConnection:null,store:{labs:{}},workStorage:{persistent:true},
  document:{title:'',body:{classList:{add(){},remove(){}}}},window:{scrollTo(){},addEventListener(name,fn){events.set(name,fn);}},$,$$:()=>[],disposeHardware(){},preserveCodeDraft(){},
  renderNetworkStudio:()=>'<section>Editable network</section>',mountNetworkStudio(root,options){calls.mounts.push(options);return ()=>calls.disposed++;},renderCodingStudio:()=>'<section>Coding studio</section>',mountCodingStudio:()=>()=>{},
@@ -23,7 +26,7 @@ test('network builder route preserves graph edits across navigation and disposes
  const edited=applyNetworkStudioAction(initial,'add-device',{type:'printer'}).state;first.onChange(edited);
  h.render('#studio/coding');assert.equal(h.calls.disposed,1);
  const returned=h.render();assert.equal(returned.getState(),edited);assert.ok(networkStudioHasWork(returned.getState()));
- assert.deepEqual(Object.keys(h.context.store.labs),[],'Free layouts never become graded records or classroom uploads.');
+ assert.deepEqual(Object.keys(h.context.store.labs),[],'Creative layouts never become graded records or classroom uploads.');
  assert.match(h.context.document.title,/Network Studio/);
 });
 test('network edits warn on reload and pagehide clears private layouts and animation controller',()=>{
