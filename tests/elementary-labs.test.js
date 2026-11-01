@@ -1,15 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
 import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from '../src/elementary-labs.js';
 
 // Native-button DOM boundary: exercise the real controller and authored models.
 // Browser rendering and managed school-device acceptance are separate checks.
 const decode=text=>text.replace(/&(?:amp|lt|gt|quot|#39);/gu,value=>({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&#39;':"'"}[value]));
-function fixture(id='EX-HW-1'){
+function fixture(id='EX-HW-1',{mount=mountElementaryLab,workshopHost=null}={}){
   const document={activeElement:null},listeners=new Map();
   const element=(dataset={})=>({dataset,disabled:false,focus(){document.activeElement=this;},closest(selector){return selector==='button[data-elementary-action]'&&this.dataset.elementaryAction?this:null;}});
-  const feedback={textContent:'',dataset:{}},reset=element({elementaryAction:'reset'});
+  const feedback={textContent:'',dataset:{}},reset=element({elementaryAction:'reset'}),jump=element({elementaryAction:'workshop'});
   const body={markup:'',buttons:[],prompt:null,finished:null,
     set innerHTML(markup){
       this.markup=markup;this.buttons=[...markup.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/gu)].map(match=>{
@@ -34,14 +35,14 @@ function fixture(id='EX-HW-1'){
     }
   };
   const shell={dataset:{elementaryLab:id,elementaryComplete:'false'},
-    querySelector(selector){if(selector==='[data-elementary-body]')return body;if(selector==='[data-elementary-feedback]')return feedback;assert.fail(selector);},
-    contains(button){return button===reset||body.buttons.includes(button);},
+    querySelector(selector){if(selector==='[data-elementary-body]')return body;if(selector==='[data-elementary-feedback]')return feedback;if(selector==='[data-elementary-workshop]')return workshopHost;assert.fail(selector);},
+    contains(button){return button===reset||button===jump||body.buttons.includes(button)||workshopHost?.contains(button)===true;},
     addEventListener(name,handler){assert.equal(name,'click');listeners.set(name,handler);},
     removeEventListener(name,handler){assert.equal(listeners.get(name),handler);listeners.delete(name);}
   };
   const root={querySelector(selector){assert.equal(selector,'[data-elementary-lab]');return shell;}};
-  const controller=mountElementaryLab(root,{id});
-  function button(action,choice){return action==='reset'?reset:body.buttons.find(candidate=>candidate.dataset.elementaryAction===action&&(choice===undefined||candidate.dataset.elementaryChoice===choice));}
+  const controller=mount(root,{id});
+  function button(action,choice){return action==='reset'?reset:action==='workshop'?jump:body.buttons.find(candidate=>candidate.dataset.elementaryAction===action&&(choice===undefined||candidate.dataset.elementaryChoice===choice));}
   return {id,document,listeners,root,shell,body,feedback,controller,button,
     click(action,choice){const target=button(action,choice);assert.ok(target,`Missing ${id} ${action} ${choice??''}`);if(!target.disabled)listeners.get('click')?.({target});return target;},
     get complete(){return shell.dataset.elementaryComplete==='true';},
@@ -90,6 +91,45 @@ test('all activities use labeled pictures and native buttons without free text, 
     assert.doesNotMatch(html,/<(?:input|textarea|form|iframe|script|audio|video)\b|https?:\/\//iu,lab.id);
     for(const button of html.matchAll(/<button\b([^>]*)>/gu))assert.match(button[1],/type="button"/u);
     assert.match(html,/href="#explore\?band=(?:k1|2-3|4-6)"/u);
+  }
+});
+
+test('only the three elementary coding activities offer a separate optional workshop outside prediction repainting',()=>{
+  for(const lab of ELEMENTARY_LABS){
+    const html=renderElementaryLab(lab.id),count=(html.match(/data-elementary-workshop/gu)||[]).length;
+    assert.equal(count,lab.track==='coding'?1:0,lab.id);
+    assert.equal((html.match(/data-elementary-action="workshop"/gu)||[]).length,lab.track==='coding'?1:0,lab.id);
+    if(lab.track==='coding'){
+      assert.match(html.split('</header>')[0],/<button type="button"[^>]*data-elementary-action="workshop">Open block workshop<\/button>/u,'The workshop entry is a native header button.');
+      assert.ok(html.indexOf('data-elementary-workshop')>html.indexOf('class="elementary-privacy"'),'The workshop stays outside the challenge body and feedback.');
+      assert.match(html,/Optional: build your own program with blocks/u);
+      assert.equal(lab.tasks.length,3,'The established prediction sequence stays unchanged.');
+    }
+  }
+});
+
+test('workshop jumps, prediction checks and reset retain independent drafts; disposal clears both controllers once',async()=>{
+  const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
+  const instances=[],workshopButton={dataset:{elementaryAction:'reset'},disabled:false,closest(){return this;}};
+  const focusCalls=[],scrollCalls=[],heading={focus:options=>focusCalls.push(options),scrollIntoView:options=>scrollCalls.push(options)};
+  const workshopHost={contains:button=>button===workshopButton,querySelector(selector){assert.equal(selector,'h3');return heading;}};
+  const context=vm.createContext({renderBlockWorkshop:()=>'<h2>Build with blocks</h2>',
+    mountBlockWorkshop(host,{band}){
+      const instance={host,band,program:[],disposals:0};instances.push(instance);
+      return {dispose(){instance.disposals++;instance.program.length=0;}};
+    }});
+  vm.runInContext(source.replace(/^import[^\n]+\r?\n/u,'').replace(/^export /gmu,''),context);
+  for(const [id,band]of [['EX-CODE-1','K–1'],['EX-CODE-2','2–3'],['EX-CODE-3','4–6']]){
+    const view=fixture(id,{mount:context.mountElementaryLab,workshopHost}),instance=instances.at(-1),count=instances.length;
+    assert.equal(instance.host,workshopHost);assert.equal(instance.band,band);instance.program.push('PRETEND_BLOCK');
+    const jumpWithoutChanges=()=>{const before={body:view.body.markup,progress:view.progress,complete:view.complete,output:view.output};view.click('workshop');assert.deepEqual({body:view.body.markup,progress:view.progress,complete:view.complete,output:view.output},before);assert.deepEqual(instance.program,['PRETEND_BLOCK']);assert.equal(instances.length,count);};
+    jumpWithoutChanges();finish(view);jumpWithoutChanges();
+    assert.equal(heading.tabIndex,-1);assert.equal(focusCalls.at(-1).preventScroll,true);assert.equal(scrollCalls.at(-1).block,'start');
+    view.click('reset');assert.equal(instances.length,count);assert.deepEqual(instance.program,['PRETEND_BLOCK']);
+    view.click('choose',solutions[id][0]);view.click('check');assert.equal(view.progress,1);
+    view.listeners.get('click')({target:workshopButton});assert.equal(view.progress,1,'An event from the independent workshop cannot reset prediction progress.');
+    view.controller.dispose();view.controller.dispose();assert.equal(instance.disposals,1);assert.deepEqual(instance.program,[]);assert.equal(view.listeners.size,0);
+    const reopened=context.mountElementaryLab(view.root,{id});assert.equal(view.progress,0);assert.deepEqual(instances.at(-1).program,[]);reopened.dispose();
   }
 });
 
@@ -175,5 +215,7 @@ test('rendering, checking, resetting and disposing never consult network, browse
   }finally{for(const [name,descriptor] of descriptors){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}}
   const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/u);
-  assert.doesNotMatch(source,/^import\b/mu,'The activity does not import a service or a general code runtime.');
+  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./block-workshop.js?release=20261025-learning-plans'],'Only the reviewed local block workshop is imported.');
+  const workshop=await readFile(new URL('../src/block-workshop.js',import.meta.url),'utf8');
+  assert.doesNotMatch(workshop,/^import\b|\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/mu,'The workshop adds no imported runtime, persistence or network capability.');
 });

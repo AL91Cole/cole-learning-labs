@@ -1,3 +1,5 @@
+import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261025-learning-plans';
+
 // Authored, fictional activities. Each mount owns its choices; nothing is saved
 // or sent. These local practice checks are not grades or identity verification.
 const esc=value=>String(value??'').replace(/[&<>"']/gu,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -7,6 +9,7 @@ const task=(prompt,choices,answer,explanation)=>({prompt,choices,answer,explanat
 const forecast=(prompt,choices,model,code,explanation)=>({prompt,choices,model,code,explanation});
 const bands=['K–1','2–3','4–6'];
 const topics={hardware:'Computer parts',network:'Networks',ai:'AI and checking',security:'Staying safe',coding:'Coding'};
+const workshopLabIds=new Set(['EX-CODE-1','EX-CODE-2','EX-CODE-3']);
 
 export const ELEMENTARY_LABS=freeze([
   {id:'EX-HW-1',title:'Meet the computer parts',track:'hardware',band:'K–1',grade:'K–1',minutes:5,kind:'match',diagram:'parts',summary:'Match three pictured parts to their jobs.',goal:'Choose a part, check its job and try again if needed.',tasks:[
@@ -151,10 +154,16 @@ export function renderElementaryCatalogue({band}={}){
   return `<section class="wrap page-intro elementary-catalogue"><p class="eyebrow">Explore and try · Free activities</p><h1>Small steps.<br><em>Try a technology idea.</em></h1><p>Fifteen short, fictional activities for kindergarten through grade 6. These are suggested starting points; an adult can help with reading and choosing a suitable activity.</p><p>Choose, check and try again. These activities have no chat box, learner account, upload, score or device saving.</p>${selected?'<p><a href="#explore">← All age bands</a></p>':''}${bands.filter(value=>!selected||value===selected).map(value=>`<section class="elementary-band" aria-labelledby="elementary-band-${bandCode(value)}"><h2 id="elementary-band-${bandCode(value)}">${gradeLabel(value)}</h2><div class="elementary-catalogue-grid">${ELEMENTARY_LABS.filter(lab=>lab.band===value).map(lab=>`<a class="basics-card elementary-card" href="#explore/${lab.id}"><span class="eyebrow">${esc(topics[lab.track])}</span><h3>${esc(lab.title)}</h3><p>${esc(lab.summary)}</p><span>${lab.minutes} min · Try this activity →</span></a>`).join('')}</div></section>`).join('')}<p><a href="#labs">Grades 7–12 and other labs →</a></p></section>`;
 }
 
+function optionalWorkshop(lab){
+  if(!workshopLabIds.has(lab.id))return '';
+  return `<section class="elementary-workshop" aria-label="Optional block workshop"><p class="panel-help">Optional: build your own program with blocks. This workspace has its own controls; its program does not change the three prediction challenges above.</p><div data-elementary-workshop>${renderBlockWorkshop({band:lab.band})}</div></section>`;
+}
+
 export function renderElementaryLab(id){
   const lab=knownLab(id);
   if(!lab)return '<section class="wrap page-intro"><h1>Choose an available activity.</h1><a href="#explore">All kindergarten–grade 6 activities →</a></section>';
-  return `<section class="wrap elementary-lab" data-elementary-lab="${lab.id}" data-elementary-complete="false" aria-labelledby="elementary-title"><header><a href="#explore?band=${bandCode(lab.band)}">← ${gradeLabel(lab.band)} activities</a><p class="eyebrow">${esc(gradeLabel(lab.band))} · ${esc(topics[lab.track])} · About ${lab.minutes} minutes</p><h1 id="elementary-title">${esc(lab.title)}</h1><p>${esc(lab.goal)}</p></header><div data-elementary-body>${bodyFor(lab,blankState())}</div><p class="elementary-feedback" data-elementary-feedback role="status" aria-live="polite" aria-atomic="true">Choose an answer, then check it.</p><div class="elementary-actions"><button type="button" class="button button-outline" data-elementary-action="reset">Start this activity again</button><a href="#explore">Choose another activity →</a></div><p class="elementary-privacy">Use made-up information. Your choices stay in this activity’s page memory and disappear when you leave it. No real computer, network, AI service or account is controlled by these picture models.</p></section>`;
+  const workshopJump=workshopLabIds.has(lab.id)?'<p><button type="button" class="button button-outline" data-elementary-action="workshop">Open block workshop</button></p>':'';
+  return `<section class="wrap elementary-lab" data-elementary-lab="${lab.id}" data-elementary-complete="false" aria-labelledby="elementary-title"><header><a href="#explore?band=${bandCode(lab.band)}">← ${gradeLabel(lab.band)} activities</a><p class="eyebrow">${esc(gradeLabel(lab.band))} · ${esc(topics[lab.track])} · About ${lab.minutes} minutes</p><h1 id="elementary-title">${esc(lab.title)}</h1><p>${esc(lab.goal)}</p>${workshopJump}</header><div data-elementary-body>${bodyFor(lab,blankState())}</div><p class="elementary-feedback" data-elementary-feedback role="status" aria-live="polite" aria-atomic="true">Choose an answer, then check it.</p><div class="elementary-actions"><button type="button" class="button button-outline" data-elementary-action="reset">Start this activity again</button><a href="#explore">Choose another activity →</a></div><p class="elementary-privacy">Use made-up information. Your choices stay in this activity’s page memory and disappear when you leave it. No real computer, network, AI service or account is controlled by these picture models.</p>${optionalWorkshop(lab)}</section>`;
 }
 
 export function mountElementaryLab(root,{id}={}){
@@ -164,6 +173,10 @@ export function mountElementaryLab(root,{id}={}){
   if(!shell||shell.dataset.elementaryLab!==id)return {dispose(){}};
   const body=shell.querySelector('[data-elementary-body]'),feedback=shell.querySelector('[data-elementary-feedback]');
   if(!body||!feedback)return {dispose(){}};
+  const workshopRoot=workshopLabIds.has(lab.id)?shell.querySelector('[data-elementary-workshop]'):null;
+  const workshop=workshopRoot?mountBlockWorkshop(workshopRoot,{band:lab.band}):null;
+  const workshopHeading=workshopRoot?.querySelector?.('h3');
+  if(workshopHeading)workshopHeading.tabIndex=-1;
   let state=blankState(),disposed=false;
   function paint(message,{tone='info',focus}={}){
     if(disposed)return;
@@ -175,8 +188,9 @@ export function mountElementaryLab(root,{id}={}){
   function click(event){
     if(disposed)return;
     const button=event.target?.closest?.('button[data-elementary-action]');
-    if(!button||!shell.contains(button)||button.disabled)return;
+    if(!button||!shell.contains(button)||button.disabled||workshopRoot?.contains(button))return;
     const action=button.dataset.elementaryAction,round=lab.tasks[state.index];
+    if(action==='workshop'){workshopHeading?.focus({preventScroll:true});workshopHeading?.scrollIntoView({block:'start'});return;}
     if(action==='reset'){state=blankState();paint('A fresh practice is ready. Choose an answer, then check it.',{focus:'[data-elementary-prompt]'});return;}
     if(state.complete)return;
     if(action==='choose'){
@@ -202,5 +216,5 @@ export function mountElementaryLab(root,{id}={}){
   }
   shell.addEventListener('click',click);
   paint('Choose an answer, then check it.');
-  return {dispose(){if(disposed)return;disposed=true;shell.removeEventListener('click',click);state=null;}};
+  return {dispose(){if(disposed)return;disposed=true;shell.removeEventListener('click',click);state=null;workshop?.dispose();}};
 }
