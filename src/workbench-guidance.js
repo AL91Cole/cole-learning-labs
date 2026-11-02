@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261102-polish';
+import { pcActivity } from './pc-activity.js?release=20261102-playflow';
 
 /** Control recommendations only. The equipment model still decides every repair. */
 const freezeList=values=>Object.freeze(values);

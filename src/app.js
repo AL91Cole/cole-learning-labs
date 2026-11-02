@@ -1,43 +1,44 @@
-import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261102-polish';
-import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261102-polish';
-import {renderCodeQuestEntry,renderCodeQuestHub,renderCodeQuest,mountCodeQuest} from './code-quests.js?release=20261102-polish';
-import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-polish';
-import {renderArcadeEntry,renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue} from './arcade.js?release=20261102-polish';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-polish';
-import {CATALOG} from './lab-catalog.js?release=20261102-polish';
-import {renderSignIn} from './sign-in.js?release=20261102-polish';
-import {renderInboxDefenderEntry,renderInboxDefender,mountInboxDefender} from './inbox-defender.js?release=20261102-polish';
-import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261102-polish';
-import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261102-polish';
-import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261102-polish';
-import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261102-polish';
-import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261102-polish';
-import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261102-polish';
-import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261102-polish';
-import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261102-polish';
-import {SCENARIOS} from './scenarios.js?release=20261102-polish';
-import {labLanguage} from './lab-language.js?release=20261102-polish';
-import {requesterPersona} from './requester-persona.js?release=20261102-polish';
-import {mountRequesterChat,resetRequesterPreference} from './requester-chat.js?release=20261102-polish';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261102-polish';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261102-polish';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261102-polish';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261102-polish';
-import {cancelCodingWorkbench} from './coding-workbench.js?release=20261102-polish';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261102-polish';
-import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261102-polish';
-import {privacyPage} from './privacy.js?release=20261102-polish';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261102-polish';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261102-polish';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261102-polish';
+import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261102-playflow';
+import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261102-playflow';
+import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261102-playflow';
+import {renderCodeQuestEntry,renderCodeQuestHub,renderCodeQuest,mountCodeQuest} from './code-quests.js?release=20261102-playflow';
+import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-playflow';
+import {renderArcadeEntry,renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue} from './arcade.js?release=20261102-playflow';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-playflow';
+import {CATALOG} from './lab-catalog.js?release=20261102-playflow';
+import {renderSignIn} from './sign-in.js?release=20261102-playflow';
+import {renderInboxDefenderEntry,renderInboxDefender,mountInboxDefender} from './inbox-defender.js?release=20261102-playflow';
+import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261102-playflow';
+import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261102-playflow';
+import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261102-playflow';
+import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261102-playflow';
+import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261102-playflow';
+import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261102-playflow';
+import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261102-playflow';
+import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261102-playflow';
+import {SCENARIOS} from './scenarios.js?release=20261102-playflow';
+import {labLanguage} from './lab-language.js?release=20261102-playflow';
+import {requesterPersona} from './requester-persona.js?release=20261102-playflow';
+import {mountRequesterChat,resetRequesterPreference} from './requester-chat.js?release=20261102-playflow';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261102-playflow';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261102-playflow';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261102-playflow';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261102-playflow';
+import {cancelCodingWorkbench} from './coding-workbench.js?release=20261102-playflow';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261102-playflow';
+import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261102-playflow';
+import {privacyPage} from './privacy.js?release=20261102-playflow';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261102-playflow';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261102-playflow';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261102-playflow';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261102-polish';
-import {hasLessonPlanWork,clearLessonPlanWork} from './lesson-plans.js?release=20261102-polish';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261102-polish';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261102-polish';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261102-polish';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261102-polish';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261102-polish';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261102-playflow';
+import {hasLessonPlanWork,clearLessonPlanWork} from './lesson-plans.js?release=20261102-playflow';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261102-playflow';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261102-playflow';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261102-playflow';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261102-playflow';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261102-playflow';
 
 let routeCleanup=null;
 const $ = (s,root=document)=>root.querySelector(s);
@@ -124,7 +125,7 @@ function about(){return `<section class="wrap page-intro about-intro"><div><p cl
 
 function networkSequence(){if(!MEMBER_CONTENT)return '';const labs=SCENARIOS.filter(s=>s.networkStep).sort((a,b)=>a.networkStep-b.networkStep);return `<details class="network-sequence"><summary>Try networking in order · ${labs.length} labs</summary><p>Start with the network basics, then work through these classroom problems. Read the clues, save your idea, try a change and explain the result.</p><ol>${labs.map(s=>`<li><a href="#lab/${esc(s.id)}">${esc(s.title)}</a><p>${esc(s.summary)}</p></li>`).join('')}</ol><a class="text-link" href="#learn/network">Start with the network basics →</a></details>`;}
 function practiceEntries(){const entries=[['network','#studio/network','Network Studio · Members'],['network','#practice/NET-201','Network lab workbenches'],['ai','#practice/AI-301','Try AI activities'],['security','#practice/SEC-401','Try cybersecurity'],['coding','#studio/coding','Coding Studio · Members']].filter(([track])=>libraryTrack==='all'||libraryTrack===track);return entries.length?`<section class="wrap library-guidance"><div><p class="eyebrow">TRY IT HANDS-ON</p><h2>Choose a practice workbench</h2><p>Build a layout, change a setting and watch the result.</p><div class="button-row">${entries.map(([,path,label])=>`<a class="button button-outline" href="${path}">${typeof PUBLIC_LABS_OPEN!=='undefined'&&PUBLIC_LABS_OPEN?label.replace(' · Members',''):label} →</a>`).join('')}</div></div></section>`:'';}
-function library(){const completed=countComplete(),durations=[...new Set(CATALOG.map(s=>s.minutes))].filter(Number.isFinite).sort((a,b)=>a-b);return `<section class="lab-library-intro"><div class="wrap"><p class="eyebrow">Choose a lab</p><h1>Choose your next <em>investigation.</em></h1><p>${typeof PUBLIC_LABS_OPEN!=='undefined'&&PUBLIC_LABS_OPEN===true?'Find a ticket, try a change and explain what happened. All labs are open without an account.':'All 15 K–6 activities are free. For grades 7–12, all five beginner courses, the practice workbench and two investigations per topic are free. The remaining investigations, studios, open coding sandboxes and teaching resources require membership.'}</p><p><a class="text-link" href="#guide">New here? Read the student guide →</a></p><div class="library-meta">${tag('Grades K–12')}<span class="tag" aria-describedby="lab-progress-help">${completed} of ${SCENARIOS.length} ${MEMBER_CONTENT?'':'free '}investigations finished</span></div><details class="library-progress-details"><summary>About practice progress</summary><p id="lab-progress-help" class="panel-help">Finished means you checked the task and completed your explanation. This count covers grades 7–12 investigations and includes saved work you choose to resume. K–6 activities start fresh when opened. It is practice progress, not a grade.</p></details><div class="library-pathway-markers" aria-hidden="true">${Object.keys(tracks).map(id=>`<span data-track="${id}">${trackIcon(id)}</span>`).join('')}</div></div></section><nav class="wrap library-shortcuts" aria-label="Learning activity categories"><a class="text-link" href="#labs" data-library-jump="lab-results">Investigations (${CATALOG.length})</a><a class="text-link" href="#labs" data-library-jump="basics-heading">Beginner courses (${FOUNDATION_LABS.length})</a><a class="text-link" href="#arcade">Game arcade (${ARCADE_CATALOG.length})</a><a class="text-link" href="#quests">Coding paths (${CODE_QUESTS.length})</a><a class="text-link" href="#labs" data-library-jump="coding-options">Workbenches</a><a class="text-link" href="#explore">K–6 (${ELEMENTARY_LABS.length})</a></nav><section class="wrap library-section" aria-label="Investigations"><div class="library-toolbar"><div class="track-filters" role="group" aria-label="Filter by topic"><button data-track="all" class="${libraryTrack==='all'?'active':''}" aria-pressed="${libraryTrack==='all'}">All topics</button>${Object.entries(tracks).map(([id,t])=>`<button data-track="${id}" class="${libraryTrack===id?'active':''}" aria-pressed="${libraryTrack===id}">${t.short}</button>`).join('')}</div><div class="library-options"><label>Grade band<select id="grade-filter"><option value="all">All grades</option>${['7–8','9–10','11–12'].map(g=>`<option value="${g}" ${libraryGrade===g?'selected':''}>Grades ${g}</option>`).join('')}</select></label><label>Time estimate<select id="duration-filter"><option value="all">Any length</option>${durations.map(minutes=>`<option value="${minutes}" ${String(libraryMinutes)===String(minutes)?'selected':''}>${minutes} minutes</option>`).join('')}</select></label><label>Find a lab<input id="lab-search" type="search" value="${esc(libraryQuery)}" placeholder="Search title or ticket…"></label></div></div><div id="network-sequence">${libraryTrack==='all'||libraryTrack==='network'?networkSequence():''}</div><p id="lab-count" class="result-count" aria-live="polite"></p><div class="lab-card-grid" id="lab-results"></div><div class="library-guidance"><span class="pathway-symbol" aria-hidden="true">→</span><div><h2>Try a whole classroom</h2><p>Work through five practice requests to get a classroom ready, then explain what the next technician should know.</p></div><a class="button button-outline" href="#capstone">Try classroom opening day →</a></div><div class="library-guidance"><span class="pathway-symbol" aria-hidden="true">?</span><div><h2>Need a hand getting started?</h2><p>The Student Guide explains the workflow. Private sessions keep work on this page. Device saving is an explicit choice; export a report when you finish.</p></div>${routeLink('guide','Read the student guide →','button button-outline')}</div></section><section class="wrap library-more" aria-labelledby="library-more-heading"><h2 id="library-more-heading">More ways to explore</h2></section>${foundationCards()}<div id="coding-options"><div id="practice-entries">${practiceEntries()}</div>${sandboxCards()}</div>${renderArcadeEntry(libraryTrack)}${renderCodeQuestEntry()}${renderInboxDefenderEntry()}${elementaryEntryCards()}`;}
+function library(){const completed=countComplete(),durations=[...new Set(CATALOG.map(s=>s.minutes))].filter(Number.isFinite).sort((a,b)=>a-b);return `<section class="lab-library-intro"><div class="wrap"><p class="eyebrow">Choose a lab</p><h1>Choose your next <em>investigation.</em></h1><p>${typeof PUBLIC_LABS_OPEN!=='undefined'&&PUBLIC_LABS_OPEN===true?'Find a ticket, try a change and explain what happened. All labs are open without an account.':'All 15 K–6 activities are free. For grades 7–12, all five beginner courses, the practice workbench and two investigations per topic are free. The remaining investigations, studios, open coding sandboxes and teaching resources require membership.'}</p>${renderStartingPoints()}<p><a class="text-link" href="#guide">New here? Read the student guide →</a></p><div class="library-meta">${tag('Grades K–12')}<span class="tag" aria-describedby="lab-progress-help">${completed} of ${SCENARIOS.length} ${MEMBER_CONTENT?'':'free '}investigations finished</span></div><details class="library-progress-details"><summary>About practice progress</summary><p id="lab-progress-help" class="panel-help">Finished means you checked the task and completed your explanation. This count covers grades 7–12 investigations and includes saved work you choose to resume. K–6 activities start fresh when opened. It is practice progress, not a grade.</p></details><div class="library-pathway-markers" aria-hidden="true">${Object.keys(tracks).map(id=>`<span data-track="${id}">${trackIcon(id)}</span>`).join('')}</div></div></section><nav class="wrap library-shortcuts" aria-label="Learning activity categories"><a class="text-link" href="#labs" data-library-jump="lab-results">Investigations (${CATALOG.length})</a><a class="text-link" href="#labs" data-library-jump="basics-heading">Beginner courses (${FOUNDATION_LABS.length})</a><a class="text-link" href="#arcade">Game arcade (${ARCADE_CATALOG.length})</a><a class="text-link" href="#quests">Coding paths (${CODE_QUESTS.length})</a><a class="text-link" href="#labs" data-library-jump="coding-options">Workbenches</a><a class="text-link" href="#explore">K–6 (${ELEMENTARY_LABS.length})</a></nav><section class="wrap library-section" aria-label="Investigations"><div class="library-toolbar"><div class="track-filters" role="group" aria-label="Filter by topic"><button data-track="all" class="${libraryTrack==='all'?'active':''}" aria-pressed="${libraryTrack==='all'}">All topics</button>${Object.entries(tracks).map(([id,t])=>`<button data-track="${id}" class="${libraryTrack===id?'active':''}" aria-pressed="${libraryTrack===id}">${t.short}</button>`).join('')}</div><div class="library-options"><label>Grade band<select id="grade-filter"><option value="all">All grades</option>${['7–8','9–10','11–12'].map(g=>`<option value="${g}" ${libraryGrade===g?'selected':''}>Grades ${g}</option>`).join('')}</select></label><label>Time estimate<select id="duration-filter"><option value="all">Any length</option>${durations.map(minutes=>`<option value="${minutes}" ${String(libraryMinutes)===String(minutes)?'selected':''}>${minutes} minutes</option>`).join('')}</select></label><label>Find a lab<input id="lab-search" type="search" value="${esc(libraryQuery)}" placeholder="Search title or ticket…"></label></div></div><div id="network-sequence">${libraryTrack==='all'||libraryTrack==='network'?networkSequence():''}</div><p id="lab-count" class="result-count" aria-live="polite"></p><div class="lab-card-grid" id="lab-results"></div><div class="library-guidance"><span class="pathway-symbol" aria-hidden="true">→</span><div><h2>Try a whole classroom</h2><p>Work through five practice requests to get a classroom ready, then explain what the next technician should know.</p></div><a class="button button-outline" href="#capstone">Try classroom opening day →</a></div><div class="library-guidance"><span class="pathway-symbol" aria-hidden="true">?</span><div><h2>Need a hand getting started?</h2><p>The Student Guide explains the workflow. Private sessions keep work on this page. Device saving is an explicit choice; export a report when you finish.</p></div>${routeLink('guide','Read the student guide →','button button-outline')}</div></section><section class="wrap library-more" aria-labelledby="library-more-heading"><h2 id="library-more-heading">More ways to explore</h2></section>${foundationCards()}<div id="coding-options"><div id="practice-entries">${practiceEntries()}</div>${sandboxCards()}</div>${renderArcadeEntry(libraryTrack)}${renderCodeQuestEntry()}${renderInboxDefenderEntry()}${elementaryEntryCards()}`;}
 function syncLibraryControls(){
   $$('.track-filters [data-track]').forEach(button=>{const selected=button.dataset.track===libraryTrack;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});
   $('#practice-entries').innerHTML=practiceEntries();$('#network-sequence').innerHTML=libraryTrack==='all'||libraryTrack==='network'?networkSequence():'';
@@ -139,6 +140,7 @@ function labPage(s){
   return [
     '<section class="lab-shell single-page-lab paged-lab" data-track="'+esc(s.track)+'"><div class="lab-topbar"><a href="#labs" class="back-link">← All labs</a><div><span class="eyebrow">'+esc(s.id)+' / '+esc(tracks[s.track].name)+'</span><h1>'+esc(s.title)+'</h1></div><span class="tag">GRADES '+esc(s.grade)+'</span><div class="lab-tools"><button id="reading-toggle" class="lab-tool" aria-pressed="false">Larger text</button><button id="saving-options" class="lab-tool">Saving & privacy</button><button id="report-button" class="lab-tool">My report</button></div></div>',
     '<div class="lab-objective"><strong>'+esc(language.goalLabel)+'</strong><p>'+esc(s.goal)+'</p></div>',
+    '<div data-lab-next></div>',
     '<div class="lab-page-heading"><p id="lab-page-progress" class="eyebrow">PAGE 1 OF 3</p><h2 id="lab-page-title">Request &amp; clues</h2></div>',
 
     "<nav class=\"lab-section-nav lab-section-jumps\" aria-label=\"Investigation sections\"><button type=\"button\" id=\"lab-tab-1\" data-lab-section=\"1\" aria-controls=\"lab-problem\" aria-current=\"step\"><span class=\"step-number\">1</span>Request & clues<span class=\"section-done\" aria-hidden=\"true\"></span></button><button type=\"button\" id=\"lab-tab-2\" data-lab-section=\"2\" aria-controls=\"lab-workbench\"><span class=\"step-number\">2</span>Workbench & test<span class=\"section-done\" aria-hidden=\"true\"></span></button><button type=\"button\" id=\"lab-tab-3\" data-lab-section=\"3\" aria-controls=\"lab-finish\" aria-expanded=\"false\" disabled aria-disabled=\"true\"><span class=\"step-number\">3</span>Check & explain<span class=\"section-done\" aria-hidden=\"true\"></span></button></nav>",
@@ -258,6 +260,8 @@ function bindLab(s,route=null,{onModeChange=null}={}){
     tabs.forEach((button,index)=>{const locked=!OWNER_PREVIEW&&index>0&&(!progress.ready||(index===2&&!testing.ready));button.disabled=locked;button.setAttribute('aria-disabled',String(locked));});
     $('#workbench-next').disabled=!OWNER_PREVIEW&&(!progress.ready||!testing.ready);
     $('#workbench-test-status').textContent=testing.message;
+    const guide=shell.querySelector?.('[data-lab-next]');
+    if(guide){const next=investigationNextStep({section:labView?.section||1,asked:progress.asked,clarified:inquiry.complete,clues:progress.clues,symptoms:progress.symptoms,hypothesis:progress.hypothesis,saved:progress.saved,ready:testing.ready,passed:testing.passed,answered:testing.answered,current:testing.current,unfinished:testing.unfinished,tested:r.verified||readExperiments(r).attempts.length>0,verified:r.verified,notes:r.notes.trim().length>=15,reflection:r.reflection.trim().length>=15,complete:r.closed});const key=next.target+':'+next.message;if(guide.dataset.guideKey!==key){guide.innerHTML=renderLearningBrief({first:next.message,target:next.target,action:next.action,label:'Your next move'})+(r.closed?renderNextChallenge({href:'#labs/'+s.track,title:'Choose another '+(tracks[s.track].short||tracks[s.track].name).toLowerCase()+' investigation',copy:'Review and keep your current report first. Your next case has a new mystery to solve.'}):'');guide.dataset.guideKey=key;}}
     const checks={inquiry:progress.asked&&inquiry.complete,clues:progress.clues>=2,plan:progress.saved,notes:r.notes.trim().length>=15,reflection:r.reflection.trim().length>=15,verified:r.verified===true};
     const done=[progress.ready,testing.ready,r.closed];
     tabs.forEach((button,index)=>{button.classList.toggle('is-complete',done[index]);button.querySelector('.section-done').textContent=done[index]?'✓':'';});
@@ -434,7 +438,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261102-polish');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261102-playflow');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -446,7 +450,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261102-polish');
+      const cryptoModule=await import('./report-crypto.js?release=20261102-playflow');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;
@@ -536,6 +540,7 @@ function bindMenuDismissal(){
 }
 $('#menu-toggle').addEventListener('click',()=>setSiteMenuOpen(!$('#site-nav').classList.contains('open')));
 bindMenuDismissal();
+mountLearningGuides($('#main'));
 $('.skip-link').addEventListener('click',e=>{e.preventDefault();$('#main').focus();$('#main').scrollIntoView({block:'start'});});
 window.addEventListener('hashchange',()=>{if(renderRoute()!==false)$('#main').focus({preventScroll:true});});
 renderRoute();

@@ -1,3 +1,4 @@
+import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep} from '../src/activity-guidance.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -8,7 +9,7 @@ const source=readFileSync(new URL('../src/foundation-labs.js',import.meta.url),'
 const modelAction=(id,record,action)=>applyFoundationAction(id,record,structuredClone(action));
 const moduleText=source.replace(/^import[^\n]+\n/gm,'').replaceAll('export function ','function ')+';({renderFoundationLab,mountFoundationLab})';
 const renderVisual=()=>'<div aria-label="Fictional learning equipment"></div>';
-const render=vm.runInNewContext(moduleText,{OWNER_PREVIEW:false,getFoundation,createFoundationRecord,applyFoundationAction:modelAction,foundationSummary,renderFoundationVisual:renderVisual,mountFoundationScene(){assert.fail('Rendering alone must not mount graphics.');}}).renderFoundationLab;
+const render=vm.runInNewContext(moduleText,{renderLearningBrief,renderNextChallenge,OWNER_PREVIEW:false,getFoundation,createFoundationRecord,applyFoundationAction:modelAction,foundationSummary,renderFoundationVisual:renderVisual,mountFoundationScene(){assert.fail('Rendering alone must not mount graphics.');}}).renderFoundationLab;
 
 // A DOM boundary exercises the actual controller and model. Scene geometry,
 // native touch, computed layout and school-device acceptance have separate QA.
@@ -50,7 +51,7 @@ function fixture(id='hardware',record=createFoundationRecord(id),{ownerPreview=f
     addEventListener(name,handler){listeners.set(name,handler);},removeEventListener(name,handler){if(listeners.get(name)===handler)listeners.delete(name);}};
   shell.contains=target=>allButtons().includes(target)||[...fields.values()].includes(target);
   const scene={update(record){calls.updates++;calls.lastSceneRecord=record;},focus(item){calls.focus.push(item);},camera(action){calls.camera.push(action);},setMode(mode){calls.mode.push(mode);},setVisible(visible){calls.visible.push(visible);},cancelInteraction(){calls.order.push('cancel');},dispose(){calls.disposed++;}};
-  const functions=vm.runInNewContext(moduleText,{OWNER_PREVIEW:ownerPreview,getFoundation,createFoundationRecord,applyFoundationAction:actionModel,foundationSummary,renderFoundationVisual:renderVisual,mountFoundationScene(host,options){calls.mounts++;assert.equal(host,visual);sceneOptions=options;return scene;}});
+  const functions=vm.runInNewContext(moduleText,{renderLearningBrief,renderNextChallenge,OWNER_PREVIEW:ownerPreview,getFoundation,createFoundationRecord,applyFoundationAction:actionModel,foundationSummary,renderFoundationVisual:renderVisual,mountFoundationScene(host,options){calls.mounts++;assert.equal(host,visual);sceneOptions=options;return scene;}});
   const controller=functions.mountFoundationLab(root,{lab,record:current,onChange(record){current=record;calls.changed++;},onReport(record){calls.reports++;calls.report=record;calls.order.push('report');}});
   function click(field,value='') {
     const target=allButtons().find(button=>Object.hasOwn(button.dataset,field)&&(value===undefined||button.dataset[field]===value));assert.ok(target,`Missing ${field}=${value}`);

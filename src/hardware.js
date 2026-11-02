@@ -1,6 +1,6 @@
-import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261102-polish';
-import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261102-polish';
-import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261102-polish';
+import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261102-playflow';
+import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261102-playflow';
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261102-playflow';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },

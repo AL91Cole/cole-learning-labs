@@ -39,6 +39,10 @@ their sitemap.
 
 ## Verification
 
+The expanded activity guidance, replay and next-challenge work is documented in
+[Learning experience verification](LEARNING-EXPERIENCE.md), including the current
+full-suite result and additional browser checks.
+
 - Full application suite: 1,769 passed, two Windows link-related skips, no failures.
 - Final delivery, CSS, indexing, route, catalog and arcade checks: 42 passed,
   one Windows link-related skip, no failures.

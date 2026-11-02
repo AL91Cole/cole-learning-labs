@@ -1,3 +1,4 @@
+import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep} from '../src/activity-guidance.js';
 import {CODE_QUESTS} from '../src/code-quest-catalog.js';
 import {renderCodeQuestEntry} from '../src/code-quests.js';
 import {ARCADE_CATALOG} from '../src/arcade-catalog.js';
@@ -37,7 +38,7 @@ function harness({memberContent=true}={}){
   const forbidden=()=>assert.fail('Public previews must not create lab records, change equipment, save progress, or call a network service.');
   // Full-catalog filter behavior defaults to the protected member view.
   const scenarios=memberContent?SCENARIOS:SCENARIOS.filter(lab=>isFreeLab(lab.id));
-  const context=vm.createContext({CODE_QUESTS,renderCodeQuestEntry,ARCADE_CATALOG,renderArcadeEntry,renderInboxDefenderEntry,MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
+  const context=vm.createContext({renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,CODE_QUESTS,renderCodeQuestEntry,ARCADE_CATALOG,renderArcadeEntry,renderInboxDefenderEntry,MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
     $:selector=>{assert.ok(elements.has(selector),selector);return elements.get(selector);},
     $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;if(selector==='.track-filters [data-track]')return pathwayButtons;assert.fail(selector);},
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,

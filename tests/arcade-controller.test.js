@@ -11,9 +11,30 @@ function fixture(id){
   const listeners=new Map(),status={textContent:''};let buttons=[],html='';
   const host={set innerHTML(value){html=value;buttons=[...value.matchAll(/<button\b([^>]*)>/g)].map(([,attrs])=>{const node={dataset:{ga:attrs.match(/data-ga="([^"]+)"/)?.[1],value:attrs.match(/data-value="([^"]+)"/)?.[1]},disabled:/ disabled/.test(attrs),focus(){},setAttribute(){}};node.closest=()=>node;return node;});},get innerHTML(){return html;},replaceChildren(){html='';buttons=[];}};
   host.innerHTML=renderArcadeGame(id);
-  const root={contains:node=>buttons.includes(node),querySelector:selector=>selector==='[data-arcade-board]'?host:selector==='[data-arcade-status]'?status:buttons.find(button=>button.dataset.ga==='run'),querySelectorAll:()=>buttons,addEventListener:(type,fn)=>listeners.set(type,fn),removeEventListener:(type,fn)=>{if(listeners.get(type)===fn)listeners.delete(type);}};
-  return {root,host,status,listeners,button:(action,value)=>buttons.find(b=>b.dataset.ga===action&&b.dataset.value===(value===undefined?undefined:String(value))),click:button=>listeners.get('click')?.({target:button})};
+  const picture={innerHTML:'',attrs:{},hasAttribute:name=>name==='data-rover-picture',setAttribute(name,value){this.attrs[name]=value;}},frame={textContent:''};
+  const root={contains:node=>buttons.includes(node),querySelector:selector=>selector==='[data-arcade-board]'?host:selector==='[data-arcade-status]'?status:selector==='[data-rover-picture]'?(arcadeLevel(id).kind==='coding'?picture:null):selector==='[data-rover-frame]'?frame:selector==='[data-ga="play-trace"]'?buttons.find(button=>button.dataset.ga==='play-trace'):buttons.find(button=>button.dataset.ga==='run'),querySelectorAll:()=>buttons,addEventListener:(type,fn)=>listeners.set(type,fn),removeEventListener:(type,fn)=>{if(listeners.get(type)===fn)listeners.delete(type);}};
+  return {root,host,status,listeners,picture,frame,button:(action,value)=>buttons.find(b=>b.dataset.ga===action&&b.dataset.value===(value===undefined?undefined:String(value))),click:button=>listeners.get('click')?.({target:button})};
 }
+
+test('rover playback follows the computed trace without replacing focused controls and cancels stale frames',()=>{
+  const f=fixture('garden-rover'),tasks=new Map();let id=0;
+  const cleanup=mountArcade(f.root,{id:'garden-rover',animate:true,schedule:fn=>{tasks.set(++id,fn);return id;},cancel:key=>tasks.delete(key)});
+  for(const command of ['E','E','S'])f.click(f.button('append',command));
+  f.click(f.button('run'));assert.equal(tasks.size,1);assert.match(f.picture.attrs['aria-label'],/row 1, column 1/u);
+  const run=f.button('run'),tick=()=>{const [key,fn]=tasks.entries().next().value;tasks.delete(key);fn();};
+  tick();assert.match(f.picture.attrs['aria-label'],/row 1, column 2/u);assert.equal(f.button('run'),run,'Playback must retain native controls and their focus.');
+  const late=[...tasks.values()][0];f.click(f.button('play-trace'));assert.equal(tasks.size,0);
+  const paused=f.picture.innerHTML;late();assert.equal(f.picture.innerHTML,paused);
+  f.click(f.button('play-trace'));assert.equal(tasks.size,1);assert.match(f.picture.attrs['aria-label'],/row 1, column 1/u);
+  f.click(f.button('append','S'));assert.equal(tasks.size,0);assert.doesNotMatch(f.host.innerHTML,/Mission complete/u);
+  f.click(f.button('run'));assert.equal(tasks.size,1);const afterDispose=[...tasks.values()][0];cleanup();cleanup();assert.equal(tasks.size,0);afterDispose();assert.equal(f.host.innerHTML,'');
+});
+
+test('reduced-motion rover runs show their actual final position without scheduling animation',()=>{
+  const f=fixture('garden-rover'),cleanup=mountArcade(f.root,{id:'garden-rover',animate:false,schedule(){assert.fail('Reduced motion scheduled playback.');}});
+  f.click(f.button('append','E'));f.click(f.button('run'));
+  assert.match(f.picture.attrs['aria-label'],/row 1, column 2/u);assert.match(f.status.textContent,/without animation/u);assert.doesNotMatch(f.host.innerHTML,/Mission complete/u);cleanup();
+});
 test('every network tile announces its four-column location and current ports after rotation',()=>{
   const labels=html=>[...html.matchAll(/data-ga="rotate" data-value="(\d+)"[^>]*aria-label="([^"]+)"/gu)];
   for(const game of ARCADE_CATALOG.filter(item=>item.track==='network')){

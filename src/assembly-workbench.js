@@ -1,9 +1,9 @@
-import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261102-polish';
-import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261102-polish';
-import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261102-polish';
-import { workbenchGuidance } from './workbench-guidance.js?release=20261102-polish';
-import { pcActivity } from './pc-activity.js?release=20261102-polish';
-import { assemblyBuilderView, renderAssemblyBuilder } from './assembly-builder.js?release=20261102-polish';
+import { assemblyActions, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261102-playflow';
+import { ASSEMBLY_TOOLS, assemblyToolAction } from './assembly-tools.js?release=20261102-playflow';
+import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from './assembly-cables.js?release=20261102-playflow';
+import { workbenchGuidance } from './workbench-guidance.js?release=20261102-playflow';
+import { pcActivity } from './pc-activity.js?release=20261102-playflow';
+import { assemblyBuilderView, renderAssemblyBuilder } from './assembly-builder.js?release=20261102-playflow';
 
 const GROUPS = [['panel','Case & screws'],['psu','Power supply'],['board','Motherboard'],['cpu','CPU & retention'],['paste','Thermal paste'],['cooler','Cooler & fan'],['ram','Memory & clips'],['gpu','Graphics & latch'],['ssd','Original SSD'],['cables','Power & data leads'],['display','Monitor']];
 const NAMES = Object.fromEntries(GROUPS);

@@ -9,7 +9,8 @@ import {learningRoute} from '../src/learning-tools.js';
 const answers=id=>id==='sql'?['hello','six','plus','at-least','asc','sum','name','at-least']:['hello','six','plus','at-least','three','times','one','times'];
 test('twelve language paths contain 96 sequential lessons, including a distinct SQL sequence',()=>{
   assert.equal(CODE_QUESTS.length,12);assert.equal(new Set(CODE_QUESTS.map(q=>q.id)).size,12);
-  assert.equal((renderCodeQuestHub().match(/href="#quests\//g)||[]).length,12);
+  const languageGrid=renderCodeQuestHub().split('<div class="cq-language-grid">')[1];
+  assert.equal((languageGrid.match(/href="#quests\//g)||[]).length,12);
   assert.match(courseLessons('sql')[4].title,/Order/);assert.match(courseLessons('sql')[5].title,/Summarize/);
   assert.match(courseLessons('python')[4].title,/Repeat/);assert.match(courseLessons('python')[5].title,/function/);
   for(const quest of CODE_QUESTS){assert.equal(courseLessons(quest.id).length,8);assert.equal(routeAccess(learningRoute('#quests/'+quest.id)),'public');assert.match(renderCodeQuest(quest.id),/Eight lessons/);}

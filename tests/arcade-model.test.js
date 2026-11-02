@@ -74,7 +74,7 @@ test('rover programs compute all fixtures, cargo, walls, energy and instruction 
   const branch=solve('branch-bridge'),result=evaluateArcade('branch-bridge',branch);assert.equal(result.runs.length,2);assert.ok(result.runs.every(run=>run.ok));
   branch.program=['E','E','S','E'];assert.equal(evaluateArcade('branch-bridge',branch).ok,false);
   const loop=solve('loop-lagoon');loop.program=['E','E','S','S','S','S','E','E'];assert.equal(evaluateArcade('loop-lagoon',loop).ok,false,'A correct physical path still exceeds the block budget');
-  const drone=solve('delivery-drone');drone.program=['E2','E2','S2','S2'];assert.equal(evaluateArcade('delivery-drone',drone).ok,false,'Reaching home without the cargo cannot pass');
+  const drone=solve('delivery-drone');drone.program=['S','S','S','S','E','E','E','E'];const incomplete=evaluateArcade('delivery-drone',drone);assert.equal(incomplete.runs[0].position,24);assert.equal(incomplete.ok,false,'Reaching home without the cargo cannot pass');assert.match(incomplete.runs[0].message,/Collected 1 of 4 cargo/u);
   for(const value of ['eval','fetch','while(true)','__proto__','constructor',{},null]){const s=initialArcadeState('garden-rover');assert.equal(arcadeAction('garden-rover',s,'append',value).changed,false);}
   assert.ok(Object.isFrozen(ROVER_COMMANDS));
 });
@@ -82,4 +82,18 @@ test('unknown IDs, actions, outside values and late input cannot create progress
   assert.equal(arcadeLevel('__proto__'),null);assert.equal(initialArcadeState('missing'),null);
   for(const game of ARCADE_CATALOG){let s=initialArcadeState(game.id);for(const action of ['complete','save','grade','member','eval','__proto__'])assert.equal(arcadeAction(game.id,s,action,'https://real.example').changed,false);s.turns=120;assert.equal(arcadeAction(game.id,s,'run').changed,false);assert.equal(act(game.id,s,'reset').turns,0);}
   for(const filename of ['arcade.js','arcade-model.js','arcade-levels.js']){const source=await readFile(new URL('../src/'+filename,import.meta.url),'utf8');assert.doesNotMatch(source,/\b(?:eval|Function|fetch|XMLHttpRequest|WebSocket|setInterval)\s*\(|\b(?:localStorage|sessionStorage|document\.cookie)\b/);}
+});
+
+test('rover palettes introduce repeats and conditions only in their authored missions',()=>{
+  for(const id of ['garden-rover','bug-trail','delivery-drone']){
+    assert.deepEqual(arcadeLevel(id).commands,['N','E','S','W']);
+    for(const command of ['E2','S2','IF']){
+      const state=initialArcadeState(id);
+      assert.equal(arcadeAction(id,state,'append',command).changed,false);
+      assert.equal(evaluateArcade(id,{...state,program:[command]}).ok,false);
+    }
+  }
+  assert.ok(arcadeLevel('loop-lagoon').commands.includes('E2'));
+  assert.equal(arcadeLevel('loop-lagoon').commands.includes('IF'),false);
+  assert.ok(arcadeLevel('branch-bridge').commands.includes('IF'));
 });

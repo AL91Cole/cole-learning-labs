@@ -1,5 +1,5 @@
-import {IMPROVEMENT_ACTIVITIES,validateImprovementSummary} from './improvement-schema.js?release=20261102-polish';
-import {IMPROVEMENT_SHARING_ENABLED,IMPROVEMENT_ENDPOINT} from './improvement-config.js?release=20261102-polish';
+import {IMPROVEMENT_ACTIVITIES,validateImprovementSummary} from './improvement-schema.js?release=20261102-playflow';
+import {IMPROVEMENT_SHARING_ENABLED,IMPROVEMENT_ENDPOINT} from './improvement-config.js?release=20261102-playflow';
 
 const activePanels=new Set();
 const labels=Object.freeze({

@@ -1,3 +1,4 @@
+import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep} from '../src/activity-guidance.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -113,7 +114,7 @@ test('workshop jumps, prediction checks and reset retain independent drafts; dis
   const instances=[],workshopButton={dataset:{elementaryAction:'reset'},disabled:false,closest(){return this;}};
   const focusCalls=[],scrollCalls=[],heading={focus:options=>focusCalls.push(options),scrollIntoView:options=>scrollCalls.push(options)};
   const workshopHost={contains:button=>button===workshopButton,querySelector(selector){assert.equal(selector,'h3');return heading;}};
-  const context=vm.createContext({OWNER_PREVIEW:false,renderBlockWorkshop:()=>'<h2>Build with blocks</h2>',
+  const context=vm.createContext({renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,OWNER_PREVIEW:false,renderBlockWorkshop:()=>'<h2>Build with blocks</h2>',
     mountBlockWorkshop(host,{band}){
       const instance={host,band,program:[],disposals:0};instances.push(instance);
       return {dispose(){instance.disposals++;instance.program.length=0;}};
@@ -185,7 +186,12 @@ test('picture models distinguish route failures, display inputs and network prer
 
 test('each of the fifteen activities has a complete retryable path, and reset/remount do not retain choices',()=>{
   for(const lab of ELEMENTARY_LABS){
-    const view=fixture(lab.id);finish(view);view.click('reset');
+    const view=fixture(lab.id);finish(view);
+    assert.doesNotMatch(view.body.markup,/\$\{/u,'Completion must render the actual next activity.');
+    const nextId=view.body.markup.match(/href="#explore\/([A-Z0-9-]+)"/u)?.[1];
+    const recommended=ELEMENTARY_LABS.find(item=>item.id===nextId);
+    assert.ok(recommended,'Completion offers a real activity.');assert.equal(recommended.band,lab.band);assert.notEqual(recommended.id,lab.id);
+    view.click('reset');
     assert.equal(view.progress,0);assert.equal(view.complete,false);assert.equal(view.output,null);
     assert.ok(view.body.buttons.filter(button=>button.dataset.elementaryChoice).every(button=>button.attributes['aria-pressed']==='false'));
     view.click('choose',solutions[lab.id][0]);view.click('check');assert.equal(view.progress,1);
@@ -215,14 +221,14 @@ test('rendering, checking, resetting and disposing never consult network, browse
   }finally{for(const [name,descriptor] of descriptors){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}}
   const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/u);
-  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./block-workshop.js?release=20261102-polish','./owner-preview.js?release=20261102-polish'],'Only the reviewed local workshop and build-time navigation flag are imported.');
+  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./activity-guidance.js?release=20261102-playflow','./block-workshop.js?release=20261102-playflow','./owner-preview.js?release=20261102-playflow'],'Only the reviewed local guidance, workshop and build-time navigation flag are imported.');
   const workshop=await readFile(new URL('../src/block-workshop.js',import.meta.url),'utf8');
   assert.doesNotMatch(workshop,/^import\b|\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/mu,'The workshop adds no imported runtime, persistence or network capability.');
 });
 
 test('owner challenge navigation keeps skipped challenges unfinished and counts only actual successful checks',async()=>{
   const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
-  const context=vm.createContext({OWNER_PREVIEW:true,renderBlockWorkshop:()=>'',mountBlockWorkshop(){assert.fail('No workshop host is mounted in this fixture.');}});
+  const context=vm.createContext({renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,OWNER_PREVIEW:true,renderBlockWorkshop:()=>'',mountBlockWorkshop(){assert.fail('No workshop host is mounted in this fixture.');}});
   vm.runInContext(source.replace(/^import[^\n]+\r?\n/gmu,'').replace(/^export /gmu,''),context);
   for(const lab of ELEMENTARY_LABS){
     const view=fixture(lab.id,{mount:context.mountElementaryLab});

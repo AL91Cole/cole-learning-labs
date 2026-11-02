@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {renderLearningBrief,renderNextChallenge,investigationNextStep} from '../src/activity-guidance.js';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
@@ -82,7 +83,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
     // The real renderer replaces inputs; this draft detects unexpected replacement.
     root.children = new Map(); root.querySelector('[data-unsaved-workbench-draft]').value = '';
   }
-  const context = vm.createContext({OWNER_PREVIEW:ownerPreview,MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
+  const context = vm.createContext({renderLearningBrief,renderNextChallenge,investigationNextStep,OWNER_PREVIEW:ownerPreview,MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,
     resetLabImprovements(){},mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,cloudEnabled:true,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
     // Production modules share one realm. Transfer VM-created action data into
@@ -934,7 +935,7 @@ test('finishing a technically repaired ticket returns to the next missing first-
 
 test('all cases render labelled pages and accessible navigation with one retained workstation', () => {
   const renderStart = source.indexOf('function labPage(s){'),renderEnd = source.indexOf('\nfunction evidenceList(',renderStart); assert.ok(renderStart >= 0 && renderEnd > renderStart);
-  const context = vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
+  const context = vm.createContext({renderLearningBrief,renderNextChallenge,investigationNextStep,currentLab:null,labView:null,workStorage:{},recordFor:() => ({questions:[],evidence:[],plan:'',notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:() => '',eventMessage:() => '',interviewList:() => '',evidenceList:() => '',workStatus:() => 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for (const scenario of SCENARIOS) {
     const html = context.labPage(scenario);
@@ -955,7 +956,7 @@ test('all cases render labelled pages and accessible navigation with one retaine
 
 test('first-page copy keeps the question above history and removes distracting reply and help controls',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
-  const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],symptoms:'',plan:'',ideaSaved:false,notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
+  const context=vm.createContext({renderLearningBrief,renderNextChallenge,investigationNextStep,currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],symptoms:'',plan:'',ideaSaved:false,notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for(const scenario of SCENARIOS){
     const html=context.labPage(scenario),first=html.slice(html.indexOf('id="lab-problem"'),html.indexOf('id="lab-workbench"'));
@@ -991,7 +992,7 @@ function routeHarness(id='CODE-501',initialPath='',suppliedController) {
   const location={hash:'#lab/'+id+initialPath};
   const initialStore={version:2,labs:{}};
   // Full-case navigation and draft preservation belong to the member build.
-  const context=vm.createContext({OWNER_PREVIEW:false,MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
+  const context=vm.createContext({renderLearningBrief,renderNextChallenge,investigationNextStep,OWNER_PREVIEW:false,MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     SCENARIOS,learningRoute,labPageHash,retainExperimentEvents:(s,events)=>retainExperimentEvents(s,structuredClone(events)),
     mountLabLearning(_root,options){learning=options;const {mode}=options;learningCalls.mounts++;const dispose=()=>{learningCalls.disposals++;};dispose.setMode=value=>learningCalls.modes.push(value);return dispose;},
     mountInvestigationPreview:()=>null,mountTeachingPage:()=>()=>{},renderCapstone:()=>'capstone',mountCapstone:()=>()=>{},capstoneReport:()=>'capstone report',checkCapstoneState:()=>({ok:false}),normalizeLabRecord,createWorkStorage,WORK_PREFIX,deviceStorage:storage,initialStore,tracks,location,Date,
@@ -1173,7 +1174,7 @@ test('coding reports identify only the normalized practice-language labels, incl
 
 test('every lab offers an accessible explicit cloud choice beside the processing disclosure',()=>{
   const renderStart=source.indexOf('function labPage(s){'),renderEnd=source.indexOf('\nfunction evidenceList(',renderStart);
-  const context=vm.createContext({currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],symptoms:'',plan:'',ideaSaved:false,notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
+  const context=vm.createContext({renderLearningBrief,renderNextChallenge,investigationNextStep,currentLab:null,labView:null,workStorage:{},recordFor:()=>({questions:[],evidence:[],symptoms:'',plan:'',ideaSaved:false,notes:'',reflection:'',events:[],verified:false,closed:false}),tracks,inquiryProgress,labLanguage,requesterPersona,esc:escapeHtml,eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',workStatus:()=> 'Private session'});
   vm.runInContext(source.slice(renderStart,renderEnd),context);
   for(const scenario of SCENARIOS){
     const html=context.labPage(scenario);

@@ -1,4 +1,4 @@
-import {codeQuestMeta} from './code-quest-catalog.js?release=20261102-polish';
+import {codeQuestMeta} from './code-quest-catalog.js?release=20261102-playflow';
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 const output={python:'print(%)',javascript:'console.log(%);',java:'System.out.println(%);',cpp:'std::cout << (%) << "\\n";',csharp:'System.Console.WriteLine(%);',typescript:'console.log(%);',go:'fmt.Println(%)',rust:'println!("{}", %);',swift:'print(%)',kotlin:'println(%)',ruby:'puts(%)'};
 const variables={python:'energy = □',javascript:'const energy = □;',java:'int energy = □;',cpp:'int energy = □;',csharp:'int energy = □;',typescript:'const energy: number = □;',go:'energy := □',rust:'let energy = □;',swift:'let energy = □',kotlin:'val energy = □',ruby:'energy = □'};
@@ -82,15 +82,23 @@ export function resolveCourseChip(id,index,text,second=false){
   const normalize=value=>id==='sql'&&index>=3?value.toUpperCase():value;
   return allowed.find(choice=>normalize(courseChip(id,choice))===normalize(trimmed))||null;
 }
+function courseFeedback(state,result){
+  if(!state.choice||(state.lesson===7&&!state.second))return state.lesson>=5?'Fill each code gap. The fragment bank shows the forms this lesson accepts.':'Choose a code chip first, then check what it produces.';
+  const sql=state.id==='sql';
+  const wins=sql?['You made a query return a message.','You selected a number and gave its column a name.','Your query calculated the expected total.','Your filter kept the boundary value as well as larger values.','Your rows are in the requested order.','You combined the values instead of counting the rows.','Your query selected the requested column.','Your filter and sort work together.']:['You made the program show your message.','You stored a number for the program to use.','Your operator produced the expected total.','Your condition works below, at and above the boundary.','Your loop repeated the action the requested number of times.','Your function works for every supplied pair of inputs.','You found the item using its position in the list.','Your calculation and decision work for all three orders.'];
+  const retries=sql?['Compare the returned words with the requested message.','The task needs a number. Quoted digits are text.','Look at what your operator did to the two numbers.','Compare which rows your condition includes. Pay attention to the exact boundary.','Compare the first and last energy values with the requested order.','Counting rows and adding their values answer different questions.','Compare your returned column with the column the task asks for.','Check the filter and the order separately, then try them together.']:['Compare the shown words with the requested message.','The task needs a number. Quoted digits are text; a yes/no value is different again.','Compare your result with 10. What did this operator do to 6 and 4?','Check the middle example: what should happen at exactly 3?','Count the output lines. The loop needs to produce exactly three.','Compare every input pair. The same rule needs to work for all of them.','Count the positions from zero, then compare the item your code selected.','Compare each order. Check the cost calculation first, then the exact-budget case.'];
+  return result.ok?'✓ '+wins[state.lesson]+' Try another idea or continue.':retries[state.lesson];
+}
 export function courseAction(state,action,value){
   if(!state||!codeQuestMeta(state.id))return state;
   if(action==='restart')return initialCourse(state.id);
   if(state.finished)return state;
   const lesson=courseLessons(state.id)[state.lesson];if(!lesson)return state;
+  if(action==='retry'&&state.passed)return {...initialCourse(state.id),lesson:state.lesson};
   if(action==='choose'&&!state.passed&&lesson.choices.includes(value))return {...state,choice:value,feedback:'',output:null,turns:state.turns+1};
   if(action==='choose-second'&&!state.passed&&state.lesson===7&&lesson.choices.includes(value))return {...state,second:value,feedback:'',output:null,turns:state.turns+1};
   if(action==='type'&&!state.passed&&value&&typeof value.first==='string'&&typeof value.second==='string'&&value.first.length<=160&&value.second.length<=160)return {...state,typed:value.first,typedSecond:value.second,choice:resolveCourseChip(state.id,state.lesson,value.first),second:resolveCourseChip(state.id,state.lesson,value.second,true),feedback:'',output:null};
-  if(action==='check'&&!state.passed){const result=checkCourse(state.id,state.lesson,state.choice,state.second);return {...state,passed:result.ok,output:result.output,feedback:result.ok?lesson.teach:'Try another answer. The example can help.',turns:state.turns+1};}
+  if(action==='check'&&!state.passed){const result=checkCourse(state.id,state.lesson,state.choice,state.second);return {...state,passed:result.ok,output:result.output,feedback:courseFeedback(state,result),turns:state.turns+1};}
   if(action==='next'&&state.passed)return state.lesson===7?{...state,finished:true}:{...initialCourse(state.id),lesson:state.lesson+1};
   return state;
 }
