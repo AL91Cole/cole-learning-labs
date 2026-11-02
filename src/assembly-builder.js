@@ -1,4 +1,4 @@
-import {pcActivity} from './pc-activity.js?release=20261025-learning-plans';
+import {pcActivity} from './pc-activity.js?release=20261102-inbox';
 
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 

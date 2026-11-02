@@ -1,7 +1,7 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261025-learning-plans';
-import {requesterTopic} from './requester-topics.js?release=20261025-learning-plans';
-import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261025-learning-plans';
-import {withRequesterTaskNudge} from './requester-general.js?release=20261025-learning-plans';
+import {requesterTextIsPrivate} from './interview.js?release=20261102-inbox';
+import {requesterTopic} from './requester-topics.js?release=20261102-inbox';
+import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261102-inbox';
+import {withRequesterTaskNudge} from './requester-general.js?release=20261102-inbox';
 
 // Page memory only: cloud contact requires an explicit choice each fresh page.
 const pagePreference={enabled:false};

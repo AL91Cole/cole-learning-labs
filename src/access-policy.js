@@ -1,4 +1,4 @@
-import {CATALOG} from './lab-catalog.js?release=20261025-learning-plans';
+import {CATALOG} from './lab-catalog.js?release=20261102-inbox';
 
 /** The public entry cannot grant membership from browser state or a URL.
  * Only the separately protected member build replaces this source constant. */
@@ -37,6 +37,7 @@ export function routeAccess(route){
   if(typeof page!=='string'||(id!==undefined&&typeof id!=='string'))return 'unknown';
   const noId=id===undefined||id==='';
   if(informationalPages.has(page))return noId?'public':'unknown';
+  if(page==='play')return id==='inbox-defender'?'public':'unknown';
   if(page==='explore')return noId||elementaryLabIds.has(id)?'public':'unknown';
   if(page==='labs')return noId||topics.has(id)?'public':'unknown';
   if(page==='learn')return foundationIds.has(id)?'public':'unknown';
