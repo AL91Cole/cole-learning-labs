@@ -1,6 +1,6 @@
-import {NETWORK_CONFIG,networkChecks} from './network-labs.js?release=20261025-learning-plans';
-import {getNetworkBenchSpec,normalizeNetworkBench} from './network-bench.js?release=20261025-learning-plans';
-import {getNetworkDiagram} from './network-diagrams.js?release=20261025-learning-plans';
+import {NETWORK_CONFIG,networkChecks} from './network-labs.js?release=20261102-inbox';
+import {getNetworkBenchSpec,normalizeNetworkBench} from './network-bench.js?release=20261102-inbox';
+import {getNetworkDiagram} from './network-diagrams.js?release=20261102-inbox';
 
 // Reviewed local paths. A diagram signal never sends real network traffic,
 // rewrites supplied evidence, or awards an investigation test result.

@@ -1,12 +1,13 @@
-import {learningModes,renderLabLearning} from './teaching.js?release=20261025-learning-plans';
-import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261025-learning-plans';
-import {transferCaseFor} from './scenarios.js?release=20261025-learning-plans';
+import {learningModes,renderLabLearning} from './teaching.js?release=20261102-inbox';
+import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261102-inbox';
+import {transferCaseFor} from './scenarios.js?release=20261102-inbox';
 
 export function learningRoute(hash) {
   const [path,query='']=String(hash||'').replace(/^#/,'').split('?'),params=new URLSearchParams(query);
   const [page='home',id,step]=path.split('/');
   const mode=learningModes.some(item=>item.id===params.get('mode'))?params.get('mode'):'guided';
   const route={page:page||'home',id,mode,sequence:params.get('sequence')==='opening-day'?'opening-day':null};
+  if(page==='play'&&path!=='play/inbox-defender')return {page:'unknown',id:undefined,mode:'guided',sequence:null};
   if(page==='signin'&&path!=='signin')return {page:'unknown',id:undefined,mode:'guided',sequence:null};
   if(page==='explore'){
     if(path.split('/').length>2)return {page:'unknown',id:undefined,mode:'guided',sequence:null};

@@ -1,3 +1,4 @@
+import {renderInboxDefenderEntry} from '../src/inbox-defender.js';
 import {SANDBOX_STARTERS} from '../src/coding-sandbox.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,7 +33,7 @@ function harness({memberContent=true}={}){
   const forbidden=()=>assert.fail('Public previews must not create lab records, change equipment, save progress, or call a network service.');
   // Full-catalog filter behavior defaults to the protected member view.
   const scenarios=memberContent?SCENARIOS:SCENARIOS.filter(lab=>isFreeLab(lab.id));
-  const context=vm.createContext({MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
+  const context=vm.createContext({renderInboxDefenderEntry,MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
     $:selector=>{assert.ok(elements.has(selector),selector);return elements.get(selector);},
     $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;if(selector==='.track-filters [data-track]')return pathwayButtons;assert.fail(selector);},
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,

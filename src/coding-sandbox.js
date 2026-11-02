@@ -1,7 +1,7 @@
-import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261025-learning-plans';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261025-learning-plans';
-import {createTextReport,createReportURLs} from './report-downloads.js?release=20261025-learning-plans';
-import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261025-learning-plans';
+import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261102-inbox';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-inbox';
+import {createTextReport,createReportURLs} from './report-downloads.js?release=20261102-inbox';
+import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261102-inbox';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const drafts=new Map();

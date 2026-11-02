@@ -1,5 +1,5 @@
-import {SCENARIOS} from './scenarios.js?release=20261025-learning-plans';
-import {FOUNDATION_LABS} from './foundation-model.js?release=20261025-learning-plans';
+import {SCENARIOS} from './scenarios.js?release=20261102-inbox';
+import {FOUNDATION_LABS} from './foundation-model.js?release=20261102-inbox';
 
 // Authored route keys only. Never accept a URL, custom starter name, class,
 // learner identifier, notes, code, elapsed time, or browser metadata.

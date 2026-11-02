@@ -1,5 +1,5 @@
-import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261025-learning-plans';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261025-learning-plans';
+import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261102-inbox';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-inbox';
 
 // Authored, fictional activities. Each mount owns its choices; nothing is saved
 // or sent. These local practice checks are not grades or identity verification.

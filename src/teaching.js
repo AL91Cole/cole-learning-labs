@@ -1,4 +1,4 @@
-import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261025-learning-plans';
+import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261102-inbox';
 /** Public teaching supports. This module never reads student work or contacts a provider. */
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const validId = value => /^(?:INC|NET|AI|SEC|CODE)-\d{3}$/.test(String(value));
