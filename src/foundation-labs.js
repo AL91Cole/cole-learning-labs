@@ -1,6 +1,6 @@
-import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261102-inbox';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-inbox';
-import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261102-inbox';
+import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261102-arcade';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-arcade';
+import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261102-arcade';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sections=['explore','practice','check'];

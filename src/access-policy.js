@@ -1,8 +1,12 @@
-import {CATALOG} from './lab-catalog.js?release=20261102-inbox';
+import {codeQuestMeta} from './code-quest-catalog.js?release=20261102-arcade';
+import {arcadeMeta,FREE_ARCADE_IDS} from './arcade-catalog.js?release=20261102-arcade';
+import {CATALOG} from './lab-catalog.js?release=20261102-arcade';
 
 /** The public entry cannot grant membership from browser state or a URL.
- * Only the separately protected member build replaces this source constant. */
+ * The protected member build or the reviewed open-public release replaces this content constant. It never authenticates an account. */
 export const MEMBER_CONTENT=false;
+// Replaced only by the reviewed open-public build; browser claims cannot select a release.
+export const PUBLIC_LABS_OPEN=false;
 
 export const FREE_LAB_IDS_BY_TOPIC=Object.freeze({
   hardware:Object.freeze(['INC-101','INC-102']),
@@ -37,6 +41,8 @@ export function routeAccess(route){
   if(typeof page!=='string'||(id!==undefined&&typeof id!=='string'))return 'unknown';
   const noId=id===undefined||id==='';
   if(informationalPages.has(page))return noId?'public':'unknown';
+  if(page==='quests')return noId||codeQuestMeta(id)?'public':'unknown';
+  if(page==='arcade')return noId?'public':arcadeMeta(id)?(FREE_ARCADE_IDS.includes(id)?'public':'member'):'unknown';
   if(page==='play')return id==='inbox-defender'?'public':'unknown';
   if(page==='explore')return noId||elementaryLabIds.has(id)?'public':'unknown';
   if(page==='labs')return noId||topics.has(id)?'public':'unknown';

@@ -1,5 +1,5 @@
-import {SCENARIOS} from './scenarios.js?release=20261102-inbox';
-import {initialWorkspaceState,normalizeWorkspaceState,applyWorkspaceAction,renderWorkspace,disposeWorkspace,getWorkspaceMission} from './workspaces.js?release=20261102-inbox';
+import {SCENARIOS} from './scenarios.js?release=20261102-arcade';
+import {initialWorkspaceState,normalizeWorkspaceState,applyWorkspaceAction,renderWorkspace,disposeWorkspace,getWorkspaceMission} from './workspaces.js?release=20261102-arcade';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const TRACKS=Object.freeze({network:'Networking',ai:'AI literacy',security:'Cybersecurity'});
 export const practiceScenarioFor=id=>typeof id==='string'?SCENARIOS.find(scenario=>scenario.id===id&&Object.hasOwn(TRACKS,scenario.track))||null:null;

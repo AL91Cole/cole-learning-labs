@@ -1,5 +1,7 @@
 # Deploying Cole Learning Labs with Cloudflare Pages
 
+Current release: learning content is intentionally open without an account through the reviewed build setting. The original restricted delivery policy below is retained for preview mode. See [Open learning release](OPEN-LEARNING-RELEASE.md) for the one-setting restoration procedure, published scope and unchanged account/data boundaries.
+
 Reviewed 2026-10-31. GitHub is the source repository; the existing `cole-learning-labs` Cloudflare Pages project serves the public site. The canonical address is [www.colelearninglabs.com](https://www.colelearninglabs.com). The established production branch is `main`, framework **None**, repository root, and public output `dist`.
 
 The owner approved optional fictional cloud AI using the existing plan, strict feature limits, and possible usage charges. No new paid plan, add-on, or credits are authorized. The reviewed source uses a private AI backend reached through an exact same-origin gateway. It starts AI off on every fresh page, without an automatic availability request. See [private requester deployment](PRIVATE-REQUESTER-DEPLOYMENT.md) for bindings, deployment order, costs, verification, and rollback.

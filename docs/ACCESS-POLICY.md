@@ -1,5 +1,7 @@
 # Free and member learning access
 
+Current release: learning content is intentionally open without an account through the reviewed build setting. The original restricted delivery policy below is retained for preview mode. See [Open learning release](OPEN-LEARNING-RELEASE.md) for the one-setting restoration procedure, published scope and unchanged account/data boundaries.
+
 The approved free offer includes fifteen K–6 activities, all five older beginner courses, the practice workbench and two older investigation labs per topic. The older investigation samples use the first two existing cases in each topic:
 
 | Topic | Free cases |

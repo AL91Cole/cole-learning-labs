@@ -14,6 +14,18 @@ const actual={};
 const compile=member=>actual[member]??=(bundleTier({sourceRoot:ROOT,member}));
 const tracks={INC:'hardware',NET:'network',AI:'ai',SEC:'security',CODE:'coding'};
 
+test('only an explicit full local-only public release sets open access; ordinary tiers and owner contexts stay distinct',async t=>{
+  const root=await fixture(t,"export {MEMBER_CONTENT,PUBLIC_LABS_OPEN} from './access-policy.js';");
+  for(const [options,member,open]of [[{},false,false],[{member:true},true,false],[{member:true,localOnly:true,publicLabsOpen:true},true,true]]){
+    const result=await bundleTier({sourceRoot:root,...options});
+    const compiled=await import('data:text/javascript;base64,'+Buffer.from(result.javascript).toString('base64'));
+    assert.equal(compiled.MEMBER_CONTENT,member);assert.equal(compiled.PUBLIC_LABS_OPEN,open);
+  }
+  for(const options of [{publicLabsOpen:true},{member:true,publicLabsOpen:true},{member:true,localOnly:true,publicLabsOpen:true,ownerPreview:true},{publicLabsOpen:'true'}])await assert.rejects(()=>bundleTier({sourceRoot:root,...options}),/Open-public labs/);
+  await writeFile(path.join(root,'src/access-policy.js'),'export const MEMBER_CONTENT=false;export const PUBLIC_LABS_OPEN=true;');
+  await assert.rejects(()=>bundleTier({sourceRoot:root}),/must start disabled/);
+});
+
 async function fixture(t,app="export {checkFixture} from './coding-lab.js';"){
   const temporary=path.resolve(process.env.CLL_TEST_TMPDIR||tmpdir());await mkdir(temporary,{recursive:true});
   const root=await mkdtemp(path.join(temporary,'cll-tier-bundle-'));await mkdir(path.join(root,'src'));
@@ -27,7 +39,7 @@ async function fixture(t,app="export {checkFixture} from './coding-lab.js';"){
   const coded=cases.filter(row=>row.track==='coding');
   const files={
     'app.js':app,
-    'access-policy.js':'export const MEMBER_CONTENT=false;',
+    'access-policy.js':'export const MEMBER_CONTENT=false;export const PUBLIC_LABS_OPEN=false;',
     'lab-catalog.js':'export const CATALOG=Object.freeze(['+rows.map(row=>'Object.freeze('+JSON.stringify(row)+')').join(',')+']);',
     'scenarios.js':'export const SCENARIOS='+JSON.stringify(cases.filter(row=>row.track!=='coding'))+';',
     'coding-lab.js':'export const CODING_SCENARIOS='+JSON.stringify([...coded,{id:'CODE-599',brief:'PAID_FIXTURE_SECRET'}])+';\n'+
@@ -98,7 +110,7 @@ test('public coding extraction preserves function-valued checks and discards pai
 
 test('build context forces member authority rather than accepting a source flag or browser value',async t=>{
   const root=await fixture(t,"export {MEMBER_CONTENT} from './access-policy.js';");
-  await writeFile(path.join(root,'src/access-policy.js'),'export const MEMBER_CONTENT=true;');
+  await writeFile(path.join(root,'src/access-policy.js'),'export const MEMBER_CONTENT=true;export const PUBLIC_LABS_OPEN=false;');
   for(const member of [false,true]){
     const result=await bundleTier({sourceRoot:root,member});
     const compiled=await import('data:text/javascript;base64,'+Buffer.from(result.javascript).toString('base64'));

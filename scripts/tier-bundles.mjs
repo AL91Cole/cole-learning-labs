@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {parse} from 'acorn';
 import {FREE_LAB_IDS} from '../src/access-policy.js';
+import {FREE_ARCADE_IDS} from '../src/arcade-catalog.js';
 
 const PROJECT_ROOT=fileURLToPath(new URL('../',import.meta.url));
 const FREE_IDS=Object.freeze([...FREE_LAB_IDS]);
@@ -133,10 +134,18 @@ function publicCoding(source){
   }
   return replaceParts(source,replacements);
 }
-function accessContext(source,member){
-  const node=declaration(tree(source),'MEMBER_CONTENT');
+function accessContext(source,member,publicLabsOpen=false){
+  const ast=tree(source),node=declaration(ast,'MEMBER_CONTENT'),open=declaration(ast,'PUBLIC_LABS_OPEN');
   if(node.type!=='Literal'||typeof node.value!=='boolean')throw new Error('Membership context must be a reviewed source boolean.');
-  return replaceParts(source,[{start:node.start,end:node.end,value:member?'true':'false'}]);
+  if(open.type!=='Literal'||open.value!==false)throw new Error('Open-public context must start disabled in source.');
+  return replaceParts(source,[{start:node.start,end:node.end,value:member?'true':'false'},{start:open.start,end:open.end,value:publicLabsOpen?'true':'false'}]);
+}
+function publicArcade(source){
+  const node=declaration(tree(source),'ARCADE_LEVELS');
+  if(node.type!=='CallExpression'||node.callee.type!=='Identifier'||node.callee.name!=='freeze'||node.arguments.length!==1||node.arguments[0].type!=='ObjectExpression')throw new Error('Arcade levels require one reviewed frozen map.');
+  const map=node.arguments[0],properties=map.properties.filter(property=>FREE_ARCADE_IDS.includes(propertyName(property)));
+  if(properties.length!==FREE_ARCADE_IDS.length||new Set(properties.map(propertyName)).size!==FREE_ARCADE_IDS.length)throw new Error('Reviewed free arcade levels are missing or duplicated.');
+  return replaceParts(source,[{start:map.start,end:map.end,value:'{'+properties.map(property=>source.slice(property.start,property.end)).join(',')+'}'}]);
 }
 function localRequesterContext(source){
   const node=declaration(tree(source),'REQUESTER_CLOUD_ENABLED');
@@ -204,8 +213,9 @@ const inside=(root,target)=>{const relative=path.relative(root,target);return re
 
 /** Compile an isolated delivery artifact. The helper writes no files and does
  * not execute source modules, create services, authenticate anyone or deploy. */
-export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='app.js',localOnly=false,ownerPreview=false}={}){
+export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='app.js',localOnly=false,ownerPreview=false,publicLabsOpen=false}={}){
   if(typeof sourceRoot!=='string'||typeof member!=='boolean')throw new Error('A canonical source directory and boolean tier are required.');
+  if(typeof publicLabsOpen!=='boolean'||(publicLabsOpen&&(!member||!localOnly||ownerPreview)))throw new Error('Open-public labs require full local-only content without owner privileges.');
   if(typeof localOnly!=='boolean')throw new Error('A boolean local-only build option is required.');
   if(typeof ownerPreview!=='boolean')throw new Error('A boolean owner-preview build option is required.');
   if(ownerPreview&&(!member||!localOnly||entry!=='app.js'))throw new Error('Owner preview navigation requires the full local-only main application.');
@@ -267,7 +277,7 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
       });
       builder.onLoad({filter:/.*/,namespace:'tier-source'},async args=>{
         const source=await readSource(args.path),filename=path.relative(sourceDirectory,args.path).split(path.sep).join('/');let contents=source;
-        if(filename==='access-policy.js')contents=accessContext(source,member);
+        if(filename==='access-policy.js')contents=accessContext(source,member,publicLabsOpen);
         // Trusted build configuration only; browser state and environment flags
         // cannot opt a compiled local preview back into cloud requests.
         else if(localOnly&&filename==='requester-config.js')contents=localRequesterContext(source);
@@ -278,6 +288,7 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
         else if(!member&&filename==='scenarios.js')contents=publicScenarios;
         else if(!member&&Object.hasOwn(publicStubs,filename))contents=Object.entries(publicStubs[filename]).map(([name,value])=>'export const '+name+'='+value+';').join('\n');
         else if(!member&&filename==='coding-lab.js')contents=publicCoding(source);
+        else if(!member&&filename==='arcade-levels.js')contents=publicArcade(source);
         else if(!member&&filename==='ai-activities.js')contents=publicActivity(source,'AI');
         else if(!member&&filename==='security-activities.js')contents=publicActivity(source,'SEC');
         else if(!member&&filename==='interactive-tools.js')contents=publicControls(source);

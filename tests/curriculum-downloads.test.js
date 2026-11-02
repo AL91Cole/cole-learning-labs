@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {PUBLIC_FILES,PUBLIC_SOURCE_FILES,MEMBER_FILES} from '../scripts/build.mjs';
+import {PUBLIC_FILES,publicFilesFor,PUBLIC_SOURCE_FILES,MEMBER_FILES} from '../scripts/build.mjs';
 import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
 const read=file=>readFileSync(new URL(`../${file}`,import.meta.url));
@@ -14,7 +14,8 @@ const reviewed=new Map([
 ]);
 test('retained curriculum matches the exact reviewed companion files and is excluded from public publishing',()=>{
   assert.deepEqual(PUBLIC_SOURCE_FILES.filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...reviewed.keys()].sort());
-  assert.deepEqual(PUBLIC_FILES.filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)),[]);
+  assert.deepEqual(PUBLIC_FILES.filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...reviewed.keys()].sort());
+  assert.deepEqual(publicFilesFor('preview').filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)),[]);
   for(const [file,digest] of reviewed){
     assert.ok(MEMBER_FILES.includes(file),`${file}: curriculum belongs to protected delivery`);
     const bytes=read(file);
@@ -30,7 +31,7 @@ test('member curriculum cannot inherit a public shared download cache policy',()
     // A removed public path may keep a defensive no-store rule, but must never
     // advertise a shared cache for protected curriculum or a fallback response.
     if(block){assert.match(block,/Cache-Control: private, no-store/);assert.doesNotMatch(block,/Cache-Control: public/);}
-    assert.equal(PUBLIC_FILES.includes(file),false);
+    assert.equal(publicFilesFor('preview').includes(file),false);
   }
   assert.match(headers,/\/teacher\/\*\r?\n  Cache-Control: private, no-store/);
   assert.deepEqual(JSON.parse(read('_routes.json')),{version:1,include:['/api/requester'],exclude:[]});

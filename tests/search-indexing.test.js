@@ -25,7 +25,7 @@ test('reviewed HTML sources retain their stable canonical URLs independently of 
 });
 
 test('sitemap and robots expose only crawlable preferred content URLs and retain utility noindex', () => {
-  const utilities = ['classroom.html', 'secure-reports.html', 'teacher/index.html'];
+  const utilities = ['classroom.html', 'secure-reports.html', 'teacher/index.html','student-workbook.html','practice-quizzes.html'];
   const contentPaths = [...canonicalPages].filter(([name]) => PUBLIC_FILES.includes(name)&&!utilities.includes(name)).map(([, pathname]) => origin + pathname).sort();
   const sitemap = read('sitemap.xml');
   const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(match => match[1]).sort();
@@ -35,7 +35,7 @@ test('sitemap and robots expose only crawlable preferred content URLs and retain
   assert.match(read('robots.txt'), /^Sitemap: https:\/\/www\.colelearninglabs\.com\/sitemap\.xml$/mu);
   assert.doesNotMatch(read('robots.txt'), /^Disallow:\s*\/\s*$/mu, 'crawlers must be able to read canonical and noindex signals');
   for (const file of utilities) assert.match(read(file), /<meta name="robots" content="noindex(?:,nofollow)?">/u, file);
-  for(const file of ['classroom.html','teacher/index.html','student-workbook.html','practice-quizzes.html']){
+  for(const file of ['classroom.html','teacher/index.html']){
     assert.equal(PUBLIC_FILES.includes(file),false,`${file}: cannot be a public search entry`);
     assert.ok(!locations.includes(origin+canonicalPages.get(file)),`${file}: cannot be advertised in the public sitemap`);
   }

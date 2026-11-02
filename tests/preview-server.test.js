@@ -6,7 +6,8 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createPreviewServer, previewContentType } from '../scripts/serve.mjs';
-import { PUBLIC_FILES } from '../scripts/build.mjs';
+import {publicFilesFor} from '../scripts/build.mjs';
+const PUBLIC_FILES=publicFilesFor('preview');
 
 const PRIVATE_CANARY = 'PRIVATE_CURRICULUM_OR_SECRET_MUST_NOT_BE_SERVED';
 
@@ -22,7 +23,7 @@ async function fixture(t) {
   await mkdir(root);
   t.after(() => rm(folder, { recursive: true, force: true }));
   for (const filename of PUBLIC_FILES) await put(root, filename, `PUBLIC_PREVIEW_FIXTURE:${filename}`);
-  const server = createPreviewServer({ sourceRoot: root });
+  const server = createPreviewServer({ sourceRoot: root, publicLabAccess:'preview' });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(() => new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
