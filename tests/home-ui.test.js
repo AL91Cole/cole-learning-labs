@@ -1,3 +1,7 @@
+import {CODE_QUESTS} from '../src/code-quest-catalog.js';
+import {renderCodeQuestEntry} from '../src/code-quests.js';
+import {ARCADE_CATALOG} from '../src/arcade-catalog.js';
+import {renderArcadeEntry} from '../src/arcade.js';
 import {renderInboxDefenderEntry} from '../src/inbox-defender.js';
 import {SANDBOX_STARTERS} from '../src/coding-sandbox.js';
 import test from 'node:test';
@@ -33,7 +37,7 @@ function harness({memberContent=true}={}){
   const forbidden=()=>assert.fail('Public previews must not create lab records, change equipment, save progress, or call a network service.');
   // Full-catalog filter behavior defaults to the protected member view.
   const scenarios=memberContent?SCENARIOS:SCENARIOS.filter(lab=>isFreeLab(lab.id));
-  const context=vm.createContext({renderInboxDefenderEntry,MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
+  const context=vm.createContext({CODE_QUESTS,renderCodeQuestEntry,ARCADE_CATALOG,renderArcadeEntry,renderInboxDefenderEntry,MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
     $:selector=>{assert.ok(elements.has(selector),selector);return elements.get(selector);},
     $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;if(selector==='.track-filters [data-track]')return pathwayButtons;assert.fail(selector);},
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,
@@ -45,10 +49,10 @@ function harness({memberContent=true}={}){
 
 test('the homepage explains its counts, real privacy boundaries, and manual report handoff',()=>{
   const h=harness(),html=h.context.home();
-  assert.match(html,new RegExp(`<b>${ELEMENTARY_LABS.length+FOUNDATION_LABS.length+SCENARIOS.length}</b><span>learning activities`));
+  assert.match(html,new RegExp(`<b>${ELEMENTARY_LABS.length+FOUNDATION_LABS.length+SCENARIOS.length+ARCADE_CATALOG.length+CODE_QUESTS.length+1}</b><span>learning activities`));
   assert.match(html,new RegExp(`<b>${FOUNDATION_LABS.length}</b><span>beginner courses · Grades 7–12`));
-  assert.match(html,new RegExp(`<b>${SCENARIOS.length}</b><span>investigations · Grades 7–12`));
-  assert.match(html,/>62<\/b><span>learning activities/u);
+  assert.match(html,new RegExp(`<b>${SCENARIOS.length+ARCADE_CATALOG.length+CODE_QUESTS.length}</b><span>investigations, games &amp; coding paths`));
+  assert.match(html,/>100<\/b><span>learning activities/u);
   assert.match(html,/5 pathways · Grades K–12/u);
   assert.match(html,/Includes 15 free K–6 activities/u);
   for(const copy of ['No account required for public labs','Practice stays on this device','School IT review available','Built-in replies remain available','downloaded reports','approved LMS'])assert.ok(html.includes(copy),copy);
@@ -57,8 +61,8 @@ test('the homepage explains its counts, real privacy boundaries, and manual repo
   const beginnerStart=html.indexOf('id="basics-heading"'),portfolioStart=html.indexOf('class="project-feature"');
   assert.ok(beginnerStart>=0&&beginnerStart<portfolioStart,'Beginner activities appear before the portfolio projects.');
   const free=harness({memberContent:false}),library=free.context.library();
-  assert.match(free.context.home(),/>30<\/b><span>free learning activities/u);
-  assert.match(free.context.home(),/>10<\/b><span>investigations · Grades 7–12/u);
+  assert.match(free.context.home(),/>48<\/b><span>free learning activities/u);
+  assert.match(free.context.home(),/>27<\/b><span>investigations, games &amp; coding paths/u);
   const progress=library.match(/<span class="tag" aria-describedby="lab-progress-help">([^<]+)<\/span>/u)?.[1];
   assert.ok(progress);assert.match(progress,/^0 of 10 free investigations/u);
   assert.match(library,/<p id="lab-progress-help" class="panel-help">[^<]*not a grade\.<\/p>/u,'The completion count has a visible explanation, including for keyboard and touch users.');

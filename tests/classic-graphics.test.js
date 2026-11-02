@@ -28,8 +28,9 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // Generic repair views, bounded investigation blocks and network port dragging
   // add about 31 KB. Public compilation retains its separate sub-1-MB check.
   // Keep the bounded source graph; public compilation has its own tighter cap.
-  // Inbox Defender adds a small authored local module; the public bundle retains its independent 1 MB ceiling.
-  assert.ok(bytes<1_450_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // The 25 arcade levels add about 40 KB without an engine. Preview and open-public compilations have independent size checks.
+  // Twelve eight-lesson language paths add authored examples, not twelve runtimes.
+  assert.ok(bytes<1_540_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{

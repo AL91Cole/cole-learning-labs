@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_FILES, PUBLIC_SOURCE_FILES } from '../scripts/build.mjs';
+import { PUBLIC_FILES, publicFilesFor, PUBLIC_SOURCE_FILES } from '../scripts/build.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const ORIGIN = 'https://release-test.invalid/';
@@ -72,7 +72,8 @@ test('all reviewed source entry scripts and styles retain the entry-defined asse
 test('source-only learning entry pages are excluded from the public file manifest',()=>{
   for(const filename of ['classroom.html','teacher/index.html','student-workbook.html','practice-quizzes.html']){
     assert.ok(ENTRIES.includes(filename),`${filename}: keep source dependency review`);
-    assert.equal(PUBLIC_FILES.includes(filename),false,`${filename}: require protected delivery`);
+    assert.equal(publicFilesFor('preview').includes(filename),false,`${filename}: protected in preview mode`);
+    assert.equal(PUBLIC_FILES.includes(filename),!['classroom.html','teacher/index.html'].includes(filename),`${filename}: open resource policy`);
   }
   for(const filename of ['index.html','404.html','school-it.html','ai-use-notice.html','secure-reports.html'])assert.ok(PUBLIC_FILES.includes(filename),`${filename}: public information or local privacy utility remains available`);
 });

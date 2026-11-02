@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 import { bundleTier } from './tier-bundles.mjs';
+import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
@@ -18,6 +19,8 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/foundation-model.js', 'src/foundation-labs.js', 'src/foundation-scene.js', 'src/foundations.css',
   'src/elementary-labs.js', 'src/elementary-labs.css',
   'src/inbox-defender.js', 'src/inbox-defender.css',
+  'src/code-quest-catalog.js', 'src/code-course-model.js', 'src/code-quests.js', 'src/code-quests.css',
+  'src/arcade-catalog.js', 'src/arcade-levels.js', 'src/arcade-model.js', 'src/arcade.js', 'src/arcade.css',
   'src/block-workshop.js', 'src/block-workshop.css', 'src/sign-in.js', 'src/sign-in.css',
   'src/teaching.js', 'src/teaching.css', 'src/lesson-plans.js', 'src/lesson-plans.css', 'src/experiments.js', 'src/experiments.css', 'src/learning-tools.js', 'src/capstone.js', 'src/capstone.css', 'src/requester-general.js',
   'src/app.js', 'src/lab-tutorial.js', 'src/coding-sandbox.js', 'src/standards.js', 'src/lab-language.js', 'src/requester-persona.js', 'src/requester-library.js', 'src/requester-chat.js', 'src/requester-topics.js', 'src/requester-config.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js', 'src/workbench-interactions.js',
@@ -33,10 +36,10 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/access-policy.js', 'src/lab-catalog.js', 'src/owner-preview.js', ...PUBLIC_METADATA_FILES
 ]);
 // Source review does not grant public delivery. The complete member application
-// is packaged separately and is never copied into the public website output.
+// is packaged separately unless the reviewed open-public release explicitly includes it.
 // Public disclosure metadata is not a member learning resource.
 export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)));
-export const PUBLIC_FILES = Object.freeze([
+const PREVIEW_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   ...PUBLIC_METADATA_FILES,
@@ -44,6 +47,9 @@ export const PUBLIC_FILES = Object.freeze([
   'src/app.js', 'src/secure-reports.js',
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
+const OPEN_RESOURCES=Object.freeze(['student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
+export const publicFilesFor=access=>Object.freeze([...PREVIEW_FILES,...(labsAreOpen(access)?OPEN_RESOURCES:[])]);
+export const PUBLIC_FILES=publicFilesFor(PUBLIC_LAB_ACCESS);
 const FILES = new Set(PUBLIC_SOURCE_FILES);
 const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', '.well-known'];
 
@@ -95,10 +101,11 @@ async function safeBuildDirectory(root, directory, prefix) {
   return true;
 }
 
-export async function buildSite({ sourceRoot = PROJECT_ROOT } = {}) {
+export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = PUBLIC_LAB_ACCESS } = {}) {
   // Even an accidentally approved manifest entry cannot publish a private-named
   // curriculum resource. Content review remains necessary for every new asset.
-  assertPublicCurriculumPaths(PUBLIC_FILES);
+  const openLabs=labsAreOpen(publicLabAccess),publicFiles=publicFilesFor(publicLabAccess);
+  assertPublicCurriculumPaths(publicFiles);
   const requested = path.resolve(sourceRoot);
   await directoryOnly(requested);
   const root = await realpath(requested);
@@ -106,11 +113,14 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT } = {}) {
   for (const directory of PUBLIC_DIRECTORIES) await validatePublicTree(root, directory);
   const sources = new Map();
   for (const filename of PUBLIC_SOURCE_FILES) sources.set(filename, await sourceBytes(root, filename));
-  const content = new Map(PUBLIC_FILES.map(filename=>[filename,sources.get(filename)]));
+  const content = new Map(publicFiles.map(filename=>[filename,sources.get(filename)]));
+  // An access-mode change gets a new entry URL even when no source imports changed.
+  content.set('index.html',Buffer.from(content.get('index.html').toString('utf8').replace(/(src\/app\.js\?release=[A-Za-z0-9_-]+)/u,'$1-'+publicLabAccess)));
   const routes = JSON.parse(content.get('_routes.json').toString('utf8'));
   if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester'], exclude: [] })) throw new Error('Only the reviewed requester gateway may invoke API Functions; collection routes must stay excluded.');
-  const tier = await bundleTier({sourceRoot:root,member:false});
+  const tier = await bundleTier({sourceRoot:root,member:openLabs,localOnly:openLabs,publicLabsOpen:openLabs});
   content.set('src/app.js',Buffer.from(tier.javascript));
+  if(openLabs){const redirects=content.get('_redirects').toString('utf8').split('\n').filter(line=>!/^\/(?:student-workbook|practice-quizzes)(?:[\s/.])/.test(line)).join('\n');content.set('_redirects',Buffer.from(redirects));}
   // This public privacy tool has no course content; bundle its own reviewed
   // local graph so raw source modules are never an alternate content endpoint.
   const localTool = await bundleTier({sourceRoot:root,member:false,entry:'secure-reports.js'});
@@ -128,7 +138,7 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT } = {}) {
     if (await safeBuildDirectory(root, output, 'dist')) await rm(output, { recursive: true });
     await rename(staging, output);
     staging = null;
-    return { directory: output, files: [...PUBLIC_FILES] };
+    return { directory: output, files: [...publicFiles] };
   } finally {
     if (staging && await safeBuildDirectory(root, staging, '.publish-stage-')) await rm(staging, { recursive: true });
   }

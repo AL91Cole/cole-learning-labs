@@ -1,4 +1,4 @@
-import {normalizeNetworkBench} from './network-bench.js?release=20261102-inbox';
+import {normalizeNetworkBench} from './network-bench.js?release=20261102-arcade';
 /** Original local networking adaptations. No live network, capture, or emulator calls. */
 const code=id=>typeof id==='string'?id.replaceAll('-','').toUpperCase():'';
 const option=(value,label)=>[value,label];

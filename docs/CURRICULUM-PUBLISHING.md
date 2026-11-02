@@ -1,5 +1,7 @@
 # Curriculum publishing policy
 
+Current release: learning content is intentionally open without an account through the reviewed build setting. The original restricted delivery policy below is retained for preview mode. See [Open learning release](OPEN-LEARNING-RELEASE.md) for the one-setting restoration procedure, published scope and unchanged account/data boundaries.
+
 Review imported curriculum outside the public source checkout before copying any approved asset into the project. Keep confidential teacher material in the school's approved private document or assignment system with access restricted to authorized educators. Do not place originals, archives, private keys, completed student work, or confidential assessment material in this public repository, its issues, pull requests, or previews.
 
 The catalogue contains **29 investigations**: 8 Hardware & ServiceDesk, 6 Network & Operating Systems, 6 AI Literacy & Audit, 6 Ethical Hacking & Penetration Testing, and 3 Coding Sandbox. Eight support requests are detailed and five are incomplete. The incomplete requests are INC-101, INC-103, INC-108, NET-201 and NET-205.

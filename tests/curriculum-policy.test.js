@@ -122,6 +122,7 @@ test('the build rejects a private filename even when it is accidentally added to
     .replace("'./tier-bundles.mjs'",JSON.stringify(new URL('../scripts/tier-bundles.mjs',import.meta.url).href));
   assert.notEqual(modified, source, 'The fixture must introduce an otherwise explicitly approved private-named file.');
   await put(root, 'scripts/build.mjs', modified);
+  await put(root, 'scripts/public-release.mjs', await readFile(new URL('../scripts/public-release.mjs',import.meta.url),'utf8'));
   await put(root, 'scripts/curriculum-policy.mjs', await readFile(new URL('../scripts/curriculum-policy.mjs', import.meta.url), 'utf8'));
   const { buildSite } = await import(pathToFileURL(path.join(root, 'scripts/build.mjs')).href);
   await assert.rejects(buildSite({ sourceRoot: root }), /Private curriculum[\s\S]*Answer_Keys/);

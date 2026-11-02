@@ -3,7 +3,8 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_FILES, buildSite } from './build.mjs';
+import { PUBLIC_FILES, publicFilesFor, buildSite } from './build.mjs';
+import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -83,8 +84,9 @@ async function notFound(req, res, sourceRoot) {
   res.end(req.method === 'HEAD' ? undefined : body);
 }
 
-export function createPreviewServer({ sourceRoot = path.join(PROJECT_ROOT,'dist') } = {}) {
-  assertPublicCurriculumPaths(PUBLIC_FILES);
+export function createPreviewServer({ sourceRoot = path.join(PROJECT_ROOT,'dist'), publicLabAccess = PUBLIC_LAB_ACCESS } = {}) {
+  const openLabs=labsAreOpen(publicLabAccess),FILES=new Set(publicFilesFor(publicLabAccess));
+  assertPublicCurriculumPaths([...FILES]);
   if(path.resolve(sourceRoot)===PROJECT_ROOT)throw new Error('Preview the compiled free artifact, never the source checkout.');
   return http.createServer(async (req, res) => {
     let pathname;
@@ -99,7 +101,7 @@ export function createPreviewServer({ sourceRoot = path.join(PROJECT_ROOT,'dist'
     if (!['GET', 'HEAD'].includes(req.method)) {
       res.writeHead(405, { ...BASE_HEADERS, Allow: 'GET, HEAD' }); res.end('Method not allowed'); return;
     }
-    if(MEMBER_PATHS.has(pathname)){
+    if(MEMBER_PATHS.has(pathname)&&!(openLabs&&/^\/(?:student-workbook|practice-quizzes)(?:\.html)?$/.test(pathname))){
       res.writeHead(302,{...BASE_HEADERS,Location:'/#membership'});res.end();return;
     }
     const filename = ROUTES.get(pathname) || pathname.slice(1);

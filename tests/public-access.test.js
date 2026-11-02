@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import {once} from 'node:events';
 import {readFile,readdir} from 'node:fs/promises';
-import {buildSite,PUBLIC_FILES} from '../scripts/build.mjs';
+import {buildSite,publicFilesFor} from '../scripts/build.mjs';
 import {createPreviewServer} from '../scripts/serve.mjs';
 import {CATALOG} from '../src/lab-catalog.js';
 import {FREE_LAB_IDS,ELEMENTARY_LAB_IDS} from '../src/access-policy.js';
@@ -18,11 +18,11 @@ const request=(server,url)=>new Promise((resolve,reject)=>{
 });
 
 test('the actual public artifact has no raw source or paid resource endpoint, including direct legacy URLs',async t=>{
-  const built=await buildSite(),server=createPreviewServer({sourceRoot:built.directory});
+  const built=await buildSite({publicLabAccess:'preview'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'preview'});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
   assert.deepEqual((await readdir(new URL('../dist/src/',import.meta.url))).filter(file=>file.endsWith('.js')).sort(),['app.js','secure-reports.js']);
-  assert.equal(PUBLIC_FILES.some(file=>file.startsWith('memberships/')||file.endsWith('.pdf')),false);
+  assert.equal(publicFilesFor('preview').some(file=>file.startsWith('memberships/')||file.endsWith('.pdf')),false);
   for(const path of ['/src/scenarios.js','/src/expanded-labs.js','/src/coding-lab.js','/src/coding-workbench.js','/src/sign-in.js','/src/owner-preview.js','/src/owner-preview.js?ownerPreview=true','/src/coding-sandbox.js','/src/lesson-plans.js','/src/elementary-labs.js','/src/block-workshop.js','/src/assembly-builder.js','/src/inbox-defender.js',
     '/memberships/worker.js','/memberships/dist/worker.mjs','/learn/src/app.js','/assets/cole-learning-labs-pop-quizzes.pdf']){
     const result=await request(server,path);assert.equal(result.status,404,path);
@@ -39,6 +39,24 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   assert.equal((html.match(/href="#signin">Sign in<\/a>/gu)||[]).length,2,'Navigation and footer use the shared internal entry.');
   assert.equal(html.includes('Owner sign in'),false);assert.equal(html.includes('codex-private-owner-preview'),false,'The ordinary navigation does not jump straight to a separate owner page.');
   assert.ok(app.body.includes('Subscriber sign-in is being prepared. Existing authorized access remains available.'));
+});
+
+test('open-public delivery includes every reviewed lab without raw modules, owner capabilities or collection pages',async t=>{
+  const built=await buildSite({publicLabAccess:'open'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'open'});
+  server.listen(0,'127.0.0.1');await once(server,'listening');
+  t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
+  const app=await request(server,'/src/app.js');assert.equal(app.status,200);
+  assert.ok(app.body.includes('Open access is on. All '));
+  assert.ok(app.body.includes('MY CREATIVE STUDIO'));assert.ok(app.body.includes('The fictional prize desk mixes up scores of 50 and 100.'));
+  assert.ok(app.body.includes('Game on. Build a fix as you play.'));
+  assert.doesNotMatch(app.body,/Owner preview navigation\./);
+  assert.ok(Buffer.byteLength(app.body)<1_300_000,'The full open application keeps a separate reviewed size budget.');
+  for(const path of ['/src/arcade.js','/src/arcade-levels.js','/src/arcade-model.js','/src/scenarios.js','/src/owner-preview.js','/memberships/worker.js','/learn/src/app.js'])assert.equal((await request(server,path)).status,404,path);
+  for(const path of ['/classroom','/teacher/'])assert.equal((await request(server,path)).status,302,path);
+  for(const path of ['/student-workbook','/practice-quizzes','/assets/cole-learning-labs-pop-quizzes.pdf'])assert.equal((await request(server,path)).status,200,path);
+  const unavailable=await request(server,'/api/classroom');assert.equal(unavailable.status,503);
+  const redirects=await readFile(new URL('../dist/_redirects',import.meta.url),'utf8');
+  assert.doesNotMatch(redirects,/^\/(?:student-workbook|practice-quizzes)/m);assert.match(redirects,/\/teacher\/ \/#membership/);
 });
 
 test('the public cloud reply gateway rejects every member case and elementary activity before touching the private service',async()=>{
