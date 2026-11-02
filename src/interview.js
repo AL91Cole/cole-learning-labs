@@ -1,7 +1,7 @@
-import { resolveQuestion } from './conversation.js?release=20261102-arcade';
-import { pcActivity } from './pc-activity.js?release=20261102-arcade';
-import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261102-arcade';
-import { requesterGeneralReply, requesterGeneralBoundary, withRequesterTaskNudge } from './requester-general.js?release=20261102-arcade';
+import { resolveQuestion } from './conversation.js?release=20261102-polish';
+import { pcActivity } from './pc-activity.js?release=20261102-polish';
+import { requesterPersonaReply, requesterUnknownReply, requesterCasualFollowUp } from './requester-persona.js?release=20261102-polish';
+import { requesterGeneralReply, requesterGeneralBoundary, withRequesterTaskNudge } from './requester-general.js?release=20261102-polish';
 /** Offline practice interview. Replies describe supplied fictional case facts, never a live person or AI service. */
 const EVENT_PREFIX = 'Interview v1: ';
 const QUESTION_MAX = 240;

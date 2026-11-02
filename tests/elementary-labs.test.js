@@ -215,7 +215,7 @@ test('rendering, checking, resetting and disposing never consult network, browse
   }finally{for(const [name,descriptor] of descriptors){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}}
   const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/u);
-  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./block-workshop.js?release=20261102-arcade','./owner-preview.js?release=20261102-arcade'],'Only the reviewed local workshop and build-time navigation flag are imported.');
+  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./block-workshop.js?release=20261102-polish','./owner-preview.js?release=20261102-polish'],'Only the reviewed local workshop and build-time navigation flag are imported.');
   const workshop=await readFile(new URL('../src/block-workshop.js',import.meta.url),'utf8');
   assert.doesNotMatch(workshop,/^import\b|\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/mu,'The workshop adds no imported runtime, persistence or network capability.');
 });

@@ -36,9 +36,11 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   assert.equal(app.body.includes('MY CREATIVE STUDIO'),false);
   assert.equal(app.body.includes('Memberships are being prepared.'),true);
   const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');assert.ok(html.includes('src/app.js'));
-  assert.equal((html.match(/href="#signin">Sign in<\/a>/gu)||[]).length,2,'Navigation and footer use the shared internal entry.');
+  assert.equal((html.match(/href="#signin">Approved account access<\/a>/gu)||[]).length,1,'The footer retains the shared internal entry.');
+  assert.doesNotMatch(html.match(/<nav id="site-nav"[\s\S]*?<\/nav>/u)?.[0],/#signin|#membership/u);
   assert.equal(html.includes('Owner sign in'),false);assert.equal(html.includes('codex-private-owner-preview'),false,'The ordinary navigation does not jump straight to a separate owner page.');
   assert.ok(app.body.includes('Subscriber sign-in is being prepared. Existing authorized access remains available.'));
+  assert.doesNotMatch(await readFile(new URL('../dist/sitemap.xml',import.meta.url),'utf8'),/\/(?:student-workbook|practice-quizzes)<\/loc>/u,'Restricted previews must not advertise unavailable companions.');
 });
 
 test('open-public delivery includes every reviewed lab without raw modules, owner capabilities or collection pages',async t=>{
@@ -46,14 +48,14 @@ test('open-public delivery includes every reviewed lab without raw modules, owne
   server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
   const app=await request(server,'/src/app.js');assert.equal(app.status,200);
-  assert.ok(app.body.includes('Open access is on. All '));
+  assert.ok(app.body.includes('All labs are open without an account.'));
   assert.ok(app.body.includes('MY CREATIVE STUDIO'));assert.ok(app.body.includes('The fictional prize desk mixes up scores of 50 and 100.'));
   assert.ok(app.body.includes('Game on. Build a fix as you play.'));
   assert.doesNotMatch(app.body,/Owner preview navigation\./);
   assert.ok(Buffer.byteLength(app.body)<1_300_000,'The full open application keeps a separate reviewed size budget.');
   for(const path of ['/src/arcade.js','/src/arcade-levels.js','/src/arcade-model.js','/src/scenarios.js','/src/owner-preview.js','/memberships/worker.js','/learn/src/app.js'])assert.equal((await request(server,path)).status,404,path);
   for(const path of ['/classroom','/teacher/'])assert.equal((await request(server,path)).status,302,path);
-  for(const path of ['/student-workbook','/practice-quizzes','/assets/cole-learning-labs-pop-quizzes.pdf'])assert.equal((await request(server,path)).status,200,path);
+  for(const path of ['/student-workbook','/practice-quizzes','/secure-reports','/ai-use-notice','/assets/cole-learning-labs-pop-quizzes.pdf'])assert.equal((await request(server,path)).status,200,path);
   const unavailable=await request(server,'/api/classroom');assert.equal(unavailable.status,503);
   const redirects=await readFile(new URL('../dist/_redirects',import.meta.url),'utf8');
   assert.doesNotMatch(redirects,/^\/(?:student-workbook|practice-quizzes)/m);assert.match(redirects,/\/teacher\/ \/#membership/);

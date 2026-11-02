@@ -8,8 +8,12 @@ test('the question composer exposes a persistent privacy warning and accessible 
   assert.match(app,/<textarea[^>]*id="student-question"[^>]*aria-describedby="question-help"/u);
   const help=app.match(/<p id="question-help"[^>]*>(.*?)<\/p>/u)?.[1];
   assert.ok(help);
-  for(const phrase of ['fictional details','names','contact details','student IDs','passwords','health information','private incidents'])assert.ok(help.includes(phrase),phrase);
-  assert.match(help,/<a href="ai-use-notice.html"[^>]*>AI use and limits<\/a>/u);
+  assert.match(help,/fictional details only — built-in offline replies are active/u);
+  const details=app.match(/<details class="requester-privacy">(.*?)<\/details>/u)?.[1];
+  assert.ok(details);
+  for(const phrase of ['names','contact details','student IDs','passwords','health information','private incidents','Cloudflare'])assert.ok(details.includes(phrase),phrase);
+  assert.match(details,/<a href="ai-use-notice.html"[^>]*>AI use and limits/u);
+  assert.doesNotMatch(app,/<details class="requester-privacy" open/u);
   assert.match(app,/Online replies start off\. Keep personal details out\./u);
   const disclosure=app.match(/<p id="requester-cloud-help"[^>]*>(.*?)<\/p>/u)?.[1];
   assert.ok(disclosure);

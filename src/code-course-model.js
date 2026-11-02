@@ -1,4 +1,4 @@
-import {codeQuestMeta} from './code-quest-catalog.js?release=20261102-arcade';
+import {codeQuestMeta} from './code-quest-catalog.js?release=20261102-polish';
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 const output={python:'print(%)',javascript:'console.log(%);',java:'System.out.println(%);',cpp:'std::cout << (%) << "\\n";',csharp:'System.Console.WriteLine(%);',typescript:'console.log(%);',go:'fmt.Println(%)',rust:'println!("{}", %);',swift:'print(%)',kotlin:'println(%)',ruby:'puts(%)'};
 const variables={python:'energy = □',javascript:'const energy = □;',java:'int energy = □;',cpp:'int energy = □;',csharp:'int energy = □;',typescript:'const energy: number = □;',go:'energy := □',rust:'let energy = □;',swift:'let energy = □',kotlin:'val energy = □',ruby:'energy = □'};

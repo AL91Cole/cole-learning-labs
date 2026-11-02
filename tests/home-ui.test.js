@@ -144,6 +144,15 @@ test('time filters use actual estimates and combine with pathway, grade, and tex
   assert.equal(h.renders,0);assert.equal(h.elements.get('#lab-search').focused,1);assert.equal(h.elements.get('#grade-filter').value,'all');assert.equal(h.elements.get('#duration-filter').value,'all');assert.equal(h.elements.get('#lab-search').value,'');assert.equal(vm.runInContext('libraryMinutes',h.context),'all');assert.equal(vm.runInContext('libraryTrack',h.context),'all');assert.equal(vm.runInContext('libraryGrade',h.context),'all');assert.equal(vm.runInContext('libraryQuery',h.context),'');
 });
 
+test('catalog filters and tickets come before full course and game sections',()=>{
+  const html=harness().context.library();
+  const toolbar=html.indexOf('class="library-toolbar"'),results=html.indexOf('id="lab-results"');
+  assert.ok(toolbar>=0&&results>toolbar);
+  for(const section of ['id="basics-heading"','id="game-entry-title"','id="elementary-entry-heading"','id="sandbox-library-title"']){
+    assert.ok(html.indexOf(section)>results,section);
+  }
+});
+
 test('pathway changes keep the existing toolbar and focus instead of replacing the page',()=>{
   const h=harness(),button=h.pathwayButtons.find(item=>item.dataset.track==='hardware');button.focus();
   h.context.filterLibraryTrack('hardware');

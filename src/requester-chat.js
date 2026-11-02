@@ -1,7 +1,7 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261102-arcade';
-import {requesterTopic} from './requester-topics.js?release=20261102-arcade';
-import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261102-arcade';
-import {withRequesterTaskNudge} from './requester-general.js?release=20261102-arcade';
+import {requesterTextIsPrivate} from './interview.js?release=20261102-polish';
+import {requesterTopic} from './requester-topics.js?release=20261102-polish';
+import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261102-polish';
+import {withRequesterTaskNudge} from './requester-general.js?release=20261102-polish';
 
 // Page memory only: cloud contact requires an explicit choice each fresh page.
 const pagePreference={enabled:false};

@@ -1,5 +1,5 @@
-import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261102-arcade';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-arcade';
+import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261102-polish';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-polish';
 
 // Authored, fictional activities. Each mount owns its choices; nothing is saved
 // or sent. These local practice checks are not grades or identity verification.
@@ -152,7 +152,7 @@ function bodyFor(lab,state){
 
 export function renderElementaryCatalogue({band}={}){
   const selected=bands.includes(band)?band:null;
-  return `<section class="wrap page-intro elementary-catalogue"><p class="eyebrow">Explore and try · Free activities</p><h1>Small steps.<br><em>Try a technology idea.</em></h1><p>Fifteen short, fictional activities for kindergarten through grade 6. These are suggested starting points; an adult can help with reading and choosing a suitable activity.</p><p>Choose, check and try again. These activities have no chat box, learner account, upload, score or device saving.</p>${selected?'<p><a href="#explore">← All age bands</a></p>':''}${bands.filter(value=>!selected||value===selected).map(value=>`<section class="elementary-band" aria-labelledby="elementary-band-${bandCode(value)}"><h2 id="elementary-band-${bandCode(value)}">${gradeLabel(value)}</h2><div class="elementary-catalogue-grid">${ELEMENTARY_LABS.filter(lab=>lab.band===value).map(lab=>`<a class="basics-card elementary-card" href="#explore/${lab.id}"><span class="eyebrow">${esc(topics[lab.track])}</span><h3>${esc(lab.title)}</h3><p>${esc(lab.summary)}</p><span>${lab.minutes} min · Try this activity →</span></a>`).join('')}</div></section>`).join('')}<p><a href="#labs">Grades 7–12 and other labs →</a></p></section>`;
+  return `<section class="wrap page-intro elementary-catalogue"><p class="eyebrow">Explore and try · Free activities</p><h1>Small steps.<br><em>Try a technology idea.</em></h1><p>Pick a picture challenge, solve a puzzle or help a pretend robot! Choose your grade below. You can ask a grown-up to read along.</p><p>Make a choice, check it and try again. You can play without an account.</p>${selected?'<p><a href="#explore">← All age bands</a></p>':''}${bands.filter(value=>!selected||value===selected).map(value=>`<section class="elementary-band" aria-labelledby="elementary-band-${bandCode(value)}"><h2 id="elementary-band-${bandCode(value)}">${gradeLabel(value)}</h2><div class="elementary-catalogue-grid">${ELEMENTARY_LABS.filter(lab=>lab.band===value).map(lab=>`<a class="basics-card elementary-card" href="#explore/${lab.id}"><span class="eyebrow">${esc(topics[lab.track])}</span><h3>${esc(lab.title)}</h3><p>${esc(lab.summary)}</p><span>${lab.minutes} min · Try this activity →</span></a>`).join('')}</div></section>`).join('')}<p><a href="#labs">Grades 7–12 and other labs →</a></p></section>`;
 }
 
 function optionalWorkshop(lab){
@@ -164,7 +164,7 @@ export function renderElementaryLab(id){
   const lab=knownLab(id);
   if(!lab)return '<section class="wrap page-intro"><h1>Choose an available activity.</h1><a href="#explore">All kindergarten–grade 6 activities →</a></section>';
   const workshopJump=workshopLabIds.has(lab.id)?'<p><button type="button" class="button button-outline" data-elementary-action="workshop">Open block workshop</button></p>':'';
-  return `<section class="wrap elementary-lab" data-elementary-lab="${lab.id}" data-elementary-complete="false" aria-labelledby="elementary-title"><header><a href="#explore?band=${bandCode(lab.band)}">← ${gradeLabel(lab.band)} activities</a><p class="eyebrow">${esc(gradeLabel(lab.band))} · ${esc(topics[lab.track])} · About ${lab.minutes} minutes</p><h1 id="elementary-title">${esc(lab.title)}</h1><p>${esc(lab.goal)}</p>${workshopJump}</header><div data-elementary-body>${bodyFor(lab,blankState())}</div><p class="elementary-feedback" data-elementary-feedback role="status" aria-live="polite" aria-atomic="true">Choose an answer, then check it.</p><div class="elementary-actions"><button type="button" class="button button-outline" data-elementary-action="reset">Start this activity again</button><a href="#explore">Choose another activity →</a></div><p class="elementary-privacy">Use made-up information. Your choices stay in this activity’s page memory and disappear when you leave it. No real computer, network, AI service or account is controlled by these picture models.</p>${optionalWorkshop(lab)}</section>`;
+  return `<section class="wrap elementary-lab" data-elementary-lab="${lab.id}" data-elementary-complete="false" aria-labelledby="elementary-title"><header><a href="#explore?band=${bandCode(lab.band)}">← ${gradeLabel(lab.band)} activities</a><p class="eyebrow">${esc(gradeLabel(lab.band))} · ${esc(topics[lab.track])} · About ${lab.minutes} minutes</p><h1 id="elementary-title">${esc(lab.title)}</h1><p>${esc(lab.goal)}</p>${workshopJump}</header><div data-elementary-body>${bodyFor(lab,blankState())}</div><p class="elementary-feedback" data-elementary-feedback role="status" aria-live="polite" aria-atomic="true">Choose an answer, then check it.</p><div class="elementary-actions"><button type="button" class="button button-outline" data-elementary-action="reset">Start this activity again</button><a href="#explore">Choose another activity →</a></div><p class="elementary-privacy">This is a pretend play space. Use made-up information. Leaving starts a fresh game next time.</p>${optionalWorkshop(lab)}</section>`;
 }
 
 export function mountElementaryLab(root,{id}={}){
@@ -215,7 +215,7 @@ export function mountElementaryLab(root,{id}={}){
     }else correct=selected.id===round.answer;
     if(!correct){paint(lab.kind==='predict'?`The model showed ${state.result}. Compare it with your prediction, then choose and test again.`:'That step does not fit yet. Look at the picture and the question, then try a different choice.',{tone:'retry',focus:'[data-elementary-action="check"]'});return;}
     state.checked=true;const complete=rounds.every(round=>round.checked);
-    paint(round.explanation+(complete?' Practice finished; this is not a grade.':''),{tone:'success',focus:complete?'[data-elementary-finished]':'[data-elementary-action="next"]'});
+    paint('✓ That’s right! '+round.explanation+(complete?' You finished all three challenges!':''),{tone:'success',focus:complete?'[data-elementary-finished]':'[data-elementary-action="next"]'});
   }
   shell.addEventListener('click',click);
   paint('Choose an answer, then check it.');

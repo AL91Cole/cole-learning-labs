@@ -23,7 +23,7 @@ function fixture(){
     mountFoundationLab(root,options){calls.mounts.push(options);return {dispose(){calls.disposals++;},cancelInteraction(){}};},
     openReport(...args){calls.reports.push(args);},routeLink:(route,label)=>`<a href="#${route}">${label}</a>`});
   vm.runInContext(extract('function foundationRecordFor(','\nlet storageAvailable='),context);
-  vm.runInContext(extract('function membershipGate(','\nfunction checkCapstoneState('),context);
+  vm.runInContext(extract('function activityNotFound(','\nfunction checkCapstoneState('),context);
   vm.runInContext(extract('function renderRoute(','\n$(\'#menu-toggle\').addEventListener'),context);
   vm.runInContext(source.split('\n').find(line=>line.startsWith("window.addEventListener('beforeunload'")),context);
   vm.runInContext(source.split('\n').find(line=>line.startsWith("window.addEventListener('pagehide'")),context);
@@ -91,6 +91,6 @@ test('private beginner work gets an unload warning even when investigation devic
 
 test('unknown and prototype-shaped beginner routes cannot mount a lab',()=>{
   const f=fixture();for(const id of ['__proto__','constructor','NO-999','']){
-    f.render(id);assert.equal(f.calls.mounts.length,0);assert.match(f.elements.get('#main').innerHTML,/That activity is unavailable/);
+    f.render(id);assert.equal(f.calls.mounts.length,0);assert.match(f.elements.get('#main').innerHTML,/Activity not found/);
   }
 });

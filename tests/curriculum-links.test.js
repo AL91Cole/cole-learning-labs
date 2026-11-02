@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
 const start=source.indexOf('function curriculumDownloads('),end=source.indexOf('\nfunction educators(',start);
 assert.ok(start>=0&&end>start);
-const context=vm.createContext({MEMBER_CONTENT:true});
+const context=vm.createContext({MEMBER_CONTENT:true,PUBLIC_LABS_OPEN:false});
 vm.runInContext(source.slice(start,end)+'\nglobalThis.curriculumLinks=curriculumDownloads;',context);
 
 test('protected member companions offer working web alternatives before the optional original PDFs',async()=>{
@@ -22,6 +22,14 @@ test('protected member companions offer working web alternatives before the opti
   assert.match(html,/not automatically saved, uploaded or graded/u);
   assert.match(html,/check the print preview/u);
   assert.match(html,/not a tagged PDF/u);
+});
+
+test('open teaching resources describe public practice materials without membership copy',()=>{
+  context.PUBLIC_LABS_OPEN=true;
+  const html=context.curriculumLinks();
+  assert.match(html,/practice materials are open to everyone/u);
+  assert.doesNotMatch(html,/membership practice materials/u);
+  context.PUBLIC_LABS_OPEN=false;
 });
 
 test('the public guide offers a membership notice instead of companion download links',()=>{

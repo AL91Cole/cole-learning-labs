@@ -1,4 +1,4 @@
-import {ARCADE_LEVELS,PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261102-arcade';
+import {ARCADE_LEVELS,PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261102-polish';
 export const ROVER_COMMANDS=Object.freeze({N:'↑ North',E:'→ East',S:'↓ South',W:'← West',E2:'→ → Repeat east ×2',S2:'↓ ↓ Repeat south ×2',IF:'If east blocked: south; otherwise east'});
 export const arcadeLevel=id=>typeof id==='string'&&Object.hasOwn(ARCADE_LEVELS,id)?ARCADE_LEVELS[id]:null;
 export const arcadePart=id=>PARTS.find(part=>part.id===id)||null;
