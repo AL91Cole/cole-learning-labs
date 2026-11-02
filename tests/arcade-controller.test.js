@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {renderArcadeGame,mountArcade,renderArcadeCatalogue,mountArcadeCatalogue} from '../src/arcade.js';
 import {arcadeMeta,ARCADE_CATALOG} from '../src/arcade-catalog.js';
+import {arcadeLevel} from '../src/arcade-model.js';
 import {learningRoute} from '../src/learning-tools.js';
 import {routeAccess} from '../src/access-policy.js';
 function fixture(id){
@@ -30,6 +31,20 @@ test('every network tile announces its four-column location and current ports af
   assert.match(labels(f.host.innerHTML)[0][2],/connects right and left/u);
   assert.match(labels(f.host.innerHTML)[4][2],/grid row 2, column 1/u);
   cleanup();
+});
+
+test('all rover rooms retain accurate five-column cargo and wall text maps',()=>{
+  const location=cell=>`row ${Math.floor(cell/5)+1}, column ${cell%5+1}`;
+  for(const game of ARCADE_CATALOG.filter(item=>item.track==='coding')){
+    const f=fixture(game.id),cleanup=mountArcade(f.root,{id:game.id});
+    for(const [index,room]of arcadeLevel(game.id).fixtures.entries()){
+      if(index)f.click(f.button('room',index));
+      assert.doesNotMatch(f.host.innerHTML,/Infinity|NaN/u,game.id);
+      assert.ok(f.host.innerHTML.includes('Cargo: '+room.stars.map(location).join('; ')+'.'),game.id+': cargo');
+      assert.ok(f.host.innerHTML.includes('Walls: '+(room.blocks.map(location).join('; ')||'none')+'.'),game.id+': walls');
+    }
+    cleanup();
+  }
 });
 test('delegated game controls update actual boards, reject detached/outside events and dispose cleanly',()=>{
   const f=fixture('packet-post'),cleanup=mountArcade(f.root,{id:'packet-post'}),old=f.button('rotate',0);

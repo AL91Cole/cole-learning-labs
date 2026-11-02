@@ -39,9 +39,12 @@ their sitemap.
 
 ## Verification
 
-- Full application suite: 1,768 passed, two Windows link-related skips, no failures.
+- Full application suite: 1,769 passed, two Windows link-related skips, no failures.
 - Final delivery, CSS, indexing, route, catalog and arcade checks: 42 passed,
   one Windows link-related skip, no failures.
+- Rover-map, arcade-model/controller and recovery regressions: 39 passed. All
+  coding-game rooms retain five-column cargo/wall coordinates; pipe locations
+  use four columns without changing the unary rover map callback.
 - Syntax check: 99 application/server modules. Production build: 28 reviewed files.
 - Desktop Chrome and a 390 × 844 browser viewport: catalog layout, five-link
   navigation, course jump focus, readable metadata, no horizontal overflow, and
