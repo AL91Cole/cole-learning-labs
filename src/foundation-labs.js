@@ -1,7 +1,7 @@
-import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-playflow';
-import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261102-playflow';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-playflow';
-import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261102-playflow';
+import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-reach';
+import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261102-reach';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-reach';
+import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261102-reach';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sections=['explore','practice','check'];

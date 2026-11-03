@@ -62,6 +62,13 @@ const solutions={
 };
 const finish=view=>{for(const [index,answer] of solutions[view.id].entries()){view.click('choose',answer);assert.equal(view.progress,index,'Selecting cannot award completion.');view.click('check');assert.equal(view.progress,index+1);if(index<2)view.click('next');}assert.equal(view.complete,true);};
 
+test('all fifteen elementary completion signals require the actual complete set of challenges',()=>{
+  for(const lab of ELEMENTARY_LABS){let completed=0;const view=fixture(lab.id,{mount:(root,options)=>mountElementaryLab(root,{...options,onComplete:()=>completed++})});
+    for(const [index,answer] of solutions[lab.id].entries()){view.click('choose',answer);assert.equal(completed,0);view.click('check');assert.equal(completed,index===2?1:0);if(index<2)view.click('next');}
+    view.controller.dispose();
+  }
+});
+
 test('the authored collection contains three suggested bands and five distinct topics in each, with immutable content',()=>{
   assert.equal(ELEMENTARY_LABS.length,15);assert.equal(new Set(ELEMENTARY_LABS.map(lab=>lab.id)).size,15);
   for(const band of ['K–1','2–3','4–6']){
@@ -221,7 +228,7 @@ test('rendering, checking, resetting and disposing never consult network, browse
   }finally{for(const [name,descriptor] of descriptors){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}}
   const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/u);
-  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./activity-guidance.js?release=20261102-playflow','./block-workshop.js?release=20261102-playflow','./owner-preview.js?release=20261102-playflow'],'Only the reviewed local guidance, workshop and build-time navigation flag are imported.');
+  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./activity-guidance.js?release=20261102-reach','./block-workshop.js?release=20261102-reach','./owner-preview.js?release=20261102-reach'],'Only the reviewed local guidance, workshop and build-time navigation flag are imported.');
   const workshop=await readFile(new URL('../src/block-workshop.js',import.meta.url),'utf8');
   assert.doesNotMatch(workshop,/^import\b|\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/mu,'The workshop adds no imported runtime, persistence or network capability.');
 });

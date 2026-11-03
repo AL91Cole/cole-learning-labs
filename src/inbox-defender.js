@@ -1,4 +1,4 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261102-playflow';
+import {renderLearningBrief} from './activity-guidance.js?release=20261102-reach';
 // Authored, browser-local practice. This module has no service, account or lab-record capability.
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
@@ -65,7 +65,7 @@ export function renderInboxDefender() {
   return '<section class="wrap inbox-defender" aria-labelledby="inbox-game-title"><header class="id-header"><div><p class="id-kicker">Free mission · Grades K–12 · About 8 minutes</p><h1 id="inbox-game-title">Inbox Defender</h1><p>You’re on message patrol. Inspect, decide, protect.</p></div><a href="#labs">← All labs</a></header><p class="id-boundary">Fictional practice only. No links open, accounts change or reports send. Progress stays in this page and resets when you leave.</p><p class="sr-only" data-inbox-announcement role="status" aria-live="polite" aria-atomic="true"></p>'+renderLearningBrief({first:'Open the evidence clues before choosing what to do with a message.',target:'inbox-evidence',action:'Show me the evidence',steps:['Read the fictional message. Its buttons and links stay safely closed.','Inspect the clues and compare them with the request.','Choose a response, check it and work through five messages.']})+'<div data-inbox-game>'+gameContents(initialInboxGame())+'</div></section>';
 }
 const mounts = new WeakMap();
-export function mountInboxDefender(root) {
+export function mountInboxDefender(root,{onComplete=()=>{}}={}) {
   mounts.get(root)?.();
   const host = root?.querySelector?.('[data-inbox-game]');
   if (!host) return () => {};
@@ -77,6 +77,7 @@ export function mountInboxDefender(root) {
     const before = state;
     state = inboxGameAction(state, button.dataset.idAction, button.dataset.idValue);
     if (state === before) return;
+    if(state.finished)onComplete();
     host.innerHTML = gameContents(state);
     // Replaced controls keep keyboard focus; round changes announce the new subject.
     const changedRound = button.dataset.idAction==='next' || button.dataset.idAction==='restart' || button.dataset.idAction==='mode';

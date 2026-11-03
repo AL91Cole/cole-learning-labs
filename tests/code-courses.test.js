@@ -57,3 +57,15 @@ test('the controller progresses from chips to typed function practice and handle
   f.type('<img src=x onerror=alert(1)>');assert.match(f.code.textContent,/<img src=x/);assert.doesNotMatch(f.host.innerHTML,/<img src=x/);f.click(f.button('check'));assert.match(f.host.innerHTML,/&lt;img src=x/);assert.doesNotMatch(f.host.innerHTML,/cq-pass/);
   f.type('*');f.click(f.button('check'));assert.match(f.host.innerHTML,/cq-pass/);const stale=f.button('next');cleanup();cleanup();assert.equal(f.listeners.size,0);f.click(stale);assert.equal(f.host.innerHTML,'');
 });
+
+test('all twelve quest controllers emit completion only after the complete eight-lesson path',()=>{
+  for(const quest of CODE_QUESTS){
+    const f=fixture(quest.id);let completed=0;const cleanup=mountCodeQuest(f.root,{id:quest.id,onComplete:()=>completed++});
+    for(let index=0;index<8;index++){
+      if(index<5)f.click(f.button('choose',answers(quest.id)[index]));
+      else {f.type(courseChip(quest.id,answers(quest.id)[index]));if(index===7)f.type(quest.id==='sql'?'DESC':'>=',true);}
+      f.click(f.button('check'));assert.equal(completed,0);f.click(f.button('next'));assert.equal(completed,index===7?1:0);
+    }
+    cleanup();
+  }
+});

@@ -1,6 +1,6 @@
-import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-playflow';
-import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261102-playflow';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-playflow';
+import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-reach';
+import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261102-reach';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-reach';
 
 // Authored, fictional activities. Each mount owns its choices; nothing is saved
 // or sent. These local practice checks are not grades or identity verification.
@@ -169,7 +169,7 @@ export function renderElementaryLab(id){
   return `<section class="wrap elementary-lab" data-elementary-lab="${lab.id}" data-elementary-complete="false" aria-labelledby="elementary-title"><header><a href="#explore?band=${bandCode(lab.band)}">← ${gradeLabel(lab.band)} activities</a><p class="eyebrow">${esc(gradeLabel(lab.band))} · ${esc(topics[lab.track])} · About ${lab.minutes} minutes</p><h1 id="elementary-title">${esc(lab.title)}</h1><p>${esc(lab.goal)}</p>${workshopJump}</header>${renderLearningBrief({first:"Pick an answer, then check it. It is okay to try again!",target:"elementary-answer",action:"Show me the choices",steps:["Look at the picture and listen or read the question.","Choose an answer, then check what happens.","Try all three challenges. Ask a grown-up to read along if you like."]})}<div data-elementary-body>${bodyFor(lab,blankState())}</div><p class="elementary-feedback" data-elementary-feedback role="status" aria-live="polite" aria-atomic="true">Choose an answer, then check it.</p><div class="elementary-actions"><button type="button" class="button button-outline" data-elementary-action="reset">Start this activity again</button><a href="#explore">Choose another activity →</a></div><p class="elementary-privacy">This is a pretend play space. Use made-up information. Leaving starts a fresh game next time.</p>${optionalWorkshop(lab)}</section>`;
 }
 
-export function mountElementaryLab(root,{id}={}){
+export function mountElementaryLab(root,{id,onComplete=()=>{}}={}){
   const lab=knownLab(id);
   if(!lab)return {dispose(){}};
   const shell=root?.querySelector?.('[data-elementary-lab]');
@@ -217,6 +217,7 @@ export function mountElementaryLab(root,{id}={}){
     }else correct=selected.id===round.answer;
     if(!correct){paint(lab.kind==='predict'?`The model showed ${state.result}. Compare it with your prediction, then choose and test again.`:'That step does not fit yet. Look at the picture and the question, then try a different choice.',{tone:'retry',focus:'[data-elementary-action="check"]'});return;}
     state.checked=true;const complete=rounds.every(round=>round.checked);
+    if(complete)onComplete();
     paint('✓ That’s right! '+round.explanation+(complete?' You finished all three challenges!':''),{tone:'success',focus:complete?'[data-elementary-finished]':'[data-elementary-action="next"]'});
   }
   shell.addEventListener('click',click);

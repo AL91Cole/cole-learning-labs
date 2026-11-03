@@ -1,6 +1,6 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261102-playflow';
-import {SCENARIOS} from './scenarios.js?release=20261102-playflow';
-import {initialWorkspaceState,normalizeWorkspaceState,applyWorkspaceAction,renderWorkspace,disposeWorkspace,getWorkspaceMission} from './workspaces.js?release=20261102-playflow';
+import {renderLearningBrief} from './activity-guidance.js?release=20261102-reach';
+import {SCENARIOS} from './scenarios.js?release=20261102-reach';
+import {initialWorkspaceState,normalizeWorkspaceState,applyWorkspaceAction,renderWorkspace,disposeWorkspace,getWorkspaceMission} from './workspaces.js?release=20261102-reach';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const TRACKS=Object.freeze({network:'Networking',ai:'AI literacy',security:'Cybersecurity'});
 export const practiceScenarioFor=id=>typeof id==='string'?SCENARIOS.find(scenario=>scenario.id===id&&Object.hasOwn(TRACKS,scenario.track))||null:null;

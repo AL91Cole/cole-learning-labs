@@ -16,6 +16,13 @@ function fixture(id){
   return {root,host,status,listeners,picture,frame,button:(action,value)=>buttons.find(b=>b.dataset.ga===action&&b.dataset.value===(value===undefined?undefined:String(value))),click:button=>listeners.get('click')?.({target:button})};
 }
 
+test('game completion signal requires the actual successful modeled run',()=>{
+  const f=fixture('garden-rover');let completed=0;const cleanup=mountArcade(f.root,{id:'garden-rover',animate:false,onComplete:()=>completed++});
+  f.click(f.button('run'));assert.equal(completed,0);
+  for(const command of ['E','E','E','E','S','S','S','S'])f.click(f.button('append',command));
+  assert.equal(completed,0);f.click(f.button('run'));assert.equal(completed,1);cleanup();
+});
+
 test('rover playback follows the computed trace without replacing focused controls and cancels stale frames',()=>{
   const f=fixture('garden-rover'),tasks=new Map();let id=0;
   const cleanup=mountArcade(f.root,{id:'garden-rover',animate:true,schedule:fn=>{tasks.set(++id,fn);return id;},cancel:key=>tasks.delete(key)});

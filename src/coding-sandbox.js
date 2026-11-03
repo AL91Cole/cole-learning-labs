@@ -1,8 +1,8 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261102-playflow';
-import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261102-playflow';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-playflow';
-import {createTextReport,createReportURLs} from './report-downloads.js?release=20261102-playflow';
-import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261102-playflow';
+import {renderLearningBrief} from './activity-guidance.js?release=20261102-reach';
+import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261102-reach';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-reach';
+import {createTextReport,createReportURLs} from './report-downloads.js?release=20261102-reach';
+import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261102-reach';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const drafts=new Map();

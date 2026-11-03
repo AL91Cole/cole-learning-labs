@@ -34,7 +34,7 @@ test('member curriculum cannot inherit a public shared download cache policy',()
     assert.equal(publicFilesFor('preview').includes(file),false);
   }
   assert.match(headers,/\/teacher\/\*\r?\n  Cache-Control: private, no-store/);
-  assert.deepEqual(JSON.parse(read('_routes.json')),{version:1,include:['/api/requester'],exclude:[]});
+  assert.deepEqual(JSON.parse(read('_routes.json')),{version:1,include:['/api/requester','/api/reach'],exclude:[]});
 });
 test('README repository pathway totals are derived from the complete source catalogue',()=>{
   const md=read('README.md').toString();

@@ -1,5 +1,5 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261102-playflow';
-import {executeCoding} from './coding-lab.js?release=20261102-playflow';
+import {renderLearningBrief} from './activity-guidance.js?release=20261102-reach';
+import {executeCoding} from './coding-lab.js?release=20261102-reach';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const SOURCE_LIMIT=4000;

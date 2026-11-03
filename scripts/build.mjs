@@ -24,7 +24,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/arcade-catalog.js', 'src/arcade-levels.js', 'src/arcade-model.js', 'src/arcade.js', 'src/arcade.css',
   'src/block-workshop.js', 'src/block-workshop.css', 'src/sign-in.js', 'src/sign-in.css',
   'src/teaching.js', 'src/teaching.css', 'src/lesson-plans.js', 'src/lesson-plans.css', 'src/experiments.js', 'src/experiments.css', 'src/learning-tools.js', 'src/capstone.js', 'src/capstone.css', 'src/requester-general.js',
-  'src/activity-guidance.js', 'src/activity-guidance.css', 'src/app.js', 'src/lab-tutorial.js', 'src/coding-sandbox.js', 'src/standards.js', 'src/lab-language.js', 'src/requester-persona.js', 'src/requester-library.js', 'src/requester-chat.js', 'src/requester-topics.js', 'src/requester-config.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js', 'src/workbench-interactions.js',
+  'src/reach-schema.js', 'src/reach-metrics.js', 'src/activity-guidance.js', 'src/activity-guidance.css', 'src/app.js', 'src/lab-tutorial.js', 'src/coding-sandbox.js', 'src/standards.js', 'src/lab-language.js', 'src/requester-persona.js', 'src/requester-library.js', 'src/requester-chat.js', 'src/requester-topics.js', 'src/requester-config.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js', 'src/workbench-interactions.js',
   'src/lab-improvements.js', 'src/improvement-schema.js', 'src/improvement-config.js',
   'src/privacy.js', 'src/interview.js', 'src/conversation.js', 'src/records.js', 'src/scenarios.js', 'src/workspaces.js', 'src/workspace-accessibility.js',
   'src/coding-studio.css', 'src/coding-studio.js', 'src/interactive-tools.css', 'src/interactive-tools.js', 'src/network-bench.js', 'src/network-diagrams.js', 'src/network-labs.js', 'src/network-packets.js', 'src/network-studio-model.js', 'src/network-studio.css', 'src/network-studio.js', 'src/network-visuals.css', 'src/network-visuals.js', 'src/practice-workbench.css', 'src/practice-workbench.js',
@@ -127,7 +127,7 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   // An access-mode change gets a new entry URL even when no source imports changed.
   content.set('index.html',Buffer.from(content.get('index.html').toString('utf8').replace(/(src\/app\.js\?release=[A-Za-z0-9_-]+)/u,'$1-'+publicLabAccess)));
   const routes = JSON.parse(content.get('_routes.json').toString('utf8'));
-  if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester'], exclude: [] })) throw new Error('Only the reviewed requester gateway may invoke API Functions; collection routes must stay excluded.');
+  if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester', '/api/reach'], exclude: [] })) throw new Error('Only the reviewed requester and gated reach endpoints may invoke API Functions; other collection routes must stay excluded.');
   const tier = await bundleTier({sourceRoot:root,member:openLabs,localOnly:openLabs,publicLabsOpen:openLabs});
   content.set('src/app.js',Buffer.from(tier.javascript));
   if(openLabs){const redirects=content.get('_redirects').toString('utf8').split('\n').filter(line=>!/^\/(?:student-workbook|practice-quizzes)(?:[\s/.])/.test(line)).join('\n');content.set('_redirects',Buffer.from(redirects));}

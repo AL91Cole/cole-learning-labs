@@ -1,46 +1,47 @@
-import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261102-playflow';
-import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261102-playflow';
-import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261102-playflow';
-import {renderCodeQuestEntry,renderCodeQuestHub,renderCodeQuest,mountCodeQuest} from './code-quests.js?release=20261102-playflow';
-import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-playflow';
-import {renderArcadeEntry,renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue} from './arcade.js?release=20261102-playflow';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-playflow';
-import {CATALOG} from './lab-catalog.js?release=20261102-playflow';
-import {renderSignIn} from './sign-in.js?release=20261102-playflow';
-import {renderInboxDefenderEntry,renderInboxDefender,mountInboxDefender} from './inbox-defender.js?release=20261102-playflow';
-import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261102-playflow';
-import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261102-playflow';
-import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261102-playflow';
-import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261102-playflow';
-import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261102-playflow';
-import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261102-playflow';
-import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261102-playflow';
-import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261102-playflow';
-import {SCENARIOS} from './scenarios.js?release=20261102-playflow';
-import {labLanguage} from './lab-language.js?release=20261102-playflow';
-import {requesterPersona} from './requester-persona.js?release=20261102-playflow';
-import {mountRequesterChat,resetRequesterPreference} from './requester-chat.js?release=20261102-playflow';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261102-playflow';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261102-playflow';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261102-playflow';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261102-playflow';
-import {cancelCodingWorkbench} from './coding-workbench.js?release=20261102-playflow';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261102-playflow';
-import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261102-playflow';
-import {privacyPage} from './privacy.js?release=20261102-playflow';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261102-playflow';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261102-playflow';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261102-playflow';
+import {mountReachMetrics,recordReachCompletion} from './reach-metrics.js?release=20261102-reach';
+import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261102-reach';
+import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261102-reach';
+import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261102-reach';
+import {renderCodeQuestEntry,renderCodeQuestHub,renderCodeQuest,mountCodeQuest} from './code-quests.js?release=20261102-reach';
+import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-reach';
+import {renderArcadeEntry,renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue} from './arcade.js?release=20261102-reach';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-reach';
+import {CATALOG} from './lab-catalog.js?release=20261102-reach';
+import {renderSignIn} from './sign-in.js?release=20261102-reach';
+import {renderInboxDefenderEntry,renderInboxDefender,mountInboxDefender} from './inbox-defender.js?release=20261102-reach';
+import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261102-reach';
+import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261102-reach';
+import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261102-reach';
+import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261102-reach';
+import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261102-reach';
+import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261102-reach';
+import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261102-reach';
+import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261102-reach';
+import {SCENARIOS} from './scenarios.js?release=20261102-reach';
+import {labLanguage} from './lab-language.js?release=20261102-reach';
+import {requesterPersona} from './requester-persona.js?release=20261102-reach';
+import {mountRequesterChat,resetRequesterPreference} from './requester-chat.js?release=20261102-reach';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261102-reach';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261102-reach';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261102-reach';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261102-reach';
+import {cancelCodingWorkbench} from './coding-workbench.js?release=20261102-reach';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261102-reach';
+import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261102-reach';
+import {privacyPage} from './privacy.js?release=20261102-reach';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261102-reach';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261102-reach';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261102-reach';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261102-playflow';
-import {hasLessonPlanWork,clearLessonPlanWork} from './lesson-plans.js?release=20261102-playflow';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261102-playflow';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261102-playflow';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261102-playflow';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261102-playflow';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261102-playflow';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261102-reach';
+import {hasLessonPlanWork,clearLessonPlanWork} from './lesson-plans.js?release=20261102-reach';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261102-reach';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261102-reach';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261102-reach';
+import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261102-reach';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261102-reach';
 
-let routeCleanup=null;
+let routeCleanup=null,reachMetrics=null;
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
 const esc = value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -65,8 +66,8 @@ function save(){storageAvailable=workStorage.save(store);if(!storageAvailable)sh
 function resetLocalSession(){resetLabImprovements();resetRequesterPreference();practiceStates=Object.create(null);networkStudioState=initialNetworkStudioState();codingStudioState=initialCodingStudioState();clearCodingSandboxWork();clearLessonPlanWork();foundationRecords=Object.create(null);workStorage.pause();classroomConnection?.dispose();classroomConnection=null;classroomSharingPaused=true;labView=null;storageKey=MEMBER_CONTENT?WORK_PREFIX:PUBLIC_WORK_PREFIX;workStorage=createWorkStorage({storage:deviceStorage,key:storageKey,scenarios:SCENARIOS});store={version:2,labs:{}};renderRoute(false);}
 function bindWorkPrivacy(s){mountWorkControls({host:$('#work-privacy'),manager:workStorage,getStore:()=>store,scenarioId:s.id,replaceStore:value=>{store=value;renderRoute(false);},onClear:cleared=>{resetLocalSession();showNotice(cleared?'Local lab data cleared. Downloads and previously submitted records are separate.':'This page’s work is cleared, but device deletion could not be confirmed. Clear this site’s data in browser settings before sharing the profile.');},onChange:()=>{bindWorkPrivacy(s);const status=$('.save-status');if(status)status.textContent=workStatus(store.labs[s.id]||{},workStorage);}});}
 window.addEventListener('storage',event=>{if(event.key===CLEAR_WORK_KEY&&event.newValue){resetLocalSession();showNotice('Local lab data was cleared in another tab. This page has stopped saving and sharing.');}});
-window.addEventListener('pagehide',()=>{resetLabImprovements();resetRequesterPreference();practiceStates=Object.create(null);networkStudioState=initialNetworkStudioState();codingStudioState=initialCodingStudioState();clearCodingSandboxWork();clearLessonPlanWork();foundationRecords=Object.create(null);labNavigation=null;disposeHardware($('#workspace'));routeCleanup?.();routeCleanup=null;reportCleanup?.();reportCleanup=null;classroomConnection?.dispose();$('#main')?.replaceChildren();if(!workStorage.persistent){labView=null;store={version:2,labs:{}};}});
-window.addEventListener('pageshow',event=>{if(event.persisted)renderRoute();});
+window.addEventListener('pagehide',()=>{reachMetrics?.dispose();resetLabImprovements();resetRequesterPreference();practiceStates=Object.create(null);networkStudioState=initialNetworkStudioState();codingStudioState=initialCodingStudioState();clearCodingSandboxWork();clearLessonPlanWork();foundationRecords=Object.create(null);labNavigation=null;disposeHardware($('#workspace'));routeCleanup?.();routeCleanup=null;reportCleanup?.();reportCleanup=null;classroomConnection?.dispose();$('#main')?.replaceChildren();if(!workStorage.persistent){labView=null;store={version:2,labs:{}};}});
+window.addEventListener('pageshow',event=>{if(event.persisted){reachMetrics=mountReachMetrics($('#main'),{ownerPreview:OWNER_PREVIEW});renderRoute();}});
 function hasCodeDraft(){const editor=$('#coding-editor');return !!editor&&currentLab?.track==='coding'&&editor.value!==store.labs[currentLab.id]?.state.code;}
 function preserveCodeDraft(){
   if(!hasCodeDraft())return;
@@ -362,7 +363,7 @@ function bindLab(s,route=null,{onModeChange=null}={}){
     const progress=firstPageProgress(s,r);
     if(!progress.ready){jumpToSection(1,true);showNotice(progress.message);$('#'+(!progress.asked||!progress.inquiry.complete?'student-question':!progress.symptoms?'symptoms':'plan')).focus();return;}
     if(r.notes.trim().length<15||r.reflection.trim().length<15){for(const field of ['notes','reflection'])writingError(field,r[field].trim().length<15?'Write a sentence for this answer.':'');$('#verify-result').textContent='Write a sentence about what you tried and a sentence explaining whether the evidence supports your idea. Then finish your investigation.';$('#'+(r.notes.trim().length<15?'notes':'reflection')).focus();return;}
-    r.verified=true;r.closed=true;save();refreshStatus();showNotice('Investigation finished. Review your report before exporting.');openReport(s,r);
+    r.verified=true;r.closed=true;recordReachCompletion('lab/'+s.id);save();refreshStatus();showNotice('Investigation finished. Review your report before exporting.');openReport(s,r);
   });
   $('#reading-toggle').addEventListener('click',event=>{const on=shell.classList.toggle('larger-reading');event.target.setAttribute('aria-pressed',String(on));});
   tabs.forEach((button,index)=>{
@@ -438,7 +439,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261102-playflow');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261102-reach');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -450,7 +451,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261102-playflow');
+      const cryptoModule=await import('./report-crypto.js?release=20261102-reach');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;
@@ -508,17 +509,17 @@ const improvementActivity=['lab','learn','practice','studio'].includes(page)?pag
 if(improvementActivity)html+='<div id="lab-improvement-summary" class="wrap"></div>';
 $('#main').innerHTML=html;document.title=`${title} · Cole Learning Labs`;$$('#site-nav a').forEach(a=>{const active=a.hash===`#${['lab','learn','sandbox','studio','practice','play','arcade','quests'].includes(page)?'labs':page}`;if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});$('#site-nav').classList.remove('open');$('#menu-toggle').setAttribute('aria-expanded','false');$('#menu-toggle').setAttribute('aria-label','Open navigation menu');
 if(page==='home')bindHome();
-if(page==='quests'&&id)routeCleanup=mountCodeQuest($('#main'),{id});
-if(page==='arcade')routeCleanup=id?mountArcade($('#main'),{id}):mountArcadeCatalogue($('#main'));
-if(page==='play'&&id==='inbox-defender')routeCleanup=mountInboxDefender($('#main'));
+if(page==='quests'&&id)routeCleanup=mountCodeQuest($('#main'),{id,onComplete:()=>recordReachCompletion('quests/'+id)});
+if(page==='arcade')routeCleanup=id?mountArcade($('#main'),{id,onComplete:()=>recordReachCompletion('arcade/'+id)}):mountArcadeCatalogue($('#main'));
+if(page==='play'&&id==='inbox-defender')routeCleanup=mountInboxDefender($('#main'),{onComplete:()=>recordReachCompletion('play/inbox-defender')});
 if(page==='guide')routeCleanup=mountLabTutorial($('#main'));
-if(page==='explore'&&id){const controller=mountElementaryLab($('#main'),{id});routeCleanup=()=>controller.dispose();}
+if(page==='explore'&&id){const controller=mountElementaryLab($('#main'),{id,onComplete:()=>recordReachCompletion('explore/'+id)});routeCleanup=()=>controller.dispose();}
 if(page==='sandbox')routeCleanup=mountCodingSandbox($('#main'),{starterId:id});
 if(page==='practice'&&practiceScenarioFor(id))routeCleanup=mountPracticeWorkbench($('#main'),{scenario:practiceScenarioFor(id),getState:()=>practiceStates[id],onChange:state=>{practiceStates[id]=state;},onNavigate:next=>{location.hash='#practice/'+next;}});
 if(page==='studio'&&id==='network')routeCleanup=mountNetworkStudio($('#main'),{getState:()=>networkStudioState,onChange:state=>{networkStudioState=state;}});
 if(page==='studio'&&id==='coding')routeCleanup=mountCodingStudio($('#main'),{getState:()=>codingStudioState,onChange:state=>{codingStudioState=state;}});
 if(page==='labs'){$$('[data-library-jump]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();const target=document.getElementById(link.dataset.libraryJump);if(target){target.tabIndex=-1;target.focus({preventScroll:true});target.scrollIntoView({block:'start',behavior:'instant'});}}));labCards();$$('.track-filters [data-track]').forEach(b=>b.addEventListener('click',()=>{filterLibraryTrack(b.dataset.track);}));$('#grade-filter').addEventListener('change',e=>{libraryGrade=e.target.value;labCards();});$('#duration-filter').addEventListener('change',e=>{libraryMinutes=e.target.value;labCards();});$('#lab-search').addEventListener('input',e=>{libraryQuery=e.target.value;labCards();});}if(currentLab){const labController=bindLab(currentLab,route,{onModeChange:mode=>cleanupLearning.setMode?.(mode)}),s=currentLab,r=store.labs[s.id];labNavigation=labController;const cleanupLearning=mountLabLearning($('#main'),{scenario:s,record:r,autoStartFirstIdea:!OWNER_PREVIEW,mode:route.mode,sequence:route.sequence,onSave:()=>{save();$('#bench-log').innerHTML=eventList(r);$('#action-count').textContent=r.events.length+' actions';labController.refreshStatus();},onTest:prediction=>labController.runHypothesisTest(prediction,{firstIdea:false}),getResult:()=>labController.currentTaskResult()});routeCleanup=()=>{labController.dispose();cleanupLearning?.();};}
-if(page==='learn'&&getFoundation(id)){const foundation=getFoundation(id),controller=mountFoundationLab($('#main'),{lab:foundation,record:foundationRecordFor(id),onChange:record=>{foundationRecords[id]=record;},onReport:()=>{if(!foundationSummary(id,foundationRecords[id]).complete)return;openReport({id:foundation.code,title:foundation.title,grade:foundation.grade||'7–12'}, {},foundationReport(id,foundationRecords[id]));}});routeCleanup=()=>controller.dispose();$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
+if(page==='learn'&&getFoundation(id)){const foundation=getFoundation(id),controller=mountFoundationLab($('#main'),{lab:foundation,record:foundationRecordFor(id),onChange:record=>{foundationRecords[id]=record;},onReport:()=>{if(!foundationSummary(id,foundationRecords[id]).complete)return;recordReachCompletion('learn/'+id);openReport({id:foundation.code,title:foundation.title,grade:foundation.grade||'7–12'}, {},foundationReport(id,foundationRecords[id]));}});routeCleanup=()=>controller.dispose();$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
 if(page==='educators'){const disposeTeaching=mountTeachingPage($('#main'),SCENARIOS,{notify:showNotice}),disposeStandards=mountStandardsAlignment($('#standards-alignment'));routeCleanup=()=>{disposeTeaching?.();disposeStandards?.();};}
 if(page==='capstone'){const s=SCENARIOS.find(item=>item.id==='CODE-503'),r=recordFor(s);bindWorkPrivacy(s);routeCleanup=mountCapstone($('#main'),{record:r,onSave:save,onReport:()=>openReport({id:'CAP-601',title:'Classroom opening day',grade:'7–12'},r,capstoneReport(store.labs,checkCapstoneState))});$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
 if(improvementActivity){const previousCleanup=routeCleanup,disposeImprovements=mountLabImprovements($('#lab-improvement-summary'),{activity:improvementActivity});routeCleanup=()=>{disposeImprovements?.();previousCleanup?.();};}
@@ -543,4 +544,5 @@ bindMenuDismissal();
 mountLearningGuides($('#main'));
 $('.skip-link').addEventListener('click',e=>{e.preventDefault();$('#main').focus();$('#main').scrollIntoView({block:'start'});});
 window.addEventListener('hashchange',()=>{if(renderRoute()!==false)$('#main').focus({preventScroll:true});});
+reachMetrics=mountReachMetrics($('#main'),{ownerPreview:OWNER_PREVIEW});
 renderRoute();

@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/api/requester"],
+  "include": ["/api/requester", "/api/reach"],
   "exclude": []
 }

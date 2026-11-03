@@ -1,8 +1,8 @@
-import {GAME_GUIDES,renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-playflow';
-import {MEMBER_CONTENT} from './access-policy.js?release=20261102-playflow';
-import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-playflow';
-import {PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261102-playflow';
-import {arcadeLevel,initialArcadeState,arcadeAction,rotatedPorts,buildStats,arcadePart,ROVER_COMMANDS} from './arcade-model.js?release=20261102-playflow';
+import {GAME_GUIDES,renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-reach';
+import {MEMBER_CONTENT} from './access-policy.js?release=20261102-reach';
+import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-reach';
+import {PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261102-reach';
+import {arcadeLevel,initialArcadeState,arcadeAction,rotatedPorts,buildStats,arcadePart,ROVER_COMMANDS} from './arcade-model.js?release=20261102-reach';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TRACKS=Object.freeze({hardware:'Hardware',network:'Networking',security:'Cybersecurity',ai:'AI',coding:'Coding'});
 const SYMBOLS=Object.freeze({hardware:'◈',network:'⌘',security:'◇',ai:'✳',coding:'⌨'});
@@ -54,7 +54,7 @@ function nextArcadeChallenge(id){
 function gameBoard(id,state){const level=arcadeLevel(id);return '<div class="ga-play-layout">'+({network:pipes,hardware,security,ai:sorting,coding}[level.kind])(level,state)+'</div>'+ (state.result?'<section class="ga-outcome '+(state.result.ok?'ga-win':'')+'" aria-labelledby="ga-outcome-title"><h2 id="ga-outcome-title">'+(state.result.ok?'Mission complete!':'Try another plan.')+'</h2><ul>'+state.result.rows.map(item=>'<li><strong>'+(item.ok?'✓':'↻')+'</strong> '+esc(item.label)+'</li>').join('')+'</ul>'+(state.result.ok?'<p>'+esc(level.lesson)+'</p><p><strong>Try explaining it:</strong> What changed, and why did it work? Game success is practice feedback, not a grade or completed investigation.</p>'+nextArcadeChallenge(id)+control('reset',undefined,'Try another plan in this game')+'':'')+'</section>':'');}
 export function renderArcadeGame(id){const meta=arcadeMeta(id),state=initialArcadeState(id);if(!meta||!state)return '';return '<section class="wrap arcade-game" data-arcade-id="'+id+'"><header class="ga-game-heading"><div><p class="eyebrow">'+TRACKS[meta.track]+' game · Grades '+meta.grade+' · About '+meta.minutes+' minutes</p><h1>'+esc(meta.title)+'</h1><p>'+esc(meta.summary)+'</p></div><a href="#arcade">← Game arcade</a></header>'+renderLearningBrief({...GAME_GUIDES[arcadeLevel(id).kind],target:'arcade-'+arcadeLevel(id).kind})+'<div class="ga-mission-strip"><span>No timer · Retry freely · Progress resets when you leave</span>'+control('reset',undefined,'Start fresh')+'</div><p class="ga-live" data-arcade-status role="status" aria-live="polite">'+(meta.grade==='K–3'?'Read and play with an adult. ':'')+'Choose a control on the board to begin.</p><div data-arcade-board>'+gameBoard(id,state)+'</div></section>';}
 const mounts=new WeakMap();
-export function mountArcade(root,{id,schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout,animate=typeof globalThis.matchMedia==='function'&&!globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches}={}){
+export function mountArcade(root,{id,onComplete=()=>{},schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout,animate=typeof globalThis.matchMedia==='function'&&!globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches}={}){
   mounts.get(root)?.();let state=initialArcadeState(id),disposed=false,timer=null,playing=false,playbackToken=0;
   const host=root?.querySelector?.('[data-arcade-board]'),status=root?.querySelector?.('[data-arcade-status]');if(!state||!host||!status)return ()=>{};
   const playButton=()=>root.querySelector('[data-ga="play-trace"]');
@@ -85,6 +85,7 @@ export function mountArcade(root,{id,schedule=globalThis.setTimeout,cancel=globa
     if(action==='play-trace'){if(playing){stopPlayback();status.textContent='Route paused. Replay it or inspect one move at a time.';}else startPlayback();return;}
     stopPlayback();const outcome=arcadeAction(id,state,action,value);status.textContent=outcome.message;if(!outcome.changed)return;
     state=outcome.state;host.innerHTML=gameBoard(id,state);
+    if(action==='run'&&state.result?.ok)onComplete();
     const target=[...root.querySelectorAll('button[data-ga]')].find(node=>node.dataset.ga===action&&node.dataset.value===raw);
     (target||root.querySelector('[data-ga="run"]'))?.focus({preventScroll:action!=='reset'});
     if(action==='run'&&state.result?.runs)startPlayback();

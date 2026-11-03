@@ -50,7 +50,7 @@ test('publish output includes browser resources and API routing while excluding 
   assert.equal(files.some(filename => privateFiles.includes(filename)), false);
   for (const filename of files) assert.equal((await readFile(path.join(result.directory, filename), 'utf8')).includes('PRIVATE_FIXTURE_DO_NOT_PUBLISH'), false);
   assert.equal(await readFile(path.join(root, 'functions/api/[[path]].js'), 'utf8'), 'PRIVATE_FIXTURE_DO_NOT_PUBLISH', 'Functions stay at project root for Cloudflare compilation.');
-  assert.deepEqual(JSON.parse(await readFile(path.join(result.directory, '_routes.json'), 'utf8')), { version: 1, include: ['/api/requester'], exclude: [] });
+  assert.deepEqual(JSON.parse(await readFile(path.join(result.directory, '_routes.json'), 'utf8')), { version: 1, include: ['/api/requester', '/api/reach'], exclude: [] });
   for(const filename of files.filter(name=>name.endsWith('.html'))){
     const html=await readFile(path.join(result.directory,filename),'utf8');
     const styles=[...html.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="([^"]+)"/gu)];

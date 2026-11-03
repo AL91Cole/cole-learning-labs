@@ -158,7 +158,7 @@ test('the browser policy denies surveillance and unnecessary hardware permission
 
 test('public labs bypass server functions and use only reviewed locked build dependencies', () => {
   const routes = JSON.parse(read('_routes.json'));
-  assert.deepEqual(routes, {version: 1, include: ['/api/requester'], exclude: []}, 'only the requester gateway invokes Functions; collection paths remain static');
+  assert.deepEqual(routes, {version: 1, include: ['/api/requester', '/api/reach'], exclude: []}, 'only the requester and explicitly gated reach endpoints invoke Functions; classroom and improvement paths remain excluded');
   const pkg = JSON.parse(read('package.json'));
   for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
     assert.deepEqual(Object.keys(pkg[field] || {}), [], `${field} require a reviewed supply chain and locked installation workflow before release`);

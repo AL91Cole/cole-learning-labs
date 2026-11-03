@@ -1,6 +1,6 @@
-import {NETWORK_CONFIG,networkChecks} from './network-labs.js?release=20261102-playflow';
-import {getNetworkBenchSpec,normalizeNetworkBench} from './network-bench.js?release=20261102-playflow';
-import {getNetworkDiagram} from './network-diagrams.js?release=20261102-playflow';
+import {NETWORK_CONFIG,networkChecks} from './network-labs.js?release=20261102-reach';
+import {getNetworkBenchSpec,normalizeNetworkBench} from './network-bench.js?release=20261102-reach';
+import {getNetworkDiagram} from './network-diagrams.js?release=20261102-reach';
 
 // Reviewed local paths. A diagram signal never sends real network traffic,
 // rewrites supplied evidence, or awards an investigation test result.

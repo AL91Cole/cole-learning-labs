@@ -1,7 +1,7 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261102-playflow';
-import {requesterTopic} from './requester-topics.js?release=20261102-playflow';
-import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261102-playflow';
-import {withRequesterTaskNudge} from './requester-general.js?release=20261102-playflow';
+import {requesterTextIsPrivate} from './interview.js?release=20261102-reach';
+import {requesterTopic} from './requester-topics.js?release=20261102-reach';
+import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261102-reach';
+import {withRequesterTaskNudge} from './requester-general.js?release=20261102-reach';
 
 // Page memory only: cloud contact requires an explicit choice each fresh page.
 const pagePreference={enabled:false};

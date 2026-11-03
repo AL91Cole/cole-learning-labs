@@ -75,7 +75,7 @@ test('public game has inert messages, accessible controls and no workspace compl
   assert.doesNotMatch(html,/<form\b|<input\b|<iframe\b|<script\b|href="https?:|onclick=/i);
   const source=await readFile(new URL('../src/inbox-defender.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\b(?:fetch|XMLHttpRequest|WebSocket|eval|Function|setInterval|setTimeout)\s*\(|\b(?:localStorage|sessionStorage|document\.cookie)\b/m);
-  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./activity-guidance.js?release=20261102-playflow'],'The only dependency is the reviewed local instruction renderer.');
+  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./activity-guidance.js?release=20261102-reach'],'The only dependency is the reviewed local instruction renderer.');
   const workspace=initialWorkspaceState('SEC-401'),before=structuredClone(workspace);
   let game=initialInboxGame();for(const round of INBOX_ROUNDS)game=inboxGameAction(decide(inspect(game),round.decision),'next');
   assert.equal(game.finished,true);assert.deepEqual(workspace,before);assert.equal(verifyWorkspace('SEC-401',workspace).ok,false);

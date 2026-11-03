@@ -1,5 +1,5 @@
-import {supportsAIActivity,renderAIActivity,aiActivityAction} from './ai-activities.js?release=20261102-playflow';
-import {supportsSecurityActivity,renderSecurityActivity,securityActivityAction} from './security-activities.js?release=20261102-playflow';
+import {supportsAIActivity,renderAIActivity,aiActivityAction} from './ai-activities.js?release=20261102-reach';
+import {supportsSecurityActivity,renderSecurityActivity,securityActivityAction} from './security-activities.js?release=20261102-reach';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mounts=new WeakMap();
 export const supportsLearningActivity=id=>supportsAIActivity(id)||supportsSecurityActivity(id);
