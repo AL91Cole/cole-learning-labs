@@ -1,4 +1,4 @@
-import {NETWORK_CONFIG} from './network-labs.js?release=20261102-reach';
+import {NETWORK_CONFIG} from './network-labs.js?release=20261102-arcade';
 
 // These diagrams describe saved choices and supplied evidence, never a test run.
 const code=id=>typeof id==='string'?id.replaceAll('-','').toUpperCase():'';

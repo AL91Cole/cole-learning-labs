@@ -37,5 +37,3 @@
 .elementary-privacy{font-size:.95rem;line-height:1.7;max-width:75ch}
 @media(max-width:760px){.elementary-entry-grid,.elementary-catalogue-grid{grid-template-columns:1fr}.elementary-choices{grid-template-columns:1fr}.elementary-choice{flex-direction:row;justify-content:flex-start;text-align:left}.elementary-choice svg{flex:0 0 70px;width:70px;height:60px}.elementary-picture{padding:.5rem}.elementary-picture text{font-size:22px}.elementary-picture .elementary-counter-number{font-size:48px}}
 @media(forced-colors:active){.elementary-choice[aria-pressed=true]{outline:3px solid Highlight}.elementary-feedback,.elementary-finished{border-color:CanvasText}.elementary-picture text{fill:CanvasText}.elementary-picture rect,.elementary-picture circle,.elementary-picture path{stroke:CanvasText}.elementary-picture .elementary-blue{fill:Highlight}.elementary-picture .elementary-robot{fill:Highlight}.elementary-code{border-color:CanvasText}}
-
-.elementary-feedback[data-tone=success]{border:2px solid #176568;border-left-width:6px;border-radius:12px;background:#e3f1ed;color:#123f34;box-shadow:0 3px 0 #c2ded1}

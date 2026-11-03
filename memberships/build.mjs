@@ -17,7 +17,7 @@ const OMIT=new Set(['404.html','classroom.html','teacher/index.html','src/classr
 // needed only by the separate local report page; its import graph is reviewed.
 const STANDALONE_JS=new Set(['src/app.js','src/secure-reports.js','src/report-crypto.js']);
 const TYPES={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8',
-  '.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.pdf':'application/pdf','.json':'application/json; charset=utf-8'};
+  '.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.pdf':'application/pdf','.json':'application/json; charset=utf-8'};
 const encoder=new TextEncoder();
 const stripRelease=text=>text.replace(/\?release=[A-Za-z0-9_.-]+/gu,'');
 const validRelative=filename=>typeof filename==='string'&&/^[A-Za-z0-9_./-]+$/u.test(filename)&&

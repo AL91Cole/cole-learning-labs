@@ -11,7 +11,7 @@ const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const FILES = new Set(PUBLIC_FILES);
 const MIME_TYPES = Object.freeze({
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp':'image/webp',
+  '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png',
   '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.json': 'application/json', '.pdf': 'application/pdf',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
@@ -20,7 +20,6 @@ const DOWNLOAD_EXTENSIONS = new Set(['.pdf', '.docx', '.pptx']);
 const ROUTES = new Map([
   ['/', 'index.html'], ['/classroom', 'classroom.html'], ['/classroom/', 'classroom.html'],
   ['/school-it', 'school-it.html'], ['/school-it/', 'school-it.html'],
-  ['/ai-use-notice', 'ai-use-notice.html'], ['/ai-use-notice/', 'ai-use-notice.html'],
   ['/secure-reports', 'secure-reports.html'], ['/secure-reports/', 'secure-reports.html'],
   ['/student-workbook', 'student-workbook.html'], ['/practice-quizzes', 'practice-quizzes.html'],
   ['/teacher', 'teacher/index.html'], ['/teacher/', 'teacher/index.html']

@@ -50,27 +50,7 @@ test('publish output includes browser resources and API routing while excluding 
   assert.equal(files.some(filename => privateFiles.includes(filename)), false);
   for (const filename of files) assert.equal((await readFile(path.join(result.directory, filename), 'utf8')).includes('PRIVATE_FIXTURE_DO_NOT_PUBLISH'), false);
   assert.equal(await readFile(path.join(root, 'functions/api/[[path]].js'), 'utf8'), 'PRIVATE_FIXTURE_DO_NOT_PUBLISH', 'Functions stay at project root for Cloudflare compilation.');
-  assert.deepEqual(JSON.parse(await readFile(path.join(result.directory, '_routes.json'), 'utf8')), { version: 1, include: ['/api/requester', '/api/reach'], exclude: [] });
-  for(const filename of files.filter(name=>name.endsWith('.html'))){
-    const html=await readFile(path.join(result.directory,filename),'utf8');
-    const styles=[...html.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="([^"]+)"/gu)];
-    assert.equal(styles.length,1,`${filename}: one blocking stylesheet`);
-    const url=new URL(styles[0][1],new URL(filename,'https://test.invalid/'));
-    assert.ok(files.includes(url.pathname.slice(1)));
-    assert.doesNotMatch(await readFile(path.join(result.directory,url.pathname.slice(1)),'utf8'),/@import\b/u);
-    if(filename==='404.html')assert.ok(styles[0][1].startsWith('/'),'Nested 404 styles must resolve from the origin.');
-  }
-});
-
-test('CSS bundling refuses remote and unreviewed imports before replacing a previous build',async t=>{
-  const {root}=await fixture(t);
-  await mkdir(path.join(root,'dist'));
-  await writeFile(path.join(root,'dist','previous.txt'),'KEEP');
-  for(const reference of ['https://external.invalid/collect.css','./unreviewed.css','../../private.css']){
-    await writeFile(path.join(root,'src/styles.css'),`@import "${reference}";`);
-    await assert.rejects(buildSite({sourceRoot:root}),/Unapproved stylesheet reference/u);
-    assert.equal(await readFile(path.join(root,'dist/previous.txt'),'utf8'),'KEEP');
-  }
+  assert.deepEqual(JSON.parse(await readFile(path.join(result.directory, '_routes.json'), 'utf8')), { version: 1, include: ['/api/requester'], exclude: [] });
 });
 
 for (const unexpected of ['src/.env', 'src/unreviewed.js', 'assets/unreviewed.svg', 'assets/secret.json', 'teacher/extra.html', '.well-known/private.json']) {

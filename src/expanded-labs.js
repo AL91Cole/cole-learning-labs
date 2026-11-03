@@ -1,9 +1,9 @@
-import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261102-reach';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-reach';
-import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261102-reach';
-import {getNetworkBenchSpec,networkBenchInitial,normalizeNetworkBench,networkBenchSignature,networkCableChecks,applyNetworkBenchAction} from './network-bench.js?release=20261102-reach';
-import {NETWORK_CONFIG,networkChecks,networkDiagnostic} from './network-labs.js?release=20261102-reach';
-import {renderNetworkVisual,mountNetworkVisual} from './network-visuals.js?release=20261102-reach';
+import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261102-arcade';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-arcade';
+import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261102-arcade';
+import {getNetworkBenchSpec,networkBenchInitial,normalizeNetworkBench,networkBenchSignature,networkCableChecks,applyNetworkBenchAction} from './network-bench.js?release=20261102-arcade';
+import {NETWORK_CONFIG,networkChecks,networkDiagnostic} from './network-labs.js?release=20261102-arcade';
+import {renderNetworkVisual,mountNetworkVisual} from './network-visuals.js?release=20261102-arcade';
 /** Local, fictional equipment and decision models. No service, shell, or AI calls. */
 const code = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));

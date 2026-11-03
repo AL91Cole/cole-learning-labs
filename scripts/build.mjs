@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 import { bundleTier } from './tier-bundles.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
-import {bundlePageStyles,styleBundlePath} from './style-bundles.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
@@ -14,7 +13,7 @@ const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 export const PUBLIC_SOURCE_FILES = Object.freeze([
   'index.html', '404.html', 'classroom.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'teacher/index.html', 'student-workbook.html', 'practice-quizzes.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
-  'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
+  'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
   'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
   'src/assembly-model.js', 'src/assembly-tools.js', 'src/assembly-cables.js', 'src/assembly-workbench.js', 'src/assembly-builder.js', 'src/workbench-guidance.js', 'src/pc-activity.js', 'src/assembly.css',
   'src/foundation-model.js', 'src/foundation-labs.js', 'src/foundation-scene.js', 'src/foundations.css',
@@ -24,7 +23,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/arcade-catalog.js', 'src/arcade-levels.js', 'src/arcade-model.js', 'src/arcade.js', 'src/arcade.css',
   'src/block-workshop.js', 'src/block-workshop.css', 'src/sign-in.js', 'src/sign-in.css',
   'src/teaching.js', 'src/teaching.css', 'src/lesson-plans.js', 'src/lesson-plans.css', 'src/experiments.js', 'src/experiments.css', 'src/learning-tools.js', 'src/capstone.js', 'src/capstone.css', 'src/requester-general.js',
-  'src/reach-schema.js', 'src/reach-metrics.js', 'src/activity-guidance.js', 'src/activity-guidance.css', 'src/app.js', 'src/lab-tutorial.js', 'src/coding-sandbox.js', 'src/standards.js', 'src/lab-language.js', 'src/requester-persona.js', 'src/requester-library.js', 'src/requester-chat.js', 'src/requester-topics.js', 'src/requester-config.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js', 'src/workbench-interactions.js',
+  'src/app.js', 'src/lab-tutorial.js', 'src/coding-sandbox.js', 'src/standards.js', 'src/lab-language.js', 'src/requester-persona.js', 'src/requester-library.js', 'src/requester-chat.js', 'src/requester-topics.js', 'src/requester-config.js', 'src/classroom-client.js', 'src/classroom-portal.js', 'src/hardware.js', 'src/workbench-interactions.js',
   'src/lab-improvements.js', 'src/improvement-schema.js', 'src/improvement-config.js',
   'src/privacy.js', 'src/interview.js', 'src/conversation.js', 'src/records.js', 'src/scenarios.js', 'src/workspaces.js', 'src/workspace-accessibility.js',
   'src/coding-studio.css', 'src/coding-studio.js', 'src/interactive-tools.css', 'src/interactive-tools.js', 'src/network-bench.js', 'src/network-diagrams.js', 'src/network-labs.js', 'src/network-packets.js', 'src/network-studio-model.js', 'src/network-studio.css', 'src/network-studio.js', 'src/network-visuals.css', 'src/network-visuals.js', 'src/practice-workbench.css', 'src/practice-workbench.js',
@@ -44,15 +43,12 @@ const PREVIEW_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   ...PUBLIC_METADATA_FILES,
-  'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
+  'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png',
   'src/app.js', 'src/secure-reports.js',
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
 const OPEN_RESOURCES=Object.freeze(['student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
-export const publicFilesFor=access=>{
-  const files=[...PREVIEW_FILES,...(labsAreOpen(access)?OPEN_RESOURCES:[])].filter(filename=>!filename.endsWith('.css'));
-  return Object.freeze([...files,...files.filter(filename=>filename.endsWith('.html')).map(styleBundlePath)]);
-};
+export const publicFilesFor=access=>Object.freeze([...PREVIEW_FILES,...(labsAreOpen(access)?OPEN_RESOURCES:[])]);
 export const PUBLIC_FILES=publicFilesFor(PUBLIC_LAB_ACCESS);
 const FILES = new Set(PUBLIC_SOURCE_FILES);
 const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', '.well-known'];
@@ -117,21 +113,14 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   for (const directory of PUBLIC_DIRECTORIES) await validatePublicTree(root, directory);
   const sources = new Map();
   for (const filename of PUBLIC_SOURCE_FILES) sources.set(filename, await sourceBytes(root, filename));
-  const content = new Map(publicFiles.filter(filename=>sources.has(filename)).map(filename=>[filename,sources.get(filename)]));
-  for(const filename of publicFiles.filter(filename=>filename.endsWith('.html'))){
-    const bundled=await bundlePageStyles(filename,sources.get(filename).toString('utf8'),sources);
-    if(!bundled)throw new Error(`Expected reviewed page styles: ${filename}`);
-    content.set(filename,Buffer.from(bundled.html));
-    content.set(bundled.filename,Buffer.from(bundled.css));
-  }
+  const content = new Map(publicFiles.map(filename=>[filename,sources.get(filename)]));
   // An access-mode change gets a new entry URL even when no source imports changed.
   content.set('index.html',Buffer.from(content.get('index.html').toString('utf8').replace(/(src\/app\.js\?release=[A-Za-z0-9_-]+)/u,'$1-'+publicLabAccess)));
   const routes = JSON.parse(content.get('_routes.json').toString('utf8'));
-  if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester', '/api/reach'], exclude: [] })) throw new Error('Only the reviewed requester and gated reach endpoints may invoke API Functions; other collection routes must stay excluded.');
+  if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester'], exclude: [] })) throw new Error('Only the reviewed requester gateway may invoke API Functions; collection routes must stay excluded.');
   const tier = await bundleTier({sourceRoot:root,member:openLabs,localOnly:openLabs,publicLabsOpen:openLabs});
   content.set('src/app.js',Buffer.from(tier.javascript));
   if(openLabs){const redirects=content.get('_redirects').toString('utf8').split('\n').filter(line=>!/^\/(?:student-workbook|practice-quizzes)(?:[\s/.])/.test(line)).join('\n');content.set('_redirects',Buffer.from(redirects));}
-  else content.set('sitemap.xml',Buffer.from(content.get('sitemap.xml').toString('utf8').replace(/\s*<url><loc>https:\/\/www\.colelearninglabs\.com\/(?:student-workbook|practice-quizzes)<\/loc><\/url>/gu,'')));
   // This public privacy tool has no course content; bundle its own reviewed
   // local graph so raw source modules are never an alternate content endpoint.
   const localTool = await bundleTier({sourceRoot:root,member:false,entry:'secure-reports.js'});

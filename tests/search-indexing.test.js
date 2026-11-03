@@ -6,7 +6,7 @@ import { previewContentType } from '../scripts/serve.mjs';
 
 const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8');
 const canonicalPages = new Map([
-  ['index.html', '/'], ['school-it.html', '/school-it'], ['ai-use-notice.html','/ai-use-notice'],
+  ['index.html', '/'], ['school-it.html', '/school-it'],
   ['student-workbook.html', '/student-workbook'], ['practice-quizzes.html', '/practice-quizzes'],
   ['classroom.html', '/classroom'], ['secure-reports.html', '/secure-reports'], ['teacher/index.html', '/teacher/']
 ]);
@@ -24,8 +24,8 @@ test('reviewed HTML sources retain their stable canonical URLs independently of 
   assert.match(read('404.html'), /<meta name="robots" content="noindex">/u);
 });
 
-test('sitemap includes the public companions and information pages while protected classroom pages stay excluded', () => {
-  const utilities = ['classroom.html', 'teacher/index.html'];
+test('sitemap and robots expose only crawlable preferred content URLs and retain utility noindex', () => {
+  const utilities = ['classroom.html', 'secure-reports.html', 'teacher/index.html','student-workbook.html','practice-quizzes.html'];
   const contentPaths = [...canonicalPages].filter(([name]) => PUBLIC_FILES.includes(name)&&!utilities.includes(name)).map(([, pathname]) => origin + pathname).sort();
   const sitemap = read('sitemap.xml');
   const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(match => match[1]).sort();

@@ -1,5 +1,5 @@
-import {IMPROVEMENT_ACTIVITIES,validateImprovementSummary} from './improvement-schema.js?release=20261102-reach';
-import {IMPROVEMENT_SHARING_ENABLED,IMPROVEMENT_ENDPOINT} from './improvement-config.js?release=20261102-reach';
+import {IMPROVEMENT_ACTIVITIES,validateImprovementSummary} from './improvement-schema.js?release=20261102-arcade';
+import {IMPROVEMENT_SHARING_ENABLED,IMPROVEMENT_ENDPOINT} from './improvement-config.js?release=20261102-arcade';
 
 const activePanels=new Set();
 const labels=Object.freeze({

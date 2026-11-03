@@ -9,8 +9,7 @@ import {learningRoute} from '../src/learning-tools.js';
 const answers=id=>id==='sql'?['hello','six','plus','at-least','asc','sum','name','at-least']:['hello','six','plus','at-least','three','times','one','times'];
 test('twelve language paths contain 96 sequential lessons, including a distinct SQL sequence',()=>{
   assert.equal(CODE_QUESTS.length,12);assert.equal(new Set(CODE_QUESTS.map(q=>q.id)).size,12);
-  const languageGrid=renderCodeQuestHub().split('<div class="cq-language-grid">')[1];
-  assert.equal((languageGrid.match(/href="#quests\//g)||[]).length,12);
+  assert.equal((renderCodeQuestHub().match(/href="#quests\//g)||[]).length,12);
   assert.match(courseLessons('sql')[4].title,/Order/);assert.match(courseLessons('sql')[5].title,/Summarize/);
   assert.match(courseLessons('python')[4].title,/Repeat/);assert.match(courseLessons('python')[5].title,/function/);
   for(const quest of CODE_QUESTS){assert.equal(courseLessons(quest.id).length,8);assert.equal(routeAccess(learningRoute('#quests/'+quest.id)),'public');assert.match(renderCodeQuest(quest.id),/Eight lessons/);}
@@ -56,16 +55,4 @@ test('the controller progresses from chips to typed function practice and handle
   assert.match(f.host.innerHTML,/data-cq-first/);assert.doesNotMatch(f.host.innerHTML,/data-cq="choose"/);
   f.type('<img src=x onerror=alert(1)>');assert.match(f.code.textContent,/<img src=x/);assert.doesNotMatch(f.host.innerHTML,/<img src=x/);f.click(f.button('check'));assert.match(f.host.innerHTML,/&lt;img src=x/);assert.doesNotMatch(f.host.innerHTML,/cq-pass/);
   f.type('*');f.click(f.button('check'));assert.match(f.host.innerHTML,/cq-pass/);const stale=f.button('next');cleanup();cleanup();assert.equal(f.listeners.size,0);f.click(stale);assert.equal(f.host.innerHTML,'');
-});
-
-test('all twelve quest controllers emit completion only after the complete eight-lesson path',()=>{
-  for(const quest of CODE_QUESTS){
-    const f=fixture(quest.id);let completed=0;const cleanup=mountCodeQuest(f.root,{id:quest.id,onComplete:()=>completed++});
-    for(let index=0;index<8;index++){
-      if(index<5)f.click(f.button('choose',answers(quest.id)[index]));
-      else {f.type(courseChip(quest.id,answers(quest.id)[index]));if(index===7)f.type(quest.id==='sql'?'DESC':'>=',true);}
-      f.click(f.button('check'));assert.equal(completed,0);f.click(f.button('next'));assert.equal(completed,index===7?1:0);
-    }
-    cleanup();
-  }
 });

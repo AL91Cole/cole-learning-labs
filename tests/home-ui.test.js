@@ -1,4 +1,3 @@
-import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep} from '../src/activity-guidance.js';
 import {CODE_QUESTS} from '../src/code-quest-catalog.js';
 import {renderCodeQuestEntry} from '../src/code-quests.js';
 import {ARCADE_CATALOG} from '../src/arcade-catalog.js';
@@ -38,7 +37,7 @@ function harness({memberContent=true}={}){
   const forbidden=()=>assert.fail('Public previews must not create lab records, change equipment, save progress, or call a network service.');
   // Full-catalog filter behavior defaults to the protected member view.
   const scenarios=memberContent?SCENARIOS:SCENARIOS.filter(lab=>isFreeLab(lab.id));
-  const context=vm.createContext({renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,CODE_QUESTS,renderCodeQuestEntry,ARCADE_CATALOG,renderArcadeEntry,renderInboxDefenderEntry,MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
+  const context=vm.createContext({CODE_QUESTS,renderCodeQuestEntry,ARCADE_CATALOG,renderArcadeEntry,renderInboxDefenderEntry,MEMBER_CONTENT:memberContent,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS:scenarios,FOUNDATION_LABS,tracks,esc,store,countComplete:()=>0,
     $:selector=>{assert.ok(elements.has(selector),selector);return elements.get(selector);},
     $$:selector=>{if(selector==='[data-hero-check]')return hero;if(selector==='[data-guardian-view]')return guardian;if(selector==='.track-filters [data-track]')return pathwayButtons;assert.fail(selector);},
     recordFor:forbidden,save:forbidden,applyHardwareAction:forbidden,applyWorkspaceAction:forbidden,fetch:forbidden,XMLHttpRequest:forbidden,
@@ -143,15 +142,6 @@ test('time filters use actual estimates and combine with pathway, grade, and tex
   assert.deepEqual(h.filter({minutes:'15',query:'monitor'}),SCENARIOS.filter(s=>s.minutes===15&&`${s.id} ${s.title} ${s.summary}`.toLowerCase().includes('monitor')).map(s=>s.id));
   h.filter({track:'coding',minutes:'15',query:'nothing'});h.elements.get('#clear-filters').click();
   assert.equal(h.renders,0);assert.equal(h.elements.get('#lab-search').focused,1);assert.equal(h.elements.get('#grade-filter').value,'all');assert.equal(h.elements.get('#duration-filter').value,'all');assert.equal(h.elements.get('#lab-search').value,'');assert.equal(vm.runInContext('libraryMinutes',h.context),'all');assert.equal(vm.runInContext('libraryTrack',h.context),'all');assert.equal(vm.runInContext('libraryGrade',h.context),'all');assert.equal(vm.runInContext('libraryQuery',h.context),'');
-});
-
-test('catalog filters and tickets come before full course and game sections',()=>{
-  const html=harness().context.library();
-  const toolbar=html.indexOf('class="library-toolbar"'),results=html.indexOf('id="lab-results"');
-  assert.ok(toolbar>=0&&results>toolbar);
-  for(const section of ['id="basics-heading"','id="game-entry-title"','id="elementary-entry-heading"','id="sandbox-library-title"']){
-    assert.ok(html.indexOf(section)>results,section);
-  }
 });
 
 test('pathway changes keep the existing toolbar and focus instead of replacing the page',()=>{

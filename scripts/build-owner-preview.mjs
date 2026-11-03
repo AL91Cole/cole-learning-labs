@@ -73,8 +73,8 @@ function approvedAssetName(name){
   const extension=path.posix.extname(relative);
   if(extension==='.html'&&!ALLOWED_HTML.has(relative)||extension==='.js'&&!ALLOWED_JS.has(relative)||
     extension==='.css'&&!/^src\/[a-z0-9-]+\.css$/u.test(relative)||
-    ['.png','.svg','.pdf','.webp'].includes(extension)&&!/^assets\/[A-Za-z0-9_-]+\.(?:png|svg|pdf|webp)$/u.test(relative)||
-    !['.html','.js','.css','.png','.svg','.pdf','.webp'].includes(extension))throw new Error('Unreviewed owner asset type.');
+    ['.png','.svg','.pdf'].includes(extension)&&!/^assets\/[A-Za-z0-9_-]+\.(?:png|svg|pdf)$/u.test(relative)||
+    !['.html','.js','.css','.png','.svg','.pdf'].includes(extension))throw new Error('Unreviewed owner asset type.');
   return 'learn/'+relative;
 }
 

@@ -1,4 +1,3 @@
-import {mountReachMetrics,recordReachCompletion} from '../src/reach-metrics.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -43,7 +42,7 @@ function harness() {
   const events = new Map(), notices = [], calls = { disposed: 0, scheduled: 0, rendered: 0, sandboxCleared: 0, lessonPlansCleared: 0, cloudReset: 0, improvementReset: 0 };
   const status = { textContent: '' };
   let mounted;
-  const context = vm.createContext({mountReachMetrics,recordReachCompletion,reachMetrics:null,
+  const context = vm.createContext({
     // This fixture starts in an existing classroom/member saving scope.
     MEMBER_CONTENT:true,PUBLIC_WORK_PREFIX,
     SCENARIOS, normalizeLabRecord, createWorkStorage, CLEAR_WORK_KEY, WORK_PREFIX, deviceStorage: storage,
@@ -205,7 +204,7 @@ test('saving-mode changes keep the same live bound record and persist later lear
 
 test('educator lesson drafts warn before leaving and clear on document exit regardless of investigation saving', () => {
   const events=new Map();let dirty=false,clears=0,markupCleared=0;
-  const context=vm.createContext({mountReachMetrics,recordReachCompletion,reachMetrics:null,
+  const context=vm.createContext({
     window:{addEventListener(name,listener){events.set(name,listener);}},
     networkStudioHasWork:()=>false,networkStudioState:{},initialNetworkStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,
     codingStudioHasWork:()=>false,codingStudioState:{},initialCodingStudioState:()=>({}),hasFoundationWork:()=>false,

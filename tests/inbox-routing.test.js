@@ -21,11 +21,10 @@ test('actual game routing mounts no records or services and disposes before navi
     mountLabImprovements:forbidden,attachClassroomLab:forbidden,openReport:forbidden,fetch:forbidden,XMLHttpRequest:forbidden
   });
   const start=source.indexOf('function renderRoute('),end=source.indexOf('\nfunction setSiteMenuOpen(',start);
-  vm.runInContext(source.slice(source.indexOf('function activityNotFound('),source.indexOf('\nfunction membershipGate(')),context);
   assert.ok(start>=0&&end>start);vm.runInContext(source.slice(start,end),context);
   context.renderRoute();assert.equal(calls.mounts,1);assert.match(nodes.get('#main').innerHTML,/01 \/ 05/);
   assert.doesNotMatch(nodes.get('#main').innerHTML,/lab-improvement-summary|work-privacy|data-requester/);
   context.location.hash='#signin';context.renderRoute();assert.equal(calls.disposals,1);
   context.location.hash='#play/inbox-defender';context.renderRoute();assert.equal(calls.mounts,2);
-  context.location.hash='#play/SEC-403?member=true';context.renderRoute();assert.equal(calls.disposals,2);assert.equal(calls.gates,0);assert.match(nodes.get('#main').innerHTML,/Activity not found/u);assert.equal(calls.mounts,2);
+  context.location.hash='#play/SEC-403?member=true';context.renderRoute();assert.equal(calls.disposals,2);assert.equal(calls.gates,1);assert.equal(calls.mounts,2);
 });

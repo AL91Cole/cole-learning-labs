@@ -1,6 +1,6 @@
-import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261102-reach';
-import { executeCoding } from './coding-lab.js?release=20261102-reach';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-reach';
+import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261102-arcade';
+import { executeCoding } from './coding-lab.js?release=20261102-arcade';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-arcade';
 
 const item = (id,label,looks,role) => ({id,label,looks,role});
 const check = (id,prompt,options,answer,explanation) => ({id,prompt,options:options.map(([id,label])=>({id,label})),answer,explanation});

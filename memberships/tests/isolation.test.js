@@ -8,14 +8,12 @@ const json=async path=>JSON.parse(await readFile(new URL(path,import.meta.url),'
 
 test('student publishing and collection remain independent of adult memberships',async()=>{
   assert.equal(IMPROVEMENT_SHARING_ENABLED,false);
-  assert.deepEqual((await json('../../_routes.json')).include,['/api/requester','/api/reach']);
+  assert.deepEqual((await json('../../_routes.json')).include,['/api/requester']);
   assert.equal(PUBLIC_FILES.some(path=>path.startsWith('memberships/')),false);
   const student=await json('../../wrangler.jsonc');
   for(const config of [student,...Object.values(student.env)]){
     assert.equal(config.vars.CLASSROOM_ENABLED,'false');
     assert.equal(config.vars.IMPROVEMENTS_ENABLED,'false');
-    assert.equal(config.vars.REACH_ENABLED,'false');
-    assert.equal(config.vars.REACH_RETENTION_VERIFIED,'false');
     assert.equal((config.services||[]).some(service=>/member/iu.test(service.binding+' '+service.service)),false);
   }
 });
