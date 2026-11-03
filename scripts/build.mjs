@@ -12,6 +12,7 @@ const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 
 // A new public file needs an explicit review here. Never publish the checkout root.
 export const PUBLIC_SOURCE_FILES = Object.freeze([
+  'src/turnstile-client.js',
   'index.html', '404.html', 'classroom.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'teacher/index.html', 'student-workbook.html', 'practice-quizzes.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',

@@ -31,6 +31,7 @@
         "service": "cole-learning-labs-requester"
       }],
       "vars": {
+        "TURNSTILE_SITE_KEY": "0x4AAAAAAFxZYtuWgDCSGAU5",
         "NODE_VERSION": "24.22.0",
         "REQUESTER_ENABLED": "true",
         "REQUESTER_BILLING_REVIEWED": "true",

@@ -1,4 +1,6 @@
-import test from 'node:test';
+import test,{mock} from 'node:test';
+import {turnstileEnv,mockSiteverify} from './turnstile-fixture.js';
+mockSiteverify(mock,'reach');
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
@@ -8,8 +10,8 @@ import {summarizeReach} from '../reach/report.mjs';
 const event={version:1,activity:'arcade/garden-rover',metric:'start'};
 function database(){const sql=new DatabaseSync(':memory:');sql.exec(readFileSync(new URL('../reach/0001_reach.sql',import.meta.url),'utf8'));return {sql,prepare(text){let args=[];return {bind(...values){args=values;return this;},async all(){return {success:true,results:sql.prepare(text).all(...args)};},async run(){sql.prepare(text).run(...args);return {success:true};}};}};}
 function context({body=event,method='POST',country='US',agent='Mozilla/5.0 Chrome/156',headers={},env={},path='/api/reach'}={}){
-  const request=new Request('https://www.colelearninglabs.com'+path,{method,headers:{'Content-Type':'application/json',Origin:'https://www.colelearninglabs.com','Sec-Fetch-Site':'same-origin','User-Agent':agent,...headers},...(method==='POST'?{body:JSON.stringify(body)}:{})});Object.defineProperty(request,'cf',{value:{country},configurable:true});
-  return {request,env:{REACH_ENABLED:'true',REACH_RETENTION_VERIFIED:'true',LAB_REACH:database(),...env}};
+  const request=new Request('https://www.colelearninglabs.com'+path,{method,headers:{'Content-Type':'application/json','X-CLL-Turnstile':'reach-test-token',Origin:'https://www.colelearninglabs.com','Sec-Fetch-Site':'same-origin','User-Agent':agent,...headers},...(method==='POST'?{body:JSON.stringify(body)}:{})});Object.defineProperty(request,'cf',{value:{country},configurable:true});
+  return {request,env:{...turnstileEnv,REACH_ENABLED:'true',REACH_RETENTION_VERIFIED:'true',LAB_REACH:database(),...env}};
 }
 test('production collection remains unavailable until both live activation and verified retention flags are set',async()=>{
   for(const env of [{REACH_ENABLED:'false'},{REACH_RETENTION_VERIFIED:'false'}]){const c=context({env});const result=await onRequest(c);assert.equal(result.status,503);assert.equal(c.env.LAB_REACH.sql.prepare('SELECT count(*) n FROM reach_counts').get().n,0);}

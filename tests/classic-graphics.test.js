@@ -32,7 +32,8 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // Twelve eight-lesson language paths add authored examples, not twelve runtimes.
   // Shared onboarding, contextual retries and cancellable route playback add
   // about 25 KB of authored source; the compiled delivery cap stays unchanged.
-  assert.ok(bytes<1_560_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // On-demand bot verification adds about 4 KB; compiled caps stay unchanged.
+  assert.ok(bytes<1_565_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{

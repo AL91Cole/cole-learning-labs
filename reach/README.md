@@ -98,3 +98,11 @@ The tool refuses to overwrite an existing report and does not contact a service.
 Keep real exports outside Git and delete them on the approved schedule. No
 public analytics read endpoint is added. This feature does not enable or depend
 on the separately configured Cloudflare RUM JavaScript beacon.
+
+## Bot verification
+
+POST counts now require server-verified Turnstile proof before D1 access.
+Configure the invisible widget and encrypted production Pages secret described
+in [the Turnstile guide](../docs/TURNSTILE.md). Do not enable collection to test
+Turnstile. This additional requirement does not replace the privacy, retention,
+database, scheduled deletion, or separate activation checks in this guide.

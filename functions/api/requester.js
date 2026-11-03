@@ -1,6 +1,7 @@
 /** Same-origin fictional-topic broker. No AI or database binding belongs in Pages. */
 import {PRIVATE_REQUESTER_URL,RequesterError,failRequester,readRequesterTopic,readBoundedJson,validRequesterAnswer} from '../../worker-requester/contract.js';
 import {isFreeLab} from '../../src/access-policy.js';
+import {turnstileSitekey,verifyTurnstile,TURNSTILE_KEY_HEADER} from '../../edge/turnstile.js';
 
 // This reviewed path sends only authored fictional topic codes. It does not
 // approve classroom records or improvement collection, which remain closed.
@@ -37,6 +38,9 @@ export async function handleRequesterRequest(context,{privacyApproved=false,time
     // The public gateway cannot become an alternate reply endpoint for a
     // member-only investigation. The private member site has no AI proxy.
     if(topic&&!isFreeLab(topic.payload.scenarioId))fail(403,'reply_unavailable');
+    const sitekey=turnstileSitekey(env);
+    if(!sitekey)fail(503,'reply_unavailable');
+    if(topic&&!await verifyTurnstile(request,env,'requester'))fail(403,'reply_unavailable');
     const service=env.REQUESTER_SERVICE;
     if(typeof service?.fetch!=='function')fail(503,'requester_not_configured');
     controller=new AbortController();
@@ -61,7 +65,7 @@ export async function handleRequesterRequest(context,{privacyApproved=false,time
       const keys=Object.keys(data||{}).sort().join(',');
       if(request.method==='GET'){
         if(keys!=='enabled,provider,requiresConsent'||data.enabled!==true||data.provider!=='cloudflare-workers-ai'||data.requiresConsent!==true)fail(502,'invalid_service_reply');
-        return response({enabled:true,requiresConsent:true});
+        return response({enabled:true,requiresConsent:true},200,{[TURNSTILE_KEY_HEADER]:sitekey});
       }
       if(keys!=='accepted,answer,enabled,kind,provider,ungraded'||data.enabled!==true||data.kind!=='ai'||data.accepted!==false||data.ungraded!==true||data.provider!=='cloudflare-workers-ai'||!validRequesterAnswer(data.answer))fail(502,'invalid_service_reply');
       return response({enabled:true,answer:data.answer.trim(),kind:'ai',accepted:false,ungraded:true});

@@ -228,7 +228,7 @@ test('rendering, checking, resetting and disposing never consult network, browse
   }finally{for(const [name,descriptor] of descriptors){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}}
   const source=await readFile(new URL('../src/elementary-labs.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/u);
-  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./activity-guidance.js?release=20261102-reach','./block-workshop.js?release=20261102-reach','./owner-preview.js?release=20261102-reach'],'Only the reviewed local guidance, workshop and build-time navigation flag are imported.');
+  assert.deepEqual([...source.matchAll(/^import[^\n]+from\s+(['"])([^'"]+)\1;?$/gmu)].map(match=>match[2]),['./activity-guidance.js?release=20261102-turnstile','./block-workshop.js?release=20261102-turnstile','./owner-preview.js?release=20261102-turnstile'],'Only the reviewed local guidance, workshop and build-time navigation flag are imported.');
   const workshop=await readFile(new URL('../src/block-workshop.js',import.meta.url),'utf8');
   assert.doesNotMatch(workshop,/^import\b|\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|localStorage|sessionStorage|indexedDB|speechSynthesis|eval|Function)\s*(?:\.|\()/mu,'The workshop adds no imported runtime, persistence or network capability.');
 });

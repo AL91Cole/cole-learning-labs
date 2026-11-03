@@ -80,7 +80,7 @@ test('existing private files, repository metadata, and unreviewed browser files 
     '.env', 'README.md', 'package.json', 'docs/TEACHER-RUBRICS.md', '.well-known/private.json', '.well-known/security.txt.bak',
     'private-teacher-materials/criteria.json', 'Teacher/Resources/INC-101_Worked_Report.txt',
     'assets/ColeLearningLabs_Pop_Quiz_Answer_Keys.pdf', 'assets/unreviewed.pdf',
-    'teacher/secret.html', 'src/unreviewed.html', 'scripts/build.mjs', 'dist/index.html'
+    'teacher/secret.html', 'src/unreviewed.html', 'scripts/build.mjs', 'dist/index.html', 'edge/turnstile.js', 'docs/TURNSTILE.md'
   ];
   for (const filename of hidden) await put(root, filename, PRIVATE_CANARY);
   for (const filename of [...hidden, '.git/config']) {

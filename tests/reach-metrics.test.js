@@ -9,7 +9,7 @@ function fixture(overrides={}){
   const handlers=new Map(),requests=[],location={origin:'https://www.colelearninglabs.com',hash:'#arcade/garden-rover'},document={visibilityState:'visible'};
   const control={disabled:false,dataset:{ga:'append'},closest:()=>null};
   const root={contains:item=>item===control,addEventListener:(type,fn,capture)=>{assert.equal(capture,true);handlers.set(type,fn);},removeEventListener:type=>handlers.delete(type)};
-  const counter=mountReachMetrics(root,{root,location,document,navigator:{},fetcher:async(url,options)=>{requests.push({url,...options});return new Response(JSON.stringify(options.method==='GET'?{enabled:true}:{accepted:true}));},...overrides});
+  const counter=mountReachMetrics(root,{root,location,document,navigator:{},tokenProvider:async()=> 'reach-test-token',fetcher:async(url,options)=>{requests.push({url,...options});return new Response(JSON.stringify(options.method==='GET'?{enabled:true}:{accepted:true}));},...overrides});
   return {counter,handlers,requests,location,document,control,act(trusted=true){handlers.get('click')?.({type:'click',isTrusted:trusted,target:{closest:selector=>selector==='[data-reach-stop]'?null:control}});}};
 }
 test('reach schema covers all 100 bounded activities and four open-ended tools without URLs or free text',()=>{
@@ -46,4 +46,11 @@ test('the page privacy control stops new activity events immediately',async()=>{
   const f=fixture();await flush();f.act();await flush();assert.equal(f.requests.length,2);
   f.handlers.get('click')({type:'click',isTrusted:true,target:{closest:selector=>selector==='[data-reach-stop]'?{}:null}});
   recordReachCompletion('arcade/garden-rover');f.location.hash='#arcade/loop-lagoon';f.act();await flush();assert.equal(f.requests.length,2);assert.equal(f.counter.active(),false);f.counter.dispose();
+});
+
+test('count verification is on demand and failure or stopping cancels events without retry',async()=>{
+  let checks=0;const f=fixture({tokenProvider:async()=>{checks++;return null;}});await flush();assert.equal(checks,0);f.act();await flush();assert.equal(checks,1);assert.equal(f.requests.length,1);assert.equal(f.counter.active(),false);f.act();await flush();assert.equal(checks,1);f.counter.dispose();
+  let finish,signal;const g=fixture({tokenProvider:options=>{signal=options.signal;return new Promise(resolve=>{finish=resolve;});}});await flush();g.act();assert.equal(g.requests.length,1);
+  g.handlers.get('click')({type:'click',isTrusted:true,target:{closest:selector=>selector==='[data-reach-stop]'?{}:null}});
+  assert.equal(signal.aborted,true);finish('late-proof');await flush();assert.equal(g.requests.length,1);g.counter.dispose();
 });
