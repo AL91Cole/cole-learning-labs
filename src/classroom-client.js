@@ -1,7 +1,7 @@
 /* Optional sharing only after an explicit classroom join. No live AI or device surveillance. */
-import { SCENARIOS } from './scenarios.js?release=20261102-reach';
-import { inquiryProtectedEvents } from './interview.js?release=20261102-reach';
-import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261102-reach';
+import { SCENARIOS } from './scenarios.js?release=20261102-turnstile';
+import { inquiryProtectedEvents } from './interview.js?release=20261102-turnstile';
+import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261102-turnstile';
 export const CLASSROOM_ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
 // Saved sessions and page settings cannot authorize network sharing while the
 // school, privacy, insurance and operating requirements await review.

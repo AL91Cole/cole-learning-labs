@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261102-reach';
+import { SCENARIOS } from './scenarios.js?release=20261102-turnstile';
 
 // No availability probes, cookies, class codes, drafts or reviews leave this
 // browser until a separately reviewed source release approves sharing.

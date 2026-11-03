@@ -86,7 +86,7 @@ function harness(id = 'INC-101', initialSection = 1, replyForQuestion = answerQu
   }
   const context = vm.createContext({mountReachMetrics,recordReachCompletion,reachMetrics:null,renderLearningBrief,renderNextChallenge,investigationNextStep,OWNER_PREVIEW:ownerPreview,MEMBER_CONTENT:true,routeAccess,CATALOG,PUBLIC_WORK_PREFIX,networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,
     scenario,record,initialSection,applyHardwareAction,verifyHardware,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,
-    resetLabImprovements(){},mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,cloudEnabled:true,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
+    resetLabImprovements(){},mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,tokenProvider:async()=>"requester-test-token",cloudEnabled:true,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200}),...requesterOptions}),
     // Production modules share one realm. Transfer VM-created action data into
     // the model's realm so its strict plain-object boundary is tested fairly.
     applyWorkspaceAction:(caseId,previous,action,value)=>applyWorkspaceAction(caseId,previous,action,value===undefined?undefined:structuredClone(value)),
@@ -844,7 +844,7 @@ test('a delayed cloud reply does not pull a reader away from older visible messa
   const h=harness('INC-101',1,answerQuestion,()=>{},{},{fetcher:async(_path,options)=>options.method==='GET'?new Response(JSON.stringify({enabled:true}),{status:200}):new Promise(resolve=>{deliver=()=>resolve(new Response(JSON.stringify({kind:'ai',ungraded:true,answer:'A quiet creative breakfast idea.'}),{status:200}));})});
   await new Promise(resolve=>setImmediate(resolve));
   const log=h.elements.get('#interview-history');log.scrollHeight=1000;log.clientHeight=250;log.scrollTop=0;
-  h.ask('What did you have for breakfast?');assert.equal(log.scrollTop,1000);
+  h.ask('What did you have for breakfast?');assert.equal(log.scrollTop,1000);await new Promise(resolve=>setImmediate(resolve));
   log.scrollTop=0;const before=structuredClone(h.record);deliver();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(log.scrollTop,0);assert.match(log.innerHTML,/A quiet creative breakfast idea/u);assert.match(log.innerHTML,/AI reply.*may be wrong/u);
   assert.deepEqual(h.record,before);h.context.navigation.dispose();

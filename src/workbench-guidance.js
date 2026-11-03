@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261102-reach';
+import { pcActivity } from './pc-activity.js?release=20261102-turnstile';
 
 /** Control recommendations only. The equipment model still decides every repair. */
 const freezeList=values=>Object.freeze(values);

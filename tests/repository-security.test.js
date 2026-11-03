@@ -56,14 +56,15 @@ test('public browser security limits scripts, connections, forms, and embedded c
     const worksheet = WORKSHEET_ROUTES.includes(route);
     const localOnly = localReport || worksheet;
     for (const name of ['default-src', 'script-src', 'font-src']) {
-      assert.deepEqual(csp.get(name), [worksheet && name !== 'font-src' ? "'none'" : "'self'"], `${route}: ${name} must stay within the reviewed local policy`);
+      const allowed=route==='/*'&&name==='script-src'?["'self'",'https://challenges.cloudflare.com']:[worksheet && name !== 'font-src' ? "'none'" : "'self'"];
+      assert.deepEqual(csp.get(name),allowed,`${route}: ${name} must stay within the reviewed policy`);
     }
     const connections=localOnly?["'none'"]:["'self'"];
     assert.deepEqual(csp.get('connect-src'),connections,`${route}: connections must stay within the website; the AI Worker is private`);
     assert.deepEqual(csp.get('form-action'),localOnly?["'none'"]:["'self'"],`${route}: forms must match the reviewed local boundary`);
     assert.deepEqual(csp.get('style-src'), localReport ? ["'self'"] : ["'self'", "'unsafe-inline'"], `${route}: unexpected stylesheet policy`);
     for (const name of ['object-src', 'base-uri', 'frame-src', 'frame-ancestors']) {
-      assert.deepEqual(csp.get(name), ["'none'"], `${route}: ${name} must remain disabled`);
+      assert.deepEqual(csp.get(name),route==='/*'&&name==='frame-src'?['https://challenges.cloudflare.com']:["'none'"],`${route}: ${name} must match the reviewed policy`);
     }
     assert.deepEqual(csp.get('img-src'), worksheet ? ["'self'"] : ["'self'", 'data:'], `${route}: unexpected image provider`);
     assert.ok(csp.has('upgrade-insecure-requests'), `${route}: insecure resource upgrade is required`);

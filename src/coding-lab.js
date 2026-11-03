@@ -1,6 +1,6 @@
-import {codingVisualHTML} from './coding-visuals.js?release=20261102-reach';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-reach';
-import {renderCodingWorkbench,mountCodingWorkbench} from './coding-workbench.js?release=20261102-reach';
+import {codingVisualHTML} from './coding-visuals.js?release=20261102-turnstile';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-turnstile';
+import {renderCodingWorkbench,mountCodingWorkbench} from './coding-workbench.js?release=20261102-turnstile';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';

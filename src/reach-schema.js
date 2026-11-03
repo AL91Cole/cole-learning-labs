@@ -1,6 +1,6 @@
-import {CATALOG} from './lab-catalog.js?release=20261102-reach';
-import {ARCADE_CATALOG} from './arcade-catalog.js?release=20261102-reach';
-import {CODE_QUESTS} from './code-quest-catalog.js?release=20261102-reach';
+import {CATALOG} from './lab-catalog.js?release=20261102-turnstile';
+import {ARCADE_CATALOG} from './arcade-catalog.js?release=20261102-turnstile';
+import {CODE_QUESTS} from './code-quest-catalog.js?release=20261102-turnstile';
 
 export const REACH_ACTIVITIES=Object.freeze([
   ...CATALOG.map(item=>'lab/'+item.id),...ARCADE_CATALOG.map(item=>'arcade/'+item.id),

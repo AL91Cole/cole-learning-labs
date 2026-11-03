@@ -1,4 +1,6 @@
-import test from 'node:test';
+import test,{mock} from 'node:test';
+import {turnstileEnv,mockSiteverify} from './turnstile-fixture.js';
+mockSiteverify(mock);
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {handleRequesterRequest,onRequest} from '../functions/api/requester.js';
@@ -13,11 +15,11 @@ const publicReady={enabled:true,requiresConsent:true};
 const {provider:internalProvider,...publicAnswer}=answer;
 function fixture(provider=async request=>json(request.method==='GET'?ready:answer)){
   const calls=[];
-  const env={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',
+  const env={...turnstileEnv,REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',
     get AI(){assert.fail('Pages accessed AI.');},get REQUESTER_BUDGET(){assert.fail('Pages accessed a database.');},
     REQUESTER_SERVICE:{fetch(request){calls.push(request);return provider(request);}}};
   function make({method='POST',body={scenarioId:'INC-101',topic:'breakfast'},url=ORIGIN+'/api/requester',headers={},signal,raw=false}={}){
-    const h=new Headers({'Sec-Fetch-Site':'same-origin',...(method==='POST'?{Origin:ORIGIN,'Content-Type':'application/json'}:{}),...headers});
+    const h=new Headers({'Sec-Fetch-Site':'same-origin',...(method==='POST'?{Origin:ORIGIN,'Content-Type':'application/json','X-CLL-Turnstile':'requester-test-token'}:{}),...headers});
     for(const [key,value]of Object.entries(headers))if(value===null)h.delete(key);
     return new Request(url,{method,headers:h,signal,...(!['GET','HEAD'].includes(method)?{body:raw?body:JSON.stringify(body)}:{})});
   }

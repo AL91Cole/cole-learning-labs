@@ -1,8 +1,8 @@
-import {GAME_GUIDES,renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-reach';
-import {MEMBER_CONTENT} from './access-policy.js?release=20261102-reach';
-import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-reach';
-import {PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261102-reach';
-import {arcadeLevel,initialArcadeState,arcadeAction,rotatedPorts,buildStats,arcadePart,ROVER_COMMANDS} from './arcade-model.js?release=20261102-reach';
+import {GAME_GUIDES,renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-turnstile';
+import {MEMBER_CONTENT} from './access-policy.js?release=20261102-turnstile';
+import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-turnstile';
+import {PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261102-turnstile';
+import {arcadeLevel,initialArcadeState,arcadeAction,rotatedPorts,buildStats,arcadePart,ROVER_COMMANDS} from './arcade-model.js?release=20261102-turnstile';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TRACKS=Object.freeze({hardware:'Hardware',network:'Networking',security:'Cybersecurity',ai:'AI',coding:'Coding'});
 const SYMBOLS=Object.freeze({hardware:'◈',network:'⌘',security:'◇',ai:'✳',coding:'⌨'});

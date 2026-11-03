@@ -1,4 +1,5 @@
-import {reachActivity,validateReachEvent} from './reach-schema.js?release=20261102-reach';
+import {reachActivity,validateReachEvent} from './reach-schema.js?release=20261102-turnstile';
+import {requestTurnstileToken} from './turnstile-client.js?release=20261102-turnstile';
 
 const ORIGINS=new Set(['https://www.colelearninglabs.com','https://colelearninglabs.com']);
 const CONTROLS=Object.freeze({
@@ -18,20 +19,23 @@ export function reachPrivacyHTML(){return '<section data-reach-notice><h2>Aggreg
 // document. Counts describe engaged browser activity, never verified people.
 export function mountReachMetrics(root,{
   location=globalThis.location,navigator=globalThis.navigator,document=globalThis.document,
-  fetcher=globalThis.fetch,ownerPreview=false
+  fetcher=globalThis.fetch,tokenProvider=requestTurnstileToken,ownerPreview=false
 }={}){
   const stopped={dispose(){},complete(){}};
   if(ownerPreview||!ORIGINS.has(location?.origin)||navigator?.webdriver===true||navigator?.globalPrivacyControl===true||navigator?.doNotTrack==='1'||!root?.addEventListener||typeof fetcher!=='function')return stopped;
-  let enabled=false,disposed=false;const started=new Set(),completed=new Set(),pending=new Set();
+  let enabled=false,disposed=false,sitekey=null;const started=new Set(),completed=new Set(),pending=new Set();
   const visible=()=>document?.visibilityState==='visible';
   const notice=()=>{const status=root.querySelector?.('[data-reach-status]'),stop=root.querySelector?.('[data-reach-stop]');if(status)status.textContent=enabled?'Activity counting is on for this page.':'Activity counting is off for this page.';if(stop)stop.disabled=!enabled;};
   async function request(method,payload){
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),2000);pending.add(controller);
+    const controller=new AbortController();let timer=setTimeout(()=>controller.abort(),method==='GET'?2000:10000);pending.add(controller);
     try{
-      const response=await fetcher('/api/reach',{method,credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',redirect:'error',signal:controller.signal,...(payload?{headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}:{})});
+      let proof;
+      if(payload){proof=await tokenProvider({sitekey,action:'reach',signal:controller.signal});if(!proof||controller.signal.aborted||disposed||!enabled)return null;clearTimeout(timer);timer=setTimeout(()=>controller.abort(),2000);}
+      const response=await fetcher('/api/reach',{method,credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',redirect:'error',signal:controller.signal,...(payload?{headers:{'Content-Type':'application/json','X-CLL-Turnstile':proof},body:JSON.stringify(payload)}:{})});
       if(!response.ok)return null;
       if(method!=='GET')return true;
       const raw=await response.text();if(raw.length>64)return null;
+      sitekey=response.headers.get('X-CLL-Turnstile-Sitekey');
       return JSON.parse(raw);
     }catch{return null;}finally{clearTimeout(timer);pending.delete(controller);}
   }

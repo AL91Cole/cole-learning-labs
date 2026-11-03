@@ -1,7 +1,8 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261102-reach';
-import {requesterTopic} from './requester-topics.js?release=20261102-reach';
-import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261102-reach';
-import {withRequesterTaskNudge} from './requester-general.js?release=20261102-reach';
+import {requesterTextIsPrivate} from './interview.js?release=20261102-turnstile';
+import {requesterTopic} from './requester-topics.js?release=20261102-turnstile';
+import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261102-turnstile';
+import {withRequesterTaskNudge} from './requester-general.js?release=20261102-turnstile';
+import {requestTurnstileToken} from './turnstile-client.js?release=20261102-turnstile';
 
 // Page memory only: cloud contact requires an explicit choice each fresh page.
 const pagePreference={enabled:false};
@@ -14,11 +15,11 @@ export function resetRequesterPreference(){
 // Availability checks require a page-memory opt-in and do not run a model.
 // A new eligible question still needs a known topic, backend enablement and
 // a committed shared budget reserve.
-export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind(globalThis),timeoutMs=12000,cloudEnabled=REQUESTER_CLOUD_ENABLED,preference=pagePreference}={}) {
+export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind(globalThis),tokenProvider=requestTurnstileToken,timeoutMs=12000,cloudEnabled=REQUESTER_CLOUD_ENABLED,preference=pagePreference}={}) {
   const toggle=root.querySelector('[data-ai-toggle]'),status=root.querySelector('[data-ai-status]');
   const cloudAllowed=cloudEnabled===true;
   const readyMessage=cloudAllowed?'Built-in replies are ready.':'Built-in replies are ready. Online replies are unavailable.';
-  let disposed=false,available=false,useCloud=cloudAllowed&&preference.enabled===true;
+  let disposed=false,available=false,sitekey=null,useCloud=cloudAllowed&&preference.enabled===true;
   let sequence=0,probeSequence=0,controller=null,probeController=null;
   const say=text=>{if(!disposed)status.textContent=text;};
   function syncToggle(){if(toggle){toggle.setAttribute('aria-pressed',String(useCloud));toggle.textContent=!cloudAllowed?'AI replies unavailable':useCloud?'AI replies on':'AI replies off';}}
@@ -37,6 +38,12 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
     const stale=()=>disposed||(probe?probeSequence:sequence)!==token;
     const timer=setTimeout(()=>abort.abort(),timeoutMs);
     try{
+      if(!probe){
+        const proof=await tokenProvider({sitekey,action:'requester',signal:abort.signal});
+        if(stale())return undefined;
+        if(!proof||abort.signal.aborted)return null;
+        options={...options,headers:{...options.headers,'X-CLL-Turnstile':proof}};
+      }
       const result=await fetcher(REQUESTER_ENDPOINT,{...options,credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',redirect:'error',signal:abort.signal});
       if(stale())return undefined;
       if(!result.ok)return result.status===429?{limited:true}:null;
@@ -56,6 +63,7 @@ export function mountRequesterChat(root,{scenario,fetcher=globalThis.fetch?.bind
         raw+=decoder.decode();
       }finally{reader.releaseLock();}
       const data=JSON.parse(raw);
+      if(probe)sitekey=result.headers.get('X-CLL-Turnstile-Sitekey');
       if(stale())return undefined;
       return abort.signal.aborted?null:data;
     }catch{abort.abort();return stale()?undefined:null;}
