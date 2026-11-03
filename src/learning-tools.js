@@ -1,6 +1,6 @@
-import {learningModes,renderLabLearning} from './teaching.js?release=20261102-arcade';
-import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261102-arcade';
-import {transferCaseFor} from './scenarios.js?release=20261102-arcade';
+import {learningModes,renderLabLearning} from './teaching.js?release=20261102-reach';
+import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261102-reach';
+import {transferCaseFor} from './scenarios.js?release=20261102-reach';
 
 export function learningRoute(hash) {
   const [path,query='']=String(hash||'').replace(/^#/,'').split('?'),params=new URLSearchParams(query);

@@ -1,3 +1,4 @@
+import {mountReachMetrics,recordReachCompletion} from '../src/reach-metrics.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -11,7 +12,7 @@ function fixture(){
   const node=()=>({innerHTML:'',classList:{add(){},remove(){}},setAttribute(){},replaceChildren(){this.innerHTML='';}});
   const $=selector=>{if(!nodes.has(selector))nodes.set(selector,node());return nodes.get(selector);};
   const forbidden=()=>assert.fail('Elementary routes must not mount reporting, cloud replies, collection, classroom connections or device-saving controls.');
-  const context=vm.createContext({OWNER_PREVIEW:false,MEMBER_CONTENT:false,routeAccess,learningRoute,ELEMENTARY_LABS:ELEMENTARY_LAB_IDS.map(id=>({id,title:'Activity '+id})),
+  const context=vm.createContext({mountReachMetrics,recordReachCompletion,reachMetrics:null,OWNER_PREVIEW:false,MEMBER_CONTENT:false,routeAccess,learningRoute,ELEMENTARY_LABS:ELEMENTARY_LAB_IDS.map(id=>({id,title:'Activity '+id})),
     location:{hash:'#explore'},document:{body:node(),title:''},window:{scrollTo(){},addEventListener:(name,listener)=>events.set(name,listener)},$,$$:()=>[],
     labNavigation:null,currentLab:null,routeCleanup:null,reportCleanup:null,classroomConnection:null,
     store:{labs:{}},foundationRecords:{},practiceStates:{},workStorage:{persistent:true},labView:null,
@@ -25,6 +26,7 @@ function fixture(){
     mountLabImprovements:forbidden,attachClassroomLab:forbidden,openReport:forbidden,fetch:forbidden,XMLHttpRequest:forbidden
   });
   const start=source.indexOf('function renderRoute('),end=source.indexOf("\n$('#menu-toggle').addEventListener",start);
+  vm.runInContext(source.slice(source.indexOf('function activityNotFound('),source.indexOf('\nfunction membershipGate(')),context);
   assert.ok(start>=0&&end>start);vm.runInContext(source.slice(start,end),context);
   vm.runInContext(source.split('\n').find(line=>line.startsWith("window.addEventListener('pagehide'")),context);
   return {context,calls,events,nodes,render(hash){context.location.hash=hash;context.renderRoute();}};
@@ -55,7 +57,7 @@ test('grade-band catalogue routes retain only authored choices and never create 
 test('unknown or extended elementary URLs remain closed without mounting or rendering a real activity',()=>{
   const f=fixture();
   for(const hash of ['#explore/INC-101','#explore/EX-HW-0','#explore/EX-HW-1/extra','#explore/ex-hw-1','#explore/EX%2DHW%2D1'])f.render(hash);
-  assert.equal(f.calls.gates.length,5);assert.ok(f.calls.gates.every(call=>call.unknown));
+  assert.equal(f.calls.gates.length,0);assert.match(f.nodes.get('#main').innerHTML,/Activity not found/u);
   assert.deepEqual(f.calls.mounted,[]);assert.deepEqual(f.calls.rendered,[]);assert.deepEqual(f.calls.catalogues,[]);
 });
 

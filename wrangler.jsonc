@@ -12,7 +12,7 @@
     "REQUESTER_ENABLED": "false",
     "REQUESTER_BILLING_REVIEWED": "false",
     "CLASSROOM_ENABLED": "false",
-    "IMPROVEMENTS_ENABLED": "false"
+    "IMPROVEMENTS_ENABLED": "false", "REACH_ENABLED": "false", "REACH_RETENTION_VERIFIED": "false"
   },
   "env": {
     "preview": {
@@ -22,7 +22,7 @@
         "REQUESTER_ENABLED": "false",
         "REQUESTER_BILLING_REVIEWED": "false",
         "CLASSROOM_ENABLED": "false",
-        "IMPROVEMENTS_ENABLED": "false"
+        "IMPROVEMENTS_ENABLED": "false", "REACH_ENABLED": "false", "REACH_RETENTION_VERIFIED": "false"
       }
     },
     "production": {
@@ -35,7 +35,7 @@
         "REQUESTER_ENABLED": "true",
         "REQUESTER_BILLING_REVIEWED": "true",
         "CLASSROOM_ENABLED": "false",
-        "IMPROVEMENTS_ENABLED": "false"
+        "IMPROVEMENTS_ENABLED": "false", "REACH_ENABLED": "false", "REACH_RETENTION_VERIFIED": "false"
       }
     }
   }

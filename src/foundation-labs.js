@@ -1,6 +1,7 @@
-import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261102-arcade';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-arcade';
-import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261102-arcade';
+import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261102-reach';
+import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261102-reach';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-reach';
+import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261102-reach';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sections=['explore','practice','check'];
@@ -32,10 +33,11 @@ export function renderFoundationLab(candidate,record) {
   const current=record||createFoundationRecord(lab.id);
   return `<section class="foundation-lab" aria-labelledby="foundation-title">
     <header class="foundation-heading"><a href="#labs">← All labs</a><p class="foundation-eyebrow">Start here · ${esc(lab.code||lab.id)} · Grades ${esc(lab.grade)}</p><h1 id="foundation-title">${esc(lab.title)}</h1><p>${esc(lab.goal)}</p></header>
+
     <div class="foundation-tabs" role="tablist" aria-label="Beginner lab steps">${sections.map((id,i)=>`<button type="button" id="foundation-tab-${id}" data-foundation-section="${id}" role="tab" aria-controls="foundation-panel-${id}" aria-selected="${i===0}" tabindex="${i===0?0:-1}"${i>0&&!OWNER_PREVIEW?' disabled aria-disabled="true"':''}><span>${i+1}</span> ${esc(sectionLabels[i])}</button>`).join('')}</div>
     <div class="foundation-body foundation-flow">
       <p class="foundation-step-status" data-foundation-step-status role="status">Explore the items, then try the practice.</p>
-      <section id="foundation-panel-explore" data-foundation-panel="explore" role="tabpanel" aria-labelledby="foundation-tab-explore" tabindex="0"><div class="foundation-prompt" data-foundation-explore></div></section>
+      <section id="foundation-panel-explore" data-foundation-panel="explore" role="tabpanel" aria-labelledby="foundation-tab-explore" tabindex="0">${renderLearningBrief({first:"Choose an item in the picture to discover its job. Follow Explore, Practice and Check in order.",target:"foundation-item",action:"Show me the learning items",steps:["Explore the pictured items and read what each one does.","Try the short practice task. The result tells you what to change.","Explain what you tried, review your report and try the linked investigation."]})}<div class="foundation-prompt" data-foundation-explore></div></section>
       <section id="foundation-panel-practice" data-foundation-panel="practice" role="tabpanel" aria-labelledby="foundation-tab-practice" tabindex="-1" hidden><div class="foundation-prompt" data-foundation-practice></div>
       </section>
       <section id="foundation-panel-check" data-foundation-panel="check" role="tabpanel" aria-labelledby="foundation-tab-check" tabindex="-1" hidden><div class="foundation-prompt" data-foundation-check></div><div class="foundation-explanation"><h2>Explain what you learned</h2><label for="foundation-notes">What did you try?<textarea id="foundation-notes" data-foundation-notes maxlength="2000" rows="3" aria-describedby="foundation-explanation-help" placeholder="I tried…">${esc(current.notes||'')}</textarea></label><label for="foundation-reflection">What did you learn from the result?<textarea id="foundation-reflection" data-foundation-reflection maxlength="2000" rows="3" aria-describedby="foundation-explanation-help" placeholder="The result showed…">${esc(current.reflection||'')}</textarea></label><p id="foundation-explanation-help" class="foundation-small">Write a sentence for each answer. Then finish your practice.</p><p data-foundation-explanation-status class="foundation-small" role="status"></p><div class="foundation-handoff"><button type="button" class="foundation-primary" data-foundation-report>Finish practice &amp; open report</button><a data-foundation-ticket aria-disabled="true" tabindex="-1">Next: try ticket ${esc(lab.nextLab)} →</a></div></div></section>
@@ -87,7 +89,7 @@ export function mountFoundationLab(root,{lab:candidate,record,onChange=()=>{},on
     if(OWNER_PREVIEW&&!check)prompt.innerHTML+='<button type="button" data-foundation-review-questions>Review questions</button>';
     if(lab.track==='coding')$('[data-foundation-code-results]').innerHTML=codingResults(current);
     const outcomes=[['Explore every item',progress.explored===progress.exploreTotal],['Answer each question',progress.checked===progress.checkTotal],['Finish and check the practice task',progress.practiceComplete]];
-    $('[data-foundation-check]').innerHTML=`<p class="foundation-eyebrow">3. Check &amp; explain</p><h2>${progress.complete?'Practice finished.':progress.practiceComplete?'Your task works. What did you learn?':'Check your progress. What did you learn?'}</h2><p>${esc(lab.goal)}</p><ul class="foundation-outcomes">${outcomes.map(([label,done])=>`<li><span aria-hidden="true">${done?'✓':'○'}</span> ${label} <b>${done?'Done':'To do'}</b></li>`).join('')}</ul>`;
+    $('[data-foundation-check]').innerHTML=`<p class="foundation-eyebrow">3. Check &amp; explain</p><h2>${progress.complete?'Practice finished.':progress.practiceComplete?'Your task works. What did you learn?':'Check your progress. What did you learn?'}</h2><p>${esc(lab.goal)}</p><ul class="foundation-outcomes">${outcomes.map(([label,done])=>`<li><span aria-hidden="true">${done?'✓':'○'}</span> ${label} <b>${done?'Done':'To do'}</b></li>`).join('')}</ul>${progress.complete?renderNextChallenge({href:'#lab/'+lab.nextLab,title:'Use your new skills in ticket '+lab.nextLab,copy:'Ask questions, collect clues and test an idea in a full investigation.'}):''}`;
     for(const field of ['notes','reflection'])if($('[data-foundation-'+field+']').value!==(current[field]||''))$('[data-foundation-'+field+']').value=current[field]||'';
     $('[data-foundation-explanation-status]').textContent=progress.complete?'Both answers saved. Review and save your report.':'Write both answers, then select Finish practice & open report.';
   }

@@ -1,4 +1,4 @@
-import { generateTeacherKeyFiles, inspectPublicKey, encryptReport, decryptReport, generateAlias, REPORT_LIMITS } from './report-crypto.js?release=20261102-arcade';
+import { generateTeacherKeyFiles, inspectPublicKey, encryptReport, decryptReport, generateAlias, REPORT_LIMITS } from './report-crypto.js?release=20261102-reach';
 
 const byId = id => document.getElementById(id);
 const status = byId('status');

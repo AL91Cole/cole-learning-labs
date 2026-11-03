@@ -38,7 +38,7 @@ function gateLevel(service,identity,scope,good,badIdentity,badScope,lesson){
 }
 const card=(id,title,fact,bin,shape='star',color='teal')=>({id,title,fact,bin,shape,color});
 const sorting=(bins,cards,lesson)=>({kind:'ai',bins,cards,lesson});
-const rover=(start,end,stars,blocks=[],extra={})=>({kind:'coding',fixtures:[{start,end,stars,blocks}],maxInstructions:18,maxMoves:30,starter:[],...extra});
+const rover=(start,end,stars,blocks=[],extra={})=>({kind:'coding',fixtures:[{start,end,stars,blocks}],maxInstructions:18,maxMoves:30,starter:[],commands:['N','E','S','W'],...extra});
 export const ARCADE_LEVELS=freeze({
   'packet-post':pipeLevel([0,1,2,3,7,11,15],{lesson:'Links must meet at both ends. A packet needs a continuous working path to its destination.'}),
   'gateway-garden':pipeLevel([0,4,5,6,2,3,7,11,15],{via:[6],labels:{6:'Gateway'},lesson:'Traffic to a different network needs an appropriate gateway. The puzzle simplifies routing into connected paths.'}),
@@ -71,8 +71,8 @@ export const ARCADE_LEVELS=freeze({
     card('f1','Fox · 4 delivery tokens','Fictional rule: at least three delivery tokens. Identity is irrelevant.','eligible'),card('f2','Owl · 4 delivery tokens','Same count and rule as Fox.','eligible'),card('f3','Bear · 1 delivery token','One is below three.','ineligible'),card('f4','Hare · count missing','No token count is available. Do not invent it.','review'),card('f5','Deer · 3 delivery tokens','At least three includes exactly three.','eligible'),card('f6','Otter · 2 delivery tokens','Two is below three.','ineligible')
   ],'Apply the same relevant rule to matching fictional cases and send missing evidence to review. This tiny model does not establish real-world fairness or authorize decisions about people.'),
   'garden-rover':rover(0,24,[2,4,14],[],{lesson:'An instruction changes the rover’s position. A working sequence collects every seed and reaches home. Read the arrow blocks with an adult if needed.'}),
-  'loop-lagoon':rover(0,24,[2,12,22],[3,8,13,18],{maxInstructions:4,maxMoves:8,lesson:'A repeat block performs its move twice. Reusing a pattern fits this eight-move route into four blocks.'}),
-  'branch-bridge':rover(0,12,[6,12],[2,7],{fixtures:[{start:0,end:12,stars:[6,12],blocks:[2,7]},{start:5,end:17,stars:[11,17],blocks:[7,12]}],maxInstructions:4,lesson:'IF EAST BLOCKED uses the current room: go south when east is blocked; otherwise go east. One program must work in both supplied rooms.'}),
+  'loop-lagoon':rover(0,24,[2,12,22],[3,8,13,18],{commands:['N','E','S','W','E2','S2'],maxInstructions:4,maxMoves:8,lesson:'A repeat block performs its move twice. Reusing a pattern fits this eight-move route into four blocks.'}),
+  'branch-bridge':rover(0,12,[6,12],[2,7],{commands:['N','E','S','W','IF'],fixtures:[{start:0,end:12,stars:[6,12],blocks:[2,7]},{start:5,end:17,stars:[11,17],blocks:[7,12]}],maxInstructions:4,lesson:'IF EAST BLOCKED uses the current room: go south when east is blocked; otherwise go east. One program must work in both supplied rooms.'}),
   'delivery-drone':rover(0,24,[6,8,18,23],[2,7,12,17],{maxMoves:14,lesson:'Every move spends one energy unit. Planning the route must include all four parcels as well as the home tile.'}),
   'bug-trail':rover(0,14,[4,9],[6,7,8],{starter:['E','E','S','S'],maxMoves:8,lesson:'The starting program hits a wall. Use the trace to locate the problem, edit the blocks and run the new version.'})
 });

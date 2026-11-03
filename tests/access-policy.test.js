@@ -30,7 +30,7 @@ test('safe catalogue and policy imports never require authored scenario payloads
   const catalogue=await readFile(new URL('../src/lab-catalog.js',import.meta.url),'utf8');
   assert.doesNotMatch(catalogue,/\b(?:import|require)\s*(?:\(|\{|['"])/u);
   const policy=await readFile(new URL('../src/access-policy.js',import.meta.url),'utf8');
-  assert.deepEqual([...policy.matchAll(/\bfrom\s+(['"])(.*?)\1/gu)].map(match=>match[2]),['./code-quest-catalog.js?release=20261102-arcade','./arcade-catalog.js?release=20261102-arcade','./lab-catalog.js?release=20261102-arcade']);
+  assert.deepEqual([...policy.matchAll(/\bfrom\s+(['"])(.*?)\1/gu)].map(match=>match[2]),['./code-quest-catalog.js?release=20261102-reach','./arcade-catalog.js?release=20261102-reach','./lab-catalog.js?release=20261102-reach']);
 });
 
 test('all beginner courses and their first investigations stay public',()=>{

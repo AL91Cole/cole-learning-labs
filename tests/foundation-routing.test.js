@@ -1,3 +1,4 @@
+import {mountReachMetrics,recordReachCompletion} from '../src/reach-metrics.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -15,7 +16,7 @@ function fixture(){
   const elements=new Map();
   function node(){return {innerHTML:'',value:'',classList:{add(){},remove(){}},setAttribute(){},addEventListener(name,fn){this[name]=fn;},close(){},replaceChildren(){this.innerHTML='';}};}
   const $=selector=>{if(!elements.has(selector))elements.set(selector,node());return elements.get(selector);};
-  const context=vm.createContext({OWNER_PREVIEW:false,MEMBER_CONTENT:false,routeAccess,CATALOG,esc:value=>String(value??'').replace(/[&<>"']/gu,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])),networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,SCENARIOS,FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport,learningRoute,
+  const context=vm.createContext({mountReachMetrics,recordReachCompletion,reachMetrics:null,OWNER_PREVIEW:false,MEMBER_CONTENT:false,routeAccess,CATALOG,esc:value=>String(value??'').replace(/[&<>"']/gu,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])),networkStudioState:{},networkStudioHasWork:()=>false,initialNetworkStudioState:()=>({}),codingStudioState:{},codingStudioHasWork:()=>false,initialCodingStudioState:()=>({}),practiceStates:{},practiceHasWork:()=>false,practiceScenarioFor:()=>null,SCENARIOS,FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport,learningRoute,
     foundationRecords:Object.create(null),location:{hash:'#learn/hardware'},currentLab:null,labNavigation:null,routeCleanup:null,reportCleanup:null,classroomConnection:null,
     document:{body:{classList:{add(){},remove(){}}},title:''},window:{scrollTo(){},addEventListener(name,fn){events.set(name,fn);}},
     $,$$:()=>[],disposeHardware(){},preserveCodeDraft(){},hasCodeDraft:()=>false,hasLessonPlanWork:()=>false,clearLessonPlanWork(){},hasCodingSandboxWork:()=>false,resetLabImprovements(){},mountLabImprovements(){return()=>{};},resetRequesterPreference(){},clearCodingSandboxWork(){},workStorage:{persistent:true},store:{labs:{}},
@@ -23,7 +24,7 @@ function fixture(){
     mountFoundationLab(root,options){calls.mounts.push(options);return {dispose(){calls.disposals++;},cancelInteraction(){}};},
     openReport(...args){calls.reports.push(args);},routeLink:(route,label)=>`<a href="#${route}">${label}</a>`});
   vm.runInContext(extract('function foundationRecordFor(','\nlet storageAvailable='),context);
-  vm.runInContext(extract('function membershipGate(','\nfunction checkCapstoneState('),context);
+  vm.runInContext(extract('function activityNotFound(','\nfunction checkCapstoneState('),context);
   vm.runInContext(extract('function renderRoute(','\n$(\'#menu-toggle\').addEventListener'),context);
   vm.runInContext(source.split('\n').find(line=>line.startsWith("window.addEventListener('beforeunload'")),context);
   vm.runInContext(source.split('\n').find(line=>line.startsWith("window.addEventListener('pagehide'")),context);
@@ -91,6 +92,6 @@ test('private beginner work gets an unload warning even when investigation devic
 
 test('unknown and prototype-shaped beginner routes cannot mount a lab',()=>{
   const f=fixture();for(const id of ['__proto__','constructor','NO-999','']){
-    f.render(id);assert.equal(f.calls.mounts.length,0);assert.match(f.elements.get('#main').innerHTML,/That activity is unavailable/);
+    f.render(id);assert.equal(f.calls.mounts.length,0);assert.match(f.elements.get('#main').innerHTML,/Activity not found/);
   }
 });

@@ -1,6 +1,6 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261102-arcade';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261102-arcade';
-import {NETWORK_SCENARIOS} from './network-labs.js?release=20261102-arcade';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261102-reach';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261102-reach';
+import {NETWORK_SCENARIOS} from './network-labs.js?release=20261102-reach';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 

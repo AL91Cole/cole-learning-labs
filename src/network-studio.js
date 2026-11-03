@@ -1,4 +1,5 @@
-import {NETWORK_DEVICE_TYPES,initialNetworkStudioState,normalizeNetworkStudioState,applyNetworkStudioAction,evaluateNetworkStudio} from './network-studio-model.js?release=20261102-arcade';
+import {renderLearningBrief} from './activity-guidance.js?release=20261102-reach';
+import {NETWORK_DEVICE_TYPES,initialNetworkStudioState,normalizeNetworkStudioState,applyNetworkStudioAction,evaluateNetworkStudio} from './network-studio-model.js?release=20261102-reach';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const specFor=type=>NETWORK_DEVICE_TYPES.find(item=>item.id===type);
 const titleFor=(state,id)=>state.devices.find(device=>device.id===id)?.label||'Device';
@@ -41,7 +42,7 @@ function bodyMarkup(state,selected,pending,options={}) {
 }
 export function renderNetworkStudio(saved) {
   const state=normalizeNetworkStudioState(saved);
-  return `<section class="network-studio" data-network-studio><header class="ns-heading"><div><p class="ns-eyebrow">BUILD · CONNECT · WATCH</p><h1>Network studio</h1><p>Build your own network and watch a packet travel.</p></div><a href="#labs/network">Networking labs →</a></header><div class="ns-body" data-ns-body>${bodyMarkup(state,state.source||state.devices[0]?.id,null)}</div></section>`;
+  return `<section class="network-studio" data-network-studio><header class="ns-heading"><div><p class="ns-eyebrow">BUILD · CONNECT · WATCH</p><h1>Network studio</h1><p>Build your own network and watch a packet travel.</p></div><a href="#labs/network">Networking labs →</a></header>${renderLearningBrief({first:'Add a device, connect matching ports, then send a packet.',target:'studio-network',action:'Show me Add device',steps:['Try the starter once and look at the result.','Change one thing, run or test it again, and compare what changed.','Make it your own. Your experiment does not complete an investigation.']})}<div class="ns-body" data-ns-body>${bodyMarkup(state,state.source||state.devices[0]?.id,null)}</div></section>`;
 }
 export function mountNetworkStudio(root,{getState=()=>null,onChange=()=>{}}={}) {
   const host=root.querySelector('[data-network-studio]'),body=host?.querySelector('[data-ns-body]');
