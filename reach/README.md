@@ -12,7 +12,7 @@ The existing classroom and self-reported improvement gates are unchanged.
   activity control. Merely loading a URL, opening instructions, or pressing
   reset is insufficient.
 - `complete`: the corresponding real controller finished its existing checks,
-  after a start was sent in the same document. Investigations require closing
+  after a start was sent in the same active page visit. Investigations require closing
   their verified investigation; quests require all eight lessons; elementary
   activities require all three challenges; Inbox Defender requires five rounds;
   beginner courses require the saved explanation; games require their modeled
@@ -21,8 +21,8 @@ The existing classroom and self-reported improvement gates are unchanged.
   (sandbox, network studio, coding studio and practice workbench) count use,
   without inventing a completion criterion.
 
-Each activity can add at most one start and one completion per document.
-Reloading can add more; another person using the same page may add none.
+Each activity can add at most one start and one completion per active page visit.
+Leaving or reloading can add more; another person using the same active page may add none.
 Completion and start totals are independent monthly signals, not a matched
 cohort: month boundaries, privacy choices and failed requests can affect them.
 They are **engaged-browser events, not unique people, students, grades, attendance
