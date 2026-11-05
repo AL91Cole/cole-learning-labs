@@ -130,7 +130,8 @@ async function publishPicture(source,target){
   const browser=await playwright.chromium.launch();
   try{
     const page=await browser.newPage();
-    const dataUrl='data:image/png;base64,'+(await readFile(source)).toString('base64');
+    const mime={'.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.jpeg':'image/jpeg'}[path.extname(source).toLowerCase()]||'image/png';
+    const dataUrl='data:'+mime+';base64,'+(await readFile(source)).toString('base64');
     const webp=await page.evaluate(async url=>{
       const image=new Image();image.src=url;await image.decode();
       const canvas=document.createElement('canvas');canvas.width=512;canvas.height=512;
@@ -159,7 +160,10 @@ async function finalize(options){
   const existing=Object.fromEntries([...current.matchAll(/^  ([a-z]+):'(assets\/part-[a-z-]+\.(?:webp|png))'/gmu)].map(match=>[match[1],match[2]]));
   for(const [id,variant]of Object.entries(options.finalize)){
     if(!known.has(id))throw new Error('Unknown subject: '+id);
-    const source=path.join(options.out,`${id}-${variant}.png`);
+    // Staged candidates may be PNG (Gemini) or WebP (other generators dropped into the folder by hand).
+    const candidates=['png','webp','jpg','jpeg'].map(extension=>path.join(options.out,`${id}-${variant}.${extension}`));
+    let source=null;for(const candidate of candidates){try{await readFile(candidate);source=candidate;break;}catch{/* try the next extension */}}
+    if(!source)throw new Error(`No staged picture ${id}-${variant} (.png/.webp/.jpg) in ${options.out}.`);
     const published=await publishPicture(source,path.join(ROOT,'assets',`part-${id}.webp`));
     existing[id]='assets/'+path.basename(published);
     console.log('published',existing[id]);

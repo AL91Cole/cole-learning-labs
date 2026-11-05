@@ -6,7 +6,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','
 
 /** Alternative text describes what the picture shows, not what the learner should conclude. */
 export const PART_ART_ALT=Object.freeze({
-  panel:'Side panel of a desktop computer case, a flat metal cover with two thumbscrews at the back edge.',
+  panel:'Desktop computer case seen from the side: the flat silver side panel is fitted and held by screws along its edges, with a vent near the bottom.',
   psu:'Desktop power supply: a sealed metal box with a fan grille on one face and a bundle of cables leaving the other.',
   board:'Motherboard: a large circuit board with a square processor socket, four long memory slots and horizontal expansion slots.',
   cpu:'Processor: a small square chip with a flat metal lid and rows of tiny contacts underneath.',
@@ -20,6 +20,12 @@ export const PART_ART_ALT=Object.freeze({
 });
 // PART_ART_START (managed by scripts/generate-component-art.mjs --finalize)
 export const PART_ART=Object.freeze({
+  board:'assets/part-board.webp',
+  cooler:'assets/part-cooler.webp',
+  gpu:'assets/part-gpu.webp',
+  panel:'assets/part-panel.webp',
+  psu:'assets/part-psu.webp',
+  ram:'assets/part-ram.webp'
 });
 // PART_ART_END
 export const PART_ART_IDS=Object.freeze(Object.keys(PART_ART_ALT));

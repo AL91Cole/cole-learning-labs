@@ -20,6 +20,12 @@ Markup comes from `src/part-art.js`: `partArtHTML(id)` returns an empty string u
 5. Publish the accepted variants: `node scripts/generate-component-art.mjs --finalize ram=2,cpu=1`. This resizes to 512 px WebP with the pre-installed Chromium (plain PNG copy when Playwright is absent), writes `assets/part-<id>.webp`, and rewrites the managed block in `src/part-art.js`. The build publishes exactly the files in that manifest.
 6. Run `npm test` and `npm run build`, open the beginner hardware course and an investigation, then commit the pictures and the manifest together.
 
+## Pictures published so far
+
+Six of the eleven subjects (memory, side panel, power supply, motherboard, cooler, graphics card) were generated on 2026-11-05 with the Z-Image Turbo model on a Hugging Face Space, reviewed in-session for text, logos and part accuracy, and published with `--finalize`. Candidates from any generator can be dropped into `art-staging/` as `<id>-<n>.png`, `.webp` or `.jpg`; `--finalize` reads whichever exists. The remaining subjects (processor, thermal paste, SSD, leads, monitor) are waiting on generation quota and go through the same review.
+
+Generators compared for this set: the free Hugging Face Space produced clean, unbranded product shots but is limited by a small daily GPU quota and refused two prompts that mentioned a bare processor lid; OpenArt's free plan watermarks output, so it is unsuitable for published pictures; Visualizee's free plan watermarks output and licenses it for personal use only. The Gemini script remains the repeatable path once a key is configured.
+
 ## Review rules
 
 - Alternative text is written by a person in `PART_ART_ALT`, never generated, and describes what the picture shows.
