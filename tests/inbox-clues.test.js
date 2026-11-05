@@ -7,7 +7,7 @@ import {routeAccess} from '../src/access-policy.js';
 
 const inspectAll = state => ['sender', 'destination', 'context'].reduce((next, id) => inboxGameAction(next, 'inspect', id), state);
 const choose = (state, decision) => inboxGameAction(inboxGameAction(state, 'decide', decision), 'check');
-const text = html => html.replace(/<[^>]+>/gu, ' ').replace(/&amp;/gu, '&').replace(/&#39;/gu, "'").replace(/\s+/gu, ' ');
+const text = html => html.replace(/<[^>]+>/gu, ' ').replace(/&#39;/gu, "'").replace(/&amp;/gu, '&').replace(/\s+/gu, ' ');
 
 function fixture(options) {
   const listeners = new Map(), announcement = {textContent: ''};

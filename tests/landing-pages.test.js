@@ -71,7 +71,7 @@ test('landing pages are script-free documents with one heading, a canonical URL 
     const canonical = [...html.matchAll(/<link rel="canonical" href="([^"]+)">/gu)];
     assert.equal(canonical.length, 1, file);
     assert.equal(canonical[0][1], origin + cleanPath(file), file);
-    assert.match(html, new RegExp('<meta property="og:url" content="' + (origin + cleanPath(file)).replace(/[.]/gu, '\\.') + '">', 'u'), file);
+    assert.ok(html.includes('<meta property="og:url" content="' + origin + cleanPath(file) + '">'), file + ' has a matching og:url');
     const sheets = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/gu)].map(match => match[1]);
     assert.deepEqual(sheets, ['styles', 'school', 'landing', 'accessibility'].map(sheet => '/src/' + sheet + '.css?release=' + release), file);
     assert.match(html, /<a class="skip-link" href="#main">Skip to main content<\/a>/u, file);
