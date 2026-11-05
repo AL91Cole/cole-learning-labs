@@ -1,4 +1,4 @@
-import {normalizeNetworkBench} from './network-bench.js?release=20261104-receipts';
+import {normalizeNetworkBench} from './network-bench.js?release=20261105-receipt-review';
 /** Original local networking adaptations. No live network, capture, or emulator calls. */
 const code=id=>typeof id==='string'?id.replaceAll('-','').toUpperCase():'';
 const option=(value,label)=>[value,label];

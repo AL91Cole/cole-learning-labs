@@ -1,8 +1,9 @@
 # Optional API protection
 
 The public labs remain open. Turnstile is not an admission, progress, grading,
-or completion requirement. Only POST `/api/requester` and POST `/api/reach`
-require a fresh token. Availability GETs remain cheap and do not generate AI
+or completion requirement. Only POST `/api/requester`, `/api/reach`, `/api/telemetry` and `/api/verify`
+require a fresh token (see `telemetry/README.md` for the receipt and verify
+actions). Availability GETs remain cheap and do not generate AI
 or store activity. Classroom and improvement collection remain source-locked.
 
 ## Configuration before merging
@@ -37,7 +38,7 @@ by the automated tests. Production does not accept Cloudflare dummy keys.
 - `X-CLL-Turnstile` carries the token separately from the unchanged, bounded
   topic/count payload. The server verifies it at the fixed Cloudflare Siteverify
   endpoint and requires success, the exact request hostname, the correct action
-  (`requester` or `reach`), and a challenge age within five minutes. Cloudflare
+  (`requester`, `reach`, `receipt` or `verify`), and a challenge age within five minutes. Cloudflare
   enforces single use, including `timeout-or-duplicate` rejection. No local
   token database is needed. No IP, cookie, activity code, question, or work is
   added to Siteverify. Tokens are not forwarded to the private AI Worker or D1.

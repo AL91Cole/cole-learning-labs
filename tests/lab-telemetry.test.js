@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createActiveLabTimer,mountLabTelemetry,mountActivityTelemetry,completeLabActivity,formatActiveTime,labReceiptHTML} from '../src/lab-telemetry.js';
+import {createActiveLabTimer,mountLabTelemetry,mountActivityTelemetry,completeLabActivity,formatActiveTime,labReceiptHTML,mountLabReceiptUI} from '../src/lab-telemetry.js';
 
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 function target(){
@@ -132,4 +132,98 @@ test('reopening a completed investigation clears receipt controls and resumes a 
 test('receipt issuance rechecks that the current report is still complete',async()=>{
   let complete=true;const f=fixture({isComplete:()=>complete});await flush();f.session.complete();complete=false;
   assert.ok((await f.session.receipt()).error);assert.equal(f.requests.length,1);f.session.dispose();
+});
+
+test('assistive-technology activation counts as activity without a pointer or key event',()=>{
+  const c=clock(),timer=createActiveLabTimer(c.options);
+  c.advance(70_000);assert.equal(timer.seconds(),60);
+  c.window.emit('click',{isTrusted:true});c.advance(2_000);assert.equal(timer.seconds(),62);
+  c.window.emit('input',{isTrusted:false});c.advance(120_000);assert.equal(timer.seconds(),120);
+  c.window.emit('change',{isTrusted:true});c.advance(3_000);assert.equal(timer.seconds(),123);
+  timer.dispose();assert.equal(c.window.count(),0);
+});
+
+test('a receipt-only request never sends the learner’s step, and availability reflects the service',async()=>{
+  const f=fixture({getStep:()=>4});await flush();assert.equal(await f.session.receiptsAvailable(),true);
+  f.c.advance(3_000);f.session.complete();await f.session.receipt();
+  assert.deepEqual(JSON.parse(f.requests[1].body),{labId:'INC101',eventType:'complete',activeSeconds:3,stepReached:1,score:100,collectTelemetry:false});f.session.dispose();
+  const off=fixture({fetcher:async()=>Response.json({receiptsEnabled:false,telemetryEnabled:false})});
+  assert.equal(await off.session.receiptsAvailable(),false);off.session.dispose();
+  const preview=fixture({location:{origin:'http://127.0.0.1:4173'}});
+  assert.equal(await preview.session.receiptsAvailable(),false);assert.equal(preview.requests.length,0);preview.session.dispose();
+});
+
+test('a failed first capability check is retried once when a code is requested',async()=>{
+  let calls=0;
+  const f=fixture({fetcher:async(url,options)=>{
+    calls++;if(options.method==='GET'&&calls===1)throw new TypeError('offline');
+    return new Response(JSON.stringify(options.method==='GET'?{receiptsEnabled:true,telemetryEnabled:false}:{ok:true,completionCode:'CLL1-INC101-100-0001-261104-0123456789ABCDEF-0123456789ABCDEF0123456789ABCDEF'}),{headers:{'X-CLL-Turnstile-Sitekey':'0x123456789012345678'}});
+  }});
+  await flush();f.session.complete();
+  assert.match((await f.session.receipt()).code,/^CLL1-/u);assert.equal(calls,3);f.session.dispose();
+});
+
+test('restarting while the opt-in start is pending keeps the learner’s choice and sends one start',async()=>{
+  const tokens=[];
+  const f=fixture({tokenProvider:({signal})=>new Promise(resolve=>{tokens.push(resolve);signal?.addEventListener('abort',()=>resolve(null));})});
+  await flush();f.optIn();await flush();assert.equal(tokens.length,1);
+  f.session.reset();await flush();assert.equal(tokens.length,2);
+  tokens[1]('test-token');await flush();await flush();
+  assert.equal(f.button.textContent,'Stop sharing activity totals');assert.match(f.status.textContent,/^Sharing aggregate/u);
+  const posts=f.requests.filter(request=>request.method==='POST');
+  assert.equal(posts.length,1);assert.equal(JSON.parse(posts[0].body).eventType,'start');f.session.dispose();
+});
+
+test('turning sharing off during the security check sends nothing, and turning it on again sends a start',async()=>{
+  const tokens=[];
+  const f=fixture({tokenProvider:()=>new Promise(resolve=>{tokens.push(resolve);})});
+  await flush();f.optIn();await flush();f.optIn();tokens[0]('test-token');await flush();await flush();
+  assert.equal(f.requests.filter(request=>request.method==='POST').length,0);assert.match(f.status.textContent,/off for this visit/u);
+  f.optIn();await flush();assert.equal(tokens.length,2);tokens[1]('test-token');await flush();await flush();
+  const posts=f.requests.filter(request=>request.method==='POST');
+  assert.equal(posts.length,1);assert.equal(JSON.parse(posts[0].body).eventType,'start');assert.match(f.status.textContent,/^Sharing aggregate/u);f.session.dispose();
+});
+
+test('a start the service rejects turns sharing off and says why',async()=>{
+  const f=fixture({fetcher:async(url,options)=>options.method==='GET'?new Response(JSON.stringify({receiptsEnabled:true,telemetryEnabled:true}),{headers:{'X-CLL-Turnstile-Sitekey':'0x123456789012345678'}}):new Response('',{status:429})});
+  await flush();f.optIn();await flush();await flush();
+  assert.equal(f.button.textContent,'Share activity totals for this visit');assert.match(f.status.textContent,/could not be shared/u);f.session.dispose();
+});
+
+test('receipt links open in a new tab so finished in-memory work is not lost',()=>{
+  const html=labReceiptHTML('INC-101',true);
+  for(const page of ['compliance.html','verify.html'])assert.ok(html.includes('<a href="'+page+'" target="_blank" rel="noopener noreferrer">'),page);
+  assert.equal((html.match(/opens in a new tab/gu)||[]).length,2);
+});
+
+function receiptCard(){
+  const page={activeElement:null,body:{}};
+  const element=()=>({hidden:false,disabled:false,textContent:'',value:'',...target(),focus(){page.activeElement=this;}});
+  const button=element(),status=element(),output={...element(),hidden:true},field=element(),copy={...element(),hidden:true};
+  button.ownerDocument=page;
+  const parts={'[data-receipt-request]':button,'[data-receipt-status]':status,'[data-receipt-output]':output,'[data-receipt-code]':field,'[data-receipt-copy]':copy};
+  const section={hidden:false,querySelector:selector=>parts[selector]};
+  return {page,button,status,output,field,copy,section,host:{querySelector:selector=>selector==='[data-lab-receipt]'?section:null}};
+}
+
+test('the receipt card stays hidden unless codes can be issued, and keeps keyboard focus when one is',async()=>{
+  const off=fixture({fetcher:async()=>Response.json({receiptsEnabled:false,telemetryEnabled:false})}),hiddenCard=receiptCard();
+  const disposeHidden=mountLabReceiptUI(hiddenCard.host,{labId:'INC-101',navigator:{}});
+  assert.equal(hiddenCard.section.hidden,true);await flush();await flush();assert.equal(hiddenCard.section.hidden,true);disposeHidden();off.session.dispose();
+
+  const f=fixture();await flush();f.session.complete();
+  const card=receiptCard(),dispose=mountLabReceiptUI(card.host,{labId:'INC-101',navigator:{}});
+  assert.equal(card.section.hidden,true);await flush();assert.equal(card.section.hidden,false);
+  card.page.activeElement=card.button;card.button.emit('click');await flush();await flush();
+  assert.equal(card.button.hidden,true);assert.equal(card.output.hidden,false);assert.equal(card.copy.hidden,false);
+  assert.match(card.field.value,/^CLL1-/u);assert.equal(card.page.activeElement,card.field);
+  dispose();f.session.dispose();
+});
+
+test('a receipt request that throws re-enables the button and returns focus to it',async()=>{
+  const f=fixture({isComplete:()=>{throw new Error('report unavailable');}});await flush();f.session.complete();
+  const card=receiptCard(),dispose=mountLabReceiptUI(card.host,{labId:'INC-101',navigator:{}});await flush();
+  card.page.activeElement=card.button;card.button.emit('click');card.page.activeElement=card.page.body;await flush();await flush();
+  assert.equal(card.button.disabled,false);assert.equal(card.button.hidden,false);assert.match(card.status.textContent,/unavailable/u);assert.equal(card.page.activeElement,card.button);
+  dispose();f.session.dispose();
 });

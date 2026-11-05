@@ -7,6 +7,6 @@
   "send_metrics":false,
   "upload_source_maps":false,
   "observability":{"enabled":false},
-  "triggers":{"crons":["37 4 * * *"]},
+  "triggers":{"crons":[]},
   "d1_databases":[]
 }

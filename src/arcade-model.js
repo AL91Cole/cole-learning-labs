@@ -1,4 +1,4 @@
-import {ARCADE_LEVELS,PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261104-receipts';
+import {ARCADE_LEVELS,PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261105-receipt-review';
 export const ROVER_COMMANDS=Object.freeze({N:'↑ Up (north)',E:'→ Right (east)',S:'↓ Down (south)',W:'← Left (west)',E2:'→ → Repeat right ×2 (east)',S2:'↓ ↓ Repeat down ×2 (south)',IF:'If right is blocked: down; otherwise right'});
 export const arcadeLevel=id=>typeof id==='string'&&Object.hasOwn(ARCADE_LEVELS,id)?ARCADE_LEVELS[id]:null;
 export const arcadePart=id=>PARTS.find(part=>part.id===id)||null;

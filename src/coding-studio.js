@@ -1,5 +1,5 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261104-receipts';
-import {executeCoding} from './coding-lab.js?release=20261104-receipts';
+import {renderLearningBrief} from './activity-guidance.js?release=20261105-receipt-review';
+import {executeCoding} from './coding-lab.js?release=20261105-receipt-review';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const SOURCE_LIMIT=4000;

@@ -1,8 +1,8 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261104-receipts';
-import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261104-receipts';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261104-receipts';
-import {createTextReport,createReportURLs} from './report-downloads.js?release=20261104-receipts';
-import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261104-receipts';
+import {renderLearningBrief} from './activity-guidance.js?release=20261105-receipt-review';
+import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261105-receipt-review';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261105-receipt-review';
+import {createTextReport,createReportURLs} from './report-downloads.js?release=20261105-receipt-review';
+import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261105-receipt-review';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const drafts=new Map();

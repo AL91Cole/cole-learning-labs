@@ -32,3 +32,28 @@ test('preview and local flags prevent parsing user content or attempting the mis
     assert.equal(response.status,503);assert.equal((await response.json()).error,'requester_not_enabled');
   }
 });
+
+test('receipts and lab telemetry ship disabled in every environment and fail closed without parsing a body',async()=>{
+  const {onRequest:telemetry}=await import('../functions/api/telemetry.js'),{onRequest:verify}=await import('../functions/api/verify.js');
+  for(const config of [pages,pages.env.preview,pages.env.production]){
+    for(const flag of ['RECEIPTS_ENABLED','TELEMETRY_ENABLED','TELEMETRY_PRIVACY_REVIEWED','TELEMETRY_RETENTION_VERIFIED'])assert.equal(config.vars[flag],'false',flag);
+    assert.equal('RECEIPT_SECRET' in config.vars,false,'A signing secret must never be a Wrangler variable.');
+    for(const [handler,path] of [[telemetry,'/api/telemetry'],[verify,'/api/verify']]){
+      const url='https://www.colelearninglabs.com'+path;
+      const get=await handler({request:new Request(url,{headers:{'Sec-Fetch-Site':'same-origin'}}),env:{...config.vars}});
+      assert.equal(get.status,200,path);assert.equal((await get.json()).enabled,false,path);assert.equal(get.headers.has('X-CLL-Turnstile-Sitekey'),false,path);
+      const request=new Request(url,{method:'POST',headers:{Origin:'https://www.colelearninglabs.com','Sec-Fetch-Site':'same-origin','Content-Type':'application/json'},body:'PRIVATE_CANARY'});
+      Object.defineProperty(request,'body',{get(){assert.fail('Disabled environment parsed a browser body.');}});
+      assert.equal((await handler({request,env:{...config.vars}})).status,503,path);
+    }
+  }
+});
+
+test('the telemetry retention worker ships unprovisioned: no binding, no schedule, no variables',async()=>{
+  const config=await read('telemetry/wrangler.retention.jsonc');
+  assert.equal(config.main,'retention-worker.js');assert.deepEqual(config.d1_databases,[]);
+  // A schedule without a database could only fail nightly. Add both in the same reviewed change.
+  assert.deepEqual(config.triggers,{crons:[]});
+  assert.equal(config.vars,undefined);assert.equal(config.observability.enabled,false);
+  for(const key of ['workers_dev','preview_urls','send_metrics','upload_source_maps'])assert.equal(config[key],false,key);
+});
