@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {once} from 'node:events';
-import {readFile,readdir} from 'node:fs/promises';
+import {mkdtemp,readFile,readdir,rm} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import {buildSite,publicFilesFor} from '../scripts/build.mjs';
 import {createPreviewServer} from '../scripts/serve.mjs';
 import {CATALOG} from '../src/lab-catalog.js';
@@ -33,11 +35,19 @@ const request=(server,url)=>new Promise((resolve,reject)=>{
   });req.on('error',reject);
 });
 
+// Test files run at the same time, so each build gets its own output folder
+// instead of the checkout's shared dist.
+async function buildSeparately(t,options){
+  const outputRoot=await mkdtemp(path.join(process.env.CLL_TEST_TMPDIR||os.tmpdir(),'cll-public-access-test-'));
+  t.after(()=>rm(outputRoot,{recursive:true,force:true,maxRetries:5}));
+  return buildSite({...options,outputRoot});
+}
+
 test('the actual public artifact has no raw source or paid resource endpoint, including direct legacy URLs',async t=>{
-  const built=await buildSite({publicLabAccess:'preview'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'preview'});
+  const built=await buildSeparately(t,{publicLabAccess:'preview'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'preview'});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
-  assert.deepEqual((await readdir(new URL('../dist/src/',import.meta.url))).filter(file=>file.endsWith('.js')).sort(),['app.js','receipt-verifier.js','secure-reports.js']);
+  assert.deepEqual((await readdir(path.join(built.directory,'src'))).filter(file=>file.endsWith('.js')).sort(),['app.js','receipt-verifier.js','secure-reports.js']);
   assert.equal(publicFilesFor('preview').some(file=>file.startsWith('memberships/')||file.endsWith('.pdf')),false);
   for(const path of ['/src/scenarios.js','/src/expanded-labs.js','/src/coding-lab.js','/src/coding-workbench.js','/src/sign-in.js','/src/owner-preview.js','/src/owner-preview.js?ownerPreview=true','/src/coding-sandbox.js','/src/lesson-plans.js','/src/elementary-labs.js','/src/block-workshop.js','/src/assembly-builder.js','/src/inbox-defender.js',
     '/memberships/worker.js','/memberships/dist/worker.mjs','/learn/src/app.js','/assets/cole-learning-labs-pop-quizzes.pdf']){
@@ -51,16 +61,16 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   assert.equal(app.body.includes('The fictional prize desk mixes up scores of 50 and 100.'),false);
   assert.equal(app.body.includes('MY CREATIVE STUDIO'),false);
   assert.equal(app.body.includes('Memberships are being prepared.'),true);
-  const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');assert.ok(html.includes('src/app.js'));
+  const html=await readFile(path.join(built.directory,'index.html'),'utf8');assert.ok(html.includes('src/app.js'));
   assert.equal((html.match(/href="#signin">Approved account access<\/a>/gu)||[]).length,1,'The footer retains the shared internal entry.');
   assert.doesNotMatch(html.match(/<nav id="site-nav"[\s\S]*?<\/nav>/u)?.[0],/#signin|#membership/u);
   assert.equal(html.includes('Owner sign in'),false);assert.equal(html.includes('codex-private-owner-preview'),false,'The ordinary navigation does not jump straight to a separate owner page.');
   assert.ok(app.body.includes('Subscriber sign-in is being prepared. Existing authorized access remains available.'));
-  assert.doesNotMatch(await readFile(new URL('../dist/sitemap.xml',import.meta.url),'utf8'),/\/(?:student-workbook|practice-quizzes)<\/loc>/u,'Restricted previews must not advertise unavailable companions.');
+  assert.doesNotMatch(await readFile(path.join(built.directory,'sitemap.xml'),'utf8'),/\/(?:student-workbook|practice-quizzes)<\/loc>/u,'Restricted previews must not advertise unavailable companions.');
 });
 
 test('open-public delivery includes every reviewed lab without raw modules, owner capabilities or collection pages',async t=>{
-  const built=await buildSite({publicLabAccess:'open'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'open',generatedFiles:built.generated});
+  const built=await buildSeparately(t,{publicLabAccess:'open'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'open',generatedFiles:built.generated});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
   const app=await applicationText(server);
@@ -77,7 +87,7 @@ test('open-public delivery includes every reviewed lab without raw modules, owne
   for(const path of ['/classroom','/teacher/'])assert.equal((await request(server,path)).status,302,path);
   for(const path of ['/student-workbook','/practice-quizzes','/secure-reports','/ai-use-notice','/assets/cole-learning-labs-pop-quizzes.pdf'])assert.equal((await request(server,path)).status,200,path);
   const unavailable=await request(server,'/api/classroom');assert.equal(unavailable.status,503);
-  const redirects=await readFile(new URL('../dist/_redirects',import.meta.url),'utf8');
+  const redirects=await readFile(path.join(built.directory,'_redirects'),'utf8');
   assert.doesNotMatch(redirects,/^\/(?:student-workbook|practice-quizzes)/m);assert.match(redirects,/\/teacher\/ \/#membership/);
 });
 

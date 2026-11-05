@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import {PUBLIC_FILES,PUBLIC_SOURCE_FILES,MEMBER_FILES,PUBLIC_SHELL_FILES,offlinePrecacheList,offlineWorkerSource,buildSite} from '../scripts/build.mjs';
 import {previewContentType} from '../scripts/serve.mjs';
 
@@ -48,9 +50,17 @@ test('the offline worker caches only public site files and leaves API, downloads
   assert.throws(()=>offlineWorkerSource('const x=1;',list),/placeholders/u);
 });
 
-test('the public build ships a filled-in worker whose list matches the published files',async()=>{
-  const built=await buildSite({publicLabAccess:'open'});
-  const worker=await readFile(new URL('../dist/sw.js',import.meta.url),'utf8');
+// Test files run at the same time, so each build gets its own output folder
+// instead of the checkout's shared dist.
+async function buildSeparately(t,options){
+  const outputRoot=await mkdtemp(path.join(process.env.CLL_TEST_TMPDIR||os.tmpdir(),'cll-offline-shell-test-'));
+  t.after(()=>rm(outputRoot,{recursive:true,force:true,maxRetries:5}));
+  return buildSite({...options,outputRoot});
+}
+
+test('the public build ships a filled-in worker whose list matches the published files',async t=>{
+  const built=await buildSeparately(t,{publicLabAccess:'open'});
+  const worker=await readFile(path.join(built.directory,'sw.js'),'utf8');
   const list=JSON.parse(worker.match(/const PRECACHE=(\[[^\]]*\]);/u)[1]);
   assert.ok(list.includes('/')&&list.some(entry=>/^\/src\/app\.js\?release=.+-open$/u.test(entry))&&list.some(entry=>/^\/src\/styles\.css\?release=/u.test(entry)));
   for(const chunk of built.generated)assert.ok(list.includes('/'+chunk),chunk);

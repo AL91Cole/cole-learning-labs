@@ -99,7 +99,27 @@ async function sourceBytes(root, filename) {
   } finally { await handle.close(); }
 }
 
+const within = (child, ancestor) => {
+  const relative = path.relative(ancestor, child);
+  return relative === '' || !(relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative));
+};
+
+// The artifact is always a folder named dist. It sits inside the source root unless a
+// caller names a separate, existing real folder, so builds that run at the same time
+// (the test suite) never share one output. A separate location is never emptied.
+async function outputParentFor(root, outputRoot) {
+  if (outputRoot === undefined) return root;
+  if (typeof outputRoot !== 'string' || !path.isAbsolute(outputRoot)) throw new Error('A separate build location must be an absolute directory path.');
+  await directoryOnly(outputRoot);
+  const parent = await realpath(outputRoot);
+  if (parent === root) return root;
+  if (within(parent, root) || within(root, path.join(parent, 'dist'))) throw new Error('A separate build location must be outside the source tree.');
+  try { await lstat(path.join(parent, 'dist')); } catch (error) { if (error.code === 'ENOENT') return parent; throw error; }
+  throw new Error('A separate build location must not already contain a dist entry.');
+}
+
 // Check the exact resolved workspace target and reject junctions/links before removal.
+// root is the folder that holds the output: the project root, or a separate build location.
 async function safeBuildDirectory(root, directory, prefix) {
   if (path.dirname(directory) !== root || !path.basename(directory).startsWith(prefix)) throw new Error('Build directory escaped the project root.');
   let info;
@@ -140,7 +160,7 @@ export function offlineWorkerSource(template,precache){
   return template.replace("'cll-static-__CACHE_VERSION__'",JSON.stringify('cll-static-'+version)).replace('__PRECACHE_MANIFEST__',JSON.stringify(precache));
 }
 
-export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = PUBLIC_LAB_ACCESS } = {}) {
+export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = PUBLIC_LAB_ACCESS, outputRoot } = {}) {
   // Even an accidentally approved manifest entry cannot publish a private-named
   // curriculum resource. Content review remains necessary for every new asset.
   const openLabs=labsAreOpen(publicLabAccess),publicFiles=publicFilesFor(publicLabAccess);
@@ -148,7 +168,8 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   const requested = path.resolve(sourceRoot);
   await directoryOnly(requested);
   const root = await realpath(requested);
-  const output = path.join(root, 'dist');
+  const outputParent = await outputParentFor(root, outputRoot);
+  const output = path.join(outputParent, 'dist');
   for (const directory of PUBLIC_DIRECTORIES) await validatePublicTree(root, directory);
   const sources = new Map();
   for (const filename of PUBLIC_SOURCE_FILES) sources.set(filename, await sourceBytes(root, filename));
@@ -181,9 +202,9 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   const verifier = await bundleTier({sourceRoot:root,member:false,entry:'receipt-verifier.js'});
   content.set('src/receipt-verifier.js',Buffer.from(verifier.javascript));
   content.set('sw.js',Buffer.from(offlineWorkerSource(content.get('sw.js').toString('utf8'),offlinePrecacheList(content))));
-  await safeBuildDirectory(root, output, 'dist');
+  await safeBuildDirectory(outputParent, output, 'dist');
 
-  let staging = await mkdtemp(path.join(root, '.publish-stage-'));
+  let staging = await mkdtemp(path.join(outputParent, '.publish-stage-'));
   try {
     for (const [filename, bytes] of content) {
       const target = path.join(staging, filename);
@@ -191,12 +212,15 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
       await writeFile(target, bytes, { flag: 'wx' });
     }
     // Sources and staging are complete before replacing a previous generated output.
-    if (await safeBuildDirectory(root, output, 'dist')) await rm(output, { recursive: true });
+    if (await safeBuildDirectory(outputParent, output, 'dist')) {
+      if (outputParent !== root) throw new Error('A separate build location must not already contain a dist entry.');
+      await rm(output, { recursive: true });
+    }
     await rename(staging, output);
     staging = null;
     return { directory: output, files: [...publicFiles], generated: Object.freeze(generated) };
   } finally {
-    if (staging && await safeBuildDirectory(root, staging, '.publish-stage-')) await rm(staging, { recursive: true });
+    if (staging && await safeBuildDirectory(outputParent, staging, '.publish-stage-')) await rm(staging, { recursive: true });
   }
 }
 
