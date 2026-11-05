@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261105-receipt-review';
+import { pcActivity } from './pc-activity.js?release=20261106-fast-start';
 /** Beginner equipment views. The model owns every answer and practice result. */
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tracks=new Set(['hardware','network','ai','security','coding']);

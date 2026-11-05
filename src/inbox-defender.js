@@ -1,4 +1,5 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261105-receipt-review';
+import {renderLearningBrief} from './activity-guidance.js?release=20261106-fast-start';
+export {renderInboxDefenderEntry} from './home-entries.js?release=20261106-fast-start';
 // Authored, browser-local practice. This module has no service, account or lab-record capability.
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
@@ -41,9 +42,6 @@ export function inboxGameAction(state, action, value) {
   return {...state, resolved:true, feedback:round.feedback};
 }
 
-export function renderInboxDefenderEntry() {
-  return '<section class="wrap id-entry" aria-labelledby="inbox-entry-title"><div><p class="eyebrow">Play a mission · Free · Grades K–12</p><h2 id="inbox-entry-title">Your inbox. Your call.</h2><p>Five messages. Inspect the clues and watch your decision change the scene. Choose picture patrol with an adult or an evidence challenge. No timer.</p></div><a class="button" href="#play/inbox-defender">Play Inbox Defender <span aria-hidden="true">→</span></a></section>';
-}
 function progress(state) {
   return '<ol class="id-progress" aria-label="Message queue">'+roundsFor(state).map((round,index)=>'<li'+(!state.finished && index===state.round?' aria-current="step"':'')+'><span aria-hidden="true">'+(state.finished || index<state.round || (index===state.round && state.resolved)?'✓':index+1)+'</span><span class="id-round-label">Message '+(index+1)+'</span></li>').join('')+'</ol>';
 }

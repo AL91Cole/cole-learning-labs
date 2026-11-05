@@ -11,6 +11,20 @@ import {createWorkStorage,WORK_PREFIX,PUBLIC_WORK_PREFIX} from '../src/local-wor
 import {SCENARIOS} from '../src/scenarios.js';
 import {handleRequesterRequest} from '../functions/api/requester.js';
 
+// The main application is delivered as an entry module plus route chunks. Follow
+// every chunk reference so content checks cover the whole reviewed delivery.
+async function applicationText(server){
+  const seen=new Map(),queue=['/src/app.js'];
+  while(queue.length){
+    const pathname=queue.shift();if(seen.has(pathname))continue;
+    const result=await request(server,pathname);assert.equal(result.status,200,pathname);seen.set(pathname,result.body);
+    for(const match of result.body.matchAll(/\b(?:from|import|import\()"\.\/([^"]+\.js)"/gu))queue.push(pathname.slice(0,pathname.lastIndexOf('/')+1)+match[1]);
+  }
+  // Start-up bytes are the entry plus every chunk it imports statically; routes arrive through import().
+  const startup=new Set(),follow=pathname=>{if(startup.has(pathname))return;startup.add(pathname);for(const match of seen.get(pathname).matchAll(/\b(?:from|import)"\.\/([^"]+\.js)"/gu))follow(pathname.slice(0,pathname.lastIndexOf('/')+1)+match[1]);};
+  follow('/src/app.js');
+  return {entry:seen.get('/src/app.js'),startup:[...startup].map(name=>seen.get(name)).join('\n'),all:[...seen.values()].join('\n'),files:[...seen.keys()]};
+}
 const request=(server,url)=>new Promise((resolve,reject)=>{
   const req=http.get({host:'127.0.0.1',port:server.address().port,path:url,agent:false},res=>{
     const chunks=[];res.on('data',chunk=>chunks.push(chunk));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks).toString()}));
@@ -44,15 +58,19 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
 });
 
 test('open-public delivery includes every reviewed lab without raw modules, owner capabilities or collection pages',async t=>{
-  const built=await buildSite({publicLabAccess:'open'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'open'});
+  const built=await buildSite({publicLabAccess:'open'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'open',generatedFiles:built.generated});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
-  const app=await request(server,'/src/app.js');assert.equal(app.status,200);
-  assert.ok(app.body.includes('All labs are open without an account.'));
-  assert.ok(app.body.includes('MY CREATIVE STUDIO'));assert.ok(app.body.includes('The fictional prize desk mixes up scores of 50 and 100.'));
-  assert.ok(app.body.includes('Game on. Build a fix as you play.'));
-  assert.doesNotMatch(app.body,/Owner preview navigation\./);
-  assert.ok(Buffer.byteLength(app.body)<1_300_000,'The full open application keeps a separate reviewed size budget.');
+  const app=await applicationText(server);
+  assert.ok(app.entry.includes('All labs are open without an account.'));
+  assert.ok(app.all.includes('MY CREATIVE STUDIO'));assert.ok(app.all.includes('The fictional prize desk mixes up scores of 50 and 100.'));
+  assert.ok(app.startup.includes('Game on. Build a fix as you play.'),'The home page entry card ships with the start-up modules.');
+  for(const marker of ['<h1>Coding studio','<h1>Network studio','<h1>Teaching toolkit'])assert.equal(app.startup.includes(marker),false,marker+': downloads with its route, not with the home page.');
+  assert.doesNotMatch(app.all,/Owner preview navigation\./);
+  assert.ok(Buffer.byteLength(app.all)<1_300_000,'The full open application keeps a separate reviewed size budget.');
+  assert.ok(Buffer.byteLength(app.startup)<Buffer.byteLength(app.all)*0.8,'Start-up bytes stay well below the whole application.');
+  assert.ok(built.generated.length>=10&&built.generated.every(filename=>app.files.includes('/'+filename)),'Every generated route chunk is reachable from the entry module.');
+  assert.equal((await request(server,'/src/chunks/chunk-NOTBUILT0.js')).status,404,'Only chunks named by this build are served.');
   for(const path of ['/src/arcade.js','/src/arcade-levels.js','/src/arcade-model.js','/src/scenarios.js','/src/owner-preview.js','/memberships/worker.js','/learn/src/app.js'])assert.equal((await request(server,path)).status,404,path);
   for(const path of ['/classroom','/teacher/'])assert.equal((await request(server,path)).status,302,path);
   for(const path of ['/student-workbook','/practice-quizzes','/secure-reports','/ai-use-notice','/assets/cole-learning-labs-pop-quizzes.pdf'])assert.equal((await request(server,path)).status,200,path);

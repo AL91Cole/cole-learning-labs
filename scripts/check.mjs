@@ -12,6 +12,7 @@ async function scan(folder) {
   }
 }
 await scan('src'); await scan('functions'); await scan('scripts');
+files.push('sw.js');
 // The opt-in Docker service is source-only and has its own dependency install.
 // Syntax-check its modules without walking generated node_modules or publishing it.
 await scan('terminal-sandbox/public');

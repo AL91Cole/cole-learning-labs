@@ -35,7 +35,10 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // On-demand bot verification adds about 4 KB; compiled caps stay unchanged.
   // Local engagement timing and reviewed receipt metadata add about 16 KB;
   // server crypto stays outside this graph and compiled caps stay unchanged.
-  assert.ok(bytes<1_585_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // Route-group aggregators, the shared route parser, the on-page Display menu
+  // and device-only read-aloud add about 18 KB of source. Learning routes now
+  // download on demand, so start-up delivery shrinks while the graph grows slightly.
+  assert.ok(bytes<1_625_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{

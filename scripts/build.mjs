@@ -1,4 +1,5 @@
 import { constants } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { lstat, mkdir, mkdtemp, open, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +15,7 @@ const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/turnstile-client.js', 'src/receipt-schema.js', 'src/lab-telemetry.js', 'src/receipt-verifier.js', 'src/receipt-verifier.css',
   'index.html', '404.html', 'classroom.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', 'teacher/index.html', 'student-workbook.html', 'practice-quizzes.html',
+  'manifest.webmanifest', 'sw.js', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/icon-maskable-512.png', 'assets/apple-touch-icon.png',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
   'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
@@ -35,17 +37,22 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/report-crypto.js', 'src/report-downloads.js', 'src/secure-reports.js', 'src/local-work.js', 'src/work-controls.js',
   'src/secure-reports.css', 'src/accessibility.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css',
-  'src/access-policy.js', 'src/lab-catalog.js', 'src/owner-preview.js', ...PUBLIC_METADATA_FILES
+  'src/access-policy.js', 'src/lab-catalog.js', 'src/owner-preview.js',
+  'src/learning-routes.js', 'src/home-entries.js', 'src/sandbox-starters.js', 'src/coding-studio-model.js', 'src/display-menu.js', 'src/read-aloud.js',
+  'src/lazy-investigation.js', 'src/lazy-foundation.js', 'src/lazy-arcade.js', 'src/lazy-quests.js', 'src/lazy-inbox.js', 'src/lazy-studios.js', 'src/lazy-sandbox.js', 'src/lazy-teaching.js', 'src/lazy-guide.js', 'src/lazy-privacy.js',
+  ...PUBLIC_METADATA_FILES
 ]);
 // Source review does not grant public delivery. The complete member application
 // is packaged separately unless the reviewed open-public release explicitly includes it.
 // Public disclosure metadata is not a member learning resource.
 const PUBLIC_RECEIPT_TOOLS = new Set(['compliance.html','verify.html','src/receipt-verifier.js','src/receipt-verifier.css']);
-export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)));
+// The installable-app shell and offline cache belong to the public root site only.
+export const PUBLIC_SHELL_FILES = Object.freeze(['manifest.webmanifest','sw.js','assets/icon-192.png','assets/icon-512.png','assets/icon-maskable-512.png','assets/apple-touch-icon.png']);
+export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)));
 const PREVIEW_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
-  ...PUBLIC_METADATA_FILES,
+  ...PUBLIC_METADATA_FILES, ...PUBLIC_SHELL_FILES,
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
   'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js',
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
@@ -107,6 +114,29 @@ async function safeBuildDirectory(root, directory, prefix) {
   return true;
 }
 
+/** Files the offline cache stores at install: the home page, its entry script and
+ * styles with their exact release queries, every route chunk, the manifest and icons.
+ * Downloads, member pages and anything under /api are deliberately absent. */
+export function offlinePrecacheList(content){
+  const html=content.get('index.html').toString('utf8'),origin='https://reviewed.invalid/';
+  const references=[...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)="([^"]+)"[^>]*>/gu)]
+    .filter(([tag])=>/<script\b/u.test(tag)||/rel="(?:stylesheet|manifest|icon|apple-touch-icon)"/u.test(tag))
+    .map(([,reference])=>{const url=new URL(reference,origin);if(url.origin!==new URL(origin).origin)throw new Error('Offline cache only covers same-origin files.');return url.pathname+url.search;});
+  const chunks=[...content.keys()].filter(filename=>filename.startsWith('src/chunks/')).map(filename=>'/'+filename);
+  const list=[...new Set(['/',...references,...chunks,'/assets/cole-learning-labs-logo.webp','/assets/icon-192.png','/assets/icon-512.png','/assets/icon-maskable-512.png'])];
+  for(const entry of list){
+    const filename=entry==='/'?'index.html':decodeURIComponent(entry.slice(1).split('?')[0]);
+    if(!content.has(filename))throw new Error('Offline cache entry is not a published file: '+entry);
+    if(/\.pdf$/u.test(filename)||/^(?:classroom|teacher|student-workbook|practice-quizzes)/u.test(filename))throw new Error('Offline cache must not hold downloads or protected pages: '+entry);
+  }
+  return Object.freeze(list.sort());
+}
+export function offlineWorkerSource(template,precache){
+  if(!template.includes("'cll-static-__CACHE_VERSION__'")||!template.includes('__PRECACHE_MANIFEST__'))throw new Error('Offline worker template is missing its reviewed placeholders.');
+  const version=createHash('sha256').update(JSON.stringify(precache)).update(template).digest('hex').slice(0,16);
+  return template.replace("'cll-static-__CACHE_VERSION__'",JSON.stringify('cll-static-'+version)).replace('__PRECACHE_MANIFEST__',JSON.stringify(precache));
+}
+
 export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = PUBLIC_LAB_ACCESS } = {}) {
   // Even an accidentally approved manifest entry cannot publish a private-named
   // curriculum resource. Content review remains necessary for every new asset.
@@ -130,8 +160,15 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   content.set('index.html',Buffer.from(content.get('index.html').toString('utf8').replace(/(src\/app\.js\?release=[A-Za-z0-9_-]+)/u,'$1-'+publicLabAccess)));
   const routes = JSON.parse(content.get('_routes.json').toString('utf8'));
   if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester', '/api/reach', '/api/telemetry', '/api/verify'], exclude: [] })) throw new Error('Only the reviewed requester, gated reach, and optional receipt endpoints may invoke API Functions; classroom collection routes must stay excluded.');
-  const tier = await bundleTier({sourceRoot:root,member:openLabs,localOnly:openLabs,publicLabsOpen:openLabs});
+  // The main application is split by learning route: the entry module serves the
+  // home page and catalog, and each route group downloads when first opened.
+  const tier = await bundleTier({sourceRoot:root,member:openLabs,localOnly:openLabs,publicLabsOpen:openLabs,split:true});
   content.set('src/app.js',Buffer.from(tier.javascript));
+  const generated=[];
+  for(const chunk of tier.chunks){
+    if(!/^src\/chunks\/[a-z0-9-]+-[A-Z0-9]+\.js$/u.test(chunk.filename)||content.has(chunk.filename))throw new Error('Unexpected generated route chunk: '+chunk.filename);
+    content.set(chunk.filename,Buffer.from(chunk.javascript));generated.push(chunk.filename);
+  }
   if(openLabs){const redirects=content.get('_redirects').toString('utf8').split('\n').filter(line=>!/^\/(?:student-workbook|practice-quizzes)(?:[\s/.])/.test(line)).join('\n');content.set('_redirects',Buffer.from(redirects));}
   else content.set('sitemap.xml',Buffer.from(content.get('sitemap.xml').toString('utf8').replace(/\s*<url><loc>https:\/\/www\.colelearninglabs\.com\/(?:student-workbook|practice-quizzes)<\/loc><\/url>/gu,'')));
   // This public privacy tool has no course content; bundle its own reviewed
@@ -140,6 +177,7 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   content.set('src/secure-reports.js',Buffer.from(localTool.javascript));
   const verifier = await bundleTier({sourceRoot:root,member:false,entry:'receipt-verifier.js'});
   content.set('src/receipt-verifier.js',Buffer.from(verifier.javascript));
+  content.set('sw.js',Buffer.from(offlineWorkerSource(content.get('sw.js').toString('utf8'),offlinePrecacheList(content))));
   await safeBuildDirectory(root, output, 'dist');
 
   let staging = await mkdtemp(path.join(root, '.publish-stage-'));
@@ -153,7 +191,7 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
     if (await safeBuildDirectory(root, output, 'dist')) await rm(output, { recursive: true });
     await rename(staging, output);
     staging = null;
-    return { directory: output, files: [...publicFiles] };
+    return { directory: output, files: [...publicFiles], generated: Object.freeze(generated) };
   } finally {
     if (staging && await safeBuildDirectory(root, staging, '.publish-stage-')) await rm(staging, { recursive: true });
   }

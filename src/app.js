@@ -1,47 +1,104 @@
-import {mountReachMetrics,recordReachCompletion as recordReachCompletionCount} from './reach-metrics.js?release=20261105-receipt-review';
-import {mountActivityTelemetry,completeLabActivity,labReceiptHTML,mountLabReceiptUI} from './lab-telemetry.js?release=20261105-receipt-review';
-import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261105-receipt-review';
-import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261105-receipt-review';
-import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261105-receipt-review';
-import {renderCodeQuestEntry,renderCodeQuestHub,renderCodeQuest,mountCodeQuest} from './code-quests.js?release=20261105-receipt-review';
-import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261105-receipt-review';
-import {renderArcadeEntry,renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue} from './arcade.js?release=20261105-receipt-review';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261105-receipt-review';
-import {CATALOG} from './lab-catalog.js?release=20261105-receipt-review';
-import {renderSignIn} from './sign-in.js?release=20261105-receipt-review';
-import {renderInboxDefenderEntry,renderInboxDefender,mountInboxDefender} from './inbox-defender.js?release=20261105-receipt-review';
-import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261105-receipt-review';
-import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261105-receipt-review';
-import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261105-receipt-review';
-import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261105-receipt-review';
-import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261105-receipt-review';
-import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261105-receipt-review';
-import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261105-receipt-review';
-import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261105-receipt-review';
-import {SCENARIOS} from './scenarios.js?release=20261105-receipt-review';
-import {labLanguage} from './lab-language.js?release=20261105-receipt-review';
-import {requesterPersona} from './requester-persona.js?release=20261105-receipt-review';
-import {mountRequesterChat,resetRequesterPreference} from './requester-chat.js?release=20261105-receipt-review';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261105-receipt-review';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261105-receipt-review';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261105-receipt-review';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261105-receipt-review';
-import {cancelCodingWorkbench} from './coding-workbench.js?release=20261105-receipt-review';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261105-receipt-review';
-import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261105-receipt-review';
-import {privacyPage} from './privacy.js?release=20261105-receipt-review';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261105-receipt-review';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261105-receipt-review';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261105-receipt-review';
+import {mountReachMetrics,recordReachCompletion as recordReachCompletionCount} from './reach-metrics.js?release=20261106-fast-start';
+import {mountActivityTelemetry,completeLabActivity,labReceiptHTML,mountLabReceiptUI} from './lab-telemetry.js?release=20261106-fast-start';
+import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261106-fast-start';
+import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261106-fast-start';
+import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261106-fast-start';
+import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261106-fast-start';
+import {renderArcadeEntry,renderCodeQuestEntry,renderInboxDefenderEntry} from './home-entries.js?release=20261106-fast-start';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261106-fast-start';
+import {CATALOG} from './lab-catalog.js?release=20261106-fast-start';
+import {renderSignIn} from './sign-in.js?release=20261106-fast-start';
+import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261106-fast-start';
+import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261106-fast-start';
+import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261106-fast-start';
+import {initialCodingStudioState,codingStudioHasWork} from './coding-studio-model.js?release=20261106-fast-start';
+import {SANDBOX_STARTERS} from './sandbox-starters.js?release=20261106-fast-start';
+import {SCENARIOS} from './scenarios.js?release=20261106-fast-start';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261106-fast-start';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261106-fast-start';
+import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261106-fast-start';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261106-fast-start';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261106-fast-start';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261105-receipt-review';
-import {hasLessonPlanWork,clearLessonPlanWork} from './lesson-plans.js?release=20261105-receipt-review';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261105-receipt-review';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261105-receipt-review';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261105-receipt-review';
-import {renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff} from './capstone.js?release=20261105-receipt-review';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261105-receipt-review';
+import {learningRoute,labPageHash} from './learning-routes.js?release=20261106-fast-start';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261106-fast-start';
+import {mountDisplayMenu} from './display-menu.js?release=20261106-fast-start';
+import {mountReadAloud} from './read-aloud.js?release=20261106-fast-start';
 
+// Learning routes download on demand. Each entry is a reviewed aggregator
+// module whose exports replace these placeholders the first time a route needs
+// them. Until then the placeholders are safe no-ops, so page-leave cleanup and
+// unload warnings work before any workbench has been downloaded.
+let renderCodeQuestHub,renderCodeQuest,mountCodeQuest;
+let renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue;
+let renderInboxDefender,mountInboxDefender;
+let renderNetworkStudio,mountNetworkStudio,renderCodingStudio,mountCodingStudio;
+let practiceScenarioFor=()=>null,practiceHasWork=()=>false,renderPracticeWorkbench,mountPracticeWorkbench;
+let renderLabTutorial,mountLabTutorial;
+let renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork=()=>false,clearCodingSandboxWork=()=>{};
+let labLanguage,requesterPersona,mountRequesterChat,resetRequesterPreference=()=>{};
+let renderFoundationLab,mountFoundationLab;
+let applyHardwareAction,verifyHardware,renderHardware,disposeHardware=()=>{},cancelHardwareInteraction=()=>{},setHardwareVisible;
+let applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace;
+let cancelCodingWorkbench=()=>{};
+let privacyPage;
+let answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents;
+let renderTeachingPage,mountTeachingPage,hasLessonPlanWork=()=>false,clearLessonPlanWork=()=>{},standardsAlignmentHTML,mountStandardsAlignment;
+let mountLabLearning;
+let retainExperimentEvents,experimentEventText,experimentReport,readExperiments;
+let renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff;
+const ROUTE_MODULES=Object.freeze({
+  investigation:{pages:['lab','capstone','practice'],load:()=>import('./lazy-investigation.js?release=20261106-fast-start'),assign(m){({applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible,applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace,cancelCodingWorkbench,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,labLanguage,requesterPersona,mountRequesterChat,resetRequesterPreference,mountLabLearning,retainExperimentEvents,experimentEventText,experimentReport,readExperiments,renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff,practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench}=m);}},
+  foundation:{pages:['learn'],load:()=>import('./lazy-foundation.js?release=20261106-fast-start'),assign(m){({renderFoundationLab,mountFoundationLab}=m);}},
+  arcade:{pages:['arcade'],load:()=>import('./lazy-arcade.js?release=20261106-fast-start'),assign(m){({renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue}=m);}},
+  quests:{pages:['quests'],load:()=>import('./lazy-quests.js?release=20261106-fast-start'),assign(m){({renderCodeQuestHub,renderCodeQuest,mountCodeQuest}=m);}},
+  inbox:{pages:['play'],load:()=>import('./lazy-inbox.js?release=20261106-fast-start'),assign(m){({renderInboxDefender,mountInboxDefender}=m);}},
+  studios:{pages:['studio'],load:()=>import('./lazy-studios.js?release=20261106-fast-start'),assign(m){({renderNetworkStudio,mountNetworkStudio,renderCodingStudio,mountCodingStudio}=m);}},
+  sandbox:{pages:['sandbox'],load:()=>import('./lazy-sandbox.js?release=20261106-fast-start'),assign(m){({renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork}=m);}},
+  teaching:{pages:['educators'],load:()=>import('./lazy-teaching.js?release=20261106-fast-start'),assign(m){({renderTeachingPage,mountTeachingPage,hasLessonPlanWork,clearLessonPlanWork,standardsAlignmentHTML,mountStandardsAlignment}=m);}},
+  guide:{pages:['guide'],load:()=>import('./lazy-guide.js?release=20261106-fast-start'),assign(m){({renderLabTutorial,mountLabTutorial}=m);}},
+  privacy:{pages:['privacy'],load:()=>import('./lazy-privacy.js?release=20261106-fast-start'),assign(m){({privacyPage}=m);}}
+});
+const loadedRouteGroups=new Set(),routeGroupLoads=new Map();
+let pendingRouteLoad=null,slowRouteTimer=null;
+function routeGroupsFor(route){
+  const access=routeAccess(route);
+  if(route.page==='membership'||access==='unknown'||(access==='member'&&!MEMBER_CONTENT))return [];
+  return Object.keys(ROUTE_MODULES).filter(name=>ROUTE_MODULES[name].pages.includes(route.page));
+}
+function loadRouteGroup(name){
+  if(!routeGroupLoads.has(name))routeGroupLoads.set(name,ROUTE_MODULES[name].load().then(module=>{ROUTE_MODULES[name].assign(module);loadedRouteGroups.add(name);},error=>{routeGroupLoads.delete(name);throw error;}));
+  return routeGroupLoads.get(name);
+}
+function finishRouteLoading(){clearTimeout(slowRouteTimer);slowRouteTimer=null;document.body.classList.remove('route-loading');$('#main').removeAttribute('aria-busy');}
+/** True when every module for this route is ready. Otherwise the current page
+ * stays in place while the missing group downloads, and the route renders
+ * afterwards if the address has not changed in the meantime. */
+function ensureRouteModules(route,preserveDraft){
+  const missing=routeGroupsFor(route).filter(name=>!loadedRouteGroups.has(name));
+  if(!missing.length){if(pendingRouteLoad){pendingRouteLoad=null;finishRouteLoading();}return true;}
+  const hash=location.hash;
+  if(pendingRouteLoad?.hash===hash)return false;
+  const pending={hash};pendingRouteLoad=pending;
+  document.body.classList.add('route-loading');$('#main').setAttribute('aria-busy','true');
+  clearTimeout(slowRouteTimer);slowRouteTimer=setTimeout(()=>showNotice('Opening this activity…'),600);
+  Promise.all(missing.map(loadRouteGroup)).then(()=>{
+    if(pendingRouteLoad!==pending)return;
+    pendingRouteLoad=null;finishRouteLoading();$('#notice').hidden=true;
+    if(location.hash!==hash)return;
+    if(renderRoute(preserveDraft)!==false)$('#main').focus({preventScroll:true});
+  },()=>{
+    if(pendingRouteLoad!==pending)return;
+    pendingRouteLoad=null;finishRouteLoading();$('#notice').hidden=true;
+    if(location.hash!==hash)return;
+    routeCleanup?.();routeCleanup=null;currentLab=null;labNavigation=null;document.body.classList.remove('lab-view');
+    $('#main').innerHTML='<section class="wrap page-intro route-load-error"><p class="eyebrow">Connection problem</p><h1>This activity could not be opened.</h1><p>Part of the site did not download. Check the connection, then reload this page. Work already saved on this device is not affected.</p><div class="button-row"><button class="button" type="button" id="route-retry">Reload and try again</button><a class="button button-outline" href="#labs">Choose another activity</a></div></section>';
+    document.title='Activity unavailable · Cole Learning Labs';
+    $('#route-retry').addEventListener('click',()=>location.reload());
+    $('#main').focus({preventScroll:true});
+  });
+  return false;
+}
 let routeCleanup=null,reachMetrics=null;
 function recordReachCompletion(activity){recordReachCompletionCount(activity);completeLabActivity(activity);}
 const $ = (s,root=document)=>root.querySelector(s);
@@ -443,7 +500,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261105-receipt-review');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261106-fast-start');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -455,7 +512,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261105-receipt-review');
+      const cryptoModule=await import('./report-crypto.js?release=20261106-fast-start');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;
@@ -507,7 +564,7 @@ function membershipGate(route){
   return `<section class="wrap page-intro membership-gate"><p class="eyebrow">Member area</p><h1>${heading}</h1>${lab?`<p><strong>${esc(lab.id)} · ${esc(lab.title)}</strong></p>`:''}<p>Free access includes all 15 K–6 activities, all five beginner courses for grades 7–12, the practice workbench and two investigations per topic.</p><p>Other investigations, Network Studio, Coding Studio, open coding sandboxes, the capstone and teaching resources are reserved for members.</p><div class="membership-notice" role="status"><strong>Memberships are being prepared.</strong><p>Prices are not set, and purchases are unavailable. Paid access will be for approved adult subscribers; classroom access remains disabled. Do not share a teacher's sign-in or enter student information.</p><button class="button" type="button" disabled>Subscriptions unavailable</button></div><p><a class="button button-outline" href="#signin">Sign in →</a></p><div class="button-row"><a class="button button-outline" href="#labs">Explore the free labs →</a><a class="text-link" href="#privacy">Privacy information →</a></div></section>`;
 }
 function checkCapstoneState(id,state){const s=SCENARIOS.find(item=>item.id===id);return s?.track==='hardware'?verifyHardware(id,state):verifyWorkspace(id,state);}
-function renderRoute(preserveDraft=true){const route=learningRoute(location.hash);if(preserveDraft!==false&&labNavigation?.syncRoute(route))return false;labNavigation=null;disposeHardware($('#workspace'));if(preserveDraft!==false)preserveCodeDraft();reportCleanup?.();reportCleanup=null;classroomConnection?.dispose();classroomConnection=null;routeCleanup?.();routeCleanup=null;currentLab=null;document.body.classList.remove('lab-view');let {page,id}=route;let html,title;const access=routeAccess(route);if(access==='unknown'&&!(page==='membership'&&!id)){page='not-found';html=activityNotFound();title='Activity not found';}else if(page==='membership'||(access==='member'&&!MEMBER_CONTENT)){page='membership';html=membershipGate(route);title=PUBLIC_LABS_OPEN?'Open lab access':'Membership required';}else if(page==='quests'){html=id?renderCodeQuest(id):renderCodeQuestHub();title=id?codeQuestMeta(id).title+' learning path':'Learn coding languages';}else if(page==='arcade'){html=id?renderArcadeGame(id):renderArcadeCatalogue();title=id?arcadeMeta(id).title:'Game arcade';}else if(page==='play'&&id==='inbox-defender'){html=renderInboxDefender();title='Inbox Defender';}else if(page==='explore'){html=id?renderElementaryLab(id):renderElementaryCatalogue({band:route.band});title=id?(ELEMENTARY_LABS.find(lab=>lab.id===id)?.title||'Technology activity'):'K–6 technology activities';}else if(page==='practice'){const scenario=practiceScenarioFor(id);if(scenario){document.body.classList.add('lab-view');html=renderPracticeWorkbench(scenario,practiceStates[id]);title=scenario.title+' · Practice';}else{html='<section class="wrap page-intro"><h1>Choose a practice workbench.</h1><a href="#labs">All labs →</a></section>';title='Practice workbenches';}}else if(page==='studio'&&id==='network'){document.body.classList.add('lab-view');html=renderNetworkStudio(networkStudioState);title='Network Studio';}else if(page==='studio'&&id==='coding'){document.body.classList.add('lab-view');html=renderCodingStudio(codingStudioState);title='Coding Studio';}else if(page==='learn'){const foundation=getFoundation(id);if(foundation){id=foundation.id;document.body.classList.add('lab-view');html=renderFoundationLab(foundation,foundationRecordFor(id));title=`${foundation.code} · ${foundation.title}`;}else{html=`<section class="wrap page-intro"><h1>Choose a beginner lab.</h1><p>Pick one of the five topics to start learning.</p>${routeLink('labs','All virtual labs →')}</section>`;title='Beginner lab not found';}}else if(page==='lab'){const s=SCENARIOS.find(x=>x.id===id);if(s){document.body.classList.add('lab-view');html=(route.sequence?'<div class="capstone-return"><strong>Classroom opening day</strong><a href="#capstone">← Return to your five work orders</a></div>':'')+labPage(s);title=`${s.id} · ${s.title}`;}else{html=`<section class="wrap page-intro"><h1>That ticket is not on this bench.</h1><p>Choose one of the available investigations.</p>${routeLink('labs','All virtual labs →')}</section>`;title='Lab not found';}}else if(page==='signin'){html=renderSignIn({openLabs:typeof PUBLIC_LABS_OPEN!=='undefined'&&PUBLIC_LABS_OPEN===true});title='Sign in';}else if(page==='sandbox'){html=renderCodingSandbox({starterId:id});title='Coding sandbox';}else if(page==='capstone'){html=renderCapstone(store.labs,checkCapstoneState);title='Classroom opening day';}else{const pages={home:[home,'Alan Cole'],projects:[projectPage,'Projects'],about:[about,'About Alan Cole'],labs:[library,'Virtual labs'],educators:[educators,'For educators'],guide:[guide,'Student guide'],connect:[connect,'Connect'],privacy:[privacy,'Privacy & accessibility']};if(!Object.hasOwn(pages,page))page='home';if(page==='labs'&&Object.hasOwn(tracks,id))libraryTrack=id;[html,title]=[pages[page][0](),pages[page][1]];}
+function renderRoute(preserveDraft=true){const route=learningRoute(location.hash);if(typeof ensureRouteModules==='function'&&!ensureRouteModules(route,preserveDraft))return false;if(preserveDraft!==false&&labNavigation?.syncRoute(route))return false;labNavigation=null;disposeHardware($('#workspace'));if(preserveDraft!==false)preserveCodeDraft();reportCleanup?.();reportCleanup=null;classroomConnection?.dispose();classroomConnection=null;routeCleanup?.();routeCleanup=null;currentLab=null;document.body.classList.remove('lab-view');let {page,id}=route;let html,title;const access=routeAccess(route);if(access==='unknown'&&!(page==='membership'&&!id)){page='not-found';html=activityNotFound();title='Activity not found';}else if(page==='membership'||(access==='member'&&!MEMBER_CONTENT)){page='membership';html=membershipGate(route);title=PUBLIC_LABS_OPEN?'Open lab access':'Membership required';}else if(page==='quests'){html=id?renderCodeQuest(id):renderCodeQuestHub();title=id?codeQuestMeta(id).title+' learning path':'Learn coding languages';}else if(page==='arcade'){html=id?renderArcadeGame(id):renderArcadeCatalogue();title=id?arcadeMeta(id).title:'Game arcade';}else if(page==='play'&&id==='inbox-defender'){html=renderInboxDefender();title='Inbox Defender';}else if(page==='explore'){html=id?renderElementaryLab(id):renderElementaryCatalogue({band:route.band});title=id?(ELEMENTARY_LABS.find(lab=>lab.id===id)?.title||'Technology activity'):'K–6 technology activities';}else if(page==='practice'){const scenario=practiceScenarioFor(id);if(scenario){document.body.classList.add('lab-view');html=renderPracticeWorkbench(scenario,practiceStates[id]);title=scenario.title+' · Practice';}else{html='<section class="wrap page-intro"><h1>Choose a practice workbench.</h1><a href="#labs">All labs →</a></section>';title='Practice workbenches';}}else if(page==='studio'&&id==='network'){document.body.classList.add('lab-view');html=renderNetworkStudio(networkStudioState);title='Network Studio';}else if(page==='studio'&&id==='coding'){document.body.classList.add('lab-view');html=renderCodingStudio(codingStudioState);title='Coding Studio';}else if(page==='learn'){const foundation=getFoundation(id);if(foundation){id=foundation.id;document.body.classList.add('lab-view');html=renderFoundationLab(foundation,foundationRecordFor(id));title=`${foundation.code} · ${foundation.title}`;}else{html=`<section class="wrap page-intro"><h1>Choose a beginner lab.</h1><p>Pick one of the five topics to start learning.</p>${routeLink('labs','All virtual labs →')}</section>`;title='Beginner lab not found';}}else if(page==='lab'){const s=SCENARIOS.find(x=>x.id===id);if(s){document.body.classList.add('lab-view');html=(route.sequence?'<div class="capstone-return"><strong>Classroom opening day</strong><a href="#capstone">← Return to your five work orders</a></div>':'')+labPage(s);title=`${s.id} · ${s.title}`;}else{html=`<section class="wrap page-intro"><h1>That ticket is not on this bench.</h1><p>Choose one of the available investigations.</p>${routeLink('labs','All virtual labs →')}</section>`;title='Lab not found';}}else if(page==='signin'){html=renderSignIn({openLabs:typeof PUBLIC_LABS_OPEN!=='undefined'&&PUBLIC_LABS_OPEN===true});title='Sign in';}else if(page==='sandbox'){html=renderCodingSandbox({starterId:id});title='Coding sandbox';}else if(page==='capstone'){html=renderCapstone(store.labs,checkCapstoneState);title='Classroom opening day';}else{const pages={home:[home,'Alan Cole'],projects:[projectPage,'Projects'],about:[about,'About Alan Cole'],labs:[library,'Virtual labs'],educators:[educators,'For educators'],guide:[guide,'Student guide'],connect:[connect,'Connect'],privacy:[privacy,'Privacy & accessibility']};if(!Object.hasOwn(pages,page))page='home';if(page==='labs'&&Object.hasOwn(tracks,id))libraryTrack=id;[html,title]=[pages[page][0](),pages[page][1]];}
 if(OWNER_PREVIEW&&['lab','learn','explore','practice','studio','sandbox','capstone'].includes(page))html='<aside class="wrap owner-preview-notice" role="note"><p><strong>Owner preview navigation.</strong> Move between steps without completing answers. Skipped work is not marked complete.</p></aside>'+html;
 const improvementActivity=['lab','learn','practice','studio'].includes(page)?page+'/'+id:['sandbox','capstone'].includes(page)?page:null;
 if(improvementActivity)html+='<div id="lab-improvement-summary" class="wrap"></div>';
@@ -550,4 +607,10 @@ mountLearningGuides($('#main'));
 $('.skip-link').addEventListener('click',e=>{e.preventDefault();$('#main').focus();$('#main').scrollIntoView({block:'start'});});
 window.addEventListener('hashchange',()=>{if(renderRoute()!==false)$('#main').focus({preventScroll:true});});
 reachMetrics=mountReachMetrics($('#main'),{ownerPreview:OWNER_PREVIEW});
+// Display choices and read-aloud are presentation tools: device-only settings and device-only voices.
+mountDisplayMenu($('#display-host'),{storage:deviceStorage});
+mountReadAloud($('#read-aloud-host'));
 renderRoute();
+// The offline cache serves only public site files. It is registered for the public
+// root application, never for owner preview or private member delivery paths.
+if(!OWNER_PREVIEW&&typeof navigator!=='undefined'&&'serviceWorker' in navigator&&location.pathname==='/')navigator.serviceWorker.register('/sw.js').catch(()=>{});
