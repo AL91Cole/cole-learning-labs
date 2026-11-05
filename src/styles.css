@@ -75,7 +75,7 @@
   .lab-shell .lab-progress b{font-size:.6875rem}
   .lab-section-nav button{flex:1;min-width:120px}
   .case-sidebar,.bench-column,.evidence-sidebar{scroll-margin-top:140px}
-  .lab-shell .lab-topbar .eyebrow{font-size:.625rem}
+  .lab-shell .lab-topbar .eyebrow{font-size:.75rem}
   .lab-shell dialog{padding:20px}
 }
 @media(pointer:coarse){
@@ -676,3 +676,4 @@ body:not(.lab-view) .part-art img{border-color:#cfdbe1}body:not(.lab-view) .part
 .lab-topbar{position:relative;overflow:hidden}
 .lab-topbar>*{position:relative;z-index:1}
 .lab-topbar>.lab-topbar-scene{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;filter:brightness(.42) saturate(.9);pointer-events:none}
+.requester-privacy .panel-help a{display:inline-block;padding:4px 0;min-height:24px}
