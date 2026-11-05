@@ -1,4 +1,5 @@
 import { pcActivity } from './pc-activity.js?release=20261106-fast-start';
+import { partArtHTML } from './part-art.js?release=20261106-fast-start';
 /** Beginner equipment views. The model owns every answer and practice result. */
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tracks=new Set(['hardware','network','ai','security','coding']);
@@ -28,7 +29,7 @@ function readout(lab,record){
   }
   return `<div class="foundation-visual-readout">${(lines[trackFor(lab)]||[]).map(([done,label])=>`<span data-foundation-state="${done?'done':'waiting'}">${done?'✓':'○'} ${label}</span>`).join('')}</div>`;
 }
-function portrait(lab,id){const item=itemsFor(lab).find(item=>item.id===id)||itemsFor(lab)[0];return item?`${illustration('hardware',item.id)}<div><strong>${escape(item.label)}</strong><p>${escape(item.looks)}</p><p class="foundation-item-role">${escape(item.role)}</p></div>`:'';}
+function portrait(lab,id){const item=itemsFor(lab).find(item=>item.id===id)||itemsFor(lab)[0];return item?`${illustration('hardware',item.id)}<div><strong>${escape(item.label)}</strong><p>${escape(item.looks)}</p><p class="foundation-item-role">${escape(item.role)}</p>${partArtHTML(item.id)}</div>`:'';}
 
 const part=(id,label,body)=>`<g class="foundation-diagram-part" data-foundation-item="${id}" role="button" tabindex="0" aria-label="Inspect ${label}" aria-pressed="false"><title>${label}: choose to inspect</title>${body}</g>`;
 const screw=(x,y)=>`<circle cx="${x}" cy="${y}" r="4" fill="#485568" stroke="#8290a1"/><path d="M${x-2} ${y}h4m-2-2v4" stroke="#13202b" stroke-width="1.3"/>`;

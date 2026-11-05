@@ -660,3 +660,7 @@ body:not(.lab-view) .tour-task h2,body:not(.lab-view) .tutorial-reference h2{fon
 .lab-receipt-controls [data-lab-receipt] .button-outline:hover{background:#e4f2ef}
 [data-lab-receipt] .lab-field{color:inherit;font-size:.94rem}
 [data-lab-receipt] .lab-field input{font-size:1rem;min-height:44px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+
+/* Reviewed component pictures beside simplified lab drawings. */
+.part-art{margin:.75rem 0 0;max-width:260px}.part-art img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain;border-radius:8px;border:1px solid #2e4b5a;background:#eef1f3}.part-art figcaption{font-size:.78rem;line-height:1.45;margin-top:.4rem;color:#9cbac9}
+body:not(.lab-view) .part-art img{border-color:#cfdbe1}body:not(.lab-view) .part-art figcaption{color:#516777}

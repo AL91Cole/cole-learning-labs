@@ -7,6 +7,7 @@ import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 import { bundleTier } from './tier-bundles.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import {bundlePageStyles,styleBundlePath} from './style-bundles.mjs';
+import {PART_ART} from '../src/part-art.js';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
@@ -40,6 +41,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/access-policy.js', 'src/lab-catalog.js', 'src/owner-preview.js',
   'src/learning-routes.js', 'src/home-entries.js', 'src/sandbox-starters.js', 'src/coding-studio-model.js', 'src/display-menu.js', 'src/read-aloud.js',
   'src/record-engines.js', 'src/classroom-session.js', 'src/foundation-catalog.js', 'src/coding-scenarios.js', 'src/expanded-scenarios.js', 'src/network-scenarios.js',
+  'src/part-art.js', ...Object.values(PART_ART),
   'src/lazy-investigation.js', 'src/lazy-foundation.js', 'src/lazy-arcade.js', 'src/lazy-quests.js', 'src/lazy-inbox.js', 'src/lazy-studios.js', 'src/lazy-sandbox.js', 'src/lazy-teaching.js', 'src/lazy-guide.js', 'src/lazy-privacy.js',
   ...PUBLIC_METADATA_FILES
 ]);
@@ -54,7 +56,7 @@ const PREVIEW_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   ...PUBLIC_METADATA_FILES, ...PUBLIC_SHELL_FILES,
-  'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
+  'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png', ...Object.values(PART_ART),
   'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js',
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
