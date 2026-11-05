@@ -22,16 +22,15 @@ Markup comes from `src/part-art.js`: `partArtHTML(id)` returns an empty string u
 
 ## Pictures published so far
 
-All eleven subjects were generated on 2026-11-05 with the Z-Image Turbo model on a Hugging Face Space, reviewed in-session for text, logos and part accuracy, and published with `--finalize`. Candidates from any generator can be dropped into `art-staging/` as `<id>-<n>.png`, `.webp` or `.jpg`; `--finalize` reads whichever exists.
+All eleven subjects are published. They were generated on 2026-11-05 with Visualizee on its Pro plan (GPT Image 2.6 Flare, watermark-free, commercial license), reviewed in-session for text, logos and part accuracy, and published with `--finalize`. A first pass from the Z-Image Turbo model on a Hugging Face Space was published earlier the same day and then replaced: the Visualizee set is cleaner (no faux markings on boards and bezels), more accurate (processor beside its socket, both SSD sockets, a real 24-pin plug) and carries a clear commercial license. Candidates from any generator can be dropped into `art-staging/` as `<id>-<n>.png`, `.webp` or `.jpg`; `--finalize` reads whichever exists.
 
-Notes from that run, for the next person who regenerates a picture:
+Notes from those runs, for the next person who regenerates a picture:
 
-- The Space's safety filter returned a placeholder for prompts that named a "processor", "CPU", "chip" or a "syringe" of paste. Describing the object physically ("a small square part with a brushed-metal top and a green circuit-board edge"; "a small tube of heat-transfer compound") passed.
-- The first leads picture showed an HDMI-style plug and no 24-pin block; a top-down prompt that described each plug's shape and wire colours fixed it. The first monitor carried a faux brand mark on the bezel; asking for a plain bezel with no markings fixed it.
-- The side-panel picture shows the panel fitted to a case rather than detached, so its alt text describes exactly that.
-- OpenArt's free plan watermarks output and its CDN is unreachable from the cloud sandbox, and Visualizee's free plan watermarks output and licenses it for personal use only, so neither produced a publishable picture. The Gemini script remains the repeatable path once a key is configured.
+- The Hugging Face Space's safety filter returned a placeholder for prompts that named a "processor", "CPU", "chip" or a "syringe" of paste; Visualizee accepted the same wording.
+- Describe each plug's shape and wire colours for the leads picture, and ask for a plain bezel with no markings for the monitor; without that, generators invent HDMI-style plugs and faux brand marks.
+- OpenArt's free plan watermarks output and its CDN is unreachable from the cloud sandbox even on a paid plan, so it did not contribute a published picture. The Gemini script remains a repeatable path once a key is configured.
 
-Two scene candidates (a flat motherboard schematic and a 16:9 server-closet backdrop) were also generated and sent to the owner for review. They are not published: the schematic carries unreadable faux markings and neither has a display point in the labs yet.
+Three scene assets were also generated with Visualizee and staged for the owner, but are not published because no lab has a display point for them yet: a look-alike school-portal sign-in page with a wrong address bar for the phishing lessons, a flat motherboard schematic with no text for labelled diagrams, and a 16:9 server-closet backdrop for the networking labs.
 
 ## Review rules
 
