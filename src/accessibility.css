@@ -110,6 +110,6 @@ body.route-loading::before{content:'';position:fixed;left:0;top:0;height:4px;wid
 @keyframes route-loading{0%{left:-30%}100%{left:100%}}
 @media(prefers-reduced-motion:reduce){body.route-loading::before{animation:none;width:100%}}
 :root[data-motion=reduce] body.route-loading::before{animation:none;width:100%}
-@media(max-width:720px){.access-tools{left:12px;bottom:12px}.access-label{display:none}.access-button{padding:0 12px}.notice{bottom:84px}.access-panel{bottom:58px}}
+@media(max-width:720px){.access-tools{left:12px;bottom:12px}.access-label{display:none}.access-button{padding:0 12px}.notice{bottom:84px}.access-panel{bottom:58px}.site-footer{padding-bottom:100px}}
 @media(forced-colors:active){.access-button,.access-panel,.access-close{border:2px solid CanvasText;background:Canvas;color:CanvasText}.access-button[aria-expanded=true]{background:Highlight;color:HighlightText}.read-aloud-current{outline:3px solid Highlight;background:Canvas;color:CanvasText}}
 @media print{.access-tools{display:none}}
