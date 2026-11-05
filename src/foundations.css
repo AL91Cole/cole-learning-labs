@@ -164,3 +164,5 @@ body:has(.foundation-lab[data-section="practice"]) .site-footer{display:none}
 @keyframes foundation-packet-delivery{to{transform:translateX(410px)}}
 @media(prefers-reduced-motion:reduce){.foundation-network-path .foundation-packet{animation:none}}
 @media(max-width:600px){.foundation-live-board{padding:.7rem}.foundation-board-facts{grid-template-columns:minmax(0,1fr)}.foundation-network-path text{font-size:16px}.foundation-board-controls button{flex-basis:100%}}
+
+.foundation-item-art{margin-top:.8rem}.foundation-item-art:empty{display:none}.foundation-item-art .part-art{max-width:320px;margin:0 auto}

@@ -1,4 +1,5 @@
 import { pcActivity } from './pc-activity.js?release=20261106-fast-start';
+import { partArtHTML } from './part-art.js?release=20261106-fast-start';
 /** Beginner equipment views. The model owns every answer and practice result. */
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tracks=new Set(['hardware','network','ai','security','coding']);
@@ -28,7 +29,7 @@ function readout(lab,record){
   }
   return `<div class="foundation-visual-readout">${(lines[trackFor(lab)]||[]).map(([done,label])=>`<span data-foundation-state="${done?'done':'waiting'}">${done?'✓':'○'} ${label}</span>`).join('')}</div>`;
 }
-function portrait(lab,id){const item=itemsFor(lab).find(item=>item.id===id)||itemsFor(lab)[0];return item?`${illustration('hardware',item.id)}<div><strong>${escape(item.label)}</strong><p>${escape(item.looks)}</p><p class="foundation-item-role">${escape(item.role)}</p></div>`:'';}
+function portrait(lab,id){const item=itemsFor(lab).find(item=>item.id===id)||itemsFor(lab)[0];return item?`${illustration('hardware',item.id)}<div><strong>${escape(item.label)}</strong><p>${escape(item.looks)}</p><p class="foundation-item-role">${escape(item.role)}</p>${partArtHTML(item.id)}</div>`:'';}
 
 const part=(id,label,body)=>`<g class="foundation-diagram-part" data-foundation-item="${id}" role="button" tabindex="0" aria-label="Inspect ${label}" aria-pressed="false"><title>${label}: choose to inspect</title>${body}</g>`;
 const screw=(x,y)=>`<circle cx="${x}" cy="${y}" r="4" fill="#485568" stroke="#8290a1"/><path d="M${x-2} ${y}h4m-2-2v4" stroke="#13202b" stroke-width="1.3"/>`;
@@ -64,7 +65,7 @@ function hardwareReadout(record){const h=record?.hardware||{},a=h.assembly||{},a
 
 export function renderFoundationVisual(lab,record){
   if(trackFor(lab)==='hardware')return `<div class="foundation-hardware-diagram">${hardwareDiagram(record)}${hardwareReadout(record)}</div><div class="foundation-part-portrait" data-foundation-part-portrait>${portrait(lab,'')}</div>`;
-  return `<div class="foundation-equipment-map" role="group" aria-label="${escape(lab?.title||'Equipment explorer')}"><div class="foundation-equipment-grid">${itemsFor(lab).map(item=>`<button type="button" class="foundation-equipment-card" data-foundation-item="${escape(item.id)}" aria-pressed="false">${illustration(trackFor(lab),item.id)}<strong>${escape(item.label)}</strong><span>${escape(item.looks)}</span><span class="foundation-item-role" data-foundation-card-role="${escape(item.id)}" hidden>${escape(item.role)}</span></button>`).join('')}</div>${readout(lab,record)}</div>`;
+  return `<div class="foundation-equipment-map" role="group" aria-label="${escape(lab?.title||'Equipment explorer')}"><div class="foundation-equipment-grid">${itemsFor(lab).map(item=>`<button type="button" class="foundation-equipment-card" data-foundation-item="${escape(item.id)}" aria-pressed="false">${illustration(trackFor(lab),item.id)}<strong>${escape(item.label)}</strong><span>${escape(item.looks)}</span><span class="foundation-item-role" data-foundation-card-role="${escape(item.id)}" hidden>${escape(item.role)}</span></button>`).join('')}</div><div class="foundation-item-art" data-foundation-item-art></div>${readout(lab,record)}</div>`;
 }
 
 /** One native diagram host. Learning credit and guided actions belong to the model/controller. */
@@ -72,7 +73,7 @@ export function mountFoundationScene(host,{lab,record,onInspect=()=>{},onStatus=
   if(!host?.ownerDocument)return null;
   const doc=host.ownerDocument;let current=record,selected='',visible=!host.closest?.('[hidden]'),disposed=false;
   function motion(){host.setAttribute?.('data-pc-motion',disposed||!visible||doc.hidden?'paused':'running');}
-  function focus(id){if(disposed||!itemsFor(lab).some(item=>item.id===id))return;selected=id;host.querySelectorAll('[data-foundation-item]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.foundationItem===id)));host.querySelectorAll('[data-foundation-card-role]').forEach(node=>{node.hidden=node.dataset.foundationCardRole!==id;});const portraitNode=host.querySelector('[data-foundation-part-portrait]');if(portraitNode)portraitNode.innerHTML=portrait(lab,id);}
+  function focus(id){if(disposed||!itemsFor(lab).some(item=>item.id===id))return;selected=id;host.querySelectorAll('[data-foundation-item]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.foundationItem===id)));host.querySelectorAll('[data-foundation-card-role]').forEach(node=>{node.hidden=node.dataset.foundationCardRole!==id;});const portraitNode=host.querySelector('[data-foundation-part-portrait]');if(portraitNode)portraitNode.innerHTML=portrait(lab,id);const artNode=host.querySelector('[data-foundation-item-art]');if(artNode)artNode.innerHTML=partArtHTML(trackFor(lab)+'-'+id,{caption:false});}
   function update(next){if(disposed)return;current=next;const statusOpen=host.querySelector('.foundation-pc-status')?.open===true;const active=doc.activeElement?.closest?.('[data-foundation-item]'),restore=active&&host.contains(active)?active.dataset.foundationItem:'';host.innerHTML=renderFoundationVisual(lab,current);if(statusOpen){const status=host.querySelector('.foundation-pc-status');if(status)status.open=true;}motion();if(selected)focus(selected);if(restore)[...host.querySelectorAll('[data-foundation-item]')].find(node=>node.dataset.foundationItem===restore)?.focus({preventScroll:true});}
   function inspect(event){if(disposed||!visible||doc.hidden)return;const node=event.target.closest?.('[data-foundation-item]');if(!node||!host.contains(node)||!itemsFor(lab).some(item=>item.id===node.dataset.foundationItem))return;focus(node.dataset.foundationItem);onInspect(node.dataset.foundationItem);}
   function key(event){if(event.key!=='Enter'&&event.key!==' ')return;const node=event.target.closest?.('[data-foundation-item]');if(!node||node.tagName?.toLowerCase()==='button')return;event.preventDefault();inspect(event);}

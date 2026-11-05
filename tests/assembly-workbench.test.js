@@ -9,6 +9,7 @@ import { ASSEMBLY_CABLES, cableConnection, assemblyCableAction } from '../src/as
 import { workbenchGuidance } from '../src/workbench-guidance.js';
 import { pcActivity } from '../src/pc-activity.js';
 import { assemblyBuilderView, renderAssemblyBuilder } from '../src/assembly-builder.js';
+import { partArtHTML } from '../src/part-art.js';
 const source=readFileSync(new URL('../src/assembly-workbench.js',import.meta.url),'utf8');
 // A native-DOM boundary exercises the real controller and equipment rules.
 // Pixel geometry, native focus and touch hardware are verified in browser QA.
@@ -27,7 +28,7 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
     Object.defineProperty(element,'hidden',{get:()=>hidden,set(value){hidden=!!value;if(hidden&&doc.activeElement===element)doc.activeElement=null;}});return element;
   }
   function parse(html){return [...html.matchAll(/<(button|g)\b([^>]*)>/g)].map(([,tag,attrs])=>{const data=Object.fromEntries([...attrs.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(([,key,value])=>[key.replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));const element=node(data,tag);element.disabled=/\bdisabled(?:\s|$)/.test(attrs);for(const[,name,value]of attrs.matchAll(/\s([\w:-]+)="([^"]*)"/g))element.setAttribute(name,value);return element;});}
-  for(const key of ['on','ac-label','monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-title','part-state','actions','feedback','power','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','power-reference','fastener','cable','cable-target','cable-state','repair-observe','repair-safe','repair-verify','repair-next','repair-case','placement','result-power','result-startup','result-file'])fields.set(`[data-asm-${key}]`,node({},'div'));
+  for(const key of ['on','ac-label','monitor-readout','build-help','diagnostic-detail','ticket-title','instruction','activity-label','activity-detail','component-status','fan-status','all','scene','select','part-art','part-title','part-state','actions','feedback','power','next','delivery','tool-help','tool-controls','tool-drawer','tool-summary','component-drawer','power-reference','fastener','cable','cable-target','cable-state','repair-observe','repair-safe','repair-verify','repair-next','repair-case','placement','result-power','result-startup','result-file'])fields.set(`[data-asm-${key}]`,node({},'div'));
   fields.get('[data-asm-select]').drawer=fields.get('[data-asm-component-drawer]');
   Object.defineProperty(fields.get('[data-asm-actions]'),'innerHTML',{set(html){actions=parse(html);actions.forEach(button=>button.drawer=fields.get('[data-asm-component-drawer]'));},get(){return'';}});
   Object.defineProperty(fields.get('[data-asm-tool-controls]'),'innerHTML',{set(html){tools=parse(html);this.markup=html;},get(){return this.markup||'';}});
@@ -41,7 +42,7 @@ function fixture({hidden=false,caseId='INC-106',stateOverride=state=>state}={}){
   };
   Object.defineProperty(root,'innerHTML',{set(html){writes++;markup=html;staticButtons=parse(html);staticButtons.filter(button=>['power-off','unplug','plug-in','boot','open-document'].includes(button.dataset.assemblyAction)).forEach(button=>button.drawer=fields.get('[data-asm-power-reference]'));},get(){return markup;}});
   doc.elementFromPoint=()=>dropTarget;
-  const mount=vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm,'').replace('export function mountAssemblyWorkbench','function mountAssemblyWorkbench')};mountAssemblyWorkbench`,{assemblyActions,assemblyFailure,ASSEMBLY_FASTENERS,ASSEMBLY_TOOLS,assemblyToolAction,ASSEMBLY_CABLES,cableConnection,assemblyCableAction,workbenchGuidance,pcActivity,assemblyBuilderView,renderAssemblyBuilder});
+  const mount=vm.runInNewContext(`${source.replace(/^import[^\n]+\n/gm,'').replace('export function mountAssemblyWorkbench','function mountAssemblyWorkbench')};mountAssemblyWorkbench`,{partArtHTML,assemblyActions,assemblyFailure,ASSEMBLY_FASTENERS,ASSEMBLY_TOOLS,assemblyToolAction,ASSEMBLY_CABLES,cableConnection,assemblyCableAction,workbenchGuidance,pcActivity,assemblyBuilderView,renderAssemblyBuilder});
   let state=stateOverride(applyHardwareAction(caseId,initialHardwareState(caseId),'enable-assembly').state),controller;
   const committed=[];controller=mount(root,{state,onAction(action){committed.push(action);const result=applyHardwareAction(caseId,state,action);state=result.state;controller.update(state);return result;}});
   function click(key,value){const target=all().find(item=>item.dataset[key]===value);assert.ok(target,`Missing ${key}=${value}`);target.focus();listeners.get('click')?.({target});return target;}
@@ -165,8 +166,10 @@ test('every tool, cable choice and complete-controls toggle keeps the full X-ray
     for(const tool of ASSEMBLY_TOOLS){bench.click('asmTool',tool.id);assert.match(bench.picture,/data-asm-view="full-xray"/);assert.match(bench.picture,/data-asm-monitor-screen=/);}
     bench.click('asmTool','cables');
     for(const cable of ASSEMBLY_CABLES){bench.choose('[data-asm-cable]',cable.id);for(const socket of cable.sockets){bench.choose('[data-asm-cable-target]',socket.id);assert.match(bench.picture,/viewBox="12 46 860 566" data-asm-view="full-xray"/);}}
+    bench.click('asmPart','gpu');assert.equal(bench.fields.get('[data-asm-part-art]').innerHTML,partArtHTML('gpu'));
     bench.complete(false);bench.controller.update(bench.state);
     assert.match(bench.picture,/data-asm-view="full-xray"/);
+    assert.equal(bench.fields.get('[data-asm-part-art]').innerHTML,partArtHTML(bench.fields.get('[data-asm-select]').value==='display'?'monitor':bench.fields.get('[data-asm-select]').value),'Turning complete controls off resets the picture with the restored part');
     assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
   }
 });
@@ -183,7 +186,9 @@ test('full PC X-ray and inspection are ephemeral and retain explicit focus and c
   assert.doesNotMatch(bench.markup,/data-asm-picture-view|Equipment picture views/);
   assert.match(bench.picture,/data-asm-view="full-xray"/);
   assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);
+  const initial=bench.fields.get('[data-asm-select]').value;assert.equal(bench.fields.get('[data-asm-part-art]').innerHTML,partArtHTML(initial==='display'?'monitor':initial),'The picture slot shows the initially selected part as soon as the controls render.');
   bench.click('asmPicture','ram');assert.equal(bench.fields.get('[data-asm-select]').value,'ram');assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);
+  assert.equal(bench.fields.get('[data-asm-part-art]').innerHTML,partArtHTML('ram'),'The reviewed picture slot follows the selected part and stays empty without a manifest entry.');
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
 });
 
