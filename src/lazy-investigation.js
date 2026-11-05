@@ -10,3 +10,5 @@ export {mountLabLearning} from './learning-tools.js?release=20261106-fast-start'
 export {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261106-fast-start';
 export {renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff} from './capstone.js?release=20261106-fast-start';
 export {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261106-fast-start';
+export {normalizeLabRecord,workbenchProgress} from './records.js?release=20261106-fast-start';
+export {attachClassroomLab} from './classroom-client.js?release=20261106-fast-start';

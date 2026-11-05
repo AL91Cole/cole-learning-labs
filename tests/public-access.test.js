@@ -8,6 +8,8 @@ import {createPreviewServer} from '../scripts/serve.mjs';
 import {CATALOG} from '../src/lab-catalog.js';
 import {FREE_LAB_IDS,ELEMENTARY_LAB_IDS} from '../src/access-policy.js';
 import {createWorkStorage,WORK_PREFIX,PUBLIC_WORK_PREFIX} from '../src/local-work.js';
+// Saved work is normalized by the investigation engines, which register themselves when loaded.
+import '../src/records.js';
 import {SCENARIOS} from '../src/scenarios.js';
 import {handleRequesterRequest} from '../functions/api/requester.js';
 
@@ -65,10 +67,10 @@ test('open-public delivery includes every reviewed lab without raw modules, owne
   assert.ok(app.entry.includes('All labs are open without an account.'));
   assert.ok(app.all.includes('MY CREATIVE STUDIO'));assert.ok(app.all.includes('The fictional prize desk mixes up scores of 50 and 100.'));
   assert.ok(app.startup.includes('Game on. Build a fix as you play.'),'The home page entry card ships with the start-up modules.');
-  for(const marker of ['<h1>Coding studio','<h1>Network studio','<h1>Teaching toolkit'])assert.equal(app.startup.includes(marker),false,marker+': downloads with its route, not with the home page.');
+  for(const marker of ['<h1>Coding studio','<h1>Network studio','<h1>Teaching toolkit','PC repair studio','CLL-EXPERIMENT/1'])assert.equal(app.startup.includes(marker),false,marker+': downloads with its route, not with the home page.');
   assert.doesNotMatch(app.all,/Owner preview navigation\./);
   assert.ok(Buffer.byteLength(app.all)<1_300_000,'The full open application keeps a separate reviewed size budget.');
-  assert.ok(Buffer.byteLength(app.startup)<Buffer.byteLength(app.all)*0.8,'Start-up bytes stay well below the whole application.');
+  assert.ok(Buffer.byteLength(app.startup)<Buffer.byteLength(app.all)*0.35,'Start-up bytes stay a small share of the whole application.');
   assert.ok(built.generated.length>=10&&built.generated.every(filename=>app.files.includes('/'+filename)),'Every generated route chunk is reachable from the entry module.');
   assert.equal((await request(server,'/src/chunks/chunk-NOTBUILT0.js')).status,404,'Only chunks named by this build are served.');
   for(const path of ['/src/arcade.js','/src/arcade-levels.js','/src/arcade-model.js','/src/scenarios.js','/src/owner-preview.js','/memberships/worker.js','/learn/src/app.js'])assert.equal((await request(server,path)).status,404,path);

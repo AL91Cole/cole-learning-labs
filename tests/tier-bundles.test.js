@@ -42,7 +42,8 @@ async function fixture(t,app="export {checkFixture} from './coding-lab.js';"){
     'access-policy.js':'export const MEMBER_CONTENT=false;export const PUBLIC_LABS_OPEN=false;',
     'lab-catalog.js':'export const CATALOG=Object.freeze(['+rows.map(row=>'Object.freeze('+JSON.stringify(row)+')').join(',')+']);',
     'scenarios.js':'export const SCENARIOS='+JSON.stringify(cases.filter(row=>row.track!=='coding'))+';',
-    'coding-lab.js':'export const CODING_SCENARIOS='+JSON.stringify([...coded,{id:'CODE-599',brief:'PAID_FIXTURE_SECRET'}])+';\n'+
+    'coding-scenarios.js':'export const CODING_SCENARIOS='+JSON.stringify([...coded,{id:'CODE-599',brief:'PAID_FIXTURE_SECRET'}])+';\n',
+    'coding-lab.js':"import {CODING_SCENARIOS} from './coding-scenarios.js';export {CODING_SCENARIOS};\n"+
       'const definitions={CODE501:{expected:value=>value*3},CODE502:{expected:value=>value<20?"Heating":"Comfortable"},CODE599:{expected:()=>"PAID_EXPECTED_SECRET"}};\n'+
       'const pythonStarters={CODE501:"FREE_PYTHON_ONE",CODE502:"FREE_PYTHON_TWO",CODE599:"PAID_PYTHON_SECRET"};\n'+
       'export const checkFixture=()=>[definitions.CODE501.expected(2),definitions.CODE502.expected(18),pythonStarters.CODE501,Object.keys(definitions),CODING_SCENARIOS.map(row=>row.id)];'
@@ -95,7 +96,10 @@ test('split delivery keeps one entry module whose route chunks reference only ea
   for(const marker of ['<h1>Coding studio','<h1>Network studio','<h1>Teaching toolkit','<h1>Student and educator'])assert.ok(everything.includes(marker)&&!startupText.includes(marker),marker+': delivered on demand.');
   assert.ok(everything.includes('<h1>Learn it by playing it.')&&!startupText.includes('<h1>Learn it by playing it.'),'The arcade catalogue and games are delivered on demand.');
   assert.ok(startupText.includes('Game on. Build a fix as you play.'),'Home entry cards stay in the start-up modules.');
-  assert.ok(Buffer.byteLength(startupText)<Buffer.byteLength(everything)*0.8,'Start-up bytes stay well below the whole application.');
+  // The equipment, experiment and build engines arrive with the investigation routes, not the home page.
+  for(const marker of ['PC repair studio','CLL-EXPERIMENT/1','BUILD STUDIO'])assert.equal(startupText.includes(marker),false,marker+': engine code stays out of the start-up set.');
+  assert.ok(startupText.includes('The Blank Monitor'),'Catalog case data still ships with the start-up set for the lab library.');
+  assert.ok(Buffer.byteLength(startupText)<Buffer.byteLength(everything)*0.35,'Start-up bytes stay a small share of the whole application.');
   const single=await compile(true);
   assert.equal(single.chunks.length,0,'Ordinary member compilation remains one self-contained module.');
   for(const options of [{split:'yes'},{split:true,entry:'secure-reports.js',member:false},{split:true,entry:'receipt-verifier.js',member:false}])await assert.rejects(()=>bundleTier({sourceRoot:ROOT,...options}),/Route splitting/u);

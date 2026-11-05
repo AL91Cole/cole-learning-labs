@@ -59,6 +59,9 @@ const publicStubs=Object.freeze({
     renderLessonPlans:'()=>""',mountLessonPlans:emptyMount,hasLessonPlanWork:falseValue,clearLessonPlanWork:noOperation
   },
   'sandbox-starters.js':{SANDBOX_STARTERS:'Object.freeze([])'},
+  // Member case data lives in its own modules now; the public catalog is the reviewed literal above.
+  'expanded-scenarios.js':{EXPANDED_SCENARIOS:'Object.freeze([])'},
+  'network-scenarios.js':{NETWORK_SCENARIOS:'Object.freeze([])'},
   'coding-studio-model.js':{
     CODING_PROJECTS:'Object.freeze([])',INPUTS:'Object.freeze([])',SOURCE_LIMIT:'4000',projectFor:'()=>null',dataRecord:'()=>null',
     initialCodingStudioState:emptyState,normalizeCodingStudioState:emptyState,codingStudioHasWork:falseValue
@@ -126,10 +129,14 @@ function replaceParts(source,replacements){
   }
   return output;
 }
-function publicCoding(source){
-  const ast=tree(source),ids=new Set(FREE_IDS.filter(id=>id.startsWith('CODE-'))),keys=new Set([...ids].map(id=>id.replaceAll('-','')));
+function publicCodingScenarios(source){
+  const ast=tree(source),ids=new Set(FREE_IDS.filter(id=>id.startsWith('CODE-')));
   const {array,selected}=filteredArray(source,ast,'CODING_SCENARIOS',ids);
-  const replacements=[{start:array.start,end:array.end,value:'['+selected.map(node=>source.slice(node.start,node.end)).join(',')+']'}];
+  return replaceParts(source,[{start:array.start,end:array.end,value:'['+selected.map(node=>source.slice(node.start,node.end)).join(',')+']'}]);
+}
+function publicCoding(source){
+  const ast=tree(source),keys=new Set(FREE_IDS.filter(id=>id.startsWith('CODE-')).map(id=>id.replaceAll('-','')));
+  const replacements=[];
   for(const name of ['definitions','pythonStarters']){
     const object=declaration(ast,name);if(object.type!=='ObjectExpression')throw new Error(`Expected reviewed ${name} map.`);
     const selectedProperties=object.properties.filter(property=>keys.has(propertyName(property)));
@@ -255,7 +262,7 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
   let publicScenarios='';
   if(!member){
     const freeCases=new Map();
-    for(const [filename,name]of [['scenarios.js','SCENARIOS'],['coding-lab.js','CODING_SCENARIOS']]){
+    for(const [filename,name]of [['scenarios.js','SCENARIOS'],['coding-scenarios.js','CODING_SCENARIOS']]){
       const source=await read(filename),array=declaration(tree(source),name);
       if(array.type!=='ArrayExpression')throw new Error('Public case extraction requires reviewed arrays.');
       for(const node of array.elements){
@@ -302,6 +309,7 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
         else if(!member&&filename==='scenarios.js')contents=publicScenarios;
         else if(!member&&Object.hasOwn(publicStubs,filename))contents=Object.entries(publicStubs[filename]).map(([name,value])=>'export const '+name+'='+value+';').join('\n');
         else if(!member&&filename==='coding-lab.js')contents=publicCoding(source);
+        else if(!member&&filename==='coding-scenarios.js')contents=publicCodingScenarios(source);
         else if(!member&&filename==='arcade-levels.js')contents=publicArcade(source);
         else if(!member&&filename==='ai-activities.js')contents=publicActivity(source,'AI');
         else if(!member&&filename==='security-activities.js')contents=publicActivity(source,'SEC');

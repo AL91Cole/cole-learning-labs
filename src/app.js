@@ -14,9 +14,8 @@ import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-m
 import {initialCodingStudioState,codingStudioHasWork} from './coding-studio-model.js?release=20261106-fast-start';
 import {SANDBOX_STARTERS} from './sandbox-starters.js?release=20261106-fast-start';
 import {SCENARIOS} from './scenarios.js?release=20261106-fast-start';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261106-fast-start';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261106-fast-start';
-import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261106-fast-start';
+import {FOUNDATION_CATALOG as FOUNDATION_LABS} from './foundation-catalog.js?release=20261106-fast-start';
+import {classroomStorageKey} from './classroom-session.js?release=20261106-fast-start';
 import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261106-fast-start';
 import {mountWorkControls,workStatus} from './work-controls.js?release=20261106-fast-start';
 
@@ -37,7 +36,7 @@ let practiceScenarioFor=()=>null,practiceHasWork=()=>false,renderPracticeWorkben
 let renderLabTutorial,mountLabTutorial;
 let renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork=()=>false,clearCodingSandboxWork=()=>{};
 let labLanguage,requesterPersona,mountRequesterChat,resetRequesterPreference=()=>{};
-let renderFoundationLab,mountFoundationLab;
+let renderFoundationLab,mountFoundationLab,getFoundation=()=>null,createFoundationRecord=()=>null,foundationSummary=()=>({complete:false,hasWork:false}),foundationReport=()=>'';
 let applyHardwareAction,verifyHardware,renderHardware,disposeHardware=()=>{},cancelHardwareInteraction=()=>{},setHardwareVisible;
 let applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace;
 let cancelCodingWorkbench=()=>{};
@@ -47,9 +46,11 @@ let renderTeachingPage,mountTeachingPage,hasLessonPlanWork=()=>false,clearLesson
 let mountLabLearning;
 let retainExperimentEvents,experimentEventText,experimentReport,readExperiments;
 let renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff;
+// Saved-work normalization and classroom sharing need the same engines, so they arrive with the investigation group.
+let normalizeLabRecord,workbenchProgress,attachClassroomLab=()=>null;
 const ROUTE_MODULES=Object.freeze({
-  investigation:{pages:['lab','capstone','practice'],load:()=>import('./lazy-investigation.js?release=20261106-fast-start'),assign(m){({applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible,applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace,cancelCodingWorkbench,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,labLanguage,requesterPersona,mountRequesterChat,resetRequesterPreference,mountLabLearning,retainExperimentEvents,experimentEventText,experimentReport,readExperiments,renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff,practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench}=m);}},
-  foundation:{pages:['learn'],load:()=>import('./lazy-foundation.js?release=20261106-fast-start'),assign(m){({renderFoundationLab,mountFoundationLab}=m);}},
+  investigation:{pages:['lab','capstone','practice'],load:()=>import('./lazy-investigation.js?release=20261106-fast-start'),assign(m){({applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible,applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace,cancelCodingWorkbench,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,labLanguage,requesterPersona,mountRequesterChat,resetRequesterPreference,mountLabLearning,retainExperimentEvents,experimentEventText,experimentReport,readExperiments,renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff,practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench,normalizeLabRecord,workbenchProgress,attachClassroomLab}=m);}},
+  foundation:{pages:['learn'],load:()=>import('./lazy-foundation.js?release=20261106-fast-start'),assign(m){({renderFoundationLab,mountFoundationLab,getFoundation,createFoundationRecord,foundationSummary,foundationReport}=m);}},
   arcade:{pages:['arcade'],load:()=>import('./lazy-arcade.js?release=20261106-fast-start'),assign(m){({renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue}=m);}},
   quests:{pages:['quests'],load:()=>import('./lazy-quests.js?release=20261106-fast-start'),assign(m){({renderCodeQuestHub,renderCodeQuest,mountCodeQuest}=m);}},
   inbox:{pages:['play'],load:()=>import('./lazy-inbox.js?release=20261106-fast-start'),assign(m){({renderInboxDefender,mountInboxDefender}=m);}},
