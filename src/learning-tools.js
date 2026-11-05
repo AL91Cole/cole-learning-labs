@@ -1,8 +1,8 @@
-import {renderLabLearning} from './teaching.js?release=20261106-fast-start';
-import {learningModes,learningRoute,labPageHash} from './learning-routes.js?release=20261106-fast-start';
+import {renderLabLearning} from './teaching.js?release=20261107-tech-team';
+import {learningModes,learningRoute,labPageHash} from './learning-routes.js?release=20261107-tech-team';
 export {learningRoute,labPageHash};
-import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261106-fast-start';
-import {transferCaseFor} from './scenarios.js?release=20261106-fast-start';
+import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261107-tech-team';
+import {transferCaseFor} from './scenarios.js?release=20261107-tech-team';
 
 export function mountLabLearning(root,{scenario,record,mode='guided',sequence,onSave,onTest,getResult,autoStartFirstIdea=true}) {
   const shell=root.querySelector('.lab-shell'),select=root.querySelector('#learning-mode'),learning=root.querySelector('#lab-learning');

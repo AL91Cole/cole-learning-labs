@@ -1,6 +1,6 @@
-import {CATALOG} from './lab-catalog.js?release=20261106-fast-start';
-import {ARCADE_CATALOG} from './arcade-catalog.js?release=20261106-fast-start';
-import {CODE_QUESTS} from './code-quest-catalog.js?release=20261106-fast-start';
+import {CATALOG} from './lab-catalog.js?release=20261107-tech-team';
+import {ARCADE_CATALOG} from './arcade-catalog.js?release=20261107-tech-team';
+import {CODE_QUESTS} from './code-quest-catalog.js?release=20261107-tech-team';
 
 // Only public identifiers and titles belong here. Never derive an identifier by
 // truncating arbitrary input: that can collide and can admit private text.

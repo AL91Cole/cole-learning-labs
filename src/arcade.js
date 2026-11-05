@@ -1,9 +1,9 @@
-import {GAME_GUIDES,renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261106-fast-start';
-import {MEMBER_CONTENT} from './access-policy.js?release=20261106-fast-start';
-import {ARCADE_CATALOG,arcadeMeta,ARCADE_TRACKS as TRACKS,ARCADE_SYMBOLS as SYMBOLS} from './arcade-catalog.js?release=20261106-fast-start';
-export {renderArcadeEntry} from './home-entries.js?release=20261106-fast-start';
-import {PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261106-fast-start';
-import {arcadeLevel,initialArcadeState,arcadeAction,rotatedPorts,buildStats,arcadePart,ROVER_COMMANDS} from './arcade-model.js?release=20261106-fast-start';
+import {GAME_GUIDES,renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261107-tech-team';
+import {MEMBER_CONTENT} from './access-policy.js?release=20261107-tech-team';
+import {ARCADE_CATALOG,arcadeMeta,ARCADE_TRACKS as TRACKS,ARCADE_SYMBOLS as SYMBOLS} from './arcade-catalog.js?release=20261107-tech-team';
+export {renderArcadeEntry} from './home-entries.js?release=20261107-tech-team';
+import {PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261107-tech-team';
+import {arcadeLevel,initialArcadeState,arcadeAction,rotatedPorts,buildStats,arcadePart,ROVER_COMMANDS} from './arcade-model.js?release=20261107-tech-team';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const control=(action,value,label,{pressed,disabled=false,extra=''}={})=>'<button type="button" data-ga="'+action+'"'+(value!==undefined?' data-value="'+esc(value)+'"':'')+(pressed!==undefined?' aria-pressed="'+pressed+'"':'')+(disabled?' disabled':'')+' '+extra+'>'+label+'</button>';
 const shape=(kind='star',color='teal')=>'<svg class="ga-token ga-token-'+(['teal','blue','gold'].includes(color)?color:'teal')+'" viewBox="0 0 48 48" aria-hidden="true">'+(kind==='circle'?'<circle cx="24" cy="24" r="17"/>':kind==='square'?'<rect x="8" y="8" width="32" height="32" rx="3"/>':kind==='triangle'?'<path d="M24 5L44 41H4Z"/>':'<path d="M24 5L30 17L44 19L34 29L36 43L24 36L12 43L14 29L4 19L18 17Z"/>')+'</svg>';

@@ -1,8 +1,8 @@
-import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261106-fast-start';
-import { normalizeWorkspaceState, verifyWorkspace } from './workspaces.js?release=20261106-fast-start';
-import { inquiryProgress } from './interview.js?release=20261106-fast-start';
-import { retainExperimentEvents, readExperiments, observationSnapshot } from './experiments.js?release=20261106-fast-start';
-import { registerRecordNormalizer } from './record-engines.js?release=20261106-fast-start';
+import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20261107-tech-team';
+import { normalizeWorkspaceState, verifyWorkspace } from './workspaces.js?release=20261107-tech-team';
+import { inquiryProgress } from './interview.js?release=20261107-tech-team';
+import { retainExperimentEvents, readExperiments, observationSnapshot } from './experiments.js?release=20261107-tech-team';
+import { registerRecordNormalizer } from './record-engines.js?release=20261107-tech-team';
 
 // A saved explanation and a fresh working setup are both needed for page 3.
 // This guides the lesson; imported learner work is not an assessment credential.

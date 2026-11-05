@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261106-fast-start';
+import { pcActivity } from './pc-activity.js?release=20261107-tech-team';
 
 /** Control recommendations only. The equipment model still decides every repair. */
 const freezeList=values=>Object.freeze(values);

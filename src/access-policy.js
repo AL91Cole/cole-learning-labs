@@ -1,6 +1,6 @@
-import {codeQuestMeta} from './code-quest-catalog.js?release=20261106-fast-start';
-import {arcadeMeta,FREE_ARCADE_IDS} from './arcade-catalog.js?release=20261106-fast-start';
-import {CATALOG} from './lab-catalog.js?release=20261106-fast-start';
+import {codeQuestMeta} from './code-quest-catalog.js?release=20261107-tech-team';
+import {arcadeMeta,FREE_ARCADE_IDS} from './arcade-catalog.js?release=20261107-tech-team';
+import {CATALOG} from './lab-catalog.js?release=20261107-tech-team';
 
 /** The public entry cannot grant membership from browser state or a URL.
  * The protected member build or the reviewed open-public release replaces this content constant. It never authenticates an account. */

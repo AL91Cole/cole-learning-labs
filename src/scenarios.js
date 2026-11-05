@@ -1,6 +1,6 @@
-import {EXPANDED_SCENARIOS} from './expanded-scenarios.js?release=20261106-fast-start';
-import {CODING_SCENARIOS} from './coding-scenarios.js?release=20261106-fast-start';
-import {NETWORK_SCENARIOS} from './network-scenarios.js?release=20261106-fast-start';
+import {EXPANDED_SCENARIOS} from './expanded-scenarios.js?release=20261107-tech-team';
+import {CODING_SCENARIOS} from './coding-scenarios.js?release=20261107-tech-team';
+import {NETWORK_SCENARIOS} from './network-scenarios.js?release=20261107-tech-team';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 

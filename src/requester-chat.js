@@ -1,8 +1,8 @@
-import {requesterTextIsPrivate} from './interview.js?release=20261106-fast-start';
-import {requesterTopic} from './requester-topics.js?release=20261106-fast-start';
-import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261106-fast-start';
-import {withRequesterTaskNudge} from './requester-general.js?release=20261106-fast-start';
-import {requestTurnstileToken} from './turnstile-client.js?release=20261106-fast-start';
+import {requesterTextIsPrivate} from './interview.js?release=20261107-tech-team';
+import {requesterTopic} from './requester-topics.js?release=20261107-tech-team';
+import {REQUESTER_ENDPOINT,REQUESTER_CLOUD_ENABLED} from './requester-config.js?release=20261107-tech-team';
+import {withRequesterTaskNudge} from './requester-general.js?release=20261107-tech-team';
+import {requestTurnstileToken} from './turnstile-client.js?release=20261107-tech-team';
 
 // Page memory only: cloud contact requires an explicit choice each fresh page.
 const pagePreference={enabled:false};

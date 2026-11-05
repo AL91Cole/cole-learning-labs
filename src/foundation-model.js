@@ -1,7 +1,7 @@
-import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261106-fast-start';
-import { executeCoding } from './coding-lab.js?release=20261106-fast-start';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261106-fast-start';
-import {FOUNDATION_CATALOG} from './foundation-catalog.js?release=20261106-fast-start';
+import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261107-tech-team';
+import { executeCoding } from './coding-lab.js?release=20261107-tech-team';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261107-tech-team';
+import {FOUNDATION_CATALOG} from './foundation-catalog.js?release=20261107-tech-team';
 
 const item = (id,label,looks,role) => ({id,label,looks,role});
 const check = (id,prompt,options,answer,explanation) => ({id,prompt,options:options.map(([id,label])=>({id,label})),answer,explanation});

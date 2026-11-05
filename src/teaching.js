@@ -1,9 +1,9 @@
-import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261106-fast-start';
+import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261107-tech-team';
 /** Public teaching supports. This module never reads student work or contacts a provider. */
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const validId = value => /^(?:INC|NET|AI|SEC|CODE)-\d{3}$/.test(String(value));
 
-import {learningModes} from './learning-routes.js?release=20261106-fast-start';
+import {learningModes} from './learning-routes.js?release=20261107-tech-team';
 export {learningModes};
 const modeFor = value => learningModes.find(item => item.id === value) || learningModes[0];
 const glossary = Object.freeze({

@@ -1,30 +1,30 @@
-import {mountReachMetrics,recordReachCompletion as recordReachCompletionCount} from './reach-metrics.js?release=20261106-fast-start';
-import {mountActivityTelemetry,completeLabActivity,labReceiptHTML,mountLabReceiptUI} from './lab-telemetry.js?release=20261106-fast-start';
-import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261106-fast-start';
-import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261106-fast-start';
-import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261106-fast-start';
-import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261106-fast-start';
-import {renderArcadeEntry,renderCodeQuestEntry,renderInboxDefenderEntry} from './home-entries.js?release=20261106-fast-start';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261106-fast-start';
-import {CATALOG} from './lab-catalog.js?release=20261106-fast-start';
-import {renderSignIn} from './sign-in.js?release=20261106-fast-start';
-import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261106-fast-start';
-import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261106-fast-start';
-import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261106-fast-start';
-import {initialCodingStudioState,codingStudioHasWork} from './coding-studio-model.js?release=20261106-fast-start';
-import {SANDBOX_STARTERS} from './sandbox-starters.js?release=20261106-fast-start';
-import {SCENARIOS} from './scenarios.js?release=20261106-fast-start';
-import {FOUNDATION_CATALOG as FOUNDATION_LABS} from './foundation-catalog.js?release=20261106-fast-start';
-import {classroomStorageKey} from './classroom-session.js?release=20261106-fast-start';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261106-fast-start';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261106-fast-start';
+import {mountReachMetrics,recordReachCompletion as recordReachCompletionCount} from './reach-metrics.js?release=20261107-tech-team';
+import {mountActivityTelemetry,completeLabActivity,labReceiptHTML,mountLabReceiptUI} from './lab-telemetry.js?release=20261107-tech-team';
+import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261107-tech-team';
+import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261107-tech-team';
+import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261107-tech-team';
+import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261107-tech-team';
+import {renderArcadeEntry,renderCodeQuestEntry,renderInboxDefenderEntry} from './home-entries.js?release=20261107-tech-team';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261107-tech-team';
+import {CATALOG} from './lab-catalog.js?release=20261107-tech-team';
+import {renderSignIn} from './sign-in.js?release=20261107-tech-team';
+import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261107-tech-team';
+import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261107-tech-team';
+import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261107-tech-team';
+import {initialCodingStudioState,codingStudioHasWork} from './coding-studio-model.js?release=20261107-tech-team';
+import {SANDBOX_STARTERS} from './sandbox-starters.js?release=20261107-tech-team';
+import {SCENARIOS} from './scenarios.js?release=20261107-tech-team';
+import {FOUNDATION_CATALOG as FOUNDATION_LABS} from './foundation-catalog.js?release=20261107-tech-team';
+import {classroomStorageKey} from './classroom-session.js?release=20261107-tech-team';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261107-tech-team';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261107-tech-team';
 
-import {learningRoute,labPageHash} from './learning-routes.js?release=20261106-fast-start';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261106-fast-start';
-import {sceneArtHTML} from './part-art.js?release=20261106-fast-start';
-import {mountDisplayMenu} from './display-menu.js?release=20261106-fast-start';
-import {mountReadAloud} from './read-aloud.js?release=20261106-fast-start';
-import {sessionModes,mountSessionModes,studentHidesPage} from './session-modes.js?release=20261106-fast-start';
+import {learningRoute,labPageHash} from './learning-routes.js?release=20261107-tech-team';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261107-tech-team';
+import {sceneArtHTML} from './part-art.js?release=20261107-tech-team';
+import {mountDisplayMenu} from './display-menu.js?release=20261107-tech-team';
+import {mountReadAloud} from './read-aloud.js?release=20261107-tech-team';
+import {sessionModes,mountSessionModes,studentHidesPage} from './session-modes.js?release=20261107-tech-team';
 // Classroom link modes come only from the page address and only restrict this page.
 const SESSION=sessionModes(typeof location==='undefined'?'':location.search);
 
@@ -53,16 +53,16 @@ let renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff
 // Saved-work normalization and classroom sharing need the same engines, so they arrive with the investigation group.
 let normalizeLabRecord,workbenchProgress,attachClassroomLab=()=>null;
 const ROUTE_MODULES=Object.freeze({
-  investigation:{pages:['lab','capstone','practice'],load:()=>import('./lazy-investigation.js?release=20261106-fast-start'),assign(m){({applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible,applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace,cancelCodingWorkbench,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,labLanguage,requesterPersona,mountRequesterChat,resetRequesterPreference,mountLabLearning,retainExperimentEvents,experimentEventText,experimentReport,readExperiments,renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff,practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench,normalizeLabRecord,workbenchProgress,attachClassroomLab}=m);}},
-  foundation:{pages:['learn'],load:()=>import('./lazy-foundation.js?release=20261106-fast-start'),assign(m){({renderFoundationLab,mountFoundationLab,getFoundation,createFoundationRecord,foundationSummary,foundationReport}=m);}},
-  arcade:{pages:['arcade'],load:()=>import('./lazy-arcade.js?release=20261106-fast-start'),assign(m){({renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue}=m);}},
-  quests:{pages:['quests'],load:()=>import('./lazy-quests.js?release=20261106-fast-start'),assign(m){({renderCodeQuestHub,renderCodeQuest,mountCodeQuest}=m);}},
-  inbox:{pages:['play'],load:()=>import('./lazy-inbox.js?release=20261106-fast-start'),assign(m){({renderInboxDefender,mountInboxDefender}=m);}},
-  studios:{pages:['studio'],load:()=>import('./lazy-studios.js?release=20261106-fast-start'),assign(m){({renderNetworkStudio,mountNetworkStudio,renderCodingStudio,mountCodingStudio}=m);}},
-  sandbox:{pages:['sandbox'],load:()=>import('./lazy-sandbox.js?release=20261106-fast-start'),assign(m){({renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork}=m);}},
-  teaching:{pages:['educators'],load:()=>import('./lazy-teaching.js?release=20261106-fast-start'),assign(m){({renderTeachingPage,mountTeachingPage,hasLessonPlanWork,clearLessonPlanWork,standardsAlignmentHTML,mountStandardsAlignment}=m);}},
-  guide:{pages:['guide'],load:()=>import('./lazy-guide.js?release=20261106-fast-start'),assign(m){({renderLabTutorial,mountLabTutorial}=m);}},
-  privacy:{pages:['privacy'],load:()=>import('./lazy-privacy.js?release=20261106-fast-start'),assign(m){({privacyPage}=m);}}
+  investigation:{pages:['lab','capstone','practice'],load:()=>import('./lazy-investigation.js?release=20261107-tech-team'),assign(m){({applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible,applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace,cancelCodingWorkbench,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,labLanguage,requesterPersona,mountRequesterChat,resetRequesterPreference,mountLabLearning,retainExperimentEvents,experimentEventText,experimentReport,readExperiments,renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff,practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench,normalizeLabRecord,workbenchProgress,attachClassroomLab}=m);}},
+  foundation:{pages:['learn'],load:()=>import('./lazy-foundation.js?release=20261107-tech-team'),assign(m){({renderFoundationLab,mountFoundationLab,getFoundation,createFoundationRecord,foundationSummary,foundationReport}=m);}},
+  arcade:{pages:['arcade'],load:()=>import('./lazy-arcade.js?release=20261107-tech-team'),assign(m){({renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue}=m);}},
+  quests:{pages:['quests'],load:()=>import('./lazy-quests.js?release=20261107-tech-team'),assign(m){({renderCodeQuestHub,renderCodeQuest,mountCodeQuest}=m);}},
+  inbox:{pages:['play'],load:()=>import('./lazy-inbox.js?release=20261107-tech-team'),assign(m){({renderInboxDefender,mountInboxDefender}=m);}},
+  studios:{pages:['studio'],load:()=>import('./lazy-studios.js?release=20261107-tech-team'),assign(m){({renderNetworkStudio,mountNetworkStudio,renderCodingStudio,mountCodingStudio}=m);}},
+  sandbox:{pages:['sandbox'],load:()=>import('./lazy-sandbox.js?release=20261107-tech-team'),assign(m){({renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork}=m);}},
+  teaching:{pages:['educators'],load:()=>import('./lazy-teaching.js?release=20261107-tech-team'),assign(m){({renderTeachingPage,mountTeachingPage,hasLessonPlanWork,clearLessonPlanWork,standardsAlignmentHTML,mountStandardsAlignment}=m);}},
+  guide:{pages:['guide'],load:()=>import('./lazy-guide.js?release=20261107-tech-team'),assign(m){({renderLabTutorial,mountLabTutorial}=m);}},
+  privacy:{pages:['privacy'],load:()=>import('./lazy-privacy.js?release=20261107-tech-team'),assign(m){({privacyPage}=m);}}
 });
 const loadedRouteGroups=new Set(),routeGroupLoads=new Map();
 let pendingRouteLoad=null,slowRouteTimer=null;
@@ -506,7 +506,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261106-fast-start');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261107-tech-team');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -518,7 +518,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261106-fast-start');
+      const cryptoModule=await import('./report-crypto.js?release=20261107-tech-team');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;

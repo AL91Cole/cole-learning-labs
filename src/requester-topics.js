@@ -1,5 +1,5 @@
-import {REQUESTER_DEFINITIONS} from './requester-persona.js?release=20261106-fast-start';
-import {REQUESTER_LIBRARY_TOPICS,requesterLibraryTopic} from './requester-library.js?release=20261106-fast-start';
+import {REQUESTER_DEFINITIONS} from './requester-persona.js?release=20261107-tech-team';
+import {REQUESTER_LIBRARY_TOPICS,requesterLibraryTopic} from './requester-library.js?release=20261107-tech-team';
 
 // Only authored topic IDs cross the optional AI boundary. A learner's words,
 // notes and conversation never become provider input, even if a filter misses PII.

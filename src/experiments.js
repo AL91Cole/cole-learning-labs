@@ -1,6 +1,6 @@
-import {normalizeHardwareState, verifyHardware} from './hardware.js?release=20261106-fast-start';
-import {normalizeWorkspaceState, verifyWorkspace, getWorkspaceMission} from './workspaces.js?release=20261106-fast-start';
-import {inquiryProtectedEvents} from './interview.js?release=20261106-fast-start';
+import {normalizeHardwareState, verifyHardware} from './hardware.js?release=20261107-tech-team';
+import {normalizeWorkspaceState, verifyWorkspace, getWorkspaceMission} from './workspaces.js?release=20261107-tech-team';
+import {inquiryProtectedEvents} from './interview.js?release=20261107-tech-team';
 
 // Experiment writing shares the existing local-work, clear, and manual-export
 // lifecycle. It is not a grade, an identity record, or proof of authorship.

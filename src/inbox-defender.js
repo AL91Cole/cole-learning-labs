@@ -1,5 +1,5 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261106-fast-start';
-export {renderInboxDefenderEntry} from './home-entries.js?release=20261106-fast-start';
+import {renderLearningBrief} from './activity-guidance.js?release=20261107-tech-team';
+export {renderInboxDefenderEntry} from './home-entries.js?release=20261107-tech-team';
 // Authored, browser-local practice. This module has no service, account or lab-record capability.
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };

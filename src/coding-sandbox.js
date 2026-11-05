@@ -1,10 +1,10 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261106-fast-start';
-import {SANDBOX_STARTERS} from './sandbox-starters.js?release=20261106-fast-start';
+import {renderLearningBrief} from './activity-guidance.js?release=20261107-tech-team';
+import {SANDBOX_STARTERS} from './sandbox-starters.js?release=20261107-tech-team';
 export {SANDBOX_STARTERS};
-import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261106-fast-start';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261106-fast-start';
-import {createTextReport,createReportURLs} from './report-downloads.js?release=20261106-fast-start';
-import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261106-fast-start';
+import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261107-tech-team';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261107-tech-team';
+import {createTextReport,createReportURLs} from './report-downloads.js?release=20261107-tech-team';
+import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261107-tech-team';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const drafts=new Map();

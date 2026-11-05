@@ -1,4 +1,4 @@
-import {requestTurnstileToken} from './turnstile-client.js?release=20261106-fast-start';
+import {requestTurnstileToken} from './turnstile-client.js?release=20261107-tech-team';
 export const MAX_CODES = 200;
 export function parseCodeBatch(value) {
   if (typeof value !== 'string' || value.length > 26000) throw new Error('Paste up to 200 completion codes.');

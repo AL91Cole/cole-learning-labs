@@ -1,5 +1,5 @@
-import {IMPROVEMENT_ACTIVITIES,validateImprovementSummary} from './improvement-schema.js?release=20261106-fast-start';
-import {IMPROVEMENT_SHARING_ENABLED,IMPROVEMENT_ENDPOINT} from './improvement-config.js?release=20261106-fast-start';
+import {IMPROVEMENT_ACTIVITIES,validateImprovementSummary} from './improvement-schema.js?release=20261107-tech-team';
+import {IMPROVEMENT_SHARING_ENABLED,IMPROVEMENT_ENDPOINT} from './improvement-config.js?release=20261107-tech-team';
 
 const activePanels=new Set();
 const labels=Object.freeze({
