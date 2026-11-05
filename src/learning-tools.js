@@ -1,6 +1,6 @@
-import {learningModes,renderLabLearning} from './teaching.js?release=20261102-turnstile';
-import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261102-turnstile';
-import {transferCaseFor} from './scenarios.js?release=20261102-turnstile';
+import {learningModes,renderLabLearning} from './teaching.js?release=20261104-receipts';
+import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261104-receipts';
+import {transferCaseFor} from './scenarios.js?release=20261104-receipts';
 
 export function learningRoute(hash) {
   const [path,query='']=String(hash||'').replace(/^#/,'').split('?'),params=new URLSearchParams(query);

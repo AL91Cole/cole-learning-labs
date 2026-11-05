@@ -1,5 +1,5 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261102-turnstile';
-import {NETWORK_DEVICE_TYPES,initialNetworkStudioState,normalizeNetworkStudioState,applyNetworkStudioAction,evaluateNetworkStudio} from './network-studio-model.js?release=20261102-turnstile';
+import {renderLearningBrief} from './activity-guidance.js?release=20261104-receipts';
+import {NETWORK_DEVICE_TYPES,initialNetworkStudioState,normalizeNetworkStudioState,applyNetworkStudioAction,evaluateNetworkStudio} from './network-studio-model.js?release=20261104-receipts';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const specFor=type=>NETWORK_DEVICE_TYPES.find(item=>item.id===type);
 const titleFor=(state,id)=>state.devices.find(device=>device.id===id)?.label||'Device';

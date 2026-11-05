@@ -139,6 +139,7 @@ test('the real private app uses the local-only compile option while public build
   assert.ok(seen.length>0);assert.ok(seen.every(options=>options.member===true&&options.localOnly===true&&options.ownerPreview===true));
   const javascript=await readFile(path.join(result.directory,'learn/src/app.js'),'utf8');assert.match(javascript,/INC-103/u);
   assert.ok(javascript.includes('Owner preview navigation.'),'The guarded full owner artifact contains the preview navigation UI.');
+  assert.equal(javascript.includes('/api/telemetry'),false,'Owner navigation cannot send engagement events or mint receipts.');
   const pkg=JSON.parse(await readFile(path.join(ROOT,'package.json'),'utf8'));
   const approvedPrivateContext=process.env.CF_PAGES==='1'&&process.env.CF_PAGES_BRANCH===OWNER_PREVIEW_BRANCH;
   assert.ok(pkg.scripts.build==='node scripts/build.mjs'||approvedPrivateContext&&pkg.scripts.build==='node scripts/build-owner-preview.mjs');

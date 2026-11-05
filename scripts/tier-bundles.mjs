@@ -219,7 +219,7 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
   if(typeof localOnly!=='boolean')throw new Error('A boolean local-only build option is required.');
   if(typeof ownerPreview!=='boolean')throw new Error('A boolean owner-preview build option is required.');
   if(ownerPreview&&(!member||!localOnly||entry!=='app.js'))throw new Error('Owner preview navigation requires the full local-only main application.');
-  if(!['app.js','secure-reports.js'].includes(entry))throw new Error('Only reviewed application or local report-reader entries may be bundled.');
+  if(!['app.js','secure-reports.js','receipt-verifier.js'].includes(entry))throw new Error('Only reviewed application, local report-reader, or code-verifier entries may be bundled.');
   const root=path.resolve(sourceRoot),info=await lstat(root);
   if(info.isSymbolicLink()||!info.isDirectory()||await realpath(root)!==root)throw new Error('Tier source root must be a canonical real directory.');
   const sourceDirectory=path.join(root,'src'),sourceInfo=await lstat(sourceDirectory);
@@ -281,6 +281,8 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
         // Trusted build configuration only; browser state and environment flags
         // cannot opt a compiled local preview back into cloud requests.
         else if(localOnly&&filename==='requester-config.js')contents=localRequesterContext(source);
+        // Owner navigation cannot issue receipts or send engagement events.
+        else if(ownerPreview&&filename==='lab-telemetry.js')contents='export const mountActivityTelemetry=()=>()=>{};export const completeLabActivity=()=>{};export const labReceiptHTML=()=>"";export const mountLabReceiptUI=()=>()=>{};';
         // Always force the reviewed context, including false in ordinary full
         // member bundles. It is never inferred from a URL, user or environment.
         else if(filename==='owner-preview.js')contents=ownerPreviewContext(source,ownerPreview);

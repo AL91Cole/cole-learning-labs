@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Cole Learning Labs data practices and district review information for NYS Education Law §2-d, FERPA and COPPA, including optional completion codes and service providers.">
+  <title>Data Privacy & District Review · Cole Learning Labs</title>
+  <link rel="canonical" href="https://www.colelearninglabs.com/compliance">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="src/styles.css?release=20261104-receipts">
+  <link rel="stylesheet" href="src/school.css?release=20261104-receipts">
+  <link rel="stylesheet" href="src/accessibility.css?release=20261104-receipts">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header school-header"><a class="brand" href="/#home"><img src="assets/cole-learning-labs-logo.webp" alt="Cole Learning Labs" width="336" height="140"></a><nav aria-label="District review navigation"><a href="/#labs">Virtual labs</a><a href="school-it.html">School IT review</a><a href="verify.html">Code verifier</a></nav></header>
+  <main id="main" tabindex="-1">
+    <section class="wrap page-intro"><p class="eyebrow">DATA PRACTICES FOR SCHOOL REVIEW</p><h1>Useful practice.<br><em>Clear privacy boundaries.</em></h1><p>Cole Learning Labs provides free browser-based technology activities for grades K–12. This statement explains the public labs, optional online services and completion-code limits so district technology teams and Data Protection Officers can review the actual workflow.</p><p class="quiet-note">Operator: Alan Cole · Updated November 4, 2026</p></section>
+    <section class="wrap prose section">
+      <div class="guide-callout"><h2>Review status</h2><p>Public labs require no learner account. Online receipt issuance and lab telemetry remain disabled in this release pending review and configuration. This page does not establish school approval, a completed legal assessment or vendor certification. Districts decide whether a particular use requires an agreement or other safeguards.</p></div>
+      <h2>Data practices at a glance</h2>
+      <div class="school-table-scroll" role="region" aria-label="Data practices summary" tabindex="0"><table class="school-review-table"><thead><tr><th scope="col">Feature</th><th scope="col">What happens</th></tr></thead><tbody>
+        <tr><th scope="row">Public labs and accounts</th><td>No student registration, email address, roster or school sign-in is required. Fictional lab work runs in the browser. Connected classroom collection remains locked for a separate privacy review.</td></tr>
+        <tr><th scope="row">Saving and reports</th><td>Work starts in page memory. Device saving requires an explicit choice. A learner can review and download or copy a report, then submit it through a district-approved system. Notes or reports can contain personal information if a learner enters it; use fictional information.</td></tr>
+        <tr><th scope="row">School systems</th><td>The public workflow requests no Google Classroom OAuth access, roster import or grade synchronization. School systems receive the files or codes that a learner or teacher chooses to submit there.</td></tr>
+        <tr><th scope="row">Local active timer</th><td>The timer estimates active time while the lab is visible and recent interaction has occurred. It pauses after 60 seconds without interaction and when the lab is hidden. It does not record typed keys, pointer paths, other-tab contents or screenshots. Time is a browser estimate, not attendance evidence.</td></tr>
+        <tr><th scope="row">Optional signed codes</th><td>If enabled after review, a request would send a fixed activity ID, browser-reported score and active seconds to the website. A server signature protects the returned fields against later edits. It does not independently validate the reported score or time. No student name is part of the code.</td></tr>
+        <tr><th scope="row">Optional lab telemetry</th><td>Collection is disabled. Any later activation must disclose the approved fields, aggregate storage, retention, provider processing and controls before sending events. A date-only field does not make transport anonymous or eliminate possible correlation.</td></tr>
+        <tr><th scope="row">Hosting and security</th><td>Cloudflare receives normal connection and security information when delivering the site. This can include IP address, browser and requested path. The absence of those fields from an application table does not mean the provider receives or retains nothing.</td></tr>
+        <tr><th scope="row">Advertising and tracking</th><td>The public lab application includes no advertising SDK, behavioral advertising pixel, remote font or embedded social feed. Cloudflare delivery and optional security services have their own processing described below. School-managed browsers and networks have separate practices.</td></tr>
+      </tbody></table></div>
+
+      <h2>What a completion code can establish</h2>
+      <p>A valid signature means the code matches fields issued using the server's signing key. The key stays on the server and is never included in browser JavaScript. A signature can detect a changed lab, score, duration or date after issuance.</p>
+      <p>Public simulations run on a learner-controlled browser. A caller can modify local state or submit inaccurate results before signing. Codes therefore do not prove mastery, independent work, identity or attendance. A copied valid code remains valid; the teacher verifier can flag repeated codes within the pasted batch, but it cannot identify who completed the work or detect every reuse. Use the report, a demonstration or a discussion alongside any code.</p>
+      <p>Paste codes only into the <a href="verify.html">teacher code verifier</a>, without names, email addresses or roster columns. Verification sends the pasted codes to this website if the service is enabled. Codes contain performance-related fields and can become identifiable when linked to school records. Keep the identity mapping and grading decisions in the district's approved system. The disabled service must never display an unverified code as verified.</p>
+
+      <h2>New York Education Law §2-d and Part 121</h2>
+      <p>Applicability depends on the information and actual school/vendor arrangement. NYSED's guidance places the assessment of whether covered personally identifiable information is provided with the school district. A public URL, no-login design or label such as “anonymous” does not decide that question. When covered data will be received, applicable agreements and protections must be completed before collection. See <a href="https://www.nysed.gov/data-privacy-security/frequently-asked-questions-dpos" target="_blank" rel="noopener noreferrer">NYSED's DPO and vendor guidance</a> and <a href="https://www.nysenate.gov/legislation/laws/EDN/2-D" target="_blank" rel="noopener noreferrer">Education Law §2-d</a>.</p>
+
+      <h2>FERPA and COPPA considerations</h2>
+      <p>FERPA protects personally identifiable information from education records. Removing a name does not necessarily remove indirect identifiers. Schools should review the full data flow, including reports, performance fields and provider metadata, before using an online service with records. See the U.S. Department of Education's <a href="https://studentprivacy.ed.gov/sites/default/files/training/supporting_materials/Protecting_Student_Privacy_While_Using_Online_Educational_Services_0.pdf" target="_blank" rel="noopener noreferrer">online educational services guidance</a>.</p>
+      <p>COPPA can apply to online collection of personal information from children under 13, including certain persistent identifiers. It is not limited to names or email addresses. Required notices, authority, security and deletion procedures must be assessed for the actual service. This page does not claim a blanket internal-operations exception. See the FTC's <a href="https://www.ftc.gov/business-guidance/resources/childrens-online-privacy-protection-rule-six-step-compliance-plan-your-business" target="_blank" rel="noopener noreferrer">COPPA compliance guidance</a>. New York's additional child-data requirements also need review; see the <a href="https://ag.ny.gov/child-data-protection-act-guidance" target="_blank" rel="noopener noreferrer">Attorney General's implementation guidance</a>.</p>
+
+      <h2>Optional cloud replies and provider processing</h2>
+      <p>Cloud requester replies start off on each fresh page. Choosing the visible AI control checks availability. A later eligible question sends only a fictional lab ID and predefined topic ID through the website to its private Cloudflare AI service. Typed questions, reports, notes, conversation history and equipment state stay local in that flow. Built-in replies remain available when the service is off or unavailable. Read the <a href="ai-use-notice.html">AI use and limits notice</a> and <a href="/#privacy">full privacy information</a>.</p>
+      <p>Optional online requests may use Cloudflare Turnstile. It processes connection and browser security signals, including IP address, TLS fingerprint, user-agent and site origin, for bot detection and its improvement. It does not establish a learner's identity or achievement. Cloudflare's <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener noreferrer">Turnstile Privacy Addendum</a> and <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">privacy policy</a> describe provider processing. Current provider settings, logs, recovery copies and retention require their own review.</p>
+
+      <h2>District network and retention review</h2>
+      <p>Use HTTPS on <code>www.colelearninglabs.com</code>; the apex <code>colelearninglabs.com</code> redirects there. Optional Turnstile requests use <code>challenges.cloudflare.com</code>. Public labs do not require broad wildcard allowances for every Cloudflare or GitHub hostname. HTTPS, HSTS and a Content Security Policy reduce risks; they do not guarantee that data cannot leave a device. Test the actual managed browser, network and selected features. The <a href="school-it.html">School IT review</a> includes device and filtering information.</p>
+      <p>Independent browser work can be cleared with the site's local-work controls. Downloaded reports, clipboard contents, backups and school submissions require separate deletion. There is no approved retention schedule for the new telemetry service because it is not active. Before activation, document and test purpose limits, necessary retention, scheduled deletion, provider recovery periods, access, incident handling and rights requests. Disabling future collection does not erase earlier copies.</p>
+
+      <h2>Review contact</h2>
+      <p>For a district security questionnaire, data-flow review, privacy question or curriculum information, contact Alan Cole at <a href="mailto:support@colelearninglabs.com">support@colelearninglabs.com</a> or use the <a href="/#connect">Connect page</a>. Describe the feature and intended use. Do not send student records, private keys, passwords or live security evidence in an initial message.</p>
+    </section>
+  </main>
+  <footer class="site-footer"><div><strong>Cole Learning Labs</strong><p>Public educational simulations · Grades K–12</p></div><div class="footer-links"><a href="/#home">Home</a><a href="/#labs">Virtual labs</a><a href="verify.html">Code verifier</a><a href="school-it.html">School IT review</a><a href="/#privacy">Privacy & accessibility</a></div></footer>
+</body>
+</html>

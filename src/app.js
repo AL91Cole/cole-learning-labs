@@ -1,47 +1,49 @@
-import {mountReachMetrics,recordReachCompletion} from './reach-metrics.js?release=20261102-turnstile';
-import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261102-turnstile';
-import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261102-turnstile';
-import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261102-turnstile';
-import {renderCodeQuestEntry,renderCodeQuestHub,renderCodeQuest,mountCodeQuest} from './code-quests.js?release=20261102-turnstile';
-import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261102-turnstile';
-import {renderArcadeEntry,renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue} from './arcade.js?release=20261102-turnstile';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261102-turnstile';
-import {CATALOG} from './lab-catalog.js?release=20261102-turnstile';
-import {renderSignIn} from './sign-in.js?release=20261102-turnstile';
-import {renderInboxDefenderEntry,renderInboxDefender,mountInboxDefender} from './inbox-defender.js?release=20261102-turnstile';
-import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261102-turnstile';
-import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261102-turnstile';
-import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261102-turnstile';
-import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261102-turnstile';
-import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261102-turnstile';
-import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261102-turnstile';
-import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261102-turnstile';
-import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261102-turnstile';
-import {SCENARIOS} from './scenarios.js?release=20261102-turnstile';
-import {labLanguage} from './lab-language.js?release=20261102-turnstile';
-import {requesterPersona} from './requester-persona.js?release=20261102-turnstile';
-import {mountRequesterChat,resetRequesterPreference} from './requester-chat.js?release=20261102-turnstile';
-import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261102-turnstile';
-import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261102-turnstile';
-import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261102-turnstile';
-import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261102-turnstile';
-import {cancelCodingWorkbench} from './coding-workbench.js?release=20261102-turnstile';
-import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261102-turnstile';
-import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261102-turnstile';
-import {privacyPage} from './privacy.js?release=20261102-turnstile';
-import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261102-turnstile';
-import {mountWorkControls,workStatus} from './work-controls.js?release=20261102-turnstile';
-import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261102-turnstile';
+import {mountReachMetrics,recordReachCompletion as recordReachCompletionCount} from './reach-metrics.js?release=20261104-receipts';
+import {mountActivityTelemetry,completeLabActivity,labReceiptHTML,mountLabReceiptUI} from './lab-telemetry.js?release=20261104-receipts';
+import {renderLearningBrief,renderNextChallenge,renderStartingPoints,investigationNextStep,mountLearningGuides} from './activity-guidance.js?release=20261104-receipts';
+import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?release=20261104-receipts';
+import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261104-receipts';
+import {renderCodeQuestEntry,renderCodeQuestHub,renderCodeQuest,mountCodeQuest} from './code-quests.js?release=20261104-receipts';
+import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261104-receipts';
+import {renderArcadeEntry,renderArcadeCatalogue,renderArcadeGame,mountArcade,mountArcadeCatalogue} from './arcade.js?release=20261104-receipts';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261104-receipts';
+import {CATALOG} from './lab-catalog.js?release=20261104-receipts';
+import {renderSignIn} from './sign-in.js?release=20261104-receipts';
+import {renderInboxDefenderEntry,renderInboxDefender,mountInboxDefender} from './inbox-defender.js?release=20261104-receipts';
+import {ELEMENTARY_LABS,renderElementaryCatalogue,renderElementaryLab,mountElementaryLab} from './elementary-labs.js?release=20261104-receipts';
+import {mountLabImprovements,resetLabImprovements} from './lab-improvements.js?release=20261104-receipts';
+import {initialNetworkStudioState,networkStudioHasWork} from './network-studio-model.js?release=20261104-receipts';
+import {renderNetworkStudio,mountNetworkStudio} from './network-studio.js?release=20261104-receipts';
+import {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261104-receipts';
+import {initialCodingStudioState,codingStudioHasWork,renderCodingStudio,mountCodingStudio} from './coding-studio.js?release=20261104-receipts';
+import {renderLabTutorial,mountLabTutorial} from './lab-tutorial.js?release=20261104-receipts';
+import {SANDBOX_STARTERS,renderCodingSandbox,mountCodingSandbox,hasCodingSandboxWork,clearCodingSandboxWork} from './coding-sandbox.js?release=20261104-receipts';
+import {SCENARIOS} from './scenarios.js?release=20261104-receipts';
+import {labLanguage} from './lab-language.js?release=20261104-receipts';
+import {requesterPersona} from './requester-persona.js?release=20261104-receipts';
+import {mountRequesterChat,resetRequesterPreference} from './requester-chat.js?release=20261104-receipts';
+import {FOUNDATION_LABS,getFoundation,createFoundationRecord,foundationSummary,foundationReport} from './foundation-model.js?release=20261104-receipts';
+import {renderFoundationLab,mountFoundationLab} from './foundation-labs.js?release=20261104-receipts';
+import {applyHardwareAction,verifyHardware,renderHardware,disposeHardware,cancelHardwareInteraction,setHardwareVisible} from './hardware.js?release=20261104-receipts';
+import {applyWorkspaceAction,verifyWorkspace,renderWorkspace,disposeWorkspace} from './workspaces.js?release=20261104-receipts';
+import {cancelCodingWorkbench} from './coding-workbench.js?release=20261104-receipts';
+import {classroomStorageKey,attachClassroomLab} from './classroom-client.js?release=20261104-receipts';
+import {normalizeLabRecord,workbenchProgress} from './records.js?release=20261104-receipts';
+import {privacyPage} from './privacy.js?release=20261104-receipts';
+import {createWorkStorage,CLEAR_WORK_KEY,WORK_PREFIX,hasPrivateWork,PUBLIC_WORK_PREFIX} from './local-work.js?release=20261104-receipts';
+import {mountWorkControls,workStatus} from './work-controls.js?release=20261104-receipts';
+import {answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents} from './interview.js?release=20261104-receipts';
 
-import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261102-turnstile';
-import {hasLessonPlanWork,clearLessonPlanWork} from './lesson-plans.js?release=20261102-turnstile';
-import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261102-turnstile';
-import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261102-turnstile';
-import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261102-turnstile';
-import {renderCapstone,mountCapstone,capstoneReport} from './capstone.js?release=20261102-turnstile';
-import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261102-turnstile';
+import {renderTeachingPage,mountTeachingPage} from './teaching.js?release=20261104-receipts';
+import {hasLessonPlanWork,clearLessonPlanWork} from './lesson-plans.js?release=20261104-receipts';
+import {standardsAlignmentHTML,mountStandardsAlignment} from './standards.js?release=20261104-receipts';
+import {learningRoute,labPageHash,mountLabLearning} from './learning-tools.js?release=20261104-receipts';
+import {retainExperimentEvents,experimentEventText,experimentReport,readExperiments} from './experiments.js?release=20261104-receipts';
+import {renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff} from './capstone.js?release=20261104-receipts';
+import {reportFilename,createTextReport,canShareTextReport,shareTextReport,createReportURLs} from './report-downloads.js?release=20261104-receipts';
 
 let routeCleanup=null,reachMetrics=null;
+function recordReachCompletion(activity){recordReachCompletionCount(activity);completeLabActivity(activity);}
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
 const esc = value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -407,6 +409,7 @@ function openReport(s,r,customContent){
     '<p class="eyebrow">STUDENT REPORT</p><h2 id="report-title" tabindex="-1">'+esc(s.id)+' · '+esc(s.title)+'</h2>',
     '<p id="report-review-help">Review your notes for names, emails, student IDs, passwords, and private school details. Close this report and edit your lab notes to remove them before exporting. This tool does not automatically detect personal information.</p>',
     '<label class="lab-field">Review your report<textarea id="report-text" rows="10" readonly>'+esc(content)+'</textarea></label>',
+    typeof labReceiptHTML==='function'?labReceiptHTML(s.id,r.closed===true):'',
     '<section class="report-plain" aria-labelledby="report-save-heading"><h3 id="report-save-heading">Download or save your work</h3><p>A plain-text copy can be read by anyone who can access it. Use only your teacher’s approved submission process. Saving this file does not submit it to your teacher. A save or share destination you choose, including a cloud folder, can receive the report.</p>',
     '<label class="privacy-checkbox"><input id="plain-report-confirm" type="checkbox"><span>I reviewed the report for private information and have approval to export an unencrypted copy.</span></label>',
     '<div class="button-row"><a class="button button-outline" id="download-report" download="'+esc(reportFilename(s.id))+'" aria-describedby="report-save-help" aria-disabled="true">Download .txt report</a><button class="button button-outline" id="share-report" disabled hidden>Save or share .txt</button><button class="button button-outline" id="copy-report" disabled>Copy report</button><button class="button button-outline" id="select-report" disabled>Select report text</button></div>',
@@ -420,6 +423,7 @@ function openReport(s,r,customContent){
     '<p role="status" id="report-encryption-status"></p><p><a href="secure-reports.html" target="_blank" rel="noopener noreferrer">Teacher key setup and report reader ↗</a>. Submit the downloaded file through your school’s approved process. This does not connect to Google Classroom. Your school’s submission system can still show your account identity and attachment metadata to authorized people.</p></section>'
   ].join('');
   let active=true,selection=0,publicFile='',plainArtifact=null,sharePending=false;
+  const disposeReceipt=typeof mountLabReceiptUI==='function'?mountLabReceiptUI(panel,{labId:s.id}):()=>{};
   const urls=createReportURLs(),keyInput=$('#report-public-key'),confirm=$('#report-key-confirm'),encrypt=$('#encrypt-report'),encrypted=$('#encrypted-report-download'),status=$('#report-encryption-status'),fingerprint=$('#report-fingerprint'),plain=$('#plain-report-confirm'),plainLink=$('#download-report'),copy=$('#copy-report'),share=$('#share-report'),select=$('#select-report'),plainStatus=$('#report-plain-status'),manualHelp=$('#report-manual-help');
   const current=token=>active&&dialog.open&&panel.isConnected&&selection===token;
   const plainAllowed=()=>active&&dialog.open&&panel.isConnected&&plain.checked;
@@ -431,7 +435,7 @@ function openReport(s,r,customContent){
   }
   function clearPlain(){const url=plainLink.getAttribute('href');if(url)urls.release(url);plainArtifact=null;plainLink.removeAttribute('href');plainLink.setAttribute('aria-disabled','true');copy.disabled=true;select.disabled=true;share.disabled=true;share.hidden=true;plainStatus.textContent='';manualHelp.hidden=true;}
   function revokeLinks(){urls.clear();encrypted.hidden=true;encrypted.removeAttribute('href');plain.checked=false;clearPlain();}
-  function cleanup(){if(!active)return;active=false;selection++;publicFile='';revokeLinks();panel.replaceChildren();dialog.removeEventListener('close',closed);if(reportCleanup===cleanup)reportCleanup=null;}
+  function cleanup(){if(!active)return;active=false;selection++;publicFile='';disposeReceipt();revokeLinks();panel.replaceChildren();dialog.removeEventListener('close',closed);if(reportCleanup===cleanup)reportCleanup=null;}
   function closed(){cleanup();if(opener?.isConnected)opener.focus?.({preventScroll:true});}
   reportCleanup=cleanup;dialog.addEventListener('close',closed);
   keyInput.addEventListener('change',async()=>{
@@ -439,7 +443,7 @@ function openReport(s,r,customContent){
     try{
       const file=keyInput.files?.[0];
       if(!file||!file.name.toLowerCase().endsWith('.cllpub')||file.size<1||file.size>16000)throw new Error('Invalid file.');
-      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261102-turnstile');
+      const text=await file.text(),cryptoModule=await import('./report-crypto.js?release=20261104-receipts');
       const result=await cryptoModule.inspectPublicKey(text);
       if(!current(token))return;
       publicFile=text;fingerprint.textContent=result.fingerprint;confirm.disabled=false;
@@ -451,7 +455,7 @@ function openReport(s,r,customContent){
     const token=selection,key=publicFile,focused=reportActive(),origin=[encrypt,keyInput,confirm].includes(focused)?focused:null;
     encrypt.disabled=true;keyInput.disabled=true;confirm.disabled=true;encrypted.hidden=true;status.textContent='Encrypting on this device…';
     try{
-      const cryptoModule=await import('./report-crypto.js?release=20261102-turnstile');
+      const cryptoModule=await import('./report-crypto.js?release=20261104-receipts');
       const protectedReport=await cryptoModule.encryptReport(key,{report:content,alias:cryptoModule.generateAlias()});
       if(!current(token))return;
       const url=urls.create(new Blob([protectedReport],{type:'application/octet-stream'}));encrypted.href=url;encrypted.hidden=false;
@@ -519,10 +523,11 @@ if(page==='practice'&&practiceScenarioFor(id))routeCleanup=mountPracticeWorkbenc
 if(page==='studio'&&id==='network')routeCleanup=mountNetworkStudio($('#main'),{getState:()=>networkStudioState,onChange:state=>{networkStudioState=state;}});
 if(page==='studio'&&id==='coding')routeCleanup=mountCodingStudio($('#main'),{getState:()=>codingStudioState,onChange:state=>{codingStudioState=state;}});
 if(page==='labs'){$$('[data-library-jump]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();const target=document.getElementById(link.dataset.libraryJump);if(target){target.tabIndex=-1;target.focus({preventScroll:true});target.scrollIntoView({block:'start',behavior:'instant'});}}));labCards();$$('.track-filters [data-track]').forEach(b=>b.addEventListener('click',()=>{filterLibraryTrack(b.dataset.track);}));$('#grade-filter').addEventListener('change',e=>{libraryGrade=e.target.value;labCards();});$('#duration-filter').addEventListener('change',e=>{libraryMinutes=e.target.value;labCards();});$('#lab-search').addEventListener('input',e=>{libraryQuery=e.target.value;labCards();});}if(currentLab){const labController=bindLab(currentLab,route,{onModeChange:mode=>cleanupLearning.setMode?.(mode)}),s=currentLab,r=store.labs[s.id];labNavigation=labController;const cleanupLearning=mountLabLearning($('#main'),{scenario:s,record:r,autoStartFirstIdea:!OWNER_PREVIEW,mode:route.mode,sequence:route.sequence,onSave:()=>{save();$('#bench-log').innerHTML=eventList(r);$('#action-count').textContent=r.events.length+' actions';labController.refreshStatus();},onTest:prediction=>labController.runHypothesisTest(prediction,{firstIdea:false}),getResult:()=>labController.currentTaskResult()});routeCleanup=()=>{labController.dispose();cleanupLearning?.();};}
-if(page==='learn'&&getFoundation(id)){const foundation=getFoundation(id),controller=mountFoundationLab($('#main'),{lab:foundation,record:foundationRecordFor(id),onChange:record=>{foundationRecords[id]=record;},onReport:()=>{if(!foundationSummary(id,foundationRecords[id]).complete)return;recordReachCompletion('learn/'+id);openReport({id:foundation.code,title:foundation.title,grade:foundation.grade||'7–12'}, {},foundationReport(id,foundationRecords[id]));}});routeCleanup=()=>controller.dispose();$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
+if(page==='learn'&&getFoundation(id)){const foundation=getFoundation(id),controller=mountFoundationLab($('#main'),{lab:foundation,record:foundationRecordFor(id),onChange:record=>{foundationRecords[id]=record;},onReport:()=>{if(!foundationSummary(id,foundationRecords[id]).complete)return;recordReachCompletion('learn/'+id);openReport({id:foundation.code,title:foundation.title,grade:foundation.grade||'7–12'}, {closed:true},foundationReport(id,foundationRecords[id]));}});routeCleanup=()=>controller.dispose();$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
 if(page==='educators'){const disposeTeaching=mountTeachingPage($('#main'),SCENARIOS,{notify:showNotice}),disposeStandards=mountStandardsAlignment($('#standards-alignment'));routeCleanup=()=>{disposeTeaching?.();disposeStandards?.();};}
-if(page==='capstone'){const s=SCENARIOS.find(item=>item.id==='CODE-503'),r=recordFor(s);bindWorkPrivacy(s);routeCleanup=mountCapstone($('#main'),{record:r,onSave:save,onReport:()=>openReport({id:'CAP-601',title:'Classroom opening day',grade:'7–12'},r,capstoneReport(store.labs,checkCapstoneState))});$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
+if(page==='capstone'){const s=SCENARIOS.find(item=>item.id==='CODE-503'),r=recordFor(s);bindWorkPrivacy(s);routeCleanup=mountCapstone($('#main'),{record:r,onSave:save,onReport:()=>{const complete=capstoneProgress(store.labs,checkCapstoneState).every(stage=>stage.explained)&&Object.values(capstoneHandoff(r)).every(value=>value.trim().length>=15);if(complete)recordReachCompletion('CAP-601');openReport({id:'CAP-601',title:'Classroom opening day',grade:'7–12'},{...r,closed:complete},capstoneReport(store.labs,checkCapstoneState));}});$('#dialog-close').addEventListener('click',()=>$('#lab-dialog').close());}
 if(improvementActivity){const previousCleanup=routeCleanup,disposeImprovements=mountLabImprovements($('#lab-improvement-summary'),{activity:improvementActivity});routeCleanup=()=>{disposeImprovements?.();previousCleanup?.();};}
+if(typeof mountActivityTelemetry==='function'&&['lab','learn','arcade','quests','explore','play','capstone'].includes(page)&&(id||page==='capstone')){const activity=page==='capstone'?'CAP-601':page+'/'+id,completed=page==='lab'?store.labs[id]?.closed===true:page==='learn'?foundationSummary(id,foundationRecords[id]).complete:false,previousCleanup=routeCleanup,disposeTelemetry=mountActivityTelemetry($('#main'),{activity,completed,ownerPreview:OWNER_PREVIEW,...(page==='lab'?{isComplete:()=>store.labs[id]?.closed===true}:page==='learn'?{isComplete:()=>foundationSummary(id,foundationRecords[id]).complete}:page==='capstone'?{isComplete:()=>capstoneProgress(store.labs,checkCapstoneState).every(stage=>stage.explained)&&Object.values(capstoneHandoff(store.labs['CODE-503'])).every(value=>value.trim().length>=15)}:{}),getStep:()=>page==='lab'?(labView?.section||1):1});routeCleanup=()=>{disposeTelemetry?.();previousCleanup?.();};}
 window.scrollTo(0,0);}
 function setSiteMenuOpen(open,{restoreFocus=false}={}){
   $('#site-nav').classList.toggle('open',open);

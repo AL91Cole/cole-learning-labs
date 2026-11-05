@@ -8,7 +8,7 @@ const json=async path=>JSON.parse(await readFile(new URL(path,import.meta.url),'
 
 test('student publishing and collection remain independent of adult memberships',async()=>{
   assert.equal(IMPROVEMENT_SHARING_ENABLED,false);
-  assert.deepEqual((await json('../../_routes.json')).include,['/api/requester','/api/reach']);
+  assert.deepEqual((await json('../../_routes.json')).include,['/api/requester','/api/reach','/api/telemetry','/api/verify']);
   assert.equal(PUBLIC_FILES.some(path=>path.startsWith('memberships/')),false);
   const student=await json('../../wrangler.jsonc');
   for(const config of [student,...Object.values(student.env)]){
@@ -16,6 +16,7 @@ test('student publishing and collection remain independent of adult memberships'
     assert.equal(config.vars.IMPROVEMENTS_ENABLED,'false');
     assert.equal(config.vars.REACH_ENABLED,'false');
     assert.equal(config.vars.REACH_RETENTION_VERIFIED,'false');
+    for(const flag of ['RECEIPTS_ENABLED','TELEMETRY_ENABLED','TELEMETRY_PRIVACY_REVIEWED','TELEMETRY_RETENTION_VERIFIED'])assert.equal(config.vars[flag],'false');
     assert.equal((config.services||[]).some(service=>/member/iu.test(service.binding+' '+service.service)),false);
   }
 });

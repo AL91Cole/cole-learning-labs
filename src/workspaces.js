@@ -1,9 +1,9 @@
-import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261102-turnstile';
-import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261102-turnstile';
-import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,disposeExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261102-turnstile';
-import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261102-turnstile';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-turnstile';
-import {disposeCodingWorkbench} from './coding-workbench.js?release=20261102-turnstile';
+import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261104-receipts';
+import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261104-receipts';
+import {supportsExpandedLab,initialExpandedState,normalizeExpandedState,applyExpandedAction,verifyExpanded,renderExpanded,disposeExpanded,getExpandedMission,expandedDiagnostic} from './expanded-labs.js?release=20261104-receipts';
+import {supportsCodingLab,initialCodingState,normalizeCodingState,applyCodingAction,verifyCoding,renderCoding,getCodingMission,codingDiagnostic} from './coding-lab.js?release=20261104-receipts';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261104-receipts';
+import {disposeCodingWorkbench} from './coding-workbench.js?release=20261104-receipts';
 const normalize = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const outcome = (state, message, kind = 'info') => ({ state, message, kind });

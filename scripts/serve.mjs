@@ -22,6 +22,8 @@ const ROUTES = new Map([
   ['/school-it', 'school-it.html'], ['/school-it/', 'school-it.html'],
   ['/ai-use-notice', 'ai-use-notice.html'], ['/ai-use-notice/', 'ai-use-notice.html'],
   ['/secure-reports', 'secure-reports.html'], ['/secure-reports/', 'secure-reports.html'],
+  ['/compliance', 'compliance.html'], ['/compliance/', 'compliance.html'],
+  ['/verify', 'verify.html'], ['/verify/', 'verify.html'],
   ['/student-workbook', 'student-workbook.html'], ['/practice-quizzes', 'practice-quizzes.html'],
   ['/teacher', 'teacher/index.html'], ['/teacher/', 'teacher/index.html']
 ]);

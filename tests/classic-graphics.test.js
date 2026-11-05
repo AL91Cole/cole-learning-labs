@@ -33,7 +33,9 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // Shared onboarding, contextual retries and cancellable route playback add
   // about 25 KB of authored source; the compiled delivery cap stays unchanged.
   // On-demand bot verification adds about 4 KB; compiled caps stay unchanged.
-  assert.ok(bytes<1_565_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // Local engagement timing and reviewed receipt metadata add about 16 KB;
+  // server crypto stays outside this graph and compiled caps stay unchanged.
+  assert.ok(bytes<1_585_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{
