@@ -12,6 +12,10 @@
     "REQUESTER_ENABLED": "false",
     "REQUESTER_BILLING_REVIEWED": "false",
     "CLASSROOM_ENABLED": "false",
+    "RECEIPTS_ENABLED": "false",
+    "TELEMETRY_ENABLED": "false",
+    "TELEMETRY_PRIVACY_REVIEWED": "false",
+    "TELEMETRY_RETENTION_VERIFIED": "false",
     "IMPROVEMENTS_ENABLED": "false", "REACH_ENABLED": "false", "REACH_RETENTION_VERIFIED": "false"
   },
   "env": {
@@ -22,6 +26,10 @@
         "REQUESTER_ENABLED": "false",
         "REQUESTER_BILLING_REVIEWED": "false",
         "CLASSROOM_ENABLED": "false",
+        "RECEIPTS_ENABLED": "false",
+        "TELEMETRY_ENABLED": "false",
+        "TELEMETRY_PRIVACY_REVIEWED": "false",
+        "TELEMETRY_RETENTION_VERIFIED": "false",
         "IMPROVEMENTS_ENABLED": "false", "REACH_ENABLED": "false", "REACH_RETENTION_VERIFIED": "false"
       }
     },
@@ -36,6 +44,10 @@
         "REQUESTER_ENABLED": "true",
         "REQUESTER_BILLING_REVIEWED": "true",
         "CLASSROOM_ENABLED": "false",
+        "RECEIPTS_ENABLED": "false",
+        "TELEMETRY_ENABLED": "false",
+        "TELEMETRY_PRIVACY_REVIEWED": "false",
+        "TELEMETRY_RETENTION_VERIFIED": "false",
         "IMPROVEMENTS_ENABLED": "false", "REACH_ENABLED": "false", "REACH_RETENTION_VERIFIED": "false"
       }
     }

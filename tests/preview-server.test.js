@@ -49,6 +49,8 @@ test('preview serves only approved free-artifact pages, clean routes and version
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/school-it/', 'school-it.html', 'text/html; charset=utf-8'],
     ['/secure-reports', 'secure-reports.html', 'text/html; charset=utf-8'],
+    ['/compliance', 'compliance.html', 'text/html; charset=utf-8'],
+    ['/verify', 'verify.html', 'text/html; charset=utf-8'],
     ['/.well-known/security.txt', '.well-known/security.txt', 'text/plain; charset=utf-8'],
     ['/src/app.js?release=test', 'src/app.js', 'text/javascript; charset=utf-8'],
     ['/src/styles.css', 'src/styles.css', 'text/css; charset=utf-8']

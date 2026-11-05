@@ -1,8 +1,8 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261102-turnstile';
-import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261102-turnstile';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261102-turnstile';
-import {createTextReport,createReportURLs} from './report-downloads.js?release=20261102-turnstile';
-import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261102-turnstile';
+import {renderLearningBrief} from './activity-guidance.js?release=20261104-receipts';
+import {CODING_LANGUAGES,executeCoding,codingLanguageReference} from './coding-lab.js?release=20261104-receipts';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261104-receipts';
+import {createTextReport,createReportURLs} from './report-downloads.js?release=20261104-receipts';
+import {CODING_VISUAL_MODES,normalizeCodingVisualMode,codingVisualHTML} from './coding-visuals.js?release=20261104-receipts';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const drafts=new Map();

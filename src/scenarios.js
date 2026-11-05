@@ -1,6 +1,6 @@
-import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261102-turnstile';
-import {CODING_SCENARIOS} from './coding-lab.js?release=20261102-turnstile';
-import {NETWORK_SCENARIOS} from './network-labs.js?release=20261102-turnstile';
+import {EXPANDED_SCENARIOS} from './expanded-labs.js?release=20261104-receipts';
+import {CODING_SCENARIOS} from './coding-lab.js?release=20261104-receipts';
+import {NETWORK_SCENARIOS} from './network-labs.js?release=20261104-receipts';
 const clue = (id, label, text) => ({ id, label, text });
 const question = (label, answer) => ({ label, answer });
 

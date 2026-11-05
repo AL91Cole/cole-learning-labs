@@ -40,6 +40,7 @@ async function canonicalBytes(sourceRoot,filename){
 function privateText(text,html=false){
   let result=stripRelease(text);
   if(html){
+    result=result.replace(/href=["']\/?(compliance|verify)(?:\.html)?["']/giu,'href="https://www.colelearninglabs.com/$1"');
     result=result.replace(/<a\b[^>]*\bhref=["'](?:\.?\/?(?:classroom\.html|teacher\/[^"']*))["'][^>]*>[\s\S]*?<\/a>/giu,'');
     result=result.replace(/(\b(?:href|src)=["'])\/(?!\/|learn\/)/giu,'$1/learn/');
     result=result.replace(/(<link\b[^>]*\brel=["']canonical["'][^>]*\bhref=["'])[^"']+(["'])/giu,'$1https://members.colelearninglabs.com/learn/$2');

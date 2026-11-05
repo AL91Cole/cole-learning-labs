@@ -37,7 +37,7 @@ test('no production configuration, live entry, public artifact or Pages route ex
   const worker=JSON.parse(await readFile(new URL('../worker-requester/wrangler.jsonc',import.meta.url),'utf8'));
   const pages=JSON.parse(await readFile(new URL('../wrangler.jsonc',import.meta.url),'utf8'));
   const routes=JSON.parse(await readFile(new URL('../_routes.json',import.meta.url),'utf8'));
-  assert.equal(worker.main,'worker.js');assert.deepEqual(routes.include,['/api/requester','/api/reach']);
+  assert.equal(worker.main,'worker.js');assert.deepEqual(routes.include,['/api/requester','/api/reach','/api/telemetry','/api/verify']);
   assert.equal(PUBLIC_FILES.some(file=>/open-chat|worker-requester/u.test(file)),false);
   for(const config of [worker,pages,pages.env.production,pages.env.preview])assert.equal(config.vars.REQUESTER_OPEN_CHAT_ENABLED,undefined);
   const env={REQUESTER_ENABLED:'true',REQUESTER_BILLING_REVIEWED:'true',get AI(){assert.fail('Live route reached AI for prepared open chat.');}};

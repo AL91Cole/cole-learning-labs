@@ -15,7 +15,7 @@ function load(document,window){
   loads.set(document,loading);return loading;
 }
 export async function requestTurnstileToken({sitekey,action,signal,document=globalThis.document,window=globalThis,timeoutMs=8000}={}){
-  if(typeof sitekey!=='string'||!/^0x[A-Za-z0-9_-]{10,100}$/u.test(sitekey)||!['requester','reach'].includes(action)||signal?.aborted||!document?.head||!document?.body)return null;
+  if(typeof sitekey!=='string'||!/^0x[A-Za-z0-9_-]{10,100}$/u.test(sitekey)||!['requester','reach','receipt','verify'].includes(action)||signal?.aborted||!document?.head||!document?.body)return null;
   let timer,container,widget,finish;const controller=new AbortController();
   const abort=()=>{controller.abort();finish?.(null);};signal?.addEventListener('abort',abort,{once:true});
   const deadline=new Promise(resolve=>{timer=setTimeout(()=>{controller.abort();resolve(null);},timeoutMs);controller.signal.addEventListener('abort',()=>resolve(null),{once:true});});

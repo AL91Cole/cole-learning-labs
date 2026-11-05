@@ -1,4 +1,4 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261102-turnstile';
+import {renderLearningBrief} from './activity-guidance.js?release=20261104-receipts';
 // Authored, browser-local practice. This module has no service, account or lab-record capability.
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };

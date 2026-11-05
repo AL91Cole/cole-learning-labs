@@ -22,6 +22,8 @@ files.push('worker-requester/worker.js','worker-requester/budget.js','worker-req
 await scan('improvements');
 await scan('reach');
 await scan('edge');
+await scan('utils');
+await scan('telemetry');
 for (const file of files) {
   const result = spawnSync(process.execPath, ['--check', file], {stdio:'inherit'});
   if (result.status !== 0) process.exit(result.status || 1);
