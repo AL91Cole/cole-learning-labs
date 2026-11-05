@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { buildSite, PUBLIC_FILES, PUBLIC_SOURCE_FILES } from '../scripts/build.mjs';
@@ -128,6 +128,54 @@ test('successful rebuild removes stale output without copying new root files', a
   assert.equal((await readdir(root)).some(name => name.startsWith('.publish-stage-')), false);
 });
 
+test('a separate build location receives the same artifact and leaves the source tree untouched', async t => {
+  const { root, directory } = await fixture(t);
+  const location = path.join(directory, 'location');
+  await mkdir(location);
+  await writeFile(path.join(location, 'neighbour.txt'), 'Unrelated files here are not touched.');
+  const before = await list(root);
+  const result = await buildSite({ sourceRoot: root, outputRoot: location });
+  assert.equal(result.directory, path.join(location, 'dist'));
+  assert.deepEqual(await list(root), before, 'No dist or staging folder appears in the source tree.');
+  assert.deepEqual((await readdir(location)).sort(), ['dist', 'neighbour.txt']);
+  const files = await list(result.directory);
+  assert.deepEqual(files.filter(filename => !filename.startsWith('src/chunks/')), [...PUBLIC_FILES].sort());
+  assert.deepEqual(files.filter(filename => filename.startsWith('src/chunks/')), [...result.generated].sort());
+  // The default location is unchanged, and naming the source root itself is the default.
+  assert.equal((await buildSite({ sourceRoot: root, outputRoot: root })).directory, path.join(root, 'dist'));
+  assert.deepEqual(await list(path.join(root, 'dist')), files);
+});
+
+test('a separate build location is refused unless it is an absolute, existing, empty-of-dist folder outside the source tree', async t => {
+  const { root, directory } = await fixture(t);
+  const location = path.join(directory, 'location');
+  await mkdir(location);
+  for (const outputRoot of ['location', '', '.', null, 0, {}]) await assert.rejects(buildSite({ sourceRoot: root, outputRoot }), /absolute directory path/);
+  await assert.rejects(buildSite({ sourceRoot: root, outputRoot: path.join(directory, 'missing') }), { code: 'ENOENT' });
+  await writeFile(path.join(directory, 'file.txt'), 'Not a folder.');
+  await assert.rejects(buildSite({ sourceRoot: root, outputRoot: path.join(directory, 'file.txt') }), /real directory/);
+  for (const inside of ['assets', 'src', 'docs/nested']) {
+    await mkdir(path.join(root, 'docs/nested'), { recursive: true });
+    await assert.rejects(buildSite({ sourceRoot: root, outputRoot: path.join(root, inside) }), /outside the source tree/);
+  }
+  // An existing dist in a separate location is never replaced or emptied, whatever it is.
+  await mkdir(path.join(location, 'dist'));
+  await writeFile(path.join(location, 'dist', 'previous.txt'), 'KEEP');
+  await assert.rejects(buildSite({ sourceRoot: root, outputRoot: location }), /must not already contain a dist/);
+  assert.deepEqual(await list(location), ['dist/previous.txt']);
+  await rm(path.join(location, 'dist'), { recursive: true });
+  await writeFile(path.join(location, 'dist'), 'KEEP');
+  await assert.rejects(buildSite({ sourceRoot: root, outputRoot: location }), /must not already contain a dist/);
+  assert.equal(await readFile(path.join(location, 'dist'), 'utf8'), 'KEEP');
+  await rm(path.join(location, 'dist'));
+  // A source tree that is itself named dist cannot be chosen as the output of its own build.
+  const named = path.join(location, 'dist');
+  await rename(root, named);
+  await assert.rejects(buildSite({ sourceRoot: named, outputRoot: location }), /outside the source tree/);
+  assert.ok((await list(named)).includes('index.html'));
+  assert.equal((await readdir(location)).concat(await readdir(directory)).some(name => name.startsWith('.publish-stage-')), false);
+});
+
 test('symlinked public trees and output folders never expose or remove an outside directory', async t => {
   const { root, directory } = await fixture(t);
   const outside = path.join(directory, 'outside');
@@ -139,6 +187,11 @@ test('symlinked public trees and output folders never expose or remove an outsid
   await assert.rejects(buildSite({ sourceRoot: root }), /real directory/);
   assert.equal(await readFile(path.join(outside, 'keep.txt'), 'utf8'), 'Outside data must survive.');
   await rm(link);
+  const linkedLocation = path.join(directory, 'linked-location');
+  await symlink(outside, linkedLocation, process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(buildSite({ sourceRoot: root, outputRoot: linkedLocation }), /real directory/);
+  assert.deepEqual(await readdir(outside), ['keep.txt']);
+  await rm(linkedLocation);
   await rm(path.join(root, 'src'), { recursive: true });
   await symlink(outside, path.join(root, 'src'), process.platform === 'win32' ? 'junction' : 'dir');
   await assert.rejects(buildSite({ sourceRoot: root }), /real directory/);
