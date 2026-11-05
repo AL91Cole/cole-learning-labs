@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createActiveLabTimer,mountLabTelemetry,formatActiveTime,labReceiptHTML} from '../src/lab-telemetry.js';
+import {createActiveLabTimer,mountLabTelemetry,mountActivityTelemetry,completeLabActivity,formatActiveTime,labReceiptHTML} from '../src/lab-telemetry.js';
 
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 function target(){
@@ -87,7 +87,49 @@ test('a lost completion response never sends aggregate totals again during a rec
   assert.ok((await f.session.receipt()).code);assert.equal(sent[2].collectTelemetry,false);f.session.dispose();
 });
 
+test('a receipt waiting on an old completion cannot sign or count a restarted unfinished attempt',async t=>{
+  const sent=[];let finish;
+  const f=fixture({fetcher:async(_url,options)=>{
+    if(options.method==='GET')return new Response('{"receiptsEnabled":true,"telemetryEnabled":true}',{headers:{'X-CLL-Turnstile-Sitekey':'0x123456789012345678'}});
+    const event=JSON.parse(options.body);sent.push(event);
+    if(event.eventType==='complete')return new Promise(resolve=>{finish=resolve;});
+    return Response.json({ok:true});
+  }});t.after(()=>f.session.dispose());
+  await flush();f.optIn();await flush();f.session.complete();await flush();
+  const receipt=f.session.receipt();await flush();f.session.reset();await flush();
+  finish(Response.json({ok:true,completionCode:'CLL1-OLD-ATTEMPT'}));
+  assert.ok((await receipt).error);assert.equal(sent.filter(event=>event.eventType==='complete').length,1);
+  f.c.advance(3_000);assert.equal(f.session.timer.seconds(),3);
+});
+
 test('receipt disclosure distinguishes a signed browser report from identity or independent achievement',()=>{
   assert.equal(labReceiptHTML('INC-101',false),'');assert.equal(labReceiptHTML('UNKNOWN',true),'');
   const html=labReceiptHTML('INC-101',true);assert.match(html,/browser-reported completion percentage/);assert.match(html,/does not independently verify/);assert.match(html,/Your writing is not sent/);
+});
+
+test('switching Inbox Defender mode clears a finished receipt and starts a fresh timer',()=>{
+  const c=clock(),time={textContent:''},status={textContent:''},button={...target(),setAttribute(){}},host={innerHTML:'',querySelector(){return null;},replaceChildren(){this.innerHTML='';}};
+  const panel={innerHTML:'',className:'',remove(){},querySelector(selector){return selector==='[data-inline-lab-receipt]'?host:selector==='[data-lab-active-time]'?time:selector==='[data-lab-metrics-toggle]'?button:status;}};
+  const root={...target(),ownerDocument:{createElement:()=>panel},append(){}};
+  const cleanup=mountActivityTelemetry(root,{activity:'play/inbox-defender',location:{origin:'http://127.0.0.1:4173'},document:c.document,eventTarget:c.window,timerOptions:c.options});
+  c.advance(8_000);completeLabActivity('play/inbox-defender');assert.match(host.innerHTML,/Request signed completion code/);
+  const modeControl={closest(selector){return selector.split(',').includes('[data-id-action="mode"]')?this:null;}};
+  root.emit('click',{isTrusted:true,target:modeControl});
+  assert.equal(host.innerHTML,'');c.advance(4_000);assert.match(time.textContent,/0m 04s/);cleanup();
+});
+
+test('reopening a completed investigation clears receipt controls and resumes a fresh attempt',()=>{
+  let complete=true;
+  const c=clock(),time={textContent:''},status={textContent:''},button={...target(),setAttribute(){}},host={innerHTML:'',querySelector(){return null;},replaceChildren(){this.innerHTML='';}};
+  const panel={innerHTML:'',className:'',remove(){},querySelector(selector){return selector==='[data-inline-lab-receipt]'?host:selector==='[data-lab-active-time]'?time:selector==='[data-lab-metrics-toggle]'?button:status;}};
+  const root={...target(),ownerDocument:{createElement:()=>panel},append(){}};
+  const cleanup=mountActivityTelemetry(root,{activity:'lab/INC-101',completed:true,isComplete:()=>complete,location:{origin:'http://127.0.0.1:4173'},document:c.document,eventTarget:c.window,timerOptions:c.options});
+  assert.match(host.innerHTML,/Request signed completion code/);
+  complete=false;root.emit('input',{isTrusted:true});assert.equal(host.innerHTML,'');
+  c.advance(5_000);assert.match(time.textContent,/0m 05s/);cleanup();
+});
+
+test('receipt issuance rechecks that the current report is still complete',async()=>{
+  let complete=true;const f=fixture({isComplete:()=>complete});await flush();f.session.complete();complete=false;
+  assert.ok((await f.session.receipt()).error);assert.equal(f.requests.length,1);f.session.dispose();
 });

@@ -36,7 +36,7 @@ export function labReceiptHTML(labId,completed){
   return '<section class="report-plain" data-lab-receipt aria-label="Optional completion code"><h3>Optional completion code</h3><p>A signed code contains the lab, browser-reported completion percentage, active seconds from this page visit and UTC issue date. It confirms the service issued those values. It does not independently verify your work, identity, attention or grade. Your teacher still reviews your report.</p><p>Requesting a code sends those fields to Cloudflare and uses its security check. Your writing is not sent. Activity totals remain off unless you choose to share them in the lab. <a href="compliance.html">Data privacy details</a> · <a href="verify.html">Teacher code verifier</a></p><button class="button button-outline" type="button" data-receipt-request>Request signed completion code</button><p data-receipt-status role="status"></p><label class="lab-field" data-receipt-output hidden>Completion code<input type="text" readonly data-receipt-code></label><button class="button button-outline" type="button" data-receipt-copy hidden>Copy completion code</button></section>';
 }
 
-export function mountLabTelemetry(root,{labId,completed=false,getStep=()=>1,onComplete=()=>{},ownerPreview=false,location=globalThis.location,navigator=globalThis.navigator,document=globalThis.document,eventTarget=globalThis.window,fetcher=globalThis.fetch,tokenProvider=requestTurnstileToken,timerOptions={}}={}){
+export function mountLabTelemetry(root,{labId,completed=false,getStep=()=>1,isComplete=()=>true,onComplete=()=>{},ownerPreview=false,location=globalThis.location,navigator=globalThis.navigator,document=globalThis.document,eventTarget=globalThis.window,fetcher=globalThis.fetch,tokenProvider=requestTurnstileToken,timerOptions={}}={}){
   const id=receiptLabId(labId),pending=new Set();
   let disposed=false,config=null,sitekey=null,optedIn=false,started=false,finished=completed,completionCode=null,completionPending=null,completionMetricsAttempted=false,attempt=0;
   const timerElement=root?.querySelector?.('[data-lab-active-time]'),shareButton=root?.querySelector?.('[data-lab-metrics-toggle]'),metricsStatus=root?.querySelector?.('[data-lab-metrics-status]');
@@ -76,12 +76,15 @@ export function mountLabTelemetry(root,{labId,completed=false,getStep=()=>1,onCo
     complete(){if(finished)return;timer.complete();finished=true;update();onComplete();if(optedIn&&respectsPrivacy()&&config?.telemetryEnabled===true){completionMetricsAttempted=true;const currentAttempt=attempt;completionPending=request('POST',payload('complete',true)).then(value=>{if(!disposed&&attempt===currentAttempt&&value?.ok&&typeof value.completionCode==='string')completionCode=value.completionCode;return value;});}},
     reset(){attempt++;for(const controller of pending)controller.abort();completionCode=null;completionPending=null;completionMetricsAttempted=false;finished=false;started=false;timer.reset();update();if(optedIn)void sendStart();},
     async receipt(){
-      await ready;if(disposed||!finished||config?.receiptsEnabled!==true)return {error:'Signed completion codes are unavailable. Your local report is still ready to use.'};
-      if(completionPending)await completionPending;if(completionCode)return {code:completionCode};
+      const requestedAttempt=attempt;
+      await ready;if(disposed||attempt!==requestedAttempt||!finished||!isComplete()||config?.receiptsEnabled!==true)return {error:'Signed completion codes are unavailable. Your local report is still ready to use.'};
+      if(completionPending)await completionPending;
+      if(disposed||attempt!==requestedAttempt||!finished||!isComplete())return {error:'This completion has changed. Finish the current lab before requesting a code.'};
+      if(completionCode)return {code:completionCode};
       const collect=optedIn&&respectsPrivacy()&&!completionMetricsAttempted;completionMetricsAttempted=true;const currentAttempt=attempt;
       completionPending=request('POST',payload('complete',collect));
       const result=await completionPending;if(attempt===currentAttempt)completionPending=null;
-      if(disposed||attempt!==currentAttempt)return {error:'This lab visit has ended.'};
+      if(disposed||attempt!==currentAttempt||!isComplete())return {error:'This completion has changed. Finish the current lab before requesting a code.'};
       if(result?.ok&&typeof result.completionCode==='string'&&result.completionCode.length<=160){completionCode=result.completionCode;return {code:completionCode};}
       return {error:'A code could not be issued. Keep your local report and try again when the service is available.'};
     },
@@ -99,13 +102,16 @@ export function mountActivityTelemetry(root,{activity,completed=false,...options
   if(!receiptLabId(activity)||!root?.ownerDocument?.createElement)return()=>{};
   const panel=root.ownerDocument.createElement('section');panel.className='wrap section lab-receipt-controls';
   panel.innerHTML='<div class="case-panel"><p data-lab-active-time>Active on this page: 0m 00s</p><p class="panel-help">This local timer counts the first minute for reading. It pauses when you leave the tab or stop interacting for 60 seconds, then resumes with your next interaction. It measures this page visit, including when earlier work is resumed. It is not attendance or proof of attention.</p><button type="button" class="button button-outline" data-lab-metrics-toggle hidden>Share activity totals for this visit</button><p data-lab-metrics-status class="panel-help">Activity totals are off for this visit.</p><p class="panel-help">Optional sharing sends fixed lab/event codes, active seconds, completion percentage and step number. The application stores only daily aggregate counts in broad time/score buckets. Cloudflare still receives connection metadata. No work, text, persistent identifiers or action logs are sent. Sharing stops when you leave this activity. No reliable exit event is sent.</p><div data-inline-lab-receipt></div></div>';
-  root.append(panel);let disposeReceipt=()=>{};
-  const reveal=()=>{const host=panel.querySelector('[data-inline-lab-receipt]');host.innerHTML=labReceiptHTML(activity,true);disposeReceipt();disposeReceipt=mountLabReceiptUI(host,{labId:activity});};
+  root.append(panel);let disposeReceipt=()=>{},revealed=completed;
+  const hideReceipt=()=>{disposeReceipt();panel.querySelector('[data-inline-lab-receipt]').replaceChildren();revealed=false;};
+  const reveal=()=>{revealed=true;const host=panel.querySelector('[data-inline-lab-receipt]');host.innerHTML=labReceiptHTML(activity,true);disposeReceipt();disposeReceipt=mountLabReceiptUI(host,{labId:activity});};
   const session=mountLabTelemetry(panel,{labId:activity,completed,...options,onComplete:reveal});
-  const reset=event=>{if(event.isTrusted!==true||!event.target?.closest?.('[data-ga="reset"],[data-ga="restart"],[data-cq="restart"],[data-elementary-action="reset"],[data-id-action="restart"]'))return;disposeReceipt();panel.querySelector('[data-inline-lab-receipt]').replaceChildren();session.reset();};
+  const reset=event=>{if(event.isTrusted!==true||!event.target?.closest?.('[data-ga="reset"],[data-ga="restart"],[data-cq="restart"],[data-elementary-action="reset"],[data-id-action="restart"],[data-id-action="mode"]'))return;hideReceipt();session.reset();};
+  const recheck=()=>{if(revealed&&typeof options.isComplete==='function'&&!options.isComplete()){hideReceipt();session.reset();}};
   root.addEventListener('click',reset,true);
+  for(const type of ['click','input','change'])root.addEventListener(type,recheck);
   if(completed)reveal();
-  return()=>{disposeReceipt();root.removeEventListener('click',reset,true);session.dispose();panel.remove();};
+  return()=>{disposeReceipt();root.removeEventListener('click',reset,true);for(const type of ['click','input','change'])root.removeEventListener(type,recheck);session.dispose();panel.remove();};
 }
 
 export function mountLabReceiptUI(host,{labId,navigator=globalThis.navigator}={}){
