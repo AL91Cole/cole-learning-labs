@@ -136,6 +136,12 @@ function publicCodingScenarios(source){
 }
 function publicCoding(source){
   const ast=tree(source),keys=new Set(FREE_IDS.filter(id=>id.startsWith('CODE-')).map(id=>id.replaceAll('-','')));
+  // The case array is filtered in coding-scenarios.js. A copy declared here again
+  // would bypass that filter, so public compilation refuses it rather than shipping it.
+  for(const statement of ast.body){
+    const item=statement.type==='ExportNamedDeclaration'?statement.declaration:statement;
+    if(item?.type==='VariableDeclaration'&&item.declarations.some(entry=>entry.id.type==='Identifier'&&entry.id.name==='CODING_SCENARIOS'))throw new Error('Coding cases must stay in the reviewed coding-scenarios.js data module.');
+  }
   const replacements=[];
   for(const name of ['definitions','pythonStarters']){
     const object=declaration(ast,name);if(object.type!=='ObjectExpression')throw new Error(`Expected reviewed ${name} map.`);
