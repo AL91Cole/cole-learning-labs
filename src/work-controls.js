@@ -1,9 +1,32 @@
 const node = (tag, text, className) => {const el=document.createElement(tag);if(text)el.textContent=text;if(className)el.className=className;return el;};
-export function workStatus(record, manager) {
+export function workStatus(record, manager, shared = false) {
+  if (shared) return (record.closed ? 'Delivered. ' : '') + 'Shared-device session: download your report before you leave. Nothing is saved on this device.';
   return (record.closed ? 'Delivered. ' : '') + (manager.persistent ? 'Saved on this device, without local encryption. Export and clear before sharing this profile.' : 'Private session: export before closing, reloading, or leaving this page.');
 }
-export function mountWorkControls({host, manager, getStore, replaceStore, onChange, onClear, scenarioId}) {
+// A shared-device session offers no device saving or resuming: only reports and a clear control.
+function mountSharedControls({host, onClear}) {
+  const wasOpen=host.querySelector('details')?.open===true;
+  host.replaceChildren();host.className='work-privacy';
+  const title=node('strong','Shared-device session · nothing is saved on this device');
+  const options=node('details');options.open=wasOpen;
+  const info=node('p','Work stays in this page only. It clears when the page closes, when you choose Clear, or after a long time without activity. Download your report before you leave. Keep real names, emails, student IDs, passwords, and private school details out of notes.');
+  const controls=node('div',null,'button-row');
+  const clear=node('button','Clear this page’s work','lab-tool');clear.type='button';
+  const secure=node('a','Encrypted report tools','lab-tool');secure.href='secure-reports.html';secure.target='_blank';secure.rel='noopener noreferrer';
+  controls.append(clear,secure);
+  const confirm=node('div',null,'work-privacy-confirm');confirm.hidden=true;
+  const yes=node('button','Clear this page’s work','lab-tool'),cancel=node('button','Cancel','lab-tool');yes.type=cancel.type='button';
+  const actions=node('div',null,'button-row');actions.append(yes,cancel);
+  confirm.append(node('p','Clear all work on this page? Download a report first if you need one. This does not delete downloads or clipboard contents.'),actions);
+  clear.addEventListener('click',()=>{confirm.hidden=false;});
+  cancel.addEventListener('click',()=>{confirm.hidden=true;});
+  yes.addEventListener('click',()=>onClear(true));
+  options.append(node('summary','Reports & privacy options'),info,controls,confirm);
+  host.append(title,options);
+}
+export function mountWorkControls({host, manager, getStore, replaceStore, onChange, onClear, scenarioId, shared = false}) {
   if (!host) return;
+  if (shared) { mountSharedControls({host, onClear}); return; }
   const wasOpen=host.querySelector('details')?.open===true;
   host.replaceChildren();host.className='work-privacy';
   const title=node('strong', manager.persistent ? 'Device saving is on' : 'Private session · device saving is off');
