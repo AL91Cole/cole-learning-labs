@@ -62,7 +62,7 @@ export function mountReceiptVerifier(document, dependencies = {}) {
       summary.textContent = `${results.length} checked · ${valid} valid signatures · ${results.length-valid} invalid · ${duplicate} entries with repeated codes`;
       region.hidden = false; status.textContent = summary.textContent + '. Scores and time are browser-reported.';
     } catch (error) {
-      if (current === generation) status.textContent = error.name === 'AbortError' ? 'The check timed out. Your codes are still here; try again.' : error.message;
+      if (current === generation) status.textContent = error.name === 'AbortError' ? 'The check timed out. Your codes are still here; try again.' : error.name === 'TypeError' ? 'The verifier could not be reached. Your codes are still here; try again later or use your lab report.' : error.message;
     } finally { if (current === generation) {clearTimeout(timer);submit.disabled = false;} }
   };
   form.addEventListener('submit',onSubmit);clear.addEventListener('click',reset);
