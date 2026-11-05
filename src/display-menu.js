@@ -37,14 +37,14 @@ export function applyDisplayPreferences(root,preferences){
   return clean;
 }
 const choice=(name,value,label,current)=>'<label class="display-choice"><input type="radio" name="display-'+name+'" value="'+value+'"'+(current===value?' checked':'')+'> <span>'+esc(label)+'</span></label>';
-export function displayMenuHTML(preferences){
+export function displayMenuHTML(preferences,{saved=true}={}){
   const p=normalizeDisplayPreferences(preferences);
   return '<div class="access-panel-head"><h2 id="display-panel-title">Display</h2><button type="button" class="access-close" data-display-close aria-label="Close display menu">×</button></div>'+
     '<fieldset class="display-group"><legend>Text size</legend>'+choice('textSize','default','Standard',p.textSize)+choice('textSize','larger','Larger',p.textSize)+choice('textSize','largest','Largest',p.textSize)+'</fieldset>'+
     '<fieldset class="display-group"><legend>Spacing</legend>'+choice('spacing','default','Standard',p.spacing)+choice('spacing','relaxed','More space between lines and words',p.spacing)+'</fieldset>'+
     '<fieldset class="display-group"><legend>Contrast</legend>'+choice('contrast','default','Standard colors',p.contrast)+choice('contrast','high','Stronger contrast',p.contrast)+'</fieldset>'+
     '<fieldset class="display-group"><legend>Motion</legend>'+choice('motion','auto','Follow my device setting',p.motion)+choice('motion','reduce','Reduce animation',p.motion)+'</fieldset>'+
-    '<div class="access-panel-foot"><button type="button" class="button button-small button-outline" data-display-reset>Reset to standard</button><p class="access-note">Saved on this device only. Nothing is sent anywhere.</p></div>';
+    '<div class="access-panel-foot"><button type="button" class="button button-small button-outline" data-display-reset>Reset to standard</button><p class="access-note">'+(saved?'Saved on this device only.':'Used on this page only and not saved.')+' Nothing is sent anywhere.</p></div>';
 }
 /** Render the Display button and panel into a host element. Returns a disposer. */
 export function mountDisplayMenu(host,{storage=null,root=document.documentElement}={}){
@@ -52,7 +52,7 @@ export function mountDisplayMenu(host,{storage=null,root=document.documentElemen
   let preferences=applyDisplayPreferences(root,readDisplayPreferences(storage));
   host.innerHTML='<button type="button" class="access-button" id="display-toggle" aria-expanded="false" aria-controls="display-panel"><span class="access-icon" aria-hidden="true">Aa</span><span class="access-label">Display</span></button><div id="display-panel" class="access-panel" role="group" aria-labelledby="display-panel-title" hidden></div>';
   const toggle=host.querySelector('#display-toggle'),panel=host.querySelector('#display-panel');
-  const render=()=>{panel.innerHTML=displayMenuHTML(preferences);};
+  const render=()=>{panel.innerHTML=displayMenuHTML(preferences,{saved:!!storage});};
   const setOpen=(open,{restoreFocus=false}={})=>{
     if(open)render();
     panel.hidden=!open;toggle.setAttribute('aria-expanded',String(open));

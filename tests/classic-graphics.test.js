@@ -40,7 +40,9 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // record-registry modules add about 21 KB of source. Learning routes and their
   // engines now download on demand, so start-up delivery shrinks while the graph
   // grows slightly.
-  assert.ok(bytes<1_630_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // Classroom link modes (student mode and the shared-device session) add about
+  // 13 KB of source with no storage, network or engine; compiled caps stay unchanged.
+  assert.ok(bytes<1_645_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{
