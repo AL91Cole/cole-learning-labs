@@ -12,10 +12,18 @@ import {PART_ART} from '../src/part-art.js';
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 
+// Script-free pages at ordinary URLs: the teacher hub, featured lessons, the family path and the district review.
+// They are published on the public site only and never join the member or owner bundles.
+export const PUBLIC_LANDING_PAGES = Object.freeze([
+  'teach.html', 'everyday-tech.html', 'district-review.html',
+  'lessons/blank-monitor.html', 'lessons/inbox-defender.html', 'lessons/packet-post.html',
+  'lessons/k-6.html', 'lessons/troubleshooting-pilot.html', 'lessons/design-a-ticket.html'
+]);
 // A new public file needs an explicit review here. Never publish the checkout root.
 export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/turnstile-client.js', 'src/receipt-schema.js', 'src/lab-telemetry.js', 'src/receipt-verifier.js', 'src/receipt-verifier.css',
   'index.html', '404.html', 'classroom.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', 'teacher/index.html', 'student-workbook.html', 'practice-quizzes.html',
+  ...PUBLIC_LANDING_PAGES, 'src/landing.css',
   'manifest.webmanifest', 'sw.js', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/icon-maskable-512.png', 'assets/apple-touch-icon.png',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
@@ -51,9 +59,9 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
 const PUBLIC_RECEIPT_TOOLS = new Set(['compliance.html','verify.html','src/receipt-verifier.js','src/receipt-verifier.css']);
 // The installable-app shell and offline cache belong to the public root site only.
 export const PUBLIC_SHELL_FILES = Object.freeze(['manifest.webmanifest','sw.js','assets/icon-192.png','assets/icon-512.png','assets/icon-maskable-512.png','assets/apple-touch-icon.png']);
-export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)));
+export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)&&!PUBLIC_LANDING_PAGES.includes(filename)&&filename!=='src/landing.css'));
 const PREVIEW_FILES = Object.freeze([
-  'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html',
+  'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', ...PUBLIC_LANDING_PAGES,
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   ...PUBLIC_METADATA_FILES, ...PUBLIC_SHELL_FILES,
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png', ...Object.values(PART_ART),
@@ -67,7 +75,7 @@ export const publicFilesFor=access=>{
 };
 export const PUBLIC_FILES=publicFilesFor(PUBLIC_LAB_ACCESS);
 const FILES = new Set(PUBLIC_SOURCE_FILES);
-const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', '.well-known'];
+const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', 'lessons', '.well-known'];
 
 async function directoryOnly(filename) {
   const info = await lstat(filename);

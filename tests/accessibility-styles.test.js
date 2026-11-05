@@ -19,7 +19,7 @@ function contrast(a,b){const x=luminance(a),y=luminance(b);return (Math.max(x,y)
 function readable(fg,bgs,minimum=4.5){for(const bg of bgs)assert.ok(contrast(fg,bg)>=minimum,`${fg} on ${bg} has contrast ${contrast(fg,bg).toFixed(2)}; need ${minimum}`);}
 
 test('shared safeguards are the last stylesheet on every public HTML entry',async()=>{
-  for(const path of ['index.html','404.html','classroom.html','school-it.html','secure-reports.html','teacher/index.html','student-workbook.html','practice-quizzes.html','verify.html','compliance.html']){
+  for(const path of ['index.html','404.html','classroom.html','school-it.html','secure-reports.html','teacher/index.html','student-workbook.html','practice-quizzes.html','verify.html','compliance.html','teach.html','everyday-tech.html','district-review.html','lessons/blank-monitor.html','lessons/inbox-defender.html','lessons/packet-post.html','lessons/k-6.html','lessons/troubleshooting-pilot.html','lessons/design-a-ticket.html']){
     const html=await readFile(new URL(path,root),'utf8');
     const sheets=[...html.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/gu)];
     assert.ok(sheets.length,path);assert.match(sheets.at(-1)[1],/(?:^|\/)src\/accessibility\.css\?release=/u,path);

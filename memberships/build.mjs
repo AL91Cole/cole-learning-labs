@@ -37,10 +37,14 @@ async function canonicalBytes(sourceRoot,filename){
   finally{await handle.close();}
 }
 
+// Published on the public site only; a relative link would resolve to a missing /learn/ page.
+const PUBLIC_ONLY_PAGES='compliance|verify|teach|everyday-tech|district-review|lessons\\/[a-z0-9-]+';
+const PUBLIC_ONLY_HTML_LINK=new RegExp(`href=["']\\/?(${PUBLIC_ONLY_PAGES})(?:\\.html)?["']`,'giu');
+const PUBLIC_ONLY_SCRIPT_LINK=new RegExp(`href=(\\\\?["'])(${PUBLIC_ONLY_PAGES})\\.html\\1`,'gu');
 function privateText(text,html=false){
   let result=stripRelease(text);
   if(html){
-    result=result.replace(/href=["']\/?(compliance|verify)(?:\.html)?["']/giu,'href="https://www.colelearninglabs.com/$1"');
+    result=result.replace(PUBLIC_ONLY_HTML_LINK,'href="https://www.colelearninglabs.com/$1"');
     result=result.replace(/<a\b[^>]*\bhref=["'](?:\.?\/?(?:classroom\.html|teacher\/[^"']*))["'][^>]*>[\s\S]*?<\/a>/giu,'');
     result=result.replace(/(\b(?:href|src)=["'])\/(?!\/|learn\/)/giu,'$1/learn/');
     result=result.replace(/(<link\b[^>]*\brel=["']canonical["'][^>]*\bhref=["'])[^"']+(["'])/giu,'$1https://members.colelearninglabs.com/learn/$2');
@@ -65,7 +69,7 @@ export async function prepareProtectedAssets({sourceRoot=siteRoot,files=MEMBER_F
   if(!(memberBundle?.javascript instanceof Uint8Array))throw new Error('Invalid private app bundle.');
   // compliance.html and verify.html are published only on the public site. Links
   // emitted from JavaScript would otherwise resolve to a missing /learn/ page.
-  const bundleText=new TextDecoder('utf-8',{fatal:true}).decode(memberBundle.javascript).replace(/href=(\\?["'])(compliance|verify)\.html\1/gu,'href=$1https://www.colelearninglabs.com/$2$1');
+  const bundleText=new TextDecoder('utf-8',{fatal:true}).decode(memberBundle.javascript).replace(PUBLIC_ONLY_SCRIPT_LINK,'href=$1https://www.colelearninglabs.com/$2$1');
   assets.set('/learn/src/app.js',{bytes:encoder.encode(bundleText),contentType:TYPES['.js']});
   // One stylesheet avoids a burst of paid-entitlement checks for every CSS
   // import. All existing CSS lives below src, preserving its relative URL base.
