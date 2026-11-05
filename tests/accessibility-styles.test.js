@@ -81,3 +81,11 @@ test('the fixed assistive toolbar never covers the end of the footer on phones',
   assert.match(phone,/\.site-footer\{padding-bottom:100px\}/u,'Phone footers reserve room under the fixed Listen and Display buttons');
   assert.match(phone,/\.access-tools\{left:12px;bottom:12px\}/u);
 });
+
+test('investigation ticket labels and the AI-use link stay readable and tappable on phones',async()=>{
+  const styles=(await readFile(new URL('src/styles.css',root),'utf8')).replace(/\/\*[\s\S]*?\*\//gu,'');
+  const phone=styles.split('@media(max-width:580px){')[1]?.split('\n}')[0]||'';
+  const size=/\.lab-shell \.lab-topbar \.eyebrow\{font-size:([\d.]+)rem\}/u.exec(phone)?.[1];
+  assert.ok(size&&Number(size)>=.75,'The ticket code label keeps at least .75rem on phones, got '+size);
+  assert.match(styles,/\.requester-privacy \.panel-help a\{display:inline-block;padding:4px 0;min-height:24px\}/u,'The in-sentence AI-use link gets a 24px tap box');
+});
