@@ -1,7 +1,7 @@
 import {renderLabLearning} from './teaching.js?release=20261107-tech-team';
 import {learningModes,learningRoute,labPageHash} from './learning-routes.js?release=20261107-tech-team';
 export {learningRoute,labPageHash};
-import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult} from './experiments.js?release=20261107-tech-team';
+import {renderExperiments,mountExperiments,readExperiments,setExperimentDraft,startExperiment,captureExperimentResult,resumeExperiment,recordTestResult,sameSetup,observationSnapshot} from './experiments.js?release=20261107-tech-team';
 import {transferCaseFor} from './scenarios.js?release=20261107-tech-team';
 
 export function mountLabLearning(root,{scenario,record,mode='guided',sequence,onSave,onTest,getResult,autoStartFirstIdea=true}) {
@@ -15,7 +15,7 @@ export function mountLabLearning(root,{scenario,record,mode='guided',sequence,on
     const transfer=root.querySelector('#learning-transfer');
     const next=transferCaseFor(scenario.id);
     if(transfer){transfer.replaceChildren();transfer.hidden=!next;
-    if(next){const text=document.createElement('span');text.textContent='Try the same symptom with a different cause: ';const link=document.createElement('a');link.href=labPageHash(next,1,{mode:'challenge'});link.textContent='Open transfer case '+next+' →';transfer.append(text,link);}}
+    if(next){const text=document.createElement('span');text.textContent='Ready for a replay? Same symptom, different cause: ';const link=document.createElement('a');link.href=labPageHash(next,1,{mode:'challenge'});link.textContent='Open alternate ticket '+next+' →';transfer.append(text,link);}}
   }
   applyMode(mode);
   const change=()=>{applyMode(select.value);history.replaceState(null,'',labPageHash(scenario.id,shell.dataset.section||learningRoute(location.hash).section,{mode,sequence}));};
@@ -32,12 +32,23 @@ export function mountLabLearning(root,{scenario,record,mode='guided',sequence,on
     const started=startExperiment(scenario,record,record.state);
     if(started.ok){onSave?.();experiments.refresh();host.querySelector('[data-experiment-status]').textContent='Your first idea and starting setup are ready. Make one change, then test.';}
   }
+  // One test action: the workbench button verifies the task and this records the result in the notebook.
   function captureFirstTest(event){
     if(event.detail?.id!==scenario.id||event.detail.firstIdea!==true)return;
-    const {draft}=readExperiments(record);
-    if(!draft.before||draft.predict!==record.plan.slice(0,240))return;
-    const captured=captureExperimentResult(scenario,record,record.state,getResult?.());
-    if(captured.ok){onSave?.();experiments.refresh();host.querySelector('[data-experiment-status]').textContent=captured.message;}
+    const status=message=>{host.querySelector('[data-experiment-status]').textContent=message;};
+    const {attempts,draft}=readExperiments(record),last=attempts.at(-1),result=getResult?.();
+    if(!draft.before){
+      const blank=!Object.values(draft).some(value=>typeof value==='string'?value.trim():value!==undefined&&value!==null);
+      const whole=!!last&&['predict','evidence','changed','observed','explain'].every(part=>typeof last[part]==='string'&&last[part].trim());
+      // Retesting saved, unchanged, working equipment confirms it; there is nothing new to record.
+      if(blank&&whole&&last.check?.ok===true&&sameSetup(last.after,observationSnapshot(scenario,record.state)))return;
+      if(draft.predict.trim().length<12||draft.evidence.trim().length<12){status(last?'The test ran. To record it, write your next idea and the evidence for it in step 1. Then select Test my idea again.':'The test ran. To record it, write your idea and the evidence for it in step 1. Then select Start this test.');return;}
+      if(!resumeExperiment(scenario,record).ok){status('The test ran. To record it, select Start this test. Then select Test my idea again.');return;}
+    }
+    // A repeated click on an unchanged setup keeps the recorded result and anything already typed about it.
+    const captured=recordTestResult(scenario,record,record.state,result);
+    if(captured.ok&&!captured.repeat){onSave?.();experiments.refresh();}
+    status(captured.ok?captured.message:'The test ran. To record it: '+captured.message);
   }
   if(shell.dataset.section==='2')beginFirstTest();
   document.addEventListener('cole:lab-section-change',beginFirstTest);

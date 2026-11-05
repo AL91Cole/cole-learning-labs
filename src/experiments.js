@@ -177,6 +177,9 @@ export function observationSnapshot(scenario,savedState) {
   // four rows. A different saved source can have the same brief description.
   return [...rows.slice(0,4),['Workspace edit / test',state.workspaceEdits+' / '+state.checkRuns],['Latest workspace test',mission.tested ? `${mission.passed} of ${mission.total} checks passed`:'Not run for this setup']].map(([label,value]) => [text(label,32),text(value,40)]);
 }
+/** Two snapshots describe the same setup when they differ only in how many times the test was run. */
+const setupKey=rows=>JSON.stringify((Array.isArray(rows)?rows:[]).map(([label,value])=>label==='Workspace edit / test'?[label,String(value).split(' / ')[0]]:[label,value]));
+export const sameSetup=(first,second)=>setupKey(first)===setupKey(second);
 function taskCheck(scenario,state,result) {
   const actual=scenario.track==='hardware' ? verifyHardware(scenario.id,state) : verifyWorkspace(scenario.id,state);
   // A caller may report an untested editor draft. It may never upgrade a failing
@@ -198,7 +201,24 @@ export function captureExperimentResult(scenario,record,state,result) {
   const missing=ideaRequirement(draft);if(missing)return {ok:false,message:missing};
   if (!draft.before) return {ok:false,message:'Select Start this test before changing the setup.'};
   replaceDraft(scenario,record,{...draft,observed:'',explain:'',after:observationSnapshot(scenario,state),check:taskCheck(scenario,state,result)});
-  return {ok:true,message:'Result recorded. Describe what happened and what you learned. Then save this attempt.'};
+  return {ok:true,message:'Result recorded. Describe what you changed, what happened and what you learned. Then save this attempt.'};
+}
+/** Record a test result once. A repeat on an unchanged setup keeps the recorded result and
+ * everything the learner already typed about it. */
+export function recordTestResult(scenario,record,state,result) {
+  const draft=readExperiments(record).draft;
+  if (draft.before&&draft.after&&draft.check&&sameSetup(draft.after,observationSnapshot(scenario,state))&&draft.check.ok===taskCheck(scenario,state,result).ok) return {ok:true,repeat:true,message:'This result is already recorded. Describe what you changed, what happened and what you learned. Then save this attempt.'};
+  return captureExperimentResult(scenario,record,state,result);
+}
+/** Testing before selecting Start still gives an honest comparison after a saved attempt:
+ * the setup recorded at that last saved test is where the next test began. */
+export function resumeExperiment(scenario,record) {
+  const {attempts,draft}=readExperiments(record),last=attempts.at(-1);
+  const missing=ideaRequirement(draft);if(missing)return {ok:false,message:missing};
+  if (draft.before) return {ok:true,message:''};
+  if (!last?.after) return {ok:false,message:'Select Start this test before changing the setup.'};
+  replaceDraft(scenario,record,{predict:draft.predict,evidence:draft.evidence,changed:draft.changed,observed:'',explain:'',before:last.after});
+  return {ok:true,message:'Your last saved test is the starting setup for this one.'};
 }
 export function saveExperiment(scenario,record) {
   const {attempts,draft}=readExperiments(record);
@@ -209,7 +229,7 @@ export function saveExperiment(scenario,record) {
   const events=(Array.isArray(record.events) ? record.events : []).filter(event => decode(event)?.id!=='draft');
   for (const part of PARTS) events.push(pack(id,part,draft[part]));
   record.events=retainExperimentEvents(scenario,events.filter(Boolean));record.closed=false;
-  return {ok:true,message:attempts.length>=8 ? 'Attempt saved. Your latest eight attempts are kept. Export your report to keep older tests.' : 'Attempt saved. If it did not work, use the result to plan your next idea.'};
+  return {ok:true,message:attempts.length>=8 ? 'Attempt saved. Your latest eight attempts are kept. Export your report to keep older tests.' : draft.check.ok ? 'Attempt saved. Your test shows the task works.' : 'Attempt saved. It did not work yet. Use the result to plan your next idea.'};
 }
 
 /** Friendly rendering for the existing action log and plain/manual reports. */
@@ -288,14 +308,25 @@ function comparison(before,after) {
   const labels=[...new Set([...start.keys(),...(finish?.keys()||[])])];
   return '<details class="experiment-setup-comparison"><summary>Compare setup before &amp; after</summary><div class="experiment-table-scroll" tabindex="0" role="region" aria-label="Before and after observations"><table class="experiment-comparison"><caption>Before and after my test</caption><thead><tr><th scope="col">Observation</th><th scope="col">Before</th><th scope="col">After</th></tr></thead><tbody>'+labels.map(label=>{const value=start.get(label)||'Not recorded',next=finish?.get(label);return '<tr'+(next!==undefined && next!==value?' class="experiment-changed"':'')+'><th scope="row">'+esc(label)+'</th><td>'+esc(value)+'</td><td>'+esc(next ?? (finish?'Not recorded':'Not tested yet'))+'</td></tr>';}).join('')+'</tbody></table></div></details>';
 }
+/** Things a learner did well, noticed from their own saved attempts. Nothing is scored, counted
+ * across labs, compared with anyone or added to the record; the text exists only while this page shows it. */
+const OUTCOME_ROWS=new Set(['Startup','Lesson file','PC / AC / POST / lesson','Startup and document','Workspace edit / test','Latest workspace test']);
+export function learningBehaviors(record) {
+  const {attempts}=readExperiments(record),noticed=[];
+  const setupChanges=attempt=>{const before=new Map(attempt.before||[]);return (attempt.after||[]).filter(([label,value])=>!OUTCOME_ROWS.has(label)&&before.get(label)!==value).length;};
+  if (attempts.some(attempt=>setupChanges(attempt)===1)) noticed.push('You changed one part of the setup before a test. That makes the result easier to explain.');
+  if (attempts.some((attempt,index)=>attempt.check?.ok===false&&attempts.slice(index+1).some(later=>later.predict.trim()!==attempt.predict.trim()))) noticed.push('A test did not work, and you wrote a new idea instead of repeating the old one. That is how technicians narrow down a cause.');
+  if (attempts.some(attempt=>attempt.check?.ok===true&&/original/i.test(attempt.check.message||''))) noticed.push('Your passing test checked the requester’s original task, not only the part you changed.');
+  return noticed;
+}
 function savedAttempts(record) {
-  const {attempts}=readExperiments(record);
-  return attempts.length ? attempts.map((attempt,index)=>'<details class="experiment-attempt"'+(index===attempts.length-1?' open':'')+'><summary>Saved attempt '+(index+1)+' · '+(attempt.check.ok?'Task works':'Keep investigating')+'</summary><dl>'+Object.keys(LABELS).map(part=>'<dt>'+esc(LABELS[part])+'</dt><dd>'+esc(attempt[part]??'Not recorded in this earlier attempt.')+'</dd>').join('')+'</dl>'+comparison(attempt.before,attempt.after)+'<p><strong>Test result:</strong> '+esc(attempt.check.message)+'</p></details>').join('') : '<p class="panel-help">No saved attempts yet. A test that did not work can help you choose your next idea.</p>';
+  const {attempts}=readExperiments(record),noticed=learningBehaviors(record);
+  return (noticed.length?'<div class="experiment-noticed"><h4>Noticed in your tests</h4><ul>'+noticed.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul><p class="panel-help">This is feedback for you. It is not a score and it is not shared.</p></div>':'')+(attempts.length ? attempts.map((attempt,index)=>'<details class="experiment-attempt"'+(index===attempts.length-1?' open':'')+'><summary>Saved attempt '+(index+1)+' · '+(attempt.check.ok?'Task works':'Keep investigating')+'</summary><dl>'+Object.keys(LABELS).map(part=>'<dt>'+esc(LABELS[part])+'</dt><dd>'+esc(attempt[part]??'Not recorded in this earlier attempt.')+'</dd>').join('')+'</dl>'+comparison(attempt.before,attempt.after)+'<p><strong>Test result:</strong> '+esc(attempt.check.message)+'</p></details>').join('') : '<p class="panel-help">No saved attempts yet. A test that did not work can help you choose your next idea.</p>');
 }
 export function renderExperiments(scenario,record) {
   const {draft}=readExperiments(record);
   const field=(part,placeholder)=>'<label class="lab-field" for="experiment-'+part+'">'+esc(LABELS[part])+'<textarea id="experiment-'+part+'" data-experiment-field="'+part+'" maxlength="240" rows="2" placeholder="'+esc(placeholder)+'"'+((part==='changed'&&!draft.before)||(['observed','explain'].includes(part)&&!draft.after)?' disabled':'')+'>'+esc(draft[part])+'</textarea></label>';
-  return '<section class="case-panel experiment-workspace" id="experiment-workspace" aria-labelledby="experiment-title"><h2 id="experiment-title">Experiment notebook</h2><p class="panel-help">Record the idea you tested. If it did not work, use the result to plan another.</p><h3>1. Plan your test</h3><p class="panel-help">Use your first idea, or write another. Include a clue or result that supports it.</p>'+field('predict','I think… If I change…, I expect…')+field('evidence','The ticket, clue, or last test shows…')+'<button class="button button-outline" type="button" data-experiment-start>Start this test</button><h3>2. Make one change</h3><p class="panel-help">Use the workbench above, then describe your change here.</p>'+field('changed','I changed…')+'<h3>3. Test your idea</h3><button class="button" type="button" data-experiment-capture>Test my idea</button><div data-experiment-comparison>'+comparison(draft.before,draft.after)+'</div><p class="experiment-technical" data-experiment-check>'+esc(draft.check ? 'Test result: '+draft.check.message : 'No result yet.')+'</p><h3>4. Explain and save</h3><p class="panel-help">Did the result support your idea? Explain what it tells you.</p>'+field('observed','After the test, I noticed…')+field('explain','This supports or changes my idea because…')+'<button class="button" type="button" data-experiment-save>Save this attempt</button><p class="experiment-status" data-experiment-status role="status" aria-live="polite"></p><p class="panel-help">Need another test? Use the result as evidence for your next idea. Your latest eight attempts stay in this lab.</p><h3>My saved attempts</h3><div data-experiment-attempts>'+savedAttempts(record)+'</div></section>';
+  return '<section class="case-panel experiment-workspace" id="experiment-workspace" aria-labelledby="experiment-title"><h2 id="experiment-title">Experiment notebook</h2><p class="panel-help">Record the idea you tested. If it did not work, use the result to plan another.</p><h3>1. Plan your test</h3><p class="panel-help">Use your first idea, or write another. Include a clue or result that supports it.</p>'+field('predict','I think… If I change…, I expect…')+field('evidence','The ticket, clue, or last test shows…')+'<button class="button button-outline" type="button" data-experiment-start>Start this test</button><h3>2. Make one change</h3><p class="panel-help">Use the workbench above, then describe your change here.</p>'+field('changed','I changed…')+'<h3>3. Test your idea</h3><p class="panel-help">Select Test my idea in the workbench panel above. It tests your change and records the result here. This button does the same thing.</p><button class="button button-outline" type="button" data-experiment-capture>Test my idea</button><div data-experiment-comparison>'+comparison(draft.before,draft.after)+'</div><p class="experiment-technical" data-experiment-check>'+esc(draft.check ? 'Test result: '+draft.check.message : 'No result yet.')+'</p><h3>4. Explain and save</h3><p class="panel-help">Did the result support your idea? Explain what it tells you.</p>'+field('observed','After the test, I noticed…')+field('explain','This supports or changes my idea because…')+'<button class="button" type="button" data-experiment-save>Save this attempt</button><p class="experiment-status" data-experiment-status role="status" aria-live="polite"></p><p class="panel-help">Need another test? Use the result as evidence for your next idea. Your latest eight attempts stay in this lab.</p><h3>My saved attempts</h3><div data-experiment-attempts>'+savedAttempts(record)+'</div></section>';
 }
 
 /** No listeners outside this host, network, storage, or background work. The app
@@ -309,7 +340,7 @@ export function mountExperiments(host,{scenario,record,getState,getResult,onSave
   const syncFields=draft=>{for(const input of host.querySelectorAll('[data-experiment-field]')){const part=input.dataset.experimentField;if(input.value!==draft[part])input.value=draft[part];input.disabled=(part==='changed'&&!draft.before)||(['observed','explain'].includes(part)&&!draft.after);}};
   function refresh({changed=false}={}) {
     let {draft}=readExperiments(record);
-    if (draft.after && (changed || JSON.stringify(draft.after)!==JSON.stringify(observationSnapshot(scenario,getState())) || JSON.stringify(draft.check)!==JSON.stringify(taskCheck(scenario,getState(),getResult?.())))) {
+    if (draft.after && (changed || !sameSetup(draft.after,observationSnapshot(scenario,getState())) || JSON.stringify(draft.check)!==JSON.stringify(taskCheck(scenario,getState(),getResult?.())))) {
       delete draft.after;delete draft.check;draft.observed='';draft.explain='';replaceDraft(scenario,record,draft);persist();
       status('The setup changed. Test my idea again for a fresh result, then describe it.');
     }
@@ -321,7 +352,11 @@ export function mountExperiments(host,{scenario,record,getState,getResult,onSave
   }
   for (const input of host.querySelectorAll('[data-experiment-field]')) listen(input,'input',()=>{
     const before=readExperiments(record).draft,draft=setExperimentDraft(scenario,record,{[input.dataset.experimentField]:input.value});
-    if(before.before&&!draft.before)status('Your idea or evidence changed. Start this test again before making a change.');
+    // Rewording an idea before touching the workbench keeps the same starting setup.
+    if(before.before&&!draft.before){
+      if(!before.after&&JSON.stringify(before.before)===JSON.stringify(observationSnapshot(scenario,getState())))replaceDraft(scenario,record,{...draft,before:before.before});
+      else status('Your idea or evidence changed. Start this test again before making a change.');
+    }
     persist();refresh();
   });
   listen(host.querySelector('[data-experiment-start]'),'click',()=>{
@@ -331,10 +366,10 @@ export function mountExperiments(host,{scenario,record,getState,getResult,onSave
   listen(host.querySelector('[data-experiment-capture]'),'click',()=>{
     const {draft}=readExperiments(record),missing=ideaRequirement(draft);
     if(missing){status(missing);host.querySelector('[data-experiment-field="'+(draft.predict.trim().length<12?'predict':'evidence')+'"]').focus();return;}
-    if(!draft.before){status('Select Start this test before changing the setup.');host.querySelector('[data-experiment-start]').focus();return;}
+    if(!draft.before&&!resumeExperiment(scenario,record).ok){status('Select Start this test before changing the setup.');host.querySelector('[data-experiment-start]').focus();return;}
     const performed=onTest(draft.predict);
     if(performed===false){status('The test did not run. Read the workbench message, then try again.');return;}
-    const result=captureExperimentResult(scenario,record,getState(),getResult?.());status(result.message);persist();refresh();
+    const result=recordTestResult(scenario,record,getState(),getResult?.());status(result.message);if(!result.repeat){persist();refresh();}
   });
   listen(host.querySelector('[data-experiment-save]'),'click',()=>{
     refresh();const result=saveExperiment(scenario,record);status(result.message);

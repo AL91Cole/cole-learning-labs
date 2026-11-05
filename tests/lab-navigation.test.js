@@ -1247,3 +1247,155 @@ test('leaving the coding workbench cancels a held block without discarding edito
   assert.equal(editor.value,'print(quantity);');assert.deepEqual(h.record,before);
   assert.deepEqual(h.calls.workspaceDisposed,[],'Section navigation retains the controller; only the unfinished gesture is canceled.');
 });
+
+const testLog=h=>h.record.events.filter(event=>event.message.startsWith('Hypothesis test — '));
+const remainingList=h=>h.elements.get('.lab-shell').querySelector('[data-workbench-remaining]').innerHTML;
+
+test('one Test my idea button tests the idea written in the notebook, and repeated clicks add nothing to the action log',()=>{
+  const h=readyHarness('INC-101',2),button=h.elements.get('#run-hypothesis-test');
+  button.fire('click');
+  assert.equal(testLog(h).length,1);assert.equal(h.record.verified,false);
+  assert.ok(testLog(h)[0].message.includes(h.record.plan),'With an empty notebook the first idea is the one tested.');
+  button.fire('click');button.fire('click');
+  assert.equal(testLog(h).length,1,'Clicking again without changing anything adds no log entry.');
+  setExperimentDraft(h.scenario,h.record,{evidence:'The cable clue shows where the display cable is connected.'});
+  assert.notEqual(h.record.events.at(-1).message,testLog(h)[0].message,'The notebook wrote after the test.');
+  button.fire('click');
+  assert.equal(testLog(h).length,1,'Notebook entries written after a test do not make a repeat look new.');
+  setExperimentDraft(h.scenario,h.record,{evidence:''});
+  assert.equal(h.elements.get('#experiment-result').textContent.startsWith('Tested idea:'),false);
+  const nextIdea='I think the display cable is in the wrong video socket on the tower.';
+  setExperimentDraft(h.scenario,h.record,{predict:nextIdea,evidence:'The cable clue shows where the display cable is connected.'});
+  button.fire('click');
+  assert.equal(testLog(h).length,2);assert.ok(testLog(h)[1].message.includes(nextIdea),'The notebook idea is the one that is tested and logged.');
+  assert.ok(h.elements.get('#experiment-result').textContent.startsWith('Tested idea: “'+nextIdea+'”. '),'The result names the idea that was tested.');
+  assert.equal(h.elements.get('#experiment-hypothesis').textContent,h.record.plan,'The first idea shown above the result is never rewritten.');
+  setExperimentDraft(h.scenario,h.record,{predict:'too short'});
+  button.fire('click');assert.ok(testLog(h).at(-1).message.includes(h.record.plan),'A notebook idea that is not yet a sentence falls back to the first idea.');
+});
+
+test('the workbench step lists exactly what remains, and a passing test alone never claims page three is open',()=>{
+  const h=readyHarness('INC-101',2);h.controller.refreshStatus();
+  assert.match(remainingList(h),/<h3>Before you can continue<\/h3>/u);
+  for(const step of ['Write your test idea and the evidence for it','Start the test so your starting setup is recorded','Make one change, then select Test my idea','Write what you changed, what happened and what you learned','Select Save this attempt'])assert.ok(remainingList(h).includes(step),step);
+  assert.equal(remainingList(h).includes('class="done"'),false);
+  h.action('video-gpu');h.controller.refreshStatus();
+  assert.ok(remainingList(h).includes('Click the lesson file on the monitor'),'A running desktop still needs the original file opened.');
+  h.action('open-document');h.elements.get('#run-hypothesis-test').fire('click');
+  assert.equal(h.record.verified,true);
+  const card=h.elements.get('#experiment-result').textContent;
+  assert.match(card,/The task works\./u);assert.match(card,/Save this attempt/u);assert.match(card,/unlocks Check & explain\.$/u);
+  assert.equal(h.groups.get('[data-lab-section]')[2].disabled,true,'A working task still needs its saved explanation.');
+  assert.equal(h.elements.get('#workbench-next').disabled,true);
+  assert.equal(remainingList(h).includes('Click the lesson file on the monitor'),false);
+  assert.ok(remainingList(h).includes('Select Save this attempt'));
+  saveCurrentTest(h);
+  assert.equal(remainingList(h),'','Nothing is listed once the step is complete.');
+  assert.equal(h.groups.get('[data-lab-section]')[2].disabled,false);assert.equal(h.elements.get('#workbench-next').disabled,false);
+  h.elements.get('#run-hypothesis-test').fire('click');
+  assert.match(h.elements.get('#experiment-result').textContent,/The task works\..* Continue to Check & explain\.$/u,'With the attempt saved, the same button points straight to the next page.');
+  h.action('video-board');h.controller.refreshStatus();
+  assert.ok(remainingList(h).includes('The setup changed after your saved test, so this step needs one fresh test.'));
+  assert.equal(h.groups.get('[data-lab-section]')[2].disabled,true);
+});
+
+test('Start this lab again sits outside the three pages, so a learner stuck on the workbench can reach it',async()=>{
+  const page=source.slice(source.indexOf('function labPage('),source.indexOf('\nfunction evidenceList('));
+  const finish=page.slice(page.indexOf('<aside id="lab-finish"'),page.indexOf('</section></aside></div>'));
+  assert.equal(finish.includes('id="reset-ticket"'),false);assert.equal(finish.includes('id="reset-confirm"'),false);
+  const after=page.slice(page.indexOf('</section></aside></div>'));
+  assert.equal((page.match(/id="reset-ticket"/gu)||[]).length,1);
+  assert.ok(after.indexOf('<div class="lab-reset"><button class="text-button" id="reset-ticket"')>0&&after.indexOf('id="reset-ticket"')<after.indexOf('id="work-privacy"'));
+  assert.ok(after.includes('<div id="learning-transfer" class="learning-transfer" hidden></div>'),'The alternate-ticket link has a place to appear.');
+  const h=readyHarness('INC-101',2);
+  h.elements.get('#reset-ticket').fire('click');assert.equal(h.elements.get('#reset-confirm').hidden,false);
+  h.elements.get('#confirm-reset').fire('click');
+  assert.equal(vm.runInContext('Object.hasOwn(store.labs,"INC-101")',h.context),false);assert.deepEqual(h.calls.forcedRenders,[false]);
+});
+
+test('the report leads with a four-line summary and keeps every detailed section after it',()=>{
+  const h=finishedHarness('INC-101',3),lines=h.report().split('\n');
+  assert.equal(lines[0],'COLE LEARNING LABS — INVESTIGATION REPORT');assert.match(lines[3],/^Status: /u);
+  assert.equal(lines.indexOf('SUMMARY'),5,'The summary follows the status line directly.');
+  assert.deepEqual(lines.slice(6,10).map(line=>line.slice(0,line.indexOf(': '))),['Clue','Change','Result','Next step']);
+  assert.equal(lines[6],'Clue: The collected clues and the current task result support this test.');
+  assert.equal(lines[7],'Change: I applied the change described by my test idea.');
+  assert.match(lines[8],/^Result: The task worked\. Fixed and delivered/u);
+  assert.match(lines[9],/^Next step: Check the original task, finish the explanation and close the ticket\.$/u);
+  const order=['SUMMARY','FULL RECORD','ORIGINAL TASK','EVIDENCE','QUESTIONS I ASKED','SYMPTOMS','WORKING HYPOTHESIS','TEST NOTES','EXPERIMENT RECORD','CABLE CONNECTIONS','ACTION LOG','REFLECTION'].map(heading=>lines.indexOf(heading));
+  assert.ok(order.every(index=>index>=0),'Every detailed section is still in the report.');
+  assert.deepEqual(order,[...order].sort((a,b)=>a-b));
+  assert.match(h.report(),/Technical progress is student-reported; teachers review and grade submissions\./u);
+  h.record.closed=true;assert.match(h.report(),/\nNext step: Hand in this report through your teacher’s approved route\.\n/u);
+  const fresh=harness('INC-101',1).report();
+  assert.ok(fresh.includes('\n\nSUMMARY\nClue: No clue recorded yet.\nChange: No change recorded yet.\nResult: Not tested yet.\nNext step: Collect clues, make one change and test the idea.\n\nFULL RECORD\n\nORIGINAL TASK\n'));
+  const failed=readyHarness('INC-102',2,answerQuestion,record=>{
+    setExperimentDraft(SCENARIOS.find(item=>item.id==='INC-102'),record,{predict:record.plan,evidence:'The power clue shows the tower has no lights.\nSecond line of evidence.'});
+    startExperiment(SCENARIOS.find(item=>item.id==='INC-102'),record,record.state);
+    setExperimentDraft(SCENARIOS.find(item=>item.id==='INC-102'),record,{changed:'I pressed the power button again.'});
+    captureExperimentResult(SCENARIOS.find(item=>item.id==='INC-102'),record,record.state);
+    setExperimentDraft(SCENARIOS.find(item=>item.id==='INC-102'),record,{observed:'Nothing happened.',explain:'The button alone was not the cause.'});
+    assert.equal(saveExperiment(SCENARIOS.find(item=>item.id==='INC-102'),record).ok,true);
+  }).report().split('\n');
+  assert.equal(failed[6],'Clue: The power clue shows the tower has no lights. Second line of evidence.','Learner text stays on one summary line.');
+  assert.match(failed[8],/^Result: The task did not work yet\. /u);
+  assert.equal(failed[9],'Next step: Use this result as evidence for the next idea, then test again.');
+});
+
+test('the sentence helper composes “I noticed ___, so I tested ___” into the free-text answer without storing a selection',()=>{
+  const h=finishedHarness('INC-101',3),shell=h.elements.get('.lab-shell'),builder=shell.querySelector('[data-reason-builder]');
+  h.controller.refreshStatus();
+  const options=builder.querySelector('[data-reason-options]').innerHTML,clue=h.scenario.clues.find(item=>item.id===h.record.evidence[0]).text;
+  assert.ok(options.includes('aria-label="A clue I noticed"'));assert.ok(options.includes('aria-label="A change I tested"'));
+  assert.ok(options.includes('data-reason-clue="0" aria-pressed="false">'+escapeHtml(clue)+'</button>'));
+  assert.ok(options.includes('data-reason-test="0" aria-pressed="false">I applied the change described by my test idea.</button>'));
+  assert.equal(builder.querySelector('[data-reason-preview]').textContent,'I noticed ___, so I tested ___.');
+  const press=(dataset,textContent)=>{const target={dataset,textContent,closest:selector=>selector.includes('data-reason-clue')||selector.includes('data-reason-test')?(dataset.reasonClue!==undefined||dataset.reasonTest!==undefined?target:null):selector.includes('data-reason-add')?(dataset.reasonAdd!==undefined?target:null):null};builder.fire('click',{target});};
+  const before=JSON.stringify(h.record);
+  press({reasonClue:'0'},clue);press({reasonTest:'0'},'I applied the change described by my test idea.');
+  assert.equal(builder.querySelector('[data-reason-preview]').textContent,'I noticed this clue: “'+clue+'”, so I tested this change: “I applied the change described by my test idea.”.');
+  assert.ok(builder.querySelector('[data-reason-options]').innerHTML.includes('data-reason-clue="0" aria-pressed="true"'));
+  assert.equal(JSON.stringify(h.record),before,'Choosing evidence changes nothing in the saved record.');
+  const notes=h.elements.get('#notes');notes.value='My own words first.';notes.dispatchEvent=event=>notes.fire(event.type);
+  press({reasonAdd:''},'');
+  assert.equal(notes.value,'My own words first. I noticed this clue: “'+clue+'”, so I tested this change: “I applied the change described by my test idea.”.');
+  assert.equal(h.record.notes,notes.value,'The composed sentence is saved only as part of the learner’s own answer.');
+  assert.equal(Object.keys(h.record).some(key=>/reason|selected/iu.test(key)),false);
+  press({reasonClue:'0'},clue);assert.match(builder.querySelector('[data-reason-preview]').textContent,/^I noticed ___, so I tested this change/u,'A choice can be taken back.');
+});
+
+test('in a coding lab a repeated Test my idea neither reruns the unchanged program nor relocks page three',()=>{
+  const h=readyHarness('CODE-501',2),button=h.elements.get('#run-hypothesis-test'),editor=h.elements.get('#coding-editor');
+  editor.value=codingPrograms['CODE-501'];
+  button.fire('click');
+  assert.equal(h.record.verified,true);assert.equal(h.record.state.checkRuns,1);
+  saveCurrentTest(h);
+  assert.equal(h.groups.get('[data-lab-section]')[2].disabled,false);
+  const events=h.record.events.length;
+  button.fire('click');button.fire('click');button.fire('click');
+  assert.equal(h.record.state.checkRuns,1,'An unchanged, already tested program is not run again.');
+  assert.equal(h.record.events.length,events,'Repeats add nothing to the action log.');
+  assert.equal(h.record.verified,true);assert.equal(h.groups.get('[data-lab-section]')[2].disabled,false);
+  // Running the fixtures again from the editor is a second run of the same setup, not a new setup.
+  h.action('run-check',{code:codingPrograms['CODE-501']});
+  assert.equal(h.record.state.checkRuns,2);assert.equal(h.record.verified,false);
+  h.controller.refreshStatus();
+  assert.ok(remainingList(h).includes('Select Test my idea to confirm the task still works'));
+  assert.equal(remainingList(h).includes('Make one change'),false,'A rerun does not ask for a whole new attempt.');
+  button.fire('click');
+  assert.equal(h.record.state.checkRuns,2);assert.equal(h.record.verified,true);
+  assert.equal(h.groups.get('[data-lab-section]')[2].disabled,false,'Confirming the same setup reopens page three.');
+  // A real edit is a new setup and does need a fresh saved test.
+  h.elements.get('#coding-editor').value='print(quantity * 2);';button.fire('click');
+  assert.equal(h.record.state.checkRuns,3);assert.equal(h.record.verified,false);
+  assert.equal(h.groups.get('[data-lab-section]')[2].disabled,true);
+});
+
+test('the report summary never says the task worked while the status says it is in progress',()=>{
+  const h=finishedHarness('INC-101',3);
+  h.action('video-board');
+  const lines=h.report().split('\n');
+  assert.equal(lines[3],'Status: IN PROGRESS');
+  assert.match(lines[8],/^Result: The last saved test worked, but the setup changed afterwards\. /u);
+  assert.equal(lines[9],'Next step: Test the current setup again and save the result.');
+});

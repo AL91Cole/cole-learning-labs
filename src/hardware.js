@@ -418,7 +418,7 @@ function hardwareMission(id, s) {
     'INC-104': 'Find the original classroom desktop.',
     'INC-105': 'Choose the connection that fits.',
     'INC-106': 'Build a workstation ready for class.',
-    'INC-107': 'Match the monitor source to the cable.',
+    'INC-107': 'Bring the picture back after the presentation.',
     'INC-108': 'Complete the display signal path.'
   };
   let feedback, action, label;

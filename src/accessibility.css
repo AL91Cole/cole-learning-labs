@@ -105,11 +105,17 @@ body:not(.lab-view) .lab-library-intro h1{font-size:clamp(1.8rem,3vw,2.6rem);lin
 .read-aloud-current{outline:3px solid #0a7f78;outline-offset:4px;border-radius:4px;background:#e2f3ef;color:#0b2a30}
 body.lab-view .read-aloud-current{background:#1b4a49;color:#fff}
 body:has(.read-aloud-tap) #main :is(p,li,h1,h2,h3,summary){cursor:pointer}
-:is(button,input,select,textarea,summary,[tabindex]){scroll-margin-block-end:96px}
+:is(a,button,input,select,textarea,summary,[tabindex]){scroll-margin-block-end:96px}
+html{scroll-padding-block-end:96px}
 body.route-loading::before{content:'';position:fixed;left:0;top:0;height:4px;width:30%;background:#24c9b5;z-index:130;animation:route-loading 1.1s ease-in-out infinite}
 @keyframes route-loading{0%{left:-30%}100%{left:100%}}
 @media(prefers-reduced-motion:reduce){body.route-loading::before{animation:none;width:100%}}
 :root[data-motion=reduce] body.route-loading::before{animation:none;width:100%}
-@media(max-width:720px){.access-tools{left:12px;bottom:12px}.access-label{display:none}.access-button{padding:0 12px}.notice{bottom:84px}.access-panel{bottom:58px}.site-footer{padding-bottom:100px}}
+@media(max-width:720px){.access-tools{left:12px;bottom:12px}.notice{bottom:84px}.access-panel{bottom:58px}.site-footer{padding-bottom:100px}}
+/* On laptop-sized and zoomed viewports the tools shrink to two round icon buttons so they cover less of the page. */
+.access-button{position:relative}
+@media(max-width:1500px),(max-height:860px){.access-label{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.access-button{padding:0 12px;justify-content:center}}
+/* The last row of a page or lab step can always scroll clear of the tools. */
+body:has(.single-page-lab[data-section="2"]) #main{padding-bottom:72px}
 @media(forced-colors:active){.access-button,.access-panel,.access-close{border:2px solid CanvasText;background:Canvas;color:CanvasText}.access-button[aria-expanded=true]{background:Highlight;color:HighlightText}.read-aloud-current{outline:3px solid Highlight;background:Canvas;color:CanvasText}}
 @media print{.access-tools{display:none}}

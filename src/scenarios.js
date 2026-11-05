@@ -67,9 +67,9 @@ export const SCENARIOS = [
   },
   {
     id: 'INC-107', title: 'No Picture After a Presentation', track: 'hardware', grade: '7–8', minutes: 15,
-    summary: 'Match the monitor’s selected source to its connected cable.', requester: 'Ms. Patel · Presentation room',
+    summary: 'The same blank screen in a different room. Work out what is different this time.', requester: 'Ms. Patel · Presentation room',
     goal: 'Restore the classroom picture and open Lesson_Practice_File.docx without replacing the computer.',
-    brief: '“The monitor worked until I changed its Source setting for a presentation. The tower is running and both HDMI ends are connected. It now says ‘No signal · DisplayPort.’ Please restore my lesson.”',
+    brief: '“The monitor worked this morning. Since my presentation it only says ‘No signal.’ The tower is running and nobody opened the computer. Please restore my lesson.”',
     intake: {kind:'detailed',missing:'',factIds:[]},
     clues: [clue('screen','Read the monitor source','The monitor is on. Its selected source is DisplayPort, which has no signal.'),clue('video','Trace both HDMI ends','Both HDMI ends are connected, including the PC’s graphics-card output. There is no DisplayPort cable.'),clue('power','Check the running computer','The tower power light and fans are on. The original classroom OS has already loaded.'),clue('history','Read the presentation history','The picture worked before the Source setting changed. The PC was not opened.')],
     questions: [question('What changed before the problem?','I used the Source button for a presentation. The picture worked before that change; the computer was not opened.'),question('What did you try?','I switched the monitor off and back on. It remembered the DisplayPort source, and No signal stayed on screen.')],
