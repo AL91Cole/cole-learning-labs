@@ -2,8 +2,10 @@
 
 The catalog now puts investigation filters and tickets before the full course,
 game and sandbox sections. Category shortcuts retain the same route and move
-keyboard focus when jumping within the catalog. The header has five destinations;
-account and access-status entries live in the footer.
+keyboard focus when jumping within the catalog. The header has four destinations
+(Virtual labs, K–6 activities, For teachers, About Mx. Cole) and a Browse all labs
+button; personal projects are reached from About Mx. Cole. Account and
+access-status entries live in the footer.
 
 Unknown activities have a separate recovery page in both open and restricted
 builds. The access-status title agrees with the open-access heading. Public

@@ -132,6 +132,10 @@ Student labs do not include a Teacher Rubric panel or bundled grading criteria. 
 
 One suggested four-level scale is **independent and well supported**, **mostly supported**, **developing with prompts**, and **not yet demonstrated**. Discuss an example first. Use an oral follow-up, a prediction before an action, or a comparison with another approach to assess understanding.
 
+A student may show the same reasoning aloud, or type it with the device's own district-approved dictation. Assess it with the same criteria: the quality of the reasoning, not the typing. The site does not record audio and has no speech input. The featured lesson pages under `/teach` carry short reasoning look-fors for The Blank Monitor, Inbox Defender and Packet Post; they describe reasoning and never reveal a fix.
+
+Pairs use two roles, shown in the lesson plans and on the capstone cards: the **Operator** works the equipment and says the prediction; the **Evidence lead** records the clue, the one change and the result. They swap after each test or work order.
+
 The roster and reports contain learner-reported work. Browser-local state and shared JSON can be changed by a learner; an apparent completion or a server-held snapshot does not prove independent authorship. Teacher review of the evidence and reasoning remains necessary.
 
 ## Use independent reports now

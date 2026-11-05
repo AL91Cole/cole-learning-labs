@@ -1,6 +1,6 @@
 # Standards connections for teacher planning
 
-Sources checked October 25, 2026. These are concept-level connections to observable tasks, authored by Mx. Cole. They do not establish full coverage of a concept, individual standard, or grade band. Teachers select the expectation and assess the learner’s work.
+Sources checked October 25, 2026. These are concept-level connections to observable tasks, authored by Mx. Cole. They do not establish full coverage of a concept, individual standard, or grade band. Teachers select the expectation and assess the learner’s work. The pathway table in the app asserts no individual standard codes. A small number of codes appear on the featured lesson pages only; see “Codes on featured lesson pages” below.
 
 ## Which New York and national frameworks?
 
@@ -35,5 +35,21 @@ Free-build studios are additional practice spaces, not extra investigations in t
 Choose a lab and an official expectation. Ask what the student should explain, build, test, or revise. Review the resulting work and add a transfer question or discussion when the expectation needs more than the simulation provides. The mapping is an instructional interpretation, not official NYSED/CSTA review or endorsement, a full curriculum crosswalk, or certification of mastery.
 
 The educator table filters by pathway, state concept, national concept and lab starting grade. Filters intersect and grade selection refreshes the examples with actual labs in that group. Native labeled selects, an announced result count, table headers, a caption and a keyboard-focusable scroll region remain available. Filtering uses only authored curriculum metadata in the browser.
+
+## Codes on featured lesson pages
+
+The script-free lesson pages under `/teach` show a New York State code only where the lesson's own evidence supports it. Each code is quoted exactly from the NYSED grade-band documents (read on November 5, 2026), linked to its source, paired with one thing a teacher can observe, and followed by the statement that this is the author's mapping and not an official NYSED review or endorsement. One lesson is practice toward a standard, not proof that a student has met it.
+
+| Lesson | Code | Observable |
+| --- | --- | --- |
+| The Blank Monitor (grades 7–8) | 7-8.NSD.3 | The student records a clue, makes one change, retests and then checks the requester's original task |
+| Inbox Defender, Evidence challenge | 7-8.CY.2 | For one message, the student names the safeguard they chose (report, verify another way, or a known bookmark) and the situation it fits |
+| Inbox Defender, Picture patrol (grades 2–3) | 2-3.CY.2 | The child sorts a message into pause-and-get-help or use-the-class-bookmark and says which keeps information safe |
+| Picture patrol with an adult (K–1) | K-1.CY.5 | With an adult, the child keeps a surprise link closed and uses the class bookmark for the planned task |
+| Keep private things private (K–1) | K-1.CY.1 | The child chooses to ask a trusted adult and gives one reason |
+
+Not claimed: Packet Post lists no code, because the game asks for one continuous path and does not model data split into labelled pieces. No NYSED standard is described as a phishing standard; the official document does not use that word. `4-6.CY.5` and `9-12.CY.5` were read and are held in the test’s verified list but are not shown on any page: the first is about applications and devices rather than messages, and the second waits for a Ransomware Response & Evidence lesson page. National CSTA wording and codes are still not reproduced.
+
+`tests/landing-pages.test.js` holds the verified wording and fails if a page shows any other code, changes a quotation or omits the source link.
 
 Review these connections whenever lab tasks or official frameworks change. `src/standards.js` holds the rendered mapping and source links; `tests/standards.test.js` checks the concept vocabulary, task examples, grade bands, filter behavior and cleanup.
