@@ -22,9 +22,16 @@ Markup comes from `src/part-art.js`: `partArtHTML(id)` returns an empty string u
 
 ## Pictures published so far
 
-Six of the eleven subjects (memory, side panel, power supply, motherboard, cooler, graphics card) were generated on 2026-11-05 with the Z-Image Turbo model on a Hugging Face Space, reviewed in-session for text, logos and part accuracy, and published with `--finalize`. Candidates from any generator can be dropped into `art-staging/` as `<id>-<n>.png`, `.webp` or `.jpg`; `--finalize` reads whichever exists. The remaining subjects (processor, thermal paste, SSD, leads, monitor) are waiting on generation quota and go through the same review.
+All eleven subjects were generated on 2026-11-05 with the Z-Image Turbo model on a Hugging Face Space, reviewed in-session for text, logos and part accuracy, and published with `--finalize`. Candidates from any generator can be dropped into `art-staging/` as `<id>-<n>.png`, `.webp` or `.jpg`; `--finalize` reads whichever exists.
 
-Generators compared for this set: the free Hugging Face Space produced clean, unbranded product shots but is limited by a small daily GPU quota and refused two prompts that mentioned a bare processor lid; OpenArt's free plan watermarks output, so it is unsuitable for published pictures; Visualizee's free plan watermarks output and licenses it for personal use only. The Gemini script remains the repeatable path once a key is configured.
+Notes from that run, for the next person who regenerates a picture:
+
+- The Space's safety filter returned a placeholder for prompts that named a "processor", "CPU", "chip" or a "syringe" of paste. Describing the object physically ("a small square part with a brushed-metal top and a green circuit-board edge"; "a small tube of heat-transfer compound") passed.
+- The first leads picture showed an HDMI-style plug and no 24-pin block; a top-down prompt that described each plug's shape and wire colours fixed it. The first monitor carried a faux brand mark on the bezel; asking for a plain bezel with no markings fixed it.
+- The side-panel picture shows the panel fitted to a case rather than detached, so its alt text describes exactly that.
+- OpenArt's free plan watermarks output and its CDN is unreachable from the cloud sandbox, and Visualizee's free plan watermarks output and licenses it for personal use only, so neither produced a publishable picture. The Gemini script remains the repeatable path once a key is configured.
+
+Two scene candidates (a flat motherboard schematic and a 16:9 server-closet backdrop) were also generated and sent to the owner for review. They are not published: the schematic carries unreadable faux markings and neither has a display point in the labs yet.
 
 ## Review rules
 
