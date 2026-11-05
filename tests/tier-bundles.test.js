@@ -135,6 +135,13 @@ test('public coding extraction preserves function-valued checks and discards pai
   assert.deepEqual(compiled.checkFixture(),[6,'Heating','FREE_PYTHON_ONE',['CODE501','CODE502'],['CODE-501','CODE-502']]);
 });
 
+test('a coding case array declared beside the interpreter again cannot bypass the public data filter',async t=>{
+  const root=await fixture(t),filename=path.join(root,'src/coding-lab.js');
+  const source=await readFile(filename,'utf8');
+  await writeFile(filename,source.replace("import {CODING_SCENARIOS} from './coding-scenarios.js';export {CODING_SCENARIOS};","export const CODING_SCENARIOS=[{id:'CODE-501',brief:'FREE_FIXTURE_CODE-501'},{id:'CODE-599',brief:'PAID_FIXTURE_SECRET'}];"));
+  await assert.rejects(()=>bundleTier({sourceRoot:root}),/coding-scenarios\.js data module/u);
+});
+
 test('build context forces member authority rather than accepting a source flag or browser value',async t=>{
   const root=await fixture(t,"export {MEMBER_CONTENT} from './access-policy.js';");
   await writeFile(path.join(root,'src/access-policy.js'),'export const MEMBER_CONTENT=true;export const PUBLIC_LABS_OPEN=false;');
