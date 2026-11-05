@@ -152,7 +152,6 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     $('[data-asm-select]').value=key;
 
     renderControls();renderPicture();
-    const art=$('[data-asm-part-art]');if(art)art.innerHTML=partArtHTML(key==='display'?'monitor':key);
     if(reveal){$('[data-asm-component-drawer]').open=true;feedback(`${NAMES[key]} selected. Choose a change in Part controls.`);}
   }
   function renderControls(focusAction) {
@@ -162,6 +161,7 @@ export function mountAssemblyWorkbench(root,{state,onAction}) {
     const partStates={panel:`Side panel ${a.panelInstalled?'fitted':'set aside'}. ${a.panelScrews.filter(Boolean).length}/2 screws secured.`,board:`Motherboard ${current.boardInstalled?'on its standoffs':'in the tray'}. ${a.boardScrews.filter(Boolean).length}/4 screws secured.`,cpu:`CPU ${current.cpuInstalled?'seated':'in the tray'}. Retention ${a.retentionOpen?'open':'closed'}.`,paste:`Thermal interface: ${a.paste==='pea'?'fresh pea-sized paste':a.paste==='clean'?'clean surfaces':a.paste==='excess'?'too much paste':'used paste — clean and reapply'}.`,cooler:`Cooler ${current.coolerInstalled?'fitted':'in the tray'}. ${a.coolerScrews.filter(Boolean).length}/4 screws secured. Fan lead ${a.cpuFanConnected?'connected':'disconnected'}.`,ram:`Memory ${current.ramSeated?'seated':'in the tray / not fully seated'}. Clips ${a.ramClipsOpen?'open':'closed'}.`,gpu:`Graphics card ${current.gpuInstalled?'fitted':'in the tray'}. ${a.gpuScrews.filter(Boolean).length}/2 bracket screws. Latch ${a.pcieLatchOpen?'open':'closed'}.`,ssd:`Original SSD ${current.originalDriveInstalled?'in its bay':'safely in the tray'}. ${a.ssdScrews.filter(Boolean).length}/2 screws. OS and files preserved.`,cables:`ATX ${current.atxConnected?'✓':'○'} · CPU ${current.cpuPowerConnected?'✓':'○'} · GPU ${current.gpuPowerConnected?'✓':'○'} · SATA data ${current.sataDataConnected?'✓':'○'} · SATA power ${current.sataPowerConnected?'✓':'○'} · Front panel ${current.frontPanelConnected?'✓':'○'}`,display:`HDMI PC end ${current.pcVideoConnected!==false?'connected':'disconnected'}; monitor end ${current.signalConnected?'connected':'disconnected'}. PC output: ${current.videoPort}. Monitor source: ${current.monitorInput}.`};
     partStates.psu=`Power supply ${a.psuInstalled?'fitted':'in the tray'}. ${a.psuScrews.filter(Boolean).length}/4 mounting screws. Disconnect all PSU power leads before removal.`;
     selectedState=partStates[selected];$('[data-asm-part-state]').textContent=selectedState;
+    const art=$('[data-asm-part-art]');if(art)art.innerHTML=partArtHTML(selected==='display'?'monitor':selected);
     if(isBuild&&current.caseId==='INC-106')renderAssemblyBuilder(root,current,{activity,selected});
     else if(isBuild){
       const set=(selector,text)=>{const field=$(selector);if(field)field.textContent=text;};

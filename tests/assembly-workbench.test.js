@@ -166,8 +166,10 @@ test('every tool, cable choice and complete-controls toggle keeps the full X-ray
     for(const tool of ASSEMBLY_TOOLS){bench.click('asmTool',tool.id);assert.match(bench.picture,/data-asm-view="full-xray"/);assert.match(bench.picture,/data-asm-monitor-screen=/);}
     bench.click('asmTool','cables');
     for(const cable of ASSEMBLY_CABLES){bench.choose('[data-asm-cable]',cable.id);for(const socket of cable.sockets){bench.choose('[data-asm-cable-target]',socket.id);assert.match(bench.picture,/viewBox="12 46 860 566" data-asm-view="full-xray"/);}}
+    bench.click('asmPart','gpu');assert.equal(bench.fields.get('[data-asm-part-art]').innerHTML,partArtHTML('gpu'));
     bench.complete(false);bench.controller.update(bench.state);
     assert.match(bench.picture,/data-asm-view="full-xray"/);
+    assert.equal(bench.fields.get('[data-asm-part-art]').innerHTML,partArtHTML(bench.fields.get('[data-asm-select]').value==='display'?'monitor':bench.fields.get('[data-asm-select]').value),'Turning complete controls off resets the picture with the restored part');
     assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
   }
 });
@@ -184,6 +186,7 @@ test('full PC X-ray and inspection are ephemeral and retain explicit focus and c
   assert.doesNotMatch(bench.markup,/data-asm-picture-view|Equipment picture views/);
   assert.match(bench.picture,/data-asm-view="full-xray"/);
   assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);
+  const initial=bench.fields.get('[data-asm-select]').value;assert.equal(bench.fields.get('[data-asm-part-art]').innerHTML,partArtHTML(initial==='display'?'monitor':initial),'The picture slot shows the initially selected part as soon as the controls render.');
   bench.click('asmPicture','ram');assert.equal(bench.fields.get('[data-asm-select]').value,'ram');assert.equal(bench.fields.get('[data-asm-component-drawer]').open,false);
   assert.equal(bench.fields.get('[data-asm-part-art]').innerHTML,partArtHTML('ram'),'The reviewed picture slot follows the selected part and stays empty without a manifest entry.');
   assert.deepEqual(bench.state,before);assert.deepEqual(bench.committed,[]);bench.controller.dispose();
