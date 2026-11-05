@@ -1,13 +1,10 @@
-import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261105-receipt-review';
+import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261106-fast-start';
 /** Public teaching supports. This module never reads student work or contacts a provider. */
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const validId = value => /^(?:INC|NET|AI|SEC|CODE)-\d{3}$/.test(String(value));
 
-export const learningModes = Object.freeze([
-  Object.freeze({id:'guided',label:'Guided',description:'Start with a model, visible question starters, and a step-by-step reasoning prompt.'}),
-  Object.freeze({id:'independent',label:'Independent',description:'Choose your own first question and test. Open the model or vocabulary whenever useful.'}),
-  Object.freeze({id:'challenge',label:'Challenge',description:'Compare another possible cause and explain a result that would distinguish it. Support remains available.'})
-]);
+import {learningModes} from './learning-routes.js?release=20261106-fast-start';
+export {learningModes};
 const modeFor = value => learningModes.find(item => item.id === value) || learningModes[0];
 const glossary = Object.freeze({
   symptom:['Symptom','An observable result, such as a message or a light, that needs an explanation.'],

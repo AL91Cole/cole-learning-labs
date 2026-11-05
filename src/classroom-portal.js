@@ -1,4 +1,4 @@
-import { SCENARIOS } from './scenarios.js?release=20261105-receipt-review';
+import { SCENARIOS } from './scenarios.js?release=20261106-fast-start';
 
 // No availability probes, cookies, class codes, drafts or reviews leave this
 // browser until a separately reviewed source release approves sharing.

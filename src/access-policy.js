@@ -1,6 +1,6 @@
-import {codeQuestMeta} from './code-quest-catalog.js?release=20261105-receipt-review';
-import {arcadeMeta,FREE_ARCADE_IDS} from './arcade-catalog.js?release=20261105-receipt-review';
-import {CATALOG} from './lab-catalog.js?release=20261105-receipt-review';
+import {codeQuestMeta} from './code-quest-catalog.js?release=20261106-fast-start';
+import {arcadeMeta,FREE_ARCADE_IDS} from './arcade-catalog.js?release=20261106-fast-start';
+import {CATALOG} from './lab-catalog.js?release=20261106-fast-start';
 
 /** The public entry cannot grant membership from browser state or a URL.
  * The protected member build or the reviewed open-public release replaces this content constant. It never authenticates an account. */

@@ -1,7 +1,7 @@
-import {NETWORK_CONFIG} from './network-labs.js?release=20261105-receipt-review';
-import {getPacketTrace,packetTraceSignature} from './network-packets.js?release=20261105-receipt-review';
-import {getNetworkDiagram} from './network-diagrams.js?release=20261105-receipt-review';
-import {getNetworkBenchSpec,normalizeNetworkBench,applyNetworkBenchAction} from './network-bench.js?release=20261105-receipt-review';
+import {NETWORK_CONFIG} from './network-labs.js?release=20261106-fast-start';
+import {getPacketTrace,packetTraceSignature} from './network-packets.js?release=20261106-fast-start';
+import {getNetworkDiagram} from './network-diagrams.js?release=20261106-fast-start';
+import {getNetworkBenchSpec,normalizeNetworkBench,applyNetworkBenchAction} from './network-bench.js?release=20261106-fast-start';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const packetSnapshots=new WeakMap();

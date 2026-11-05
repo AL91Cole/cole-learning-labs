@@ -42,7 +42,14 @@ test('publish output includes browser resources and API routing while excluding 
   const files = await list(result.directory);
   assert.ok(files.includes('index.html'));
   assert.equal(files.includes('teacher/index.html'),false,'The legacy teacher document cannot bypass member delivery.');
-  assert.deepEqual(files,[...PUBLIC_FILES].sort());
+  const chunks=files.filter(filename=>filename.startsWith('src/chunks/'));
+  assert.deepEqual(files.filter(filename=>!chunks.includes(filename)),[...PUBLIC_FILES].sort());
+  assert.deepEqual(chunks,[...result.generated].sort(),'Generated route chunks are reported with the build.');
+  assert.ok(chunks.length>=10&&chunks.every(filename=>/^src\/chunks\/[a-z0-9-]+-[A-Z0-9]+\.js$/u.test(filename)));
+  const referenced=new Set();
+  for(const filename of ['src/app.js',...chunks])for(const match of (await readFile(path.join(result.directory,filename),'utf8')).matchAll(/\b(?:from|import|import\()"\.\/([^"]+\.js)"/gu))referenced.add(path.posix.normalize(path.posix.join(path.posix.dirname(filename),match[1])));
+  for(const filename of chunks)assert.ok(referenced.has(filename),`${filename}: every generated chunk is referenced by the entry or another chunk`);
+  for(const filename of referenced)assert.ok(files.includes(filename),`${filename}: chunk references resolve inside the published artifact`);
   assert.ok(files.includes('404.html'), 'Pages needs a top-level 404 to disable homepage fallback for missing paths');
   assert.ok(files.includes('src/app.js') && files.includes('assets/favicon.svg'));
   assert.ok(files.includes('_headers') && files.includes('_routes.json'));

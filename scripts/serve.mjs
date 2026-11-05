@@ -13,6 +13,7 @@ const MIME_TYPES = Object.freeze({
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp':'image/webp',
   '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.json': 'application/json', '.pdf': 'application/pdf',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 });
@@ -87,8 +88,13 @@ async function notFound(req, res, sourceRoot) {
   res.end(req.method === 'HEAD' ? undefined : body);
 }
 
-export function createPreviewServer({ sourceRoot = path.join(PROJECT_ROOT,'dist'), publicLabAccess = PUBLIC_LAB_ACCESS } = {}) {
+export function createPreviewServer({ sourceRoot = path.join(PROJECT_ROOT,'dist'), publicLabAccess = PUBLIC_LAB_ACCESS, generatedFiles = [] } = {}) {
   const openLabs=labsAreOpen(publicLabAccess),FILES=new Set(publicFilesFor(publicLabAccess));
+  // Route chunks are named by the build that produced them; nothing else below src is served.
+  for(const filename of generatedFiles){
+    if(!/^src\/chunks\/[a-z0-9-]+-[A-Z0-9]+\.js$/u.test(filename))throw new Error('Only generated route chunks may extend the preview manifest.');
+    FILES.add(filename);
+  }
   assertPublicCurriculumPaths([...FILES]);
   if(path.resolve(sourceRoot)===PROJECT_ROOT)throw new Error('Preview the compiled free artifact, never the source checkout.');
   return http.createServer(async (req, res) => {
@@ -127,7 +133,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error('Preview accepts no path or host arguments.'); process.exitCode = 1;
   } else {
     const built=await buildSite();
-    const server = createPreviewServer({sourceRoot:built.directory});
+    const server = createPreviewServer({sourceRoot:built.directory,generatedFiles:built.generated});
     server.listen(4173, '127.0.0.1', () => console.log('Local: http://127.0.0.1:4173'));
   }
 }

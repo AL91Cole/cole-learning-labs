@@ -28,3 +28,6 @@ export const ARCADE_CATALOG=Object.freeze([
 ].map(([id,title,track,grade,summary],index)=>Object.freeze({id,title,track,grade,summary,minutes:10,access:index%5===0?'free':'member'})));
 export const FREE_ARCADE_IDS=Object.freeze(['packet-post','budget-bot','permission-park','shape-sprouts','garden-rover']);
 export const arcadeMeta=id=>typeof id==='string'?ARCADE_CATALOG.find(game=>game.id===id)||null:null;
+
+export const ARCADE_TRACKS=Object.freeze({hardware:'Hardware',network:'Networking',security:'Cybersecurity',ai:'AI',coding:'Coding'});
+export const ARCADE_SYMBOLS=Object.freeze({hardware:'◈',network:'⌘',security:'◇',ai:'✳',coding:'⌨'});

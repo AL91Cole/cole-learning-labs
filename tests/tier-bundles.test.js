@@ -78,6 +78,29 @@ test('public artifact contains reviewed starter cases but excludes paid authored
   assert.equal(new Set(result.inputs).size,result.inputs.length);
 });
 
+test('split delivery keeps one entry module whose route chunks reference only each other',async()=>{
+  const result=await bundleTier({sourceRoot:ROOT,member:true,localOnly:true,publicLabsOpen:true,split:true}),entry=decode(result.javascript);
+  assert.ok(result.chunks.length>=10,'Each learning route group becomes its own chunk.');
+  const names=new Set(result.chunks.map(chunk=>chunk.filename));
+  for(const chunk of result.chunks){
+    assert.match(chunk.filename,/^src\/chunks\/[a-z0-9-]+-[A-Z0-9]+\.js$/u);
+    for(const match of decode(chunk.javascript).matchAll(/\b(?:from|import|import\()"([^"]+\.js)"/gu))assert.ok(names.has('src/chunks/'+match[1].replace(/^\.\//u,'')),chunk.filename+' imports '+match[1]);
+  }
+  const references=text=>[...text.matchAll(/\b(?:from|import|import\()"([^"]+\.js)"/gu)].map(match=>match[1]);
+  for(const name of references(entry))assert.ok(names.has('src/'+name.replace(/^\.\//u,'')),'entry imports '+name);
+  const chunkText=new Map(result.chunks.map(chunk=>[chunk.filename,decode(chunk.javascript)]));
+  const startup=new Set(),follow=(text,base)=>{for(const match of text.matchAll(/\b(?:from|import)"\.\/([^"]+\.js)"/gu)){const name=base+match[1];if(startup.has(name))continue;startup.add(name);follow(chunkText.get(name),'src/chunks/');}};
+  follow(entry,'src/');
+  const startupText=[entry,...[...startup].map(name=>chunkText.get(name))].join('\n'),everything=[entry,...chunkText.values()].join('\n');
+  for(const marker of ['<h1>Coding studio','<h1>Network studio','<h1>Teaching toolkit','<h1>Student and educator'])assert.ok(everything.includes(marker)&&!startupText.includes(marker),marker+': delivered on demand.');
+  assert.ok(everything.includes('<h1>Learn it by playing it.')&&!startupText.includes('<h1>Learn it by playing it.'),'The arcade catalogue and games are delivered on demand.');
+  assert.ok(startupText.includes('Game on. Build a fix as you play.'),'Home entry cards stay in the start-up modules.');
+  assert.ok(Buffer.byteLength(startupText)<Buffer.byteLength(everything)*0.8,'Start-up bytes stay well below the whole application.');
+  const single=await compile(true);
+  assert.equal(single.chunks.length,0,'Ordinary member compilation remains one self-contained module.');
+  for(const options of [{split:'yes'},{split:true,entry:'secure-reports.js',member:false},{split:true,entry:'receipt-verifier.js',member:false}])await assert.rejects(()=>bundleTier({sourceRoot:ROOT,...options}),/Route splitting/u);
+});
+
 test('member artifact retains authored premium resources in a separate self-contained module',async()=>{
   const [free,member]=await Promise.all([compile(false),compile(true)]),javascript=decode(member.javascript);
   assert.ok(member.javascript.length>free.javascript.length);

@@ -13,6 +13,8 @@ const FREE_SET=new Set(FREE_IDS);
 const TRACKS=new Set(['hardware','network','ai','security','coding']);
 const METADATA_KEYS=['access','grade','id','minutes','title','track'];
 const MAX_MODULE_BYTES=2_000_000;
+/** Generated route chunks live below src so relative asset references stay valid. */
+export const CHUNK_DIRECTORY='chunks';
 
 const emptyMount='()=>()=>{}';
 const emptyState='()=>({})';
@@ -55,6 +57,11 @@ const publicStubs=Object.freeze({
   },
   'lesson-plans.js':{
     renderLessonPlans:'()=>""',mountLessonPlans:emptyMount,hasLessonPlanWork:falseValue,clearLessonPlanWork:noOperation
+  },
+  'sandbox-starters.js':{SANDBOX_STARTERS:'Object.freeze([])'},
+  'coding-studio-model.js':{
+    CODING_PROJECTS:'Object.freeze([])',INPUTS:'Object.freeze([])',SOURCE_LIMIT:'4000',projectFor:'()=>null',dataRecord:'()=>null',
+    initialCodingStudioState:emptyState,normalizeCodingStudioState:emptyState,codingStudioHasWork:falseValue
   }
 });
 
@@ -213,10 +220,11 @@ const inside=(root,target)=>{const relative=path.relative(root,target);return re
 
 /** Compile an isolated delivery artifact. The helper writes no files and does
  * not execute source modules, create services, authenticate anyone or deploy. */
-export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='app.js',localOnly=false,ownerPreview=false,publicLabsOpen=false}={}){
+export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='app.js',localOnly=false,ownerPreview=false,publicLabsOpen=false,split=false}={}){
   if(typeof sourceRoot!=='string'||typeof member!=='boolean')throw new Error('A canonical source directory and boolean tier are required.');
   if(typeof publicLabsOpen!=='boolean'||(publicLabsOpen&&(!member||!localOnly||ownerPreview)))throw new Error('Open-public labs require full local-only content without owner privileges.');
   if(typeof localOnly!=='boolean')throw new Error('A boolean local-only build option is required.');
+  if(typeof split!=='boolean'||(split&&entry!=='app.js'))throw new Error('Route splitting is reviewed for the main application only.');
   if(typeof ownerPreview!=='boolean')throw new Error('A boolean owner-preview build option is required.');
   if(ownerPreview&&(!member||!localOnly||entry!=='app.js'))throw new Error('Owner preview navigation requires the full local-only main application.');
   if(!['app.js','secure-reports.js','receipt-verifier.js'].includes(entry))throw new Error('Only reviewed application, local report-reader, or code-verifier entries may be bundled.');
@@ -261,7 +269,11 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
     if(FREE_IDS.some(id=>!freeCases.has(id)))throw new Error('A reviewed free investigation is missing.');
     publicScenarios='export const SCENARIOS=Object.freeze('+JSON.stringify(FREE_IDS.map(id=>freeCases.get(id)))+');export const TRANSFER_CASES=Object.freeze([]);export const transferCaseFor=()=>null;';
   }
+  // Split mode keeps the reviewed graph but lets the browser download each
+  // learning route when it is opened. Chunk names carry a content hash and every
+  // import must resolve to another output of this same compilation.
   const result=await build({absWorkingDir:root,entryPoints:[path.join(sourceDirectory,entry)],bundle:true,write:false,
+    ...(split?{splitting:true,outdir:sourceDirectory,chunkNames:CHUNK_DIRECTORY+'/[name]-[hash]'}:{}),
     format:'esm',platform:'browser',target:'es2022',minify:true,sourcemap:false,legalComments:'none',metafile:true,logLevel:'silent',
     plugins:[{name:'reviewed-delivery-tier',setup(builder){
       builder.onResolve({filter:/.*/},async args=>{
@@ -298,11 +310,29 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
         return {contents,loader:'js',resolveDir:path.dirname(args.path)};
       });
     }}]});
-  if(result.warnings.length||result.outputFiles.length!==1||Object.values(result.metafile.outputs).some(output=>output.imports.length))throw new Error('Tier compilation must produce one self-contained reviewed module without warnings.');
+  const outputs=result.metafile.outputs,outputNames=new Set(Object.keys(outputs));
+  if(result.warnings.length)throw new Error('Tier compilation must complete without warnings.');
+  if(!split&&(result.outputFiles.length!==1||Object.values(outputs).some(output=>output.imports.length)))throw new Error('Tier compilation must produce one self-contained reviewed module without warnings.');
+  if(split){
+    const entryOutputs=Object.entries(outputs).filter(([,output])=>output.entryPoint==='tier-source:'+path.join(sourceDirectory,entry));
+    if(entryOutputs.length!==1||result.outputFiles.length!==Object.keys(outputs).length)throw new Error('Split compilation must produce exactly one reviewed entry module.');
+    for(const [name,output]of Object.entries(outputs)){
+      if(name!==entryOutputs[0][0]&&!/^src\/chunks\/[a-z0-9-]+-[A-Z0-9]+\.js$/u.test(name))throw new Error('Unexpected split output: '+name);
+      for(const item of output.imports){
+        if(item.external||!outputNames.has(item.path)||!['import-statement','dynamic-import'].includes(item.kind))throw new Error('Split output imported something outside this compilation: '+item.path);
+      }
+    }
+  }
   for(const [filename,snapshot]of sources){
     const after=await lstat(filename);
     if(after.isSymbolicLink()||after.ino!==snapshot.ino||after.dev!==snapshot.dev||after.size!==snapshot.size||after.mtimeMs!==snapshot.mtimeMs||await realpath(filename)!==filename)throw new Error('Tier source changed before compilation completed.');
   }
   const inputs=Object.freeze([...sources.keys()].map(filename=>path.relative(root,filename).split(path.sep).join('/')).sort());
-  return {javascript:new Uint8Array(result.outputFiles[0].contents),metadata,inputs};
+  if(!split)return {javascript:new Uint8Array(result.outputFiles[0].contents),metadata,inputs,chunks:Object.freeze([])};
+  const entryFile=result.outputFiles.find(file=>path.relative(root,file.path).split(path.sep).join('/')==='src/'+entry);
+  if(!entryFile)throw new Error('Split compilation lost its reviewed entry module.');
+  const chunks=Object.freeze(result.outputFiles.filter(file=>file!==entryFile).map(file=>Object.freeze({
+    filename:path.relative(root,file.path).split(path.sep).join('/'),javascript:new Uint8Array(file.contents)
+  })).sort((a,b)=>a.filename<b.filename?-1:1));
+  return {javascript:new Uint8Array(entryFile.contents),metadata,inputs,chunks};
 }

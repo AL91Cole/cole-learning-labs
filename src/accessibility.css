@@ -63,3 +63,53 @@ main,:is(.wrap,.panel,.cp-card,.case-panel,.foundation-panel){min-width:0}
 
 .lab-library-intro .library-meta{display:flex;flex-wrap:wrap;gap:.5rem;border:0;padding:0;margin:1rem 0 .5rem}.library-progress-details{font-size:.85rem}.library-progress-details>summary{min-height:44px;align-content:center;cursor:pointer}.lab-library-intro .library-pathway-markers{display:none}.library-shortcuts{gap:.2rem 1rem}.library-shortcuts .text-link{font-size:.85rem}
 body:not(.lab-view) .lab-library-intro h1{font-size:clamp(1.8rem,3vw,2.6rem);line-height:1.15;margin:0 0 1rem}.library-section{padding-top:1rem}
+
+/* Display menu choices. Each attribute is set by src/display-menu.js and kept on this device only. */
+:root[data-text-size=larger]{font-size:19px}
+:root[data-text-size=largest]{font-size:22px}
+:root[data-spacing=relaxed] body{line-height:1.8;letter-spacing:.02em;word-spacing:.08em}
+:root[data-spacing=relaxed] :is(p,li,dd,td,label,summary){line-height:1.9}
+:root[data-spacing=relaxed] p{margin-bottom:1.5em}
+:root[data-contrast=high]{--ink:#000;--muted:#1f3039;--line:#4f5f69;--teal:#005650;--paper:#fff}
+:root[data-contrast=high] body{color:#000;background:#fff}
+:root[data-contrast=high] :is(.hero-description,.hero-subtext,.hero-credentials,.pathway-card p,.lab-card-copy p:not(.eyebrow),.site-footer p,.fact-strip span,.fact-strip p,.result-count,.project-copy>p,.page-intro>p,.prose p,.prose dd,.timeline p,.focus-grid p,.section-heading>p:last-child){color:#000}
+:root[data-contrast=high] :where(p,li,dd,td) a:not(.button){text-decoration:underline;text-decoration-thickness:2px}
+:root[data-contrast=high] :is(.button,.header-cta){background:#003c38;border-color:#003c38;color:#fff}
+:root[data-contrast=high] .button-outline{background:#fff;color:#003c38;border-color:#003c38}
+:root[data-contrast=high] :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea){border-color:#000!important;color:#000}
+:root[data-contrast=high] .site-header nav a{color:#000}
+:root[data-contrast=high] body.lab-view :is(.site-footer p,.lab-shell .bench-log time,.lab-shell .learning-controls,.case-panel blockquote,.evidence-list){color:#fff}
+:root[data-contrast=high] body.lab-view .lab-shell .learning-controls{background:#000;border-color:#fff}
+:root[data-motion=reduce] *,:root[data-motion=reduce] *::before,:root[data-motion=reduce] *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+
+/* Listen and Display tools stay reachable on every page, including lab views that hide the header. */
+.access-tools{position:fixed;left:16px;bottom:16px;z-index:110;display:flex;gap:8px;align-items:flex-end}
+.access-tools>div{position:static}
+.access-button{display:inline-flex;align-items:center;gap:8px;min-height:48px;min-width:48px;padding:0 14px;border:2px solid #102c46;border-radius:24px;background:#fff;color:#102c46;font-weight:700;font-size:.9rem;box-shadow:0 4px 16px #0004;cursor:pointer}
+.access-button:hover{background:#e4f2ef}
+.access-button[aria-expanded=true]{background:#102c46;color:#fff}
+.access-icon{font-size:1.1rem;line-height:1;font-weight:800}
+.access-panel{position:absolute;left:0;bottom:60px;width:min(380px,calc(100vw - 32px));max-height:min(70vh,560px);overflow:auto;background:#fff;color:#152b3d;border:2px solid #102c46;border-radius:12px;padding:16px 18px;box-shadow:0 12px 36px #0005;font-size:.95rem;line-height:1.5}
+.access-panel[hidden]{display:none}
+.access-panel-head{position:sticky;top:-16px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-16px -18px 8px;padding:12px 18px 8px;background:#fff;border-bottom:1px solid #e4eaed}
+.access-panel h2{font:700 1.2rem/1.3 Inter,"Segoe UI",Arial,sans-serif;margin:0;letter-spacing:0;color:#102c46}
+.access-close{min-width:44px;min-height:44px;border:1px solid #c7d6de;background:#fff;border-radius:8px;font-size:1.4rem;line-height:1;color:#102c46}
+.display-group{border:1px solid #d6e0e5;border-radius:8px;padding:8px 12px 10px;margin:0 0 10px}
+.display-group legend{font-weight:700;font-size:.85rem;padding:0 4px}
+.display-choice{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.read-aloud-controls{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+.read-aloud-rate{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:600}
+.read-aloud-rate select{background:#fff;color:#152b3d;border:1px solid #667d87;padding:6px 10px;min-width:120px}
+.access-panel-foot{display:grid;gap:8px;margin-top:4px}
+.access-note{font-size:.82rem;color:#3f5563;margin:0}
+.read-aloud-current{outline:3px solid #0a7f78;outline-offset:4px;border-radius:4px;background:#e2f3ef;color:#0b2a30}
+body.lab-view .read-aloud-current{background:#1b4a49;color:#fff}
+body:has(.read-aloud-tap) #main :is(p,li,h1,h2,h3,summary){cursor:pointer}
+:is(button,input,select,textarea,summary,[tabindex]){scroll-margin-block-end:96px}
+body.route-loading::before{content:'';position:fixed;left:0;top:0;height:4px;width:30%;background:#24c9b5;z-index:130;animation:route-loading 1.1s ease-in-out infinite}
+@keyframes route-loading{0%{left:-30%}100%{left:100%}}
+@media(prefers-reduced-motion:reduce){body.route-loading::before{animation:none;width:100%}}
+:root[data-motion=reduce] body.route-loading::before{animation:none;width:100%}
+@media(max-width:720px){.access-tools{left:12px;bottom:12px}.access-label{display:none}.access-button{padding:0 12px}.notice{bottom:84px}.access-panel{bottom:58px}}
+@media(forced-colors:active){.access-button,.access-panel,.access-close{border:2px solid CanvasText;background:Canvas;color:CanvasText}.access-button[aria-expanded=true]{background:Highlight;color:HighlightText}.read-aloud-current{outline:3px solid Highlight;background:Canvas;color:CanvasText}}
+@media print{.access-tools{display:none}}

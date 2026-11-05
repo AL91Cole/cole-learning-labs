@@ -1,7 +1,7 @@
-import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261105-receipt-review';
-import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261105-receipt-review';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261105-receipt-review';
-import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261105-receipt-review';
+import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261106-fast-start';
+import {getFoundation,createFoundationRecord,applyFoundationAction,foundationSummary} from './foundation-model.js?release=20261106-fast-start';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261106-fast-start';
+import {renderFoundationVisual,mountFoundationScene} from './foundation-scene.js?release=20261106-fast-start';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sections=['explore','practice','check'];

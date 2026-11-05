@@ -1,0 +1,20 @@
+{
+  "name": "Cole Learning Labs",
+  "short_name": "Cole Labs",
+  "description": "Free technology activities for grades K–6 and step-by-step labs for grades 7–12.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f7f9fa",
+  "theme_color": "#102c46",
+  "lang": "en",
+  "categories": ["education"],
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/assets/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

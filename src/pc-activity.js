@@ -1,4 +1,4 @@
-import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261105-receipt-review';
+import { initialAssemblyState, normalizeAssemblyState, assemblyFailure, ASSEMBLY_FASTENERS } from './assembly-model.js?release=20261106-fast-start';
 
 /** Read-only teaching indicators. They never start a device or change saved work. */
 const plain = value => {

@@ -1,4 +1,4 @@
-import {normalizeLabRecord} from './records.js?release=20261105-receipt-review';
+import {normalizeLabRecord} from './records.js?release=20261106-fast-start';
 
 export const WORK_PREFIX = 'cole-learning-labs:v2';
 // A reduced public catalog must never overwrite previously saved full-catalog work.
