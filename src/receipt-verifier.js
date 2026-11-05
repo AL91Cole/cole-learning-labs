@@ -57,15 +57,17 @@ export function mountReceiptVerifier(document, dependencies = {}) {
   const input = document.querySelector('#completion-codes'), submit = document.querySelector('#verify-submit'), clear = document.querySelector('#verify-clear');
   const status = document.querySelector('#verify-status'), region = document.querySelector('#verify-results'), rows = document.querySelector('#verify-rows'), summary = document.querySelector('#verify-summary');
   const availability = document.querySelector('#verify-availability');
-  let controller, generation = 0, timer, check, blocked = true;
+  let controller, generation = 0, timer, check, checkTimer, blocked = true;
   // Ask without codes whether the service is on, so nobody is asked to paste codes that cannot be checked.
   // The answer goes above the form only; #verify-status keeps reporting the batch.
   // The notice starts hidden and empty in the page, so without JavaScript only the noscript notice shows.
   const showAvailability = state => { blocked = state !== 'enabled'; input.disabled = submit.disabled = blocked; if (availability) { availability.textContent = AVAILABILITY[state]; availability.dataset.state = state; availability.hidden = false; } };
   const checkAvailability = () => {
-    check?.abort(); const current = check = new AbortController();
+    check?.abort(); clearTimeout(checkTimer); const current = check = new AbortController();
     showAvailability('checking');
-    checkVerifierAvailability({fetcher:dependencies.fetcher,signal:current.signal}).then(({state}) => { if (current === check && !current.signal.aborted) showAvailability(state); }, () => {});
+    // A service that accepts the connection and then stalls must not leave the form locked on "Checking…".
+    checkTimer = setTimeout(() => { if (current !== check) return; current.abort(); showAvailability('unreachable'); }, dependencies.availabilityTimeout ?? 15000);
+    checkVerifierAvailability({fetcher:dependencies.fetcher,signal:current.signal}).then(({state}) => { if (current === check && !current.signal.aborted) { clearTimeout(checkTimer); showAvailability(state); } }, () => {});
   };
   const clearResults = () => { rows.replaceChildren(); summary.textContent = ''; region.hidden = true; input.removeAttribute?.('aria-invalid'); };
   const reset = () => { generation++; controller?.abort(); clearTimeout(timer); submit.disabled = blocked; input.value = ''; clearResults(); status.textContent = 'Cleared. No codes or results remain on this page.'; input.focus(); };
@@ -102,6 +104,6 @@ export function mountReceiptVerifier(document, dependencies = {}) {
   const view = document.defaultView;
   form.addEventListener('submit',onSubmit);clear.addEventListener('click',reset);view?.addEventListener?.('pageshow',onShow);
   checkAvailability();
-  return () => {generation++;controller?.abort();check?.abort();clearTimeout(timer);form.removeEventListener('submit',onSubmit);clear.removeEventListener('click',reset);view?.removeEventListener?.('pageshow',onShow);};
+  return () => {generation++;controller?.abort();check?.abort();clearTimeout(timer);clearTimeout(checkTimer);form.removeEventListener('submit',onSubmit);clear.removeEventListener('click',reset);view?.removeEventListener?.('pageshow',onShow);};
 }
 if (typeof document !== 'undefined') mountReceiptVerifier(document);

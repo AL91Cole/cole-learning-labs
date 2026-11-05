@@ -166,6 +166,25 @@ test('the availability check stops with the page and starts again only when a sa
   replies[1](capability());await settle();
   assert.match(notice.textContent,/^Checking/u);assert.equal(document.querySelector('#verify-submit').disabled,true);
 });
+test('a stalled availability check ends as unreachable instead of leaving the form on Checking',async t=>{
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const document=availabilityPage(),signals=[],replies=[],notice=document.querySelector('#verify-availability'),input=document.querySelector('#completion-codes'),submit=document.querySelector('#verify-submit'),status=document.querySelector('#verify-status');
+  const cleanup=mountReceiptVerifier(document,{tokenProvider,availabilityTimeout:5,fetcher:(url,options)=>new Promise(resolve=>{signals.push(options.signal);replies.push(resolve);})});t.after(cleanup);
+  assert.equal(notice.dataset.state,'checking');
+  await wait(40);
+  assert.equal(notice.dataset.state,'unreachable');assert.match(notice.textContent,/^Could not check/u);
+  assert.equal(signals[0].aborted,true,'the stalled request is cancelled');
+  assert.equal(input.disabled,true);assert.equal(submit.disabled,true);
+  replies[0](capability());await settle();
+  assert.equal(notice.dataset.state,'unreachable','a late answer to the cancelled check is ignored');
+  document.querySelector('#verify-clear').listeners.get('click')();
+  assert.match(status.textContent,/^Cleared/u,'Clear still works after a timeout');
+
+  // An answer that arrives in time is final: the timer never replaces it.
+  const quick=availabilityPage(),done=mountReceiptVerifier(quick,{tokenProvider,availabilityTimeout:5,fetcher:async()=>capability()});t.after(done);
+  await settle();await wait(40);
+  assert.equal(quick.querySelector('#verify-availability').dataset.state,'enabled');assert.equal(quick.querySelector('#completion-codes').disabled,false);
+});
 test('the verifier page shows availability above the form and explains what a signature can establish',async()=>{
   const html=await readFile(new URL('../verify.html',import.meta.url),'utf8');
   // The notice is empty and hidden in the markup; the script fills it. Without JavaScript only the noscript notice shows.
