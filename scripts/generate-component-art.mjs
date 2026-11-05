@@ -37,7 +37,21 @@ export const SUBJECTS=Object.freeze([
   {id:'gpu',subject:'desktop graphics card: a circuit board inside a dark plastic shroud with two fans, a metal rear bracket with HDMI and DisplayPort sockets, and a gold edge connector'},
   {id:'ssd',subject:'2.5-inch SATA solid-state drive: a flat rectangular grey metal case with a narrow data socket and a wider power socket side by side on one short edge'},
   {id:'cables',subject:'three computer leads laid side by side: a flat red SATA data cable with small L-shaped plugs, a flat black SATA power lead, and a 24-pin motherboard power plug with a bundle of coloured wires'},
-  {id:'monitor',subject:'desktop computer monitor on a simple stand, screen switched off and dark, with an HDMI socket visible on the back'}
+  {id:'monitor',subject:'desktop computer monitor on a simple stand, screen switched off and dark, with an HDMI socket visible on the back'},
+  {id:'network-device',subject:'school desktop computer: a plain black mini tower beside a monitor with a dark blank screen, a keyboard and a mouse on a light grey desk'},
+  {id:'network-cable',subject:'blue ethernet network cable loosely coiled with both clear RJ45 plugs and their clips visible at the front'},
+  {id:'network-switch',subject:'eight-port desktop network switch: a small flat metal box with a row of eight ethernet sockets along the front, each with a tiny green link light, two cables plugged into the first two sockets'},
+  {id:'network-router',subject:'small office router: a flat dark box with two upright antennas, a row of ethernet sockets and a few small status lights on the back'},
+  {id:'security-mfa',subject:'smartphone lying on a surface showing an authenticator-style app screen with a plain header bar and one entry showing six grey dots instead of digits beside a circular countdown ring'},
+  {id:'security-identity',subject:'plain white plastic ID badge on a teal lanyard showing a grey head-and-shoulders silhouette where a photo would be and two blank grey bars where a name would be printed'},
+  {id:'security-scope',subject:'clipboard holding a permission form with a few blank grey lines, an empty checkbox row and a handwritten-looking squiggle in a signature box, with a pen resting on it'},
+  {id:'security-phishing',aspect:'16:9',subject:'desktop web browser screenshot of a fictional school portal sign-in page for a lesson on spotting look-alike websites: address bar reading exactly "http://cole-learning-labs-portal.secure-login-check.net" marked "Not secure", a centred white card with an open-book icon, the heading "Cole Learning Labs Portal", the subtitle "Student and staff sign-in", fields labelled "School email" and "Password", a teal "Sign in" button, a "Forgot password?" link and the footer "For classroom use only", every word spelled exactly'},
+  {id:'pathway-hardware',aspect:'4:3',subject:'close view of a school IT repair workbench: an open desktop PC case on a black anti-static mat with its side panel removed, a memory module and a small screwdriver beside it, a monitor with a dark blank screen behind'},
+  {id:'pathway-network',aspect:'4:3',subject:'corner of a school network closet: a small open rack with a switch showing blue and green link lights, a patch panel, neatly bundled blue and yellow ethernet cables, and a laptop on a rolling cart beside the rack'},
+  {id:'pathway-ai',aspect:'4:3',subject:'tidy student desk for a lesson about checking AI answers: a laptop showing a plain chat-style application with empty rounded speech bubbles and no words, a stack of printed pages with highlighter marks over blank lines, a magnifying glass, a pencil and a mug'},
+  {id:'pathway-security',aspect:'4:3',subject:'desk for a lesson about safe sign-in habits: a laptop showing only a large padlock icon on a dark background, a smartphone showing six grey dots and a countdown ring, and a small hardware security key on a lanyard'},
+  {id:'pathway-coding',aspect:'4:3',subject:'student desk for a beginner coding lesson: a laptop showing a code-editor window with colourful blurred syntax blocks and no readable words, an open notebook with a hand-drawn flowchart, a pencil and a small friendly toy robot'},
+  {id:'scene-lab',aspect:'16:9',subject:'wide view of a bright modern high-school technology lab with nobody in it: a workbench in the foreground with an open desktop PC on an anti-static mat, a monitor with a dark blank screen, a screwdriver and a memory module; a small open network rack with a glowing switch and tidy blue cables on the left wall; rows of student desks with closed laptops and a clean blank whiteboard behind; soft daylight mixed with cool LED light'}
 ]);
 
 export function parseArguments(argv){
@@ -57,15 +71,15 @@ export function parseArguments(argv){
 
 export const promptFor=item=>STYLE.replace('{subject}',item.subject);
 
-async function generateImage({model,prompt,apiKey,modalities=['IMAGE']}){
-  const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{responseModalities:modalities,imageConfig:{aspectRatio:'1:1'}}};
+async function generateImage({model,prompt,apiKey,aspect='1:1',modalities=['IMAGE']}){
+  const body={contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{responseModalities:modalities,imageConfig:{aspectRatio:aspect}}};
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90_000);
   try{
     const response=await fetch(ENDPOINT+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body:JSON.stringify(body),signal:controller.signal});
     const text=await response.text();
     if(!response.ok){
       // Some model versions require text alongside the image modality; retry once that way.
-      if(response.status===400&&modalities.length===1&&/modalit/iu.test(text))return generateImage({model,prompt,apiKey,modalities:['TEXT','IMAGE']});
+      if(response.status===400&&modalities.length===1&&/modalit/iu.test(text))return generateImage({model,prompt,apiKey,aspect,modalities:['TEXT','IMAGE']});
       const error=new Error('Gemini API '+response.status+': '+text.slice(0,300));error.status=response.status;throw error;
     }
     const payload=JSON.parse(text);
@@ -96,7 +110,7 @@ function contactSheet(entries){
 async function stage(options){
   const apiKey=process.env.GEMINI_API_KEY;
   const chosen=SUBJECTS.filter(item=>!options.only||options.only.includes(item.id));
-  const plan=chosen.flatMap(item=>Array.from({length:options.variants},(_,index)=>({id:item.id,variant:index+1,prompt:promptFor(item)})));
+  const plan=chosen.flatMap(item=>Array.from({length:options.variants},(_,index)=>({id:item.id,variant:index+1,aspect:item.aspect||'1:1',prompt:promptFor(item)})));
   if(options.dryRun){
     console.log(JSON.stringify({model:options.model,images:plan.length,estimatedUsd:Number((plan.length*ESTIMATED_USD_PER_IMAGE).toFixed(2)),prompts:plan},null,1));
     return;
@@ -108,7 +122,7 @@ async function stage(options){
   for(const step of plan){
     const file=`${step.id}-${step.variant}.png`;
     try{
-      const image=await withRetries(()=>generateImage({model:options.model,prompt:step.prompt,apiKey}));
+      const image=await withRetries(()=>generateImage({model:options.model,prompt:step.prompt,apiKey,aspect:step.aspect}));
       await writeFile(path.join(options.out,file),image.bytes);
       entries.push({id:step.id,variant:step.variant,file});
       console.log('staged',file,image.bytes.length,'bytes');
@@ -119,7 +133,8 @@ async function stage(options){
   console.log(`Review ${path.join(options.out,'index.html')} in a browser, then run --finalize with the variants you accept.`);
 }
 
-/** Resize to 512 px and encode WebP with the pre-installed Chromium; fall back to the PNG when Playwright is absent. */
+/** Encode WebP with the pre-installed Chromium: square pictures become 512 px squares, wider scenes keep their
+ * aspect ratio with a 1024 px long edge. Falls back to copying the source when Playwright is absent. */
 async function publishPicture(source,target){
   let playwright=null;
   // CommonJS resolution honours NODE_PATH, which is how the cloud sandbox exposes its pre-installed Playwright.
@@ -134,11 +149,17 @@ async function publishPicture(source,target){
     const dataUrl='data:'+mime+';base64,'+(await readFile(source)).toString('base64');
     const webp=await page.evaluate(async url=>{
       const image=new Image();image.src=url;await image.decode();
-      const canvas=document.createElement('canvas');canvas.width=512;canvas.height=512;
-      const context=canvas.getContext('2d');context.fillStyle='#eef1f3';context.fillRect(0,0,512,512);
-      const scale=Math.min(512/image.width,512/image.height),width=image.width*scale,height=image.height*scale;
-      context.drawImage(image,(512-width)/2,(512-height)/2,width,height);
-      return canvas.toDataURL('image/webp',0.86);
+      const canvas=document.createElement('canvas'),context=canvas.getContext('2d');
+      if(Math.abs(image.width/image.height-1)<0.05){
+        canvas.width=512;canvas.height=512;context.fillStyle='#eef1f3';context.fillRect(0,0,512,512);
+        const scale=Math.min(512/image.width,512/image.height),width=image.width*scale,height=image.height*scale;
+        context.drawImage(image,(512-width)/2,(512-height)/2,width,height);
+      }else{
+        const scale=Math.min(1,1024/Math.max(image.width,image.height));
+        canvas.width=Math.round(image.width*scale);canvas.height=Math.round(image.height*scale);
+        context.drawImage(image,0,0,canvas.width,canvas.height);
+      }
+      return canvas.toDataURL('image/webp',0.84);
     },dataUrl);
     await writeFile(target,Buffer.from(webp.split(',')[1],'base64'));
     return target;
@@ -149,7 +170,9 @@ export function manifestSource(source,files){
   const start=source.indexOf('// PART_ART_START'),end=source.indexOf('// PART_ART_END');
   if(start<0||end<0||end<start)throw new Error('src/part-art.js is missing its managed manifest markers.');
   const lineEnd=source.indexOf('\n',start);
-  const body='export const PART_ART=Object.freeze({'+Object.entries(files).sort().map(([id,file])=>'\n  '+id+":'"+file+"'").join(',')+'\n});\n';
+  // Ids with a hyphen (course items, scenes) need quoted keys to stay valid JavaScript.
+  const key=id=>/^[a-z][a-z0-9]*$/u.test(id)?id:"'"+id+"'";
+  const body='export const PART_ART=Object.freeze({'+Object.entries(files).sort().map(([id,file])=>'\n  '+key(id)+":'"+file+"'").join(',')+'\n});\n';
   return source.slice(0,lineEnd+1)+body+source.slice(end);
 }
 
@@ -157,7 +180,7 @@ async function finalize(options){
   const known=new Set(SUBJECTS.map(item=>item.id));
   const manifestPath=path.join(ROOT,'src/part-art.js');
   const current=await readFile(manifestPath,'utf8');
-  const existing=Object.fromEntries([...current.matchAll(/^  ([a-z]+):'(assets\/part-[a-z-]+\.(?:webp|png))'/gmu)].map(match=>[match[1],match[2]]));
+  const existing=Object.fromEntries([...current.matchAll(/^  '?([a-z][a-z0-9-]*)'?:'(assets\/part-[a-z-]+\.(?:webp|png))'/gmu)].map(match=>[match[1],match[2]]));
   for(const [id,variant]of Object.entries(options.finalize)){
     if(!known.has(id))throw new Error('Unknown subject: '+id);
     // Staged candidates may be PNG (Gemini) or WebP (other generators dropped into the folder by hand).

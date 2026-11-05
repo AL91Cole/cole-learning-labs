@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {existsSync,readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
-import {PART_ART,PART_ART_ALT,PART_ART_IDS,partArtHTML} from '../src/part-art.js';
+import {PART_ART,PART_ART_ALT,PART_ART_IDS,partArtHTML,sceneArtHTML} from '../src/part-art.js';
 import {PUBLIC_SOURCE_FILES,PUBLIC_FILES} from '../scripts/build.mjs';
 import {SUBJECTS,STYLE,parseArguments,promptFor,manifestSource} from '../scripts/generate-component-art.mjs';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
@@ -21,6 +21,9 @@ test('every published part picture is a reviewed flat asset with human-written a
   for(const item of SUBJECTS)assert.ok(Object.hasOwn(PART_ART_ALT,item.id),item.id+': every subject has alt text');
   const hardware=FOUNDATION_LABS.find(lab=>lab.id==='hardware');
   for(const item of hardware.items)assert.ok(Object.hasOwn(PART_ART_ALT,item.id),item.id+': beginner hardware items can show a picture');
+  for(const track of ['hardware','network','ai','security','coding'])assert.ok(Object.hasOwn(PART_ART_ALT,'pathway-'+track),track+': every pathway has a scene subject');
+  for(const id of ['network-device','network-cable','network-switch','network-router','security-mfa','security-identity','security-scope','security-phishing','scene-lab'])assert.ok(Object.hasOwn(PART_ART_ALT,id),id);
+  for(const id of Object.keys(PART_ART_ALT))if(id.includes('-')){const [track,item]=[id.split('-')[0],id.split('-').slice(1).join('-')];const lab=FOUNDATION_LABS.find(lab=>lab.id===track);if(lab)assert.ok(lab.items.some(entry=>entry.id===item),id+': course item pictures name a real item');}
 });
 
 test('the picture markup is empty until a reviewed file exists and never trusts an unexpected path',()=>{
@@ -34,6 +37,9 @@ test('the picture markup is empty until a reviewed file exists and never trusts 
     assert.match(html,/<figcaption>What a real one looks like\./u);
     assert.equal(module.partArtHTML('ram',{caption:false}).includes('<figcaption'),false);
     assert.equal(module.partArtHTML('cpu'),'','Relative escapes are refused');assert.equal(module.partArtHTML('gpu'),'','Remote pictures are refused');
+    assert.match(module.sceneArtHTML('ram',{className:'hero-scene'}),/^<img class="scene-art hero-scene" src="assets\/part-ram\.webp" loading="lazy" decoding="async" alt="DDR4 memory module/u);
+    assert.match(module.sceneArtHTML('ram',{decorative:true}),/alt="">$/u,'Decorative pictures beside descriptive text carry an empty alt');
+    assert.equal(module.sceneArtHTML('cpu'),'');assert.equal(module.sceneArtHTML('nope'),'');assert.equal(sceneArtHTML('scene-lab',{}),Object.hasOwn(PART_ART,'scene-lab')?sceneArtHTML('scene-lab',{}):'');
   });
 });
 
@@ -58,8 +64,8 @@ test('argument parsing and manifest rewriting stay within the reviewed subject l
   assert.throws(()=>parseArguments(['--model','../x']),/model/u);
   assert.throws(()=>parseArguments(['--finalize','ram=9']),/id=variant/u);
   const source=readFileSync(new URL('src/part-art.js',root),'utf8');
-  const updated=manifestSource(source,{ram:'assets/part-ram.webp',cpu:'assets/part-cpu.webp'});
-  assert.match(updated,/export const PART_ART=Object\.freeze\(\{\n  cpu:'assets\/part-cpu\.webp',\n  ram:'assets\/part-ram\.webp'\n\}\);\n\/\/ PART_ART_END/u);
+  const updated=manifestSource(source,{ram:'assets/part-ram.webp',cpu:'assets/part-cpu.webp','network-switch':'assets/part-network-switch.webp'});
+  assert.match(updated,/export const PART_ART=Object\.freeze\(\{\n  cpu:'assets\/part-cpu\.webp',\n  'network-switch':'assets\/part-network-switch\.webp',\n  ram:'assets\/part-ram\.webp'\n\}\);\n\/\/ PART_ART_END/u,'Hyphenated ids are quoted so the manifest stays valid JavaScript');
   assert.ok(updated.includes('export const PART_ART_ALT='),'Alternative text and helpers are untouched');
   assert.throws(()=>manifestSource('export const x=1;',{}),/markers/u);
 });

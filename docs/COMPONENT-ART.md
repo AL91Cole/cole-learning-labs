@@ -4,10 +4,13 @@ This is the "cheaper path" to a more realistic look: keep the reviewed 2D simula
 
 ## Where pictures appear
 
-- **Beginner course "Meet the computer"**: the Explore caption shows the picture of the selected item under its "Look for" and "Its job" text.
+- **Beginner course "Meet the computer"**: the item portrait shows the picture of the selected part under its "Look for" and "Its job" text.
 - **Hardware investigations**: the Part controls drawer shows the picture of the selected component group (monitor for the display group).
+- **Other beginner courses**: selecting an item card shows its picture below the card grid when one exists. The network course has pictures for the computer, cable, switch and router; the security course for two-factor sign-in, account identity, allowed testing and the phishing warning (a look-alike sign-in page with a wrong, "Not secure" address). Concept items in the AI and coding courses have no pictures on purpose.
+- **Home page**: the hero shows a rendered view of the whole virtual lab in place of the drawn workstation, and each pathway card carries a scene for its topic.
+- **Lab library**: every investigation card uses its pathway scene as a dimmed backdrop behind the case code and icon.
 
-Markup comes from `src/part-art.js`: `partArtHTML(id)` returns an empty string until the manifest names a reviewed file, and it refuses any path that is not a flat `assets/part-<id>.webp` or `.png`.
+Markup comes from `src/part-art.js`: `partArtHTML(id)` wraps a part picture in a figure with a caption; `sceneArtHTML(id,{className,decorative})` returns a bare image for scenes and pathway cards, with an empty alt when the surrounding text already says what it shows. Both return an empty string until the manifest names a reviewed file, and both refuse any path that is not a flat `assets/part-<id>.webp` or `.png`. Course items use `track-item` ids such as `network-switch`; pathway scenes use `pathway-<track>`; the hero is `scene-lab`.
 
 ## Generating candidates with Gemini
 
@@ -22,7 +25,7 @@ Markup comes from `src/part-art.js`: `partArtHTML(id)` returns an empty string u
 
 ## Pictures published so far
 
-All eleven subjects are published. They were generated on 2026-11-05 with Visualizee on its Pro plan (GPT Image 2.6 Flare, watermark-free, commercial license), reviewed in-session for text, logos and part accuracy, and published with `--finalize`. A first pass from the Z-Image Turbo model on a Hugging Face Space was published earlier the same day and then replaced: the Visualizee set is cleaner (no faux markings on boards and bezels), more accurate (processor beside its socket, both SSD sockets, a real 24-pin plug) and carries a clear commercial license. Candidates from any generator can be dropped into `art-staging/` as `<id>-<n>.png`, `.webp` or `.jpg`; `--finalize` reads whichever exists.
+All twenty-five subjects are published: the eleven hardware parts, four network items, four security items, five pathway scenes and the lab-wide hero. They were generated on 2026-11-05 with Visualizee on its Pro plan (GPT Image 2.6 Flare, watermark-free, commercial license), reviewed in-session for text, logos and part accuracy, and published with `--finalize`. A first pass from the Z-Image Turbo model on a Hugging Face Space was published earlier the same day and then replaced: the Visualizee set is cleaner (no faux markings on boards and bezels), more accurate (processor beside its socket, both SSD sockets, a real 24-pin plug) and carries a clear commercial license. Candidates from any generator can be dropped into `art-staging/` as `<id>-<n>.png`, `.webp` or `.jpg`; `--finalize` reads whichever exists.
 
 Notes from those runs, for the next person who regenerates a picture:
 
@@ -30,7 +33,7 @@ Notes from those runs, for the next person who regenerates a picture:
 - Describe each plug's shape and wire colours for the leads picture, and ask for a plain bezel with no markings for the monitor; without that, generators invent HDMI-style plugs and faux brand marks.
 - OpenArt's free plan watermarks output and its CDN is unreachable from the cloud sandbox even on a paid plan, so it did not contribute a published picture. The Gemini script remains a repeatable path once a key is configured.
 
-Three scene assets were also generated with Visualizee and staged for the owner, but are not published because no lab has a display point for them yet: a look-alike school-portal sign-in page with a wrong address bar for the phishing lessons, a flat motherboard schematic with no text for labelled diagrams, and a 16:9 server-closet backdrop for the networking labs.
+The scene pictures were saved from the generator's inline previews, so the hero is 768 pixels wide and the pathway scenes about 768 by 575; that is sharp at the sizes the pages use, and the full-resolution originals remain in the owner's Visualizee project if a larger crop is ever needed. Two staged candidates stay unpublished: a flat motherboard schematic with no text (a possible background for labelled diagrams) and a 16:9 server-closet backdrop.
 
 ## Review rules
 
