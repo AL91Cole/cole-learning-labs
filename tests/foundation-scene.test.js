@@ -186,3 +186,24 @@ test('choosing a map label explains the spot and opens the matching lesson part'
   host.onclick({target:{closest:()=>null}});assert.deepEqual(inspections,['cpu']);
   controller.dispose();
 });
+
+test('selecting a course item shows its reviewed picture inside that card only',()=>{
+  const lab=getFoundation('network'),html=renderFoundationVisual(lab,createFoundationRecord('network'));
+  for(const item of lab.items)assert.ok(html.includes(`<span class="foundation-card-art" data-foundation-card-art="${item.id}" hidden></span></button>`),item.id+': every card carries an empty, hidden picture slot');
+  assert.doesNotMatch(html,/data-foundation-item-art/u,'The old slot below the grid is gone');
+  const arts=lab.items.map(item=>({dataset:{foundationCardArt:item.id},innerHTML:'',hidden:true}));
+  const doc={hidden:false,activeElement:null,addEventListener(){},removeEventListener(){}};
+  const host={ownerDocument:doc,innerHTML:'',setAttribute(){},closest:()=>null,contains:()=>true,querySelector:()=>null,querySelectorAll:selector=>selector==='[data-foundation-card-art]'?arts:[],addEventListener(){},removeEventListener(){}};
+  const controller=mountFoundationScene(host,{lab,record:createFoundationRecord('network')});
+  controller.focus('device');
+  const device=arts.find(node=>node.dataset.foundationCardArt==='device');
+  if(Object.hasOwn(PART_ART,'network-device')){
+    assert.equal(device.innerHTML,`<img class="scene-art foundation-card-photo" src="${PART_ART['network-device']}" loading="lazy" decoding="async" alt="">`,'The picture is decorative inside a button that already names the item');
+    assert.equal(device.hidden,false);
+  }else{assert.equal(device.innerHTML,'');assert.equal(device.hidden,true);}
+  for(const node of arts)if(node!==device){assert.equal(node.innerHTML,'');assert.equal(node.hidden,true);}
+  controller.focus('switch');
+  assert.equal(device.innerHTML,'');assert.equal(device.hidden,true,'Moving on clears the previous card');
+  const sw=arts.find(node=>node.dataset.foundationCardArt==='switch');assert.equal(sw.hidden,!Object.hasOwn(PART_ART,'network-switch'));
+  controller.dispose();
+});

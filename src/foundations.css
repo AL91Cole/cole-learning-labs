@@ -37,7 +37,7 @@
 .foundation-part-portrait strong{display:block;font-size:1rem;color:#b9f6e5}
 .foundation-part-portrait p,.foundation-part-portrait span{font-size:.88rem;line-height:1.5;color:var(--foundation-muted);margin:.25rem 0 0}
 .foundation-equipment-map{padding:.75rem}
-.foundation-equipment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem}
+.foundation-equipment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;align-items:start}
 .foundation-equipment-grid .foundation-equipment-card{display:flex;flex-direction:column;gap:.4rem;align-items:center;min-width:0;text-align:center;padding:.8rem;background:#112e40}
 .foundation-equipment-card svg{width:140px;height:90px;object-fit:contain}
 .foundation-equipment-card strong{font-size:1rem;line-height:1.4}
@@ -165,7 +165,7 @@ body:has(.foundation-lab[data-section="practice"]) .site-footer{display:none}
 @media(prefers-reduced-motion:reduce){.foundation-network-path .foundation-packet{animation:none}}
 @media(max-width:600px){.foundation-live-board{padding:.7rem}.foundation-board-facts{grid-template-columns:minmax(0,1fr)}.foundation-network-path text{font-size:16px}.foundation-board-controls button{flex-basis:100%}}
 
-.foundation-item-art{margin-top:.8rem}.foundation-item-art:empty{display:none}.foundation-item-art .part-art{max-width:320px;margin:0 auto}
+.foundation-equipment-card .foundation-card-art{display:block;width:100%;margin-top:.35rem}.foundation-equipment-card .foundation-card-art[hidden]{display:none}.foundation-card-photo{display:block;width:100%;max-width:300px;aspect-ratio:1;margin:0 auto;border-radius:8px;background:#eef1f3}@media(min-width:701px){.foundation-card-photo{max-width:200px}}
 .foundation-board-map{padding:.8rem .75rem 1rem;border-top:1px solid var(--foundation-edge);background:#0d2230}
 .foundation-board-map h3{margin:0 0 .3rem;font-size:1rem;color:#b9f6e5}
 .foundation-board-map-help,.foundation-board-map-note{margin:.25rem 0 0;font-size:.88rem;line-height:1.5;color:var(--foundation-muted)}
