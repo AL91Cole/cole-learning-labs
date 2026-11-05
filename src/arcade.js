@@ -1,8 +1,8 @@
-import {GAME_GUIDES,renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261104-receipts';
-import {MEMBER_CONTENT} from './access-policy.js?release=20261104-receipts';
-import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261104-receipts';
-import {PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261104-receipts';
-import {arcadeLevel,initialArcadeState,arcadeAction,rotatedPorts,buildStats,arcadePart,ROVER_COMMANDS} from './arcade-model.js?release=20261104-receipts';
+import {GAME_GUIDES,renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261105-receipt-review';
+import {MEMBER_CONTENT} from './access-policy.js?release=20261105-receipt-review';
+import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261105-receipt-review';
+import {PARTS,HARDWARE_SLOTS} from './arcade-levels.js?release=20261105-receipt-review';
+import {arcadeLevel,initialArcadeState,arcadeAction,rotatedPorts,buildStats,arcadePart,ROVER_COMMANDS} from './arcade-model.js?release=20261105-receipt-review';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TRACKS=Object.freeze({hardware:'Hardware',network:'Networking',security:'Cybersecurity',ai:'AI',coding:'Coding'});
 const SYMBOLS=Object.freeze({hardware:'◈',network:'⌘',security:'◇',ai:'✳',coding:'⌨'});

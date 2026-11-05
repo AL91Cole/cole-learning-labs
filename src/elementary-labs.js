@@ -1,6 +1,6 @@
-import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261104-receipts';
-import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261104-receipts';
-import {OWNER_PREVIEW} from './owner-preview.js?release=20261104-receipts';
+import {renderLearningBrief,renderNextChallenge} from './activity-guidance.js?release=20261105-receipt-review';
+import {renderBlockWorkshop,mountBlockWorkshop} from './block-workshop.js?release=20261105-receipt-review';
+import {OWNER_PREVIEW} from './owner-preview.js?release=20261105-receipt-review';
 
 // Authored, fictional activities. Each mount owns its choices; nothing is saved
 // or sent. These local practice checks are not grades or identity verification.

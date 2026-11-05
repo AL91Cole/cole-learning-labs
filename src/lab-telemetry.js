@@ -1,5 +1,5 @@
-import {receiptLabId} from './receipt-schema.js?release=20261104-receipts';
-import {requestTurnstileToken} from './turnstile-client.js?release=20261104-receipts';
+import {receiptLabId} from './receipt-schema.js?release=20261105-receipt-review';
+import {requestTurnstileToken} from './turnstile-client.js?release=20261105-receipt-review';
 
 const ORIGINS=new Set(['https://www.colelearninglabs.com','https://colelearninglabs.com']);
 const IDLE_MS=60_000;

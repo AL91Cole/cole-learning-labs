@@ -1,5 +1,5 @@
-import {reachActivity,validateReachEvent} from './reach-schema.js?release=20261104-receipts';
-import {requestTurnstileToken} from './turnstile-client.js?release=20261104-receipts';
+import {reachActivity,validateReachEvent} from './reach-schema.js?release=20261105-receipt-review';
+import {requestTurnstileToken} from './turnstile-client.js?release=20261105-receipt-review';
 
 const ORIGINS=new Set(['https://www.colelearninglabs.com','https://colelearninglabs.com']);
 const CONTROLS=Object.freeze({

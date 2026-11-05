@@ -1,5 +1,5 @@
-import {IMPROVEMENT_ACTIVITIES,validateImprovementSummary} from './improvement-schema.js?release=20261104-receipts';
-import {IMPROVEMENT_SHARING_ENABLED,IMPROVEMENT_ENDPOINT} from './improvement-config.js?release=20261104-receipts';
+import {IMPROVEMENT_ACTIVITIES,validateImprovementSummary} from './improvement-schema.js?release=20261105-receipt-review';
+import {IMPROVEMENT_SHARING_ENABLED,IMPROVEMENT_ENDPOINT} from './improvement-config.js?release=20261105-receipt-review';
 
 const activePanels=new Set();
 const labels=Object.freeze({

@@ -1,4 +1,4 @@
-import { pcActivity } from './pc-activity.js?release=20261104-receipts';
+import { pcActivity } from './pc-activity.js?release=20261105-receipt-review';
 
 /** Control recommendations only. The equipment model still decides every repair. */
 const freezeList=values=>Object.freeze(values);
