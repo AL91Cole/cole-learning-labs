@@ -159,3 +159,12 @@ test('completed actions move keyboard focus to the next required tour control',(
   assert.equal(focused.includes('status'),false);
   dispose();
 });
+
+test('the closing activity choices are tap-sized button links with their descriptions beside them',()=>{
+  const html=renderLabTutorial();
+  const list=/<ul class="tour-next-steps">([\s\S]*?)<\/ul>/u.exec(html)?.[1];
+  assert.ok(list,'The guide offers its next activities as a list');
+  for(const [href,label]of [['#learn/hardware','Learn the basics →'],['#labs','Investigations →'],['#membership','Coding sandbox →']])assert.ok(list.includes(`<a class="button button-outline" href="${href}">${label}</a><span>`),label);
+  assert.equal((list.match(/<li>/g)||[]).length,3);
+  assert.doesNotMatch(html,/<p><a href="#learn\/hardware">Learn the basics<\/a>:/u,'The old inline sentence links are gone');
+});
