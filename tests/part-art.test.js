@@ -22,7 +22,7 @@ test('every published part picture is a reviewed flat asset with human-written a
   const hardware=FOUNDATION_LABS.find(lab=>lab.id==='hardware');
   for(const item of hardware.items)assert.ok(Object.hasOwn(PART_ART_ALT,item.id),item.id+': beginner hardware items can show a picture');
   for(const track of ['hardware','network','ai','security','coding'])assert.ok(Object.hasOwn(PART_ART_ALT,'pathway-'+track),track+': every pathway has a scene subject');
-  for(const id of ['network-device','network-cable','network-switch','network-router','security-mfa','security-identity','security-scope','security-phishing','scene-lab'])assert.ok(Object.hasOwn(PART_ART_ALT,id),id);
+  for(const id of ['network-device','network-cable','network-switch','network-router','security-mfa','security-identity','security-scope','security-phishing','scene-lab','scene-board-map','scene-network-closet'])assert.ok(Object.hasOwn(PART_ART_ALT,id),id);
   for(const id of Object.keys(PART_ART_ALT))if(id.includes('-')){const [track,item]=[id.split('-')[0],id.split('-').slice(1).join('-')];const lab=FOUNDATION_LABS.find(lab=>lab.id===track);if(lab)assert.ok(lab.items.some(entry=>entry.id===item),id+': course item pictures name a real item');}
 });
 

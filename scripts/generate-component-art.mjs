@@ -51,7 +51,9 @@ export const SUBJECTS=Object.freeze([
   {id:'pathway-ai',aspect:'4:3',subject:'tidy student desk for a lesson about checking AI answers: a laptop showing a plain chat-style application with empty rounded speech bubbles and no words, a stack of printed pages with highlighter marks over blank lines, a magnifying glass, a pencil and a mug'},
   {id:'pathway-security',aspect:'4:3',subject:'desk for a lesson about safe sign-in habits: a laptop showing only a large padlock icon on a dark background, a smartphone showing six grey dots and a countdown ring, and a small hardware security key on a lanyard'},
   {id:'pathway-coding',aspect:'4:3',subject:'student desk for a beginner coding lesson: a laptop showing a code-editor window with colourful blurred syntax blocks and no readable words, an open notebook with a hand-drawn flowchart, a pencil and a small friendly toy robot'},
-  {id:'scene-lab',aspect:'16:9',subject:'wide view of a bright modern high-school technology lab with nobody in it: a workbench in the foreground with an open desktop PC on an anti-static mat, a monitor with a dark blank screen, a screwdriver and a memory module; a small open network rack with a glowing switch and tidy blue cables on the left wall; rows of student desks with closed laptops and a clean blank whiteboard behind; soft daylight mixed with cool LED light'}
+  {id:'scene-lab',aspect:'16:9',subject:'wide view of a bright modern high-school technology lab with nobody in it: a workbench in the foreground with an open desktop PC on an anti-static mat, a monitor with a dark blank screen, a screwdriver and a memory module; a small open network rack with a glowing switch and tidy blue cables on the left wall; rows of student desks with closed laptops and a clean blank whiteboard behind; soft daylight mixed with cool LED light'},
+  {id:'scene-board-map',size:768,subject:'flat top-down schematic illustration of a generic desktop motherboard with no text at all: a square processor socket near the top centre, four memory slots on the right, three horizontal expansion slots at the lower left, a tall 24-pin power header on the right edge, a row of small storage sockets at the bottom right and a cluster of rear ports along the left edge, clean vector style in soft blue and grey tones'},
+  {id:'scene-network-closet',aspect:'16:9',subject:'moody view into a small school server closet: an open rack holding a patch panel, a switch with blue and green link lights and a small backup power unit, bundled blue and yellow cables, a metal shelf with storage boxes, one warm ceiling light and a door ajar on the right'}
 ]);
 
 export function parseArguments(argv){
@@ -133,9 +135,10 @@ async function stage(options){
   console.log(`Review ${path.join(options.out,'index.html')} in a browser, then run --finalize with the variants you accept.`);
 }
 
-/** Encode WebP with the pre-installed Chromium: square pictures become 512 px squares, wider scenes keep their
- * aspect ratio with a 1024 px long edge. Falls back to copying the source when Playwright is absent. */
-async function publishPicture(source,target){
+/** Encode WebP with the pre-installed Chromium: square pictures become 512 px squares (or the subject's own
+ * `size`, for a map that carries labels), wider scenes keep their aspect ratio with a 1024 px long edge.
+ * Falls back to copying the source when Playwright is absent. */
+async function publishPicture(source,target,{square=512}={}){
   let playwright=null;
   // CommonJS resolution honours NODE_PATH, which is how the cloud sandbox exposes its pre-installed Playwright.
   try{playwright=createRequire(import.meta.url)('playwright');}catch{/* Not installed locally: keep the PNG. */}
@@ -147,20 +150,20 @@ async function publishPicture(source,target){
     const page=await browser.newPage();
     const mime={'.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.jpeg':'image/jpeg'}[path.extname(source).toLowerCase()]||'image/png';
     const dataUrl='data:'+mime+';base64,'+(await readFile(source)).toString('base64');
-    const webp=await page.evaluate(async url=>{
+    const webp=await page.evaluate(async ({url,square})=>{
       const image=new Image();image.src=url;await image.decode();
       const canvas=document.createElement('canvas'),context=canvas.getContext('2d');
       if(Math.abs(image.width/image.height-1)<0.05){
-        canvas.width=512;canvas.height=512;context.fillStyle='#eef1f3';context.fillRect(0,0,512,512);
-        const scale=Math.min(512/image.width,512/image.height),width=image.width*scale,height=image.height*scale;
-        context.drawImage(image,(512-width)/2,(512-height)/2,width,height);
+        canvas.width=square;canvas.height=square;context.fillStyle='#eef1f3';context.fillRect(0,0,square,square);
+        const scale=Math.min(square/image.width,square/image.height),width=image.width*scale,height=image.height*scale;
+        context.drawImage(image,(square-width)/2,(square-height)/2,width,height);
       }else{
         const scale=Math.min(1,1024/Math.max(image.width,image.height));
         canvas.width=Math.round(image.width*scale);canvas.height=Math.round(image.height*scale);
         context.drawImage(image,0,0,canvas.width,canvas.height);
       }
       return canvas.toDataURL('image/webp',0.84);
-    },dataUrl);
+    },{url:dataUrl,square});
     await writeFile(target,Buffer.from(webp.split(',')[1],'base64'));
     return target;
   }finally{await browser.close();}
@@ -187,7 +190,7 @@ async function finalize(options){
     const candidates=['png','webp','jpg','jpeg'].map(extension=>path.join(options.out,`${id}-${variant}.${extension}`));
     let source=null;for(const candidate of candidates){try{await readFile(candidate);source=candidate;break;}catch{/* try the next extension */}}
     if(!source)throw new Error(`No staged picture ${id}-${variant} (.png/.webp/.jpg) in ${options.out}.`);
-    const published=await publishPicture(source,path.join(ROOT,'assets',`part-${id}.webp`));
+    const published=await publishPicture(source,path.join(ROOT,'assets',`part-${id}.webp`),{square:SUBJECTS.find(item=>item.id===id)?.size||512});
     existing[id]='assets/'+path.basename(published);
     console.log('published',existing[id]);
   }

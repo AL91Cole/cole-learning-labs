@@ -30,6 +30,8 @@ export const PART_ART_ALT=Object.freeze({
   'pathway-ai':'A student desk with a laptop showing a chat-style window of empty speech bubbles, a stack of printed pages with highlighter marks, a magnifying glass and a pencil.',
   'pathway-security':'A desk with a laptop showing a large padlock icon, a smartphone showing six dots and a countdown ring, and a small hardware security key on a lanyard.',
   'pathway-coding':'A student desk with a laptop showing a code editor of colourful blurred lines, a notebook with a hand-drawn flowchart, a pencil and a small toy robot.',
+  'scene-board-map':'Flat drawing of a motherboard seen from above with no text: a square processor socket near the top centre, four memory slots on the right, three long expansion slots at the lower left, a tall power plug on the right edge, four small storage sockets at the bottom right and a cluster of ports along the left edge.',
+  'scene-network-closet':'A dim school server closet: an open rack with a patch panel, a switch with blue and green link lights and a small backup power unit below it, bundled blue and yellow cables, a metal shelf with boxes, one warm ceiling light and a door standing open.',
   'scene-lab':'A bright school technology lab with nobody in it: a workbench in front holding an open desktop computer, a monitor, a screwdriver and a memory module; a small network rack with a glowing switch on the left; rows of desks with closed laptops behind.'
 });
 // PART_ART_START (managed by scripts/generate-component-art.mjs --finalize)
@@ -53,7 +55,9 @@ export const PART_ART=Object.freeze({
   'pathway-security':'assets/part-pathway-security.webp',
   psu:'assets/part-psu.webp',
   ram:'assets/part-ram.webp',
+  'scene-board-map':'assets/part-scene-board-map.webp',
   'scene-lab':'assets/part-scene-lab.webp',
+  'scene-network-closet':'assets/part-scene-network-closet.webp',
   'security-identity':'assets/part-security-identity.webp',
   'security-mfa':'assets/part-security-mfa.webp',
   'security-phishing':'assets/part-security-phishing.webp',

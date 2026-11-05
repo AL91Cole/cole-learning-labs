@@ -1,10 +1,28 @@
 import { pcActivity } from './pc-activity.js?release=20261106-fast-start';
-import { partArtHTML } from './part-art.js?release=20261106-fast-start';
+import { partArtHTML, sceneArtHTML } from './part-art.js?release=20261106-fast-start';
 /** Beginner equipment views. The model owns every answer and practice result. */
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tracks=new Set(['hardware','network','ai','security','coding']);
 const trackFor=lab=>tracks.has(lab?.track)?lab.track:tracks.has(lab?.slug)?lab.slug:'hardware';
 const itemsFor=lab=>Array.isArray(lab?.items)?lab.items:[];
+/** Labels laid over the reviewed motherboard drawing. Positions are percentages of the picture; a label that names
+ * a lesson item opens that item so the map and the parts list stay one lesson. */
+export const BOARD_MAP=Object.freeze([
+  {id:'cpu-socket',item:'cpu',x:50,y:29,label:'Processor socket',note:'The processor drops into this square socket. A lever holds it down and the cooler sits on top.'},
+  {id:'memory-slots',item:'ram',x:78,y:30,label:'Memory slots',note:'Memory sticks push into these long slots until the clip at each end clicks shut.'},
+  {id:'main-power',item:'psu',x:92,y:46,label:'Main power plug',note:'The widest lead from the power supply pushes into this tall socket to power the whole board.'},
+  {id:'expansion-slots',item:'gpu',x:42,y:69,label:'Expansion slots',note:'The graphics card and other add-in cards slide into these long slots and screw to the case.'},
+  {id:'storage-sockets',item:'ssd',x:80,y:88,label:'Storage sockets',note:'Thin data cables from storage drives plug into these small L-shaped sockets.'},
+  {id:'chipset',item:'',x:76,y:70,label:'Chipset',note:'This chip under a small heatsink helps the processor talk to drives, cards and ports.'},
+  {id:'rear-ports',item:'',x:9,y:32,label:'Rear ports',note:'Keyboard, mouse, network and video cables plug into these ports at the back of the case.'}
+]);
+const BOARD_MAP_INTRO='Choose a label to read what sits there.';
+function boardMap(lab){
+  const art=sceneArtHTML('scene-board-map',{className:'foundation-board-map-art'});
+  if(!art)return '';
+  const items=itemsFor(lab);
+  return `<section class="foundation-board-map" aria-labelledby="foundation-board-map-title"><h3 id="foundation-board-map-title">Motherboard map</h3><p class="foundation-board-map-help">A drawing of a whole motherboard. Labels for a part in this lesson also open that part above.</p><div class="foundation-board-map-stage">${art}<ul class="foundation-board-map-labels">${BOARD_MAP.map(spot=>`<li style="left:${spot.x}%;top:${spot.y}%"><button type="button" data-foundation-map="${spot.id}"${spot.item&&items.some(item=>item.id===spot.item)?` data-foundation-map-item="${spot.item}"`:''} aria-pressed="false">${escape(spot.label)}</button></li>`).join('')}</ul></div><p class="foundation-board-map-note" data-foundation-map-note aria-live="polite">${BOARD_MAP_INTRO}</p></section>`;
+}
 const svg=(body)=>`<svg viewBox="0 0 160 110" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 const screen='<rect x="24" y="15" width="112" height="70" rx="6"/><path d="M65 85v12h30V85M48 99h64"/>';
 const person='<circle cx="80" cy="33" r="15"/><path d="M49 88v-9a31 31 0 0 1 62 0v9"/>';
@@ -64,18 +82,19 @@ function hardwareDiagram(record){
 function hardwareReadout(record){const h=record?.hardware||{},a=h.assembly||{},activity=pcActivity(h);return `<div class="foundation-visual-readout"><span>${escape(activity.status.label)}</span><span>Power cable ${h.acConnected?'connected':'disconnected'}</span><span>Memory (RAM) ${h.ramSeated?'fitted':'in the parts tray'}</span><span>Memory clips ${a.ramClipsOpen?'open':'closed'}</span><span>Panel screws ${(Array.isArray(a.panelScrews)?a.panelScrews:[]).filter(Boolean).length}/2 tight</span></div><details class="foundation-pc-status"><summary>What is running?</summary><p>Processor fan: ${activity.cpuFan?'running':'stopped'} · Graphics-card fan: ${activity.gpuFan?'running':'stopped'} · Power-supply fan: ${activity.psuFan?'running':'stopped'}.</p><p>${escape(activity.storage.label)}. ${escape(activity.startup.label)}.</p><p>${escape(activity.display.readout)}</p><p>Moving fans mean some parts have power. They do not prove the PC started.</p></details>`;}
 
 export function renderFoundationVisual(lab,record){
-  if(trackFor(lab)==='hardware')return `<div class="foundation-hardware-diagram">${hardwareDiagram(record)}${hardwareReadout(record)}</div><div class="foundation-part-portrait" data-foundation-part-portrait>${portrait(lab,'')}</div>`;
+  if(trackFor(lab)==='hardware')return `<div class="foundation-hardware-diagram">${hardwareDiagram(record)}${hardwareReadout(record)}</div><div class="foundation-part-portrait" data-foundation-part-portrait>${portrait(lab,'')}</div>${boardMap(lab)}`;
   return `<div class="foundation-equipment-map" role="group" aria-label="${escape(lab?.title||'Equipment explorer')}"><div class="foundation-equipment-grid">${itemsFor(lab).map(item=>`<button type="button" class="foundation-equipment-card" data-foundation-item="${escape(item.id)}" aria-pressed="false">${illustration(trackFor(lab),item.id)}<strong>${escape(item.label)}</strong><span>${escape(item.looks)}</span><span class="foundation-item-role" data-foundation-card-role="${escape(item.id)}" hidden>${escape(item.role)}</span></button>`).join('')}</div><div class="foundation-item-art" data-foundation-item-art></div>${readout(lab,record)}</div>`;
 }
 
 /** One native diagram host. Learning credit and guided actions belong to the model/controller. */
 export function mountFoundationScene(host,{lab,record,onInspect=()=>{},onStatus=()=>{}}={}){
   if(!host?.ownerDocument)return null;
-  const doc=host.ownerDocument;let current=record,selected='',visible=!host.closest?.('[hidden]'),disposed=false;
+  const doc=host.ownerDocument;let current=record,selected='',mapSpot='',visible=!host.closest?.('[hidden]'),disposed=false;
   function motion(){host.setAttribute?.('data-pc-motion',disposed||!visible||doc.hidden?'paused':'running');}
   function focus(id){if(disposed||!itemsFor(lab).some(item=>item.id===id))return;selected=id;host.querySelectorAll('[data-foundation-item]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.foundationItem===id)));host.querySelectorAll('[data-foundation-card-role]').forEach(node=>{node.hidden=node.dataset.foundationCardRole!==id;});const portraitNode=host.querySelector('[data-foundation-part-portrait]');if(portraitNode)portraitNode.innerHTML=portrait(lab,id);const artNode=host.querySelector('[data-foundation-item-art]');if(artNode)artNode.innerHTML=partArtHTML(trackFor(lab)+'-'+id,{caption:false});}
-  function update(next){if(disposed)return;current=next;const statusOpen=host.querySelector('.foundation-pc-status')?.open===true;const active=doc.activeElement?.closest?.('[data-foundation-item]'),restore=active&&host.contains(active)?active.dataset.foundationItem:'';host.innerHTML=renderFoundationVisual(lab,current);if(statusOpen){const status=host.querySelector('.foundation-pc-status');if(status)status.open=true;}motion();if(selected)focus(selected);if(restore)[...host.querySelectorAll('[data-foundation-item]')].find(node=>node.dataset.foundationItem===restore)?.focus({preventScroll:true});}
-  function inspect(event){if(disposed||!visible||doc.hidden)return;const node=event.target.closest?.('[data-foundation-item]');if(!node||!host.contains(node)||!itemsFor(lab).some(item=>item.id===node.dataset.foundationItem))return;focus(node.dataset.foundationItem);onInspect(node.dataset.foundationItem);}
+  function update(next){if(disposed)return;current=next;const statusOpen=host.querySelector('.foundation-pc-status')?.open===true;const active=doc.activeElement?.closest?.('[data-foundation-item]'),restore=active&&host.contains(active)?active.dataset.foundationItem:'';host.innerHTML=renderFoundationVisual(lab,current);if(statusOpen){const status=host.querySelector('.foundation-pc-status');if(status)status.open=true;}motion();if(selected)focus(selected);if(mapSpot)markMap();if(restore)[...host.querySelectorAll('[data-foundation-item]')].find(node=>node.dataset.foundationItem===restore)?.focus({preventScroll:true});}
+  function markMap(){const spot=BOARD_MAP.find(entry=>entry.id===mapSpot);host.querySelectorAll('[data-foundation-map]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.foundationMap===mapSpot)));const note=host.querySelector('[data-foundation-map-note]');if(note)note.textContent=spot?spot.label+'. '+spot.note:BOARD_MAP_INTRO;}
+  function inspect(event){if(disposed||!visible||doc.hidden)return;const mapNode=event.target.closest?.('[data-foundation-map]');if(mapNode&&host.contains(mapNode)){const spot=BOARD_MAP.find(entry=>entry.id===mapNode.dataset.foundationMap);if(!spot)return;mapSpot=spot.id;markMap();if(spot.item&&itemsFor(lab).some(item=>item.id===spot.item)){focus(spot.item);onInspect(spot.item);}return;}const node=event.target.closest?.('[data-foundation-item]');if(!node||!host.contains(node)||!itemsFor(lab).some(item=>item.id===node.dataset.foundationItem))return;focus(node.dataset.foundationItem);onInspect(node.dataset.foundationItem);}
   function key(event){if(event.key!=='Enter'&&event.key!==' ')return;const node=event.target.closest?.('[data-foundation-item]');if(!node||node.tagName?.toLowerCase()==='button')return;event.preventDefault();inspect(event);}
   host.addEventListener('click',inspect);host.addEventListener('keydown',key);doc.addEventListener?.('visibilitychange',motion);motion();
   onStatus({kind:'ready',message:'Choose a picture to learn about it.'});

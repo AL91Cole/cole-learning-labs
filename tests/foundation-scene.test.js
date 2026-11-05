@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { renderFoundationVisual, mountFoundationScene } from '../src/foundation-scene.js';
+import { renderFoundationVisual, mountFoundationScene, BOARD_MAP } from '../src/foundation-scene.js';
+import { PART_ART, PART_ART_ALT } from '../src/part-art.js';
 import { FOUNDATION_LABS, getFoundation, createFoundationRecord, applyFoundationAction } from '../src/foundation-model.js';
 
 const source=readFileSync(new URL('../src/foundation-scene.js',import.meta.url),'utf8');
@@ -145,4 +146,43 @@ test('beginner monitor captions stay short and an explicitly opened activity exp
   assert.equal(subtitles.length,2);assert.ok(subtitles.every(line=>line.length<=48));
   f.statusDetails.open=true;f.record={...f.record};assert.equal(f.statusDetails.open,true);
   assert.match(f.host.innerHTML,/Check the monitor input and cable path/);f.controller.dispose();
+});
+
+test('the hardware course lays accessible labels over the reviewed motherboard drawing',()=>{
+  const lab=getFoundation('hardware'),html=renderFoundationVisual(lab,createFoundationRecord('hardware'));
+  if(!Object.hasOwn(PART_ART,'scene-board-map')){assert.doesNotMatch(html,/foundation-board-map/);return;}
+  assert.match(html,/<section class="foundation-board-map" aria-labelledby="foundation-board-map-title"><h3 id="foundation-board-map-title">Motherboard map<\/h3>/);
+  assert.match(html,new RegExp('<img class="scene-art foundation-board-map-art" src="'+PART_ART['scene-board-map']+'" loading="lazy" decoding="async" alt="'+PART_ART_ALT['scene-board-map'].slice(0,30)));
+  assert.equal(BOARD_MAP.length,(html.match(/data-foundation-map="/g)||[]).length,'Every map spot renders one label');
+  for(const spot of BOARD_MAP){
+    assert.ok(spot.x>0&&spot.x<100&&spot.y>0&&spot.y<100,spot.id+': labels sit inside the picture');assert.ok(spot.note.length>30,spot.id);
+    const label=new RegExp('<li style="left:'+spot.x+'%;top:'+spot.y+'%"><button type="button" data-foundation-map="'+spot.id+'"'+(spot.item?' data-foundation-map-item="'+spot.item+'"':'')+' aria-pressed="false">'+spot.label+'</button></li>');
+    assert.match(html,label,spot.id);
+    if(spot.item)assert.ok(lab.items.some(item=>item.id===spot.item),spot.id+': a labelled item is a lesson item');
+  }
+  assert.doesNotMatch(html,/data-foundation-item="(?:cpu-socket|memory-slots|chipset|rear-ports)"/,'Map labels are not counted as picture targets');
+  assert.ok(html.includes('<p class="foundation-board-map-note" data-foundation-map-note aria-live="polite">Choose a label to read what sits there.</p>'));
+  assert.match(css,/\.foundation-board-map-labels button\[aria-pressed="true"\]/);assert.match(css,/@media\(max-width:600px\)\{\.foundation-board-map-labels\{position:static/);
+});
+
+test('choosing a map label explains the spot and opens the matching lesson part',()=>{
+  const lab=getFoundation('hardware');if(!Object.hasOwn(PART_ART,'scene-board-map'))return;
+  const inspections=[],labels=BOARD_MAP.map(spot=>({dataset:{foundationMap:spot.id,foundationMapItem:spot.item||undefined},attrs:{},closest(selector){return selector==='[data-foundation-map]'?this:null;},setAttribute(name,value){this.attrs[name]=value;}}));
+  const note={textContent:''},portrait={innerHTML:''},parts=lab.items.map(item=>({dataset:{foundationItem:item.id},attrs:{},setAttribute(name,value){this.attrs[name]=value;},closest(){return null;}}));
+  const doc={hidden:false,activeElement:null,addEventListener(){},removeEventListener(){}};
+  const host={ownerDocument:doc,innerHTML:'',setAttribute(){},closest:()=>null,contains:node=>labels.includes(node)||parts.includes(node),querySelector:selector=>selector==='[data-foundation-map-note]'?note:selector==='[data-foundation-part-portrait]'?portrait:null,querySelectorAll:selector=>selector==='[data-foundation-map]'?labels:selector==='[data-foundation-item]'?parts:[],addEventListener(name,fn){this['on'+name]=fn;},removeEventListener(){}};
+  const controller=mountFoundationScene(host,{lab,record:createFoundationRecord('hardware'),onInspect:id=>inspections.push(id)});
+  const socket=labels.find(node=>node.dataset.foundationMap==='cpu-socket'),chipset=labels.find(node=>node.dataset.foundationMap==='chipset');
+  host.onclick({target:socket});
+  assert.equal(socket.attrs['aria-pressed'],'true');assert.equal(chipset.attrs['aria-pressed'],'false');
+  assert.match(note.textContent,/^Processor socket\. The processor drops into this square socket/);
+  assert.deepEqual(inspections,['cpu'],'A label for a lesson part counts as inspecting that part');
+  assert.equal(parts.find(node=>node.dataset.foundationItem==='cpu').attrs['aria-pressed'],'true');assert.match(portrait.innerHTML,/Processor \(CPU\)/);
+  host.onclick({target:chipset});
+  assert.equal(chipset.attrs['aria-pressed'],'true');assert.equal(socket.attrs['aria-pressed'],'false');assert.match(note.textContent,/^Chipset\. This chip/);
+  assert.deepEqual(inspections,['cpu'],'Spots without a lesson part only explain themselves');
+  controller.update(createFoundationRecord('hardware'));
+  assert.equal(chipset.attrs['aria-pressed'],'true','The chosen label survives a record update');assert.match(note.textContent,/^Chipset\./);
+  host.onclick({target:{closest:()=>null}});assert.deepEqual(inspections,['cpu']);
+  controller.dispose();
 });

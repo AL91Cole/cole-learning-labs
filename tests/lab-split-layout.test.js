@@ -27,7 +27,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 const tracks=Object.fromEntries(SCENARIOS.map(s=>[s.track,{name:s.track}]));
 function recordFor(s){return {questions:[],evidence:[],symptoms:'',plan:'',ideaSaved:false,notes:'',reflection:'',events:[],verified:false,closed:false,state:s.track==='hardware'?initialHardwareState(s.id):initialWorkspaceState(s.id)};}
 function renderTicket(s,record=recordFor(s)){
-  return vm.runInNewContext('let currentLab=null,labView=null;\n'+source.slice(renderStart,renderEnd)+'\nlabPage(s)',{
+  return vm.runInNewContext('let currentLab=null,labView=null;\n'+source.slice(renderStart,renderEnd)+'\nlabPage(s)',{sceneArtHTML:()=>'',
     s,tracks,esc,labLanguage,requesterPersona,recordFor:()=>record,inquiryProgress,readQuestionEvents,experimentEventText,workStorage:{},workStatus:()=> 'Private session'
   });
 }
@@ -90,7 +90,7 @@ function controller(s){
     ['[data-clue]',s.clues.map(clue=>new Node({clue:clue.id}))],['[data-question]',s.questions.map((_,index)=>new Node({question:String(index)}))]
   ]);
   function renderBench(){calls.renders++;node('#workspace').children=new Map();if(s.track==='coding'){const editor=new Node();editor.value=record.state.code;nodes.set('#coding-editor',editor);}}
-  const context=vm.createContext({mountReachMetrics,recordReachCompletion,reachMetrics:null,renderLearningBrief,renderNextChallenge,investigationNextStep,OWNER_PREVIEW:false,s,record,tracks,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200})}),esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
+  const context=vm.createContext({sceneArtHTML:()=>"",partArtHTML:()=>"",mountReachMetrics,recordReachCompletion,reachMetrics:null,renderLearningBrief,renderNextChallenge,investigationNextStep,OWNER_PREVIEW:false,s,record,tracks,location,history,learningRoute,labPageHash,labLanguage,requesterPersona,mountRequesterChat:(root,options)=>mountRequesterChat(root,{...options,preference:{enabled:true},fetcher:async()=>new Response(JSON.stringify({enabled:false}),{status:200})}),esc,answerQuestion,questionEvent,readQuestionEvents,inquiryProgress,retainInquiryEvents,
     applyHardwareAction,verifyHardware,applyWorkspaceAction:(id,state,action,value)=>applyWorkspaceAction(id,state,action,value===undefined?undefined:structuredClone(value)),verifyWorkspace,
     retainExperimentEvents:(scenario,events)=>retainExperimentEvents(scenario,structuredClone(events)),experimentEventText,experimentReport,readExperiments,workbenchProgress,
     $:node,$$:selector=>{assert.ok(groups.has(selector),'Unknown control group '+selector);return groups.get(selector);},
