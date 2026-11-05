@@ -75,3 +75,9 @@ test('verifier buttons stay readable on hover, focus and while disabled',async()
   readable('#174651',['#ffffff','#e4f2ef']);readable('#ffffff',['#164e57','#103e46']);readable('#3f5a61',['#e6ecec']);
   readable('#195d39',['#ffffff']);readable('#912e28',['#fff0ef','#ffffff']);readable('#795400',['#fff8e5']);
 });
+
+test('the fixed assistive toolbar never covers the end of the footer on phones',()=>{
+  const phone=css.split('@media(max-width:720px){')[1]?.split('@media')[0]||'';
+  assert.match(phone,/\.site-footer\{padding-bottom:100px\}/u,'Phone footers reserve room under the fixed Listen and Display buttons');
+  assert.match(phone,/\.access-tools\{left:12px;bottom:12px\}/u);
+});
