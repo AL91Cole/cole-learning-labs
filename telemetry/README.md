@@ -28,7 +28,10 @@ there is no site-wide submission history.
 Use a cryptographically random secret of at least 32 bytes, stored only as the
 Cloudflare Pages environment secret `RECEIPT_SECRET`. Never put its value in
 Wrangler variables, client code, repository files, logs, screenshots or a PR.
-The parser accepts 32–256 UTF-8 bytes. Set it separately for any intended preview
+The parser accepts 32–256 UTF-8 bytes containing at least 8 distinct byte values.
+That only catches placeholder or repeated-character values; it is not an entropy
+check. Generate the secret with a CSPRNG, for example 32 random bytes as hex or
+base64. Set it separately for any intended preview
 environment; production credentials must not be copied into a public preview.
 
 Receipts require `RECEIPTS_ENABLED="true"`, that secret, and reviewed Turnstile
@@ -72,7 +75,9 @@ The counter cannot deduplicate retries because it stores no attempt identifier.
 
 Cleanup retains the current UTC day and preceding 29 days. The request path runs
 cleanup before writes. Deploy `wrangler.retention.jsonc` as a separate Worker only
-after adding the same approved D1 binding, then verify a successful scheduled
+after adding the same approved D1 binding and, in the same change, the daily
+cron trigger (`"crons":["37 4 * * *"]`). The committed file ships with no
+binding and no trigger so an unprovisioned deployment cannot fail nightly. Then verify a successful scheduled
 cleanup and test expired-date deletion before setting the retention flag. Its
 scheduled handler throws on cleanup failure so existing operational monitoring
 can detect failures; establish an alert and deletion procedure before activation.

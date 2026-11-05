@@ -1,4 +1,4 @@
-export const receiptJson=(value,status=200,headers={})=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'",...headers}});
+export const receiptJson=(value,status=200,headers={})=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Cross-Origin-Resource-Policy':'same-origin','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'",...headers}});
 export function receiptRequestAllowed(request,path,env){
   const url=new URL(request.url),origins=new Set(['https://www.colelearninglabs.com','https://colelearninglabs.com']);
   // Pages injects the exact deployment URL. Do not trust arbitrary *.pages.dev

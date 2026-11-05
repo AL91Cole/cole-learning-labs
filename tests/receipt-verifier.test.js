@@ -51,3 +51,36 @@ test('untrusted result strings are rendered as text and never interpreted as HTM
   await document.querySelector('#verify-form').listeners.get('submit')({preventDefault(){}});
   const row=document.querySelector('#verify-rows').children[0];assert.equal(row.children[1].textContent,code);assert.equal(row.children[1].innerHTML,undefined);
 });
+test('filtered or blocked responses give guidance instead of parser text or a misleading batch error',async()=>{
+  const codes=['example'],blockPage=()=>new Response('<!doctype html><title>Blocked</title>',{status:200});
+  await assert.rejects(verifyCodeBatch(codes,{tokenProvider,fetcher:async()=>blockPage()}),/verifier is unavailable/u);
+  await assert.rejects(verifyCodeBatch(codes,{tokenProvider,fetcher:protectedFetch(async()=>blockPage())}),/unexpected response/u);
+  await assert.rejects(verifyCodeBatch(codes,{tokenProvider,fetcher:protectedFetch(async()=>new Response('',{status:403}))}),/security check was not accepted/u);
+  await assert.rejects(verifyCodeBatch(codes,{tokenProvider,fetcher:protectedFetch(async()=>new Response('',{status:400}))}),/Review the batch/u);
+  const aborted=Object.assign(new Error('stopped'),{name:'AbortError'});
+  await assert.rejects(verifyCodeBatch(codes,{tokenProvider,fetcher:async()=>({ok:true,status:200,headers:new Headers(),json:async()=>{throw aborted;}})}),error=>error===aborted);
+});
+test('batch errors say how many codes were found and which line is too long',()=>{
+  assert.throws(()=>parseCodeBatch('a\n'.repeat(231)),/has 231 codes/u);
+  assert.throws(()=>parseCodeBatch('ok\n'+'x'.repeat(129)),/Code 2 is longer/u);
+  assert.throws(()=>parseCodeBatch(' \n '),/at least one/u);
+});
+test('an invalid batch is flagged on the field, and clearing or a restored page leaves no counts behind',async t=>{
+  const document=page(),attributes=new Map(),input=document.querySelector('#completion-codes');let focused=0;
+  input.setAttribute=(name,value)=>attributes.set(name,value);input.removeAttribute=name=>attributes.delete(name);input.focus=()=>{focused++;};
+  document.defaultView={listeners:new Map(),addEventListener(name,fn){this.listeners.set(name,fn);},removeEventListener(name){this.listeners.delete(name);}};
+  const cleanup=mountReceiptVerifier(document,{tokenProvider,fetcher:protectedFetch(async()=>Response.json({results:[{code:'example',valid:false,reason:'Invalid format',isDuplicate:false}]}))});
+  const submit=document.querySelector('#verify-form').listeners.get('submit'),summary=document.querySelector('#verify-summary'),status=document.querySelector('#verify-status');
+  input.value='';await submit({preventDefault(){}});
+  assert.equal(attributes.get('aria-invalid'),'true');assert.equal(focused,1);assert.match(status.textContent,/at least one/u);
+  input.value='example';await submit({preventDefault(){}});
+  assert.equal(attributes.has('aria-invalid'),false);assert.match(summary.textContent,/^1 checked/u);
+  const restored=document.defaultView.listeners.get('pageshow');
+  restored({persisted:false});assert.match(summary.textContent,/^1 checked/u);
+  restored({persisted:true});
+  assert.equal(summary.textContent,'');assert.equal(input.value,'');assert.equal(document.querySelector('#verify-results').hidden,true);
+  assert.match(status.textContent,/cleared when this page was left/u);
+  input.value='example';await submit({preventDefault(){}});document.querySelector('#verify-clear').listeners.get('click')();
+  assert.equal(summary.textContent,'');assert.match(status.textContent,/^Cleared/u);
+  cleanup();assert.equal(document.defaultView.listeners.has('pageshow'),false);
+});

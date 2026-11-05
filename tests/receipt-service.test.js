@@ -7,6 +7,7 @@ import {onRequest as verify} from '../functions/api/verify.js';
 import {generateCompletionCode} from '../utils/receiptCrypto.js';
 import {TELEMETRY_CLEANUP_SQL,storeTelemetryEvent,telemetryBands} from '../telemetry/storage.js';
 import {turnstileEnv,turnstileReply} from './turnstile-fixture.js';
+import {readReceiptJson} from '../edge/receipt-http.js';
 mock.method(globalThis,'fetch',async(url,options)=>{
   assert.equal(url,'https://challenges.cloudflare.com/turnstile/v0/siteverify');
   assert.equal(options.body.get('secret'),turnstileEnv.TURNSTILE_SECRET_KEY);
@@ -64,4 +65,63 @@ test('aggregate admission is atomic at the daily cap and deletes expired dates',
   db.sql.exec("INSERT INTO lab_telemetry_counts VALUES('2020-01-01','INC101','start','under1m','none','1',1)");db.sql.exec(TELEMETRY_CLEANUP_SQL);
   assert.equal(db.sql.prepare("SELECT COUNT(*) n FROM lab_telemetry_counts WHERE event_date='2020-01-01'").get().n,0);db.sql.close();
   assert.deepEqual(telemetryBands({activeSeconds:86400,eventType:'abandon',stepReached:20}),{durationBand:'60mplus',scoreBand:'none',stepBand:'4plus'});
+});
+test('the shared request gate rejects each unsafe request shape with an exact status before any bot check',async()=>{
+  const calls=()=>globalThis.fetch.mock.callCount();
+  const cases=[
+    [{headers:{Origin:'https://evil.invalid'}},403],[{headers:{Origin:'null'}},403],
+    [{headers:{'Sec-Fetch-Site':'cross-site'}},403],[{headers:{'Sec-Fetch-Site':'same-site'}},403],[{headers:{'Sec-Fetch-Site':'none'}},403],
+    [{headers:{Cookie:'student=secret'}},403],[{headers:{'Content-Encoding':'gzip'}},403],[{headers:{'Content-Type':'text/plain'}},403],
+    [{query:'?student=private'},403],[{method:'GET',headers:{'Sec-Fetch-Site':'cross-site'}},403],[{method:'GET',query:'?x=1'},403],
+    [{headers:{'Content-Length':'99999'}},400],[{method:'PUT'},405],[{method:'DELETE'},405]
+  ];
+  for(const [handler,path,body] of [[telemetry,'/api/telemetry',event],[verify,'/api/verify',{codes:['x']}]]){
+    const before=calls();
+    for(const [{query='',...options},status] of cases){
+      const response=await handler(context({body,...options,path:path+query}));
+      assert.equal(response.status,status,path+' '+JSON.stringify(options)+query);
+      assert.equal(response.headers.get('Cache-Control'),'private, no-store');
+      assert.equal(response.headers.get('X-Content-Type-Options'),'nosniff');
+      assert.equal(response.headers.get('Cross-Origin-Resource-Policy'),'same-origin');
+      if(status===405)assert.equal(response.headers.get('Allow'),'GET, POST');
+    }
+    assert.equal(calls(),before,path+' contacted Siteverify for a rejected request');
+  }
+});
+test('the body reader enforces its byte cap on the stream itself, not only on the declared length',async()=>{
+  const stream=length=>new Request('https://www.colelearninglabs.com/api/verify',{method:'POST',duplex:'half',body:new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('{"codes":["'+'x'.repeat(length)+'"]}'));controller.close();}})});
+  await assert.rejects(readReceiptJson(stream(30000),28000),/too large/u);
+  assert.deepEqual(await readReceiptJson(stream(10),28000),{codes:['x'.repeat(10)]});
+  await assert.rejects(readReceiptJson(new Request('https://www.colelearninglabs.com/api/verify',{method:'POST',body:'{"codes":'}),28000));
+  const before=globalThis.fetch.mock.callCount();
+  const padded=JSON.stringify(event)+' '.repeat(600);
+  assert.equal((await telemetry({request:new Request('https://www.colelearninglabs.com/api/telemetry',{method:'POST',headers:{Origin:'https://www.colelearninglabs.com','Sec-Fetch-Site':'same-origin','Content-Type':'application/json','X-CLL-Turnstile':'receipt-test-token'},body:padded}),env:{...turnstileEnv,RECEIPTS_ENABLED:'true',RECEIPT_SECRET:secret}})).status,400);
+  assert.equal(globalThis.fetch.mock.callCount(),before);
+});
+test('a verifier token cannot mint a receipt, and start or abandon events never reach signing',async()=>{
+  const wrong=await telemetry(context({headers:{'X-CLL-Turnstile':'verify-test-token'}}));
+  assert.equal(wrong.status,403);assert.equal((await wrong.json()).error,'verification_required');
+  const before=globalThis.fetch.mock.callCount();
+  for(const body of [{labId:'NET-201',eventType:'start',activeSeconds:0,stepReached:1},{labId:'NET-201',eventType:'abandon',activeSeconds:10,stepReached:1}]){
+    const response=await telemetry(context({body}));assert.equal(response.status,503);assert.equal((await response.json()).error,'telemetry_unavailable');
+  }
+  assert.equal(globalThis.fetch.mock.callCount(),before);
+  const db=database(),env={LAB_TELEMETRY:db,TELEMETRY_ENABLED:'true',TELEMETRY_PRIVACY_REVIEWED:'true',TELEMETRY_RETENTION_VERIFIED:'true'};
+  const started=await telemetry(context({env,body:{labId:'NET-201',eventType:'start',activeSeconds:0,stepReached:1,collectTelemetry:true}}));
+  assert.deepEqual(await started.json(),{ok:true,completionCode:null,telemetryStored:true,measurement:'browser-reported'});db.sql.close();
+});
+test('only the exact Pages deployment origin joins the allowlist, and a weak secret keeps receipts off',async()=>{
+  const get=(origin,env={})=>telemetry({request:new Request(origin+'/api/telemetry',{method:'GET',headers:{'Sec-Fetch-Site':'same-origin'}}),env:{...turnstileEnv,...env}});
+  const preview='https://abc123.cole-learning-labs.pages.dev';
+  assert.equal((await get(preview,{CF_PAGES_URL:preview})).status,200);
+  assert.equal((await get(preview)).status,403);
+  assert.equal((await get(preview,{CF_PAGES_URL:'https://other.cole-learning-labs.pages.dev'})).status,403);
+  assert.equal((await get('https://abc.evil.pages.dev',{CF_PAGES_URL:'https://abc.evil.pages.dev'})).status,403);
+  assert.equal((await get('https://cole-learning-labs.pages.dev',{CF_PAGES_URL:'https://cole-learning-labs.pages.dev'})).status,403);
+  assert.equal((await get('http://www.colelearninglabs.com')).status,403);
+  for(const RECEIPT_SECRET of ['x'.repeat(31),'a'.repeat(64)]){
+    const response=await telemetry(context({method:'GET',env:{RECEIPT_SECRET}}));
+    assert.deepEqual(await response.json(),{enabled:false,receiptsEnabled:false,telemetryEnabled:false});
+    assert.equal(response.headers.has('X-CLL-Turnstile-Sitekey'),false);
+  }
 });

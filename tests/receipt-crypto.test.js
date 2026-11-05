@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {generateCompletionCode,verifyCompletionCode,signPayload} from '../utils/receiptCrypto.js';
+import {generateCompletionCode,verifyCompletionCode,signPayload,validReceiptSecret} from '../utils/receiptCrypto.js';
 import {receiptLabId,RECEIPT_LABS,validateReceiptEvent} from '../src/receipt-schema.js';
 import {ARCADE_CATALOG} from '../src/arcade-catalog.js';
 import {CODE_QUESTS} from '../src/code-quest-catalog.js';
@@ -38,4 +38,32 @@ test('telemetry validation rejects unapproved fields, coercion, nonfinite values
   for(const change of [{name:'student'},{activeSeconds:'720'},{activeSeconds:NaN},{score:Infinity},{score:101},{stepReached:1.5},{collectTelemetry:'true'}])assert.equal(validateReceiptEvent({...event,...change}),null);
   assert.equal(validateReceiptEvent({...event,eventType:'start'}),null);
   assert.equal(validateReceiptEvent({labId:'NET-201',eventType:'start',activeSeconds:0,stepReached:1}).labId,'NET201');
+});
+test('look-alike characters are rejected before case folding and five-digit times round trip',async()=>{
+  const long=await generateCompletionCode({labId:'INC-101',score:100,activeSeconds:36000},secret);
+  assert.match(long,/^CLL1-INC101-100-36000-/u);assert.equal((await verifyCompletionCode(long,secret)).activeSeconds,36000);
+  assert.equal((await verifyCompletionCode(await generateCompletionCode({labId:'INC-101',score:0,activeSeconds:86400},secret),secret)).valid,true);
+  // U+0131 (dotless i) and U+017F (long s) upper-case into ASCII I and S.
+  assert.equal((await verifyCompletionCode(long.toLowerCase().replace('inc','ınc'),secret)).valid,false);
+  const code=await generateCompletionCode({labId:'SEC-400',score:100,activeSeconds:5},secret);
+  assert.equal((await verifyCompletionCode(code.replace('SEC','ſEC'),secret)).valid,false);
+  assert.equal((await verifyCompletionCode(code.replace('-100-','-1​00-'),secret)).valid,false);
+  // Ordinary paste padding (no-break space, byte-order mark) is still trimmed.
+  assert.equal((await verifyCompletionCode(' '+code+'﻿',secret)).valid,true);
+});
+test('placeholder and repeated-character secrets cannot enable signing or verification',async()=>{
+  const code=await generateCompletionCode({labId:'NET-201',score:100,activeSeconds:0},secret);
+  for(const weak of ['a'.repeat(32),' '.repeat(40),'ab'.repeat(20),'abcdefg'.repeat(6)]){
+    assert.equal(validReceiptSecret(weak),false,weak);
+    await assert.rejects(()=>generateCompletionCode({labId:'NET-201',score:100,activeSeconds:0},weak));
+    await assert.rejects(()=>verifyCompletionCode(code,weak));
+  }
+  const base='abcdefgh';
+  assert.equal(validReceiptSecret(base.repeat(4)),true);assert.equal(validReceiptSecret(base.repeat(32)),true);
+  assert.equal(validReceiptSecret(base.repeat(4).slice(1)),false);assert.equal(validReceiptSecret(base.repeat(32)+'a'),false);
+  for(const value of [null,undefined,42,{},[]])assert.equal(validReceiptSecret(value),false);
+  // The cached key is bound to the exact secret: a different secret never reuses it.
+  assert.equal((await verifyCompletionCode(code,secret)).valid,true);
+  assert.equal((await verifyCompletionCode(code,base.repeat(5))).valid,false);
+  assert.equal((await verifyCompletionCode(code,secret)).valid,true);
 });

@@ -645,3 +645,18 @@ body:not(.lab-view) .tour-task h2,body:not(.lab-view) .tutorial-reference h2{fon
 .lab-receipt-controls [data-lab-receipt]{background:#f5f8fa;color:#153d45;padding:18px;border:1px solid #b6cbd0;border-radius:10px}
 .lab-receipt-controls [data-lab-receipt] h3,.lab-receipt-controls [data-lab-receipt] p{color:#153d45}
 .lab-receipt-controls [data-lab-receipt] a{text-decoration:underline}
+/* The timer panel is injected on every activity page, so its styles live here
+   (receipt-verifier.css is loaded only by verify.html). Colors are chosen for
+   the dark .case-panel surface (#132332) and the light inline receipt card. */
+.lab-receipt-controls{padding-block:14px;margin-top:16px}
+.lab-receipt-controls .case-panel{color:#dce9f1}
+.lab-receipt-controls p{font-size:.95rem;line-height:1.5}
+.lab-receipt-controls .case-panel>.panel-help{color:#c7dfe7}
+.lab-receipt-controls .case-panel>.panel-help a{color:#9fe8d9;text-decoration:underline}
+.lab-receipt-controls .case-panel>.button-outline{background:transparent;color:#6ad5c0;border-color:#337769}
+.lab-receipt-controls .case-panel>.button-outline:hover{background:#173f3a}
+.lab-receipt-controls .case-panel>.button-outline:disabled{opacity:1;color:#b9cdd6;border-color:#4d6577;cursor:not-allowed}
+.lab-receipt-controls [data-lab-receipt] .button-outline{background:#ffffff;color:#00645d;border-color:#547c7c}
+.lab-receipt-controls [data-lab-receipt] .button-outline:hover{background:#e4f2ef}
+[data-lab-receipt] .lab-field{color:inherit;font-size:.94rem}
+[data-lab-receipt] .lab-field input{font-size:1rem;min-height:44px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}

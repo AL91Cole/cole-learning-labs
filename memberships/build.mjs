@@ -63,7 +63,10 @@ export async function prepareProtectedAssets({sourceRoot=siteRoot,files=MEMBER_F
   if(!assets.has('/learn/index.html')||!assets.has('/learn/src/app.js'))throw new Error('Private entry files are missing.');
   const memberBundle=await bundler({sourceRoot,member:true});
   if(!(memberBundle?.javascript instanceof Uint8Array))throw new Error('Invalid private app bundle.');
-  assets.set('/learn/src/app.js',{bytes:memberBundle.javascript,contentType:TYPES['.js']});
+  // compliance.html and verify.html are published only on the public site. Links
+  // emitted from JavaScript would otherwise resolve to a missing /learn/ page.
+  const bundleText=new TextDecoder('utf-8',{fatal:true}).decode(memberBundle.javascript).replace(/href=(\\?["'])(compliance|verify)\.html\1/gu,'href=$1https://www.colelearninglabs.com/$2$1');
+  assets.set('/learn/src/app.js',{bytes:encoder.encode(bundleText),contentType:TYPES['.js']});
   // One stylesheet avoids a burst of paid-entitlement checks for every CSS
   // import. All existing CSS lives below src, preserving its relative URL base.
   const expand=(filename,ancestors=new Set())=>{
