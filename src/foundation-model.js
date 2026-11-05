@@ -1,16 +1,17 @@
 import { initialHardwareState, normalizeHardwareState, applyHardwareAction, verifyHardware } from './hardware.js?release=20261106-fast-start';
 import { executeCoding } from './coding-lab.js?release=20261106-fast-start';
 import {OWNER_PREVIEW} from './owner-preview.js?release=20261106-fast-start';
+import {FOUNDATION_CATALOG} from './foundation-catalog.js?release=20261106-fast-start';
 
 const item = (id,label,looks,role) => ({id,label,looks,role});
 const check = (id,prompt,options,answer,explanation) => ({id,prompt,options:options.map(([id,label])=>({id,label})),answer,explanation});
 const job = (id,prompt,label,action=id) => ({id,prompt,label,action});
+const catalogEntry = id => {const entry=FOUNDATION_CATALOG.find(lab=>lab.id===id);if(!entry)throw new Error('Unknown beginner course: '+id);return entry;};
 const deepFreeze = value => {if(value&&typeof value==='object'){Object.values(value).forEach(deepFreeze);Object.freeze(value);}return value;};
 
 /** Public learning explanations, separate from the ticket catalogue and private teacher resources. */
 export const FOUNDATION_LABS = deepFreeze([
-  {id:'hardware',code:'HW-100',slug:'hardware',track:'hardware',title:'Meet the computer',grade:'7–12',minutes:15,nextLab:'INC-101',
-    summary:'Meet the parts, learn their jobs and fit virtual memory safely.',
+  {...catalogEntry('hardware'),
     goal:'Fit the memory, start the virtual PC and open the lesson file.',
     items:[
       item('board','Motherboard','The large board with sockets and slots.','Connects the parts so they can work together.'),
@@ -39,8 +40,7 @@ export const FOUNDATION_LABS = deepFreeze([
       job('boot','Start the PC and read the result.','Start the PC'),
       job('open-document','Open Lesson_Practice_File.docx to check that the original file is available.','Open the lesson file')
     ]},
-  {id:'network',code:'NET-200',slug:'network',track:'network',title:'Follow a network connection',grade:'7–12',minutes:12,nextLab:'NET-201',
-    summary:'Meet the network devices and follow a classroom connection.',
+  {...catalogEntry('network'),
     goal:'Connect the practice PC, get its network settings and open the practice page.',
     items:[
       item('device','Computer','The PC at the start of the connection.','Runs apps and sends or receives data through its network connection.'),
@@ -58,8 +58,7 @@ export const FOUNDATION_LABS = deepFreeze([
     ],
     choices:[{"action":"test-unwired","label":"Try the page first","feedback":"Connect the cable first. A page request needs a physical path."},{"action":"skip-settings","label":"Skip the address settings","feedback":"The cable is connected, but the PC still needs an IP address and gateway."},{"action":"skip-dns","label":"Skip the name lookup","feedback":"The address is ready. DNS must still find the practice page by name."}],
     jobs:[job('connect-wired','Connect the practice PC to the switch.','Connect the Ethernet cable'),job('request-dhcp','Use DHCP to get the practice PC’s network settings.','Get automatic settings'),job('test-service','Use DNS to find the practice page, then open it.','Open the practice page')]},
-  {id:'ai',code:'AI-300',slug:'ai',track:'ai',title:'Understand an AI response',grade:'7–12',minutes:12,nextLab:'AI-301',
-    summary:'Learn how an AI reply is made and check a practice answer.',
+  {...catalogEntry('ai'),
     goal:'Use a made-up prompt, check the reply and ask a person to review it.',
     items:[
       item('prompt','Prompt','The request sent before an AI reply.','Tells the AI what to do. Use made-up examples and leave out private information.'),
@@ -76,8 +75,7 @@ export const FOUNDATION_LABS = deepFreeze([
     ],
     choices:[{"action":"use-private-prompt","label":"Use a real class list","feedback":"Keep private details out. Use the made-up classroom prompt."},{"action":"accept-claim","label":"Keep the original reply","feedback":"The source does not say to restart every 30 minutes. Correct the claim before using it."},{"action":"skip-human","label":"Let the AI approve itself","feedback":"A person must check the reply for accuracy, fairness and suitability."}],
     jobs:[job('choose-fictional','Use the prepared prompt about a made-up classroom.','Use the practice prompt'),job('check-evidence','The AI says to restart every 30 minutes. The source says to save work and restart only when instructed. Correct the reply.','Correct the reply'),job('request-human-review','Check the corrected reply for accuracy and fairness. Keep a person in charge of using it.','Complete human review')]},
-  {id:'security',code:'SEC-400',slug:'security',track:'security',title:'Practice safe security habits',grade:'7–12',minutes:12,nextLab:'SEC-401',
-    summary:'Learn where testing is allowed and how to protect a practice account.',
+  {...catalogEntry('security'),
     goal:'Follow the practice rules, add a second sign-in factor and limit account access.',
     items:[
       item('scope','Allowed testing (scope)','The permission card beside the practice system.','Lists which systems and actions you may test. Ask your teacher if permission is unclear.'),
@@ -94,8 +92,7 @@ export const FOUNDATION_LABS = deepFreeze([
     ],
     choices:[{"action":"ignore-scope","label":"Test any account","feedback":"Only the made-up training account is allowed. Check the practice rules first."},{"action":"use-two-passwords","label":"Add another password","feedback":"Two passwords are the same type of proof. Choose a practice authenticator as the second factor."},{"action":"keep-admin","label":"Keep administrator access","feedback":"The learner task does not need administrator access. Give only the access needed."}],
     jobs:[job('confirm-scope','Read the permission card. Only this made-up training account is allowed.','Confirm the practice rules'),job('enable-mfa','Add a second sign-in factor to the practice account. No real password or device is needed.','Add the practice second factor'),job('least-privilege','Change the practice account from administrator to the limited learner role.','Limit the account access')]},
-  {id:'coding',code:'CODE-500',slug:'coding',track:'coding',title:'Read, change, and test code',grade:'7–12',minutes:15,nextLab:'CODE-501',
-    summary:'Read a short program, fix its calculation and check the results.',
+  {...catalogEntry('coding'),
     goal:'Use multiplication to get the right total for quantities 0, 2 and 5.',
     items:[
       item('input','Input','The quantity shown beside each test.','The value given to the program. It changes between tests, so do not use one fixed answer.'),

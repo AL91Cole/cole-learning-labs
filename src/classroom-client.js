@@ -2,24 +2,11 @@
 import { SCENARIOS } from './scenarios.js?release=20261106-fast-start';
 import { inquiryProtectedEvents } from './interview.js?release=20261106-fast-start';
 import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261106-fast-start';
-export const CLASSROOM_ACTIVE_KEY = 'cole-learning-labs:classroom:v1';
+import {CLASSROOM_ACTIVE_KEY,classroomSelection,classroomStorageKey} from './classroom-session.js?release=20261106-fast-start';
+export {CLASSROOM_ACTIVE_KEY,classroomSelection,classroomStorageKey};
 // Saved sessions and page settings cannot authorize network sharing while the
 // school, privacy, insurance and operating requirements await review.
 const CLASSROOM_NETWORK_REVIEW_APPROVED = false;
-const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-
-export function classroomSelection() {
-  try {
-    const value = JSON.parse(localStorage.getItem(CLASSROOM_ACTIVE_KEY) || 'null');
-    return value && typeof value.studentId === 'string' && typeof value.classId === 'string' && uuid.test(value.studentId) && uuid.test(value.classId) ? value : null;
-  } catch { return null; }
-}
-
-export function classroomStorageKey() {
-  const selected = classroomSelection();
-  return selected ? `cole-learning-labs:v2:classroom:${selected.classId}:${selected.studentId}` : 'cole-learning-labs:v2';
-}
-
 export function progressSnapshot(record, scenarioId) {
   const value = record && typeof record === 'object' && !Array.isArray(record) ? record : {};
   const scenario = SCENARIOS.find(entry => entry.id === scenarioId);

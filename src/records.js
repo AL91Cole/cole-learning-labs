@@ -2,6 +2,7 @@ import { normalizeHardwareState, verifyHardware } from './hardware.js?release=20
 import { normalizeWorkspaceState, verifyWorkspace } from './workspaces.js?release=20261106-fast-start';
 import { inquiryProgress } from './interview.js?release=20261106-fast-start';
 import { retainExperimentEvents, readExperiments, observationSnapshot } from './experiments.js?release=20261106-fast-start';
+import { registerRecordNormalizer } from './record-engines.js?release=20261106-fast-start';
 
 // A saved explanation and a fresh working setup are both needed for page 3.
 // This guides the lesson; imported learner work is not an assessment credential.
@@ -48,3 +49,6 @@ export function normalizeLabRecord(scenario, value) {
   if (record.closed && !inquiryProgress(scenario, record.events).complete) record.closed = false;
   return record;
 }
+// The storage manager in the start-up bundle reaches this normalizer only after
+// the investigation engines have loaded alongside it.
+registerRecordNormalizer(normalizeLabRecord);

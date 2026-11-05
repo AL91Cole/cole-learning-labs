@@ -14,12 +14,21 @@ The main application is still compiled by the reviewed tier compiler, but with e
 
 Measured on the compiled open release, uncompressed:
 
-| Delivery | Before | After |
-| --- | ---: | ---: |
-| Start-up script bytes | 1,224 KB | 936 KB |
-| Whole application | 1,224 KB | 1,232 KB across 28 files |
+| Delivery | Before splitting | After route groups | After engine decoupling |
+| --- | ---: | ---: | ---: |
+| Start-up script bytes | 1,224 KB | 936 KB | 303 KB (104 KB gzipped) |
+| Whole application | 1,224 KB | 1,232 KB across 28 files | 1,244 KB across 30 files |
 
-Remaining coupling, left for a follow-up: `records.js`, `scenarios.js`, `foundation-model.js` and `classroom-client.js` still import the hardware, workspace, interview and experiment engines statically, because saved-work normalization and the catalog data live beside that logic. Separating scenario data from engine code in `coding-lab.js`, `network-labs.js` and `expanded-labs.js`, and injecting the record normalizers, would move roughly another 600 KB off the home page.
+### Engine decoupling
+
+The second step removed the remaining static chains from the start-up module to the lab engines:
+
+- `coding-scenarios.js`, `network-scenarios.js` and `expanded-scenarios.js` hold the fictional case data that the lab library needs. `coding-lab.js`, `network-labs.js` and `expanded-labs.js` import and re-export them, so every existing import still works, but the interpreter, practice tools and renderers no longer travel with the catalog. Public compilation filters the coding cases in the data module exactly as it filtered them before and stubs the two member-only data modules.
+- `record-engines.js` is a small registry. `records.js` registers `normalizeLabRecord` when it loads with the investigation group; `local-work.js` reaches the normalizer through the registry. Saved work is only read or written from investigation and capstone pages, which always load that group first. If the registry is empty, the storage manager reports saving as unavailable instead of storing unvalidated data.
+- `classroom-session.js` holds the saved-work scope lookup that the start-up bundle needs; the classroom client itself, with its source gate, downloads with the investigation group.
+- `foundation-catalog.js` lists the beginner courses for the home page and library; `foundation-model.js` merges those entries into the full models and downloads with the beginner-course group.
+
+The static import graph from `src/app.js` now holds 35 small modules: catalogs, case data, route parsing, storage scope, telemetry and the two assistive tools.
 
 ## Display menu
 
@@ -37,10 +46,10 @@ Remaining coupling, left for a follow-up: `records.js`, `scenarios.js`, `foundat
 
 Headless Chromium against the compiled artifact served by `scripts/serve.mjs`:
 
-- Home page loads 15 script files; opening the arcade fetches one additional chunk; a hardware investigation fetches three.
+- Home page loads 15 script files; opening the arcade fetches one additional chunk; a hardware investigation fetches its route group and the shared engine chunks on first open.
 - The service worker registers and activates; with the network switched off, the home page reloads and the arcade opens from cache.
 - Display choices change the root font size and contrast attribute, survive a reload, close on Escape with focus returned to the button, and reset to nothing stored.
 - Read-aloud with a stubbed local voice read a lab page in 54 short utterances and reported completion; with no local voice it shows the explanatory notice.
 - No console errors during the run.
 
-Not yet done: hands-on screen-reader checks of the new panels, real-device voice checks on managed Chromebooks, Windows and iPad, and the follow-up data split described above.
+Not yet done: hands-on screen-reader checks of the new panels and real-device voice checks on managed Chromebooks, Windows and iPad.

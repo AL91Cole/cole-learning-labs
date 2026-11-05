@@ -1,4 +1,4 @@
-import {normalizeLabRecord} from './records.js?release=20261106-fast-start';
+import {normalizeSavedRecord} from './record-engines.js?release=20261106-fast-start';
 
 export const WORK_PREFIX = 'cole-learning-labs:v2';
 // A reduced public catalog must never overwrite previously saved full-catalog work.
@@ -21,7 +21,7 @@ export function normalizeWorkCollection(scenarios, value) {
   const labs = value?.version === 2 && value.labs && typeof value.labs === 'object' && !Array.isArray(value.labs) ? value.labs : {};
   const clean = {};
   for (const scenario of scenarios) {
-    if (Object.hasOwn(labs, scenario.id)) clean[scenario.id] = normalizeLabRecord(scenario, labs[scenario.id]);
+    if (Object.hasOwn(labs, scenario.id)) clean[scenario.id] = normalizeSavedRecord(scenario, labs[scenario.id]);
   }
   return {version:2, labs:clean};
 }
