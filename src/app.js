@@ -653,12 +653,45 @@ function setSiteMenuOpen(open,{restoreFocus=false}={}){
   $('#menu-toggle').setAttribute('aria-label',open?'Close navigation menu':'Open navigation menu');
   if(restoreFocus)$('#menu-toggle').focus({preventScroll:true});
 }
+// The header categories open on hover or keyboard focus through CSS alone. This adds what CSS cannot: Escape,
+// putting a category away once a link is chosen, tap-to-open inside the small-screen menu, and a true aria-expanded.
+function bindNavGroups(nav){
+  const groups=[...(nav.querySelectorAll?.('.nav-group')||[])];
+  const stacked=()=>typeof matchMedia==='function'&&matchMedia('(max-width:1050px)').matches;
+  const shown=group=>stacked()?group.classList.contains('expanded'):!group.classList.contains('dismissed')&&group.matches(':hover,:focus-within');
+  const sync=group=>group.querySelector('.nav-group-name')?.setAttribute('aria-expanded',String(shown(group)));
+  const close=group=>{group.classList.remove('expanded');if(!stacked())group.classList.add('dismissed');sync(group);};
+  const restore=group=>{group.classList.remove('dismissed');sync(group);};
+  for(const group of groups){
+    const name=group.querySelector('.nav-group-name');let wasShown=false;
+    sync(group);
+    group.addEventListener('pointerenter',()=>sync(group));
+    // A mouse click leaves focus on the name; without this the category would stay open after the pointer moves away.
+    group.addEventListener('pointerleave',event=>{if(event.pointerType!=='mouse')return;if(document.activeElement===name)name.blur();restore(group);});
+    group.addEventListener('focusin',()=>sync(group));
+    group.addEventListener('focusout',event=>{if(!group.contains(event.relatedTarget)&&!group.matches(':hover'))group.classList.remove('dismissed');setTimeout(()=>sync(group),0);});
+    name.addEventListener('pointerdown',()=>{wasShown=document.activeElement===name&&shown(group);});
+    name.addEventListener('click',event=>{
+      if(stacked()){const open=!group.classList.contains('expanded');groups.forEach(other=>{other.classList.remove('expanded','dismissed');});group.classList.toggle('expanded',open);groups.forEach(sync);return;}
+      // Keyboard: Enter or Space opens and closes. Pointer: hover already opened it, so only a second press closes.
+      const shut=event.detail===0?shown(group):wasShown;wasShown=false;
+      if(shut)close(group);else{name.focus({preventScroll:true});restore(group);}
+    });
+  }
+  return {groupOf:target=>{const group=target?.closest?.('.nav-group');return group&&nav.contains(group)?group:null;},shown,close};
+}
 function bindMenuDismissal(){
-  const nav=$('#site-nav'),toggle=$('#menu-toggle');
+  const nav=$('#site-nav'),toggle=$('#menu-toggle'),menus=bindNavGroups(nav);
   const inside=target=>target===toggle||toggle.contains?.(target)||nav.contains(target);
-  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&nav.classList.contains('open')&&inside(event.target)){event.preventDefault();setSiteMenuOpen(false,{restoreFocus:true});}});
+  document.addEventListener('keydown',event=>{
+    if(event.key!=='Escape')return;
+    const group=menus.groupOf(event.target);
+    // Escape closes the open category first and returns focus to its name; a second Escape closes the small-screen menu.
+    if(group&&menus.shown(group)){event.preventDefault();group.querySelector('.nav-group-name')?.focus({preventScroll:true});menus.close(group);return;}
+    if(nav.classList.contains('open')&&inside(event.target)){event.preventDefault();setSiteMenuOpen(false,{restoreFocus:true});}
+  });
   document.addEventListener('click',event=>{if(nav.classList.contains('open')&&!inside(event.target))setSiteMenuOpen(false);});
-  nav.addEventListener('click',event=>{const link=event.target.closest?.('a[href]');if(!link||!nav.contains(link))return;const wasOpen=nav.classList.contains('open');setSiteMenuOpen(false);if(wasOpen&&link.hash&&link.hash===location.hash)$('#main').focus({preventScroll:true});});
+  nav.addEventListener('click',event=>{const link=event.target.closest?.('a[href]');if(!link||!nav.contains(link))return;const group=menus.groupOf(link),wasOpen=nav.classList.contains('open')||Boolean(group);if(group)menus.close(group);setSiteMenuOpen(false);if(wasOpen&&link.hash&&link.hash===location.hash)$('#main').focus({preventScroll:true});});
   const leave=event=>{if(event.relatedTarget&&nav.classList.contains('open')&&!inside(event.relatedTarget))setSiteMenuOpen(false);};
   nav.addEventListener('focusout',leave);toggle.addEventListener('focusout',leave);
 }

@@ -23,6 +23,8 @@ The idea behind every change: **you're the tech team. Follow the clues, try a fi
 - **Everyday Tech** (`/everyday-tech`) is a path for families and adult beginners that reuses the phishing, AI fact-checking and troubleshooting activities with everyday scenarios.
 - Personal projects moved from the home page to **About Mx. Cole**. The home page links there once; `#projects` still works and is no longer in the header.
 - The Listen and Display tools no longer cover the hero buttons. See "Listen and Display tools" below.
+- **Header menus.** The header has five categories: Labs and games, Students and families, Teachers, Schools, About. Each opens on hover or keyboard focus and lists its pages, so the student guide, Everyday Tech, Teach a lesson and the school review pages are reachable from the top of the page. The same menu is on the nine landing pages, where it works without scripts. On the home page a script adds Escape, closes a category once a link is chosen and keeps `aria-expanded` accurate. Below 1050 px the home page puts the categories inside the Menu button, where each opens when chosen. A link mode that hides every link in a category hides the category.
+- **Footer.** The home page footer groups its 13 links under four headings (Learn, Teachers, Schools, Site) in columns: four across on a wide screen, two across on a narrow one. It measured 290 px tall at 1366 × 768. Links are 34 px tall for a mouse or trackpad and 44 px on any device with a touch screen.
 
 ### 2. The Blank Monitor and Inbox Defender
 
@@ -132,6 +134,7 @@ The home page was 317,820 script bytes and 376,848 style bytes before this chang
 
 - Each landing page gets its own 188 KB stylesheet bundle because it reuses the main site styles. A small dedicated stylesheet would make these pages lighter.
 - The home page still delivers all route styles up front (381 KB).
+- On the nine script-free pages a header category opened by hover closes when the pointer moves away, not with Escape, because those pages run no scripts. WCAG 2.2 success criterion 1.4.13 asks for a way to dismiss hover content without moving the pointer, so this is a known gap on those pages. The home page handles Escape. Closing the gap means either a small menu script on those pages or click-to-open menus there.
 - Live route chunks are served with two joined `Cache-Control` values, so their one-year caching may not take effect. Fixing it changes `_headers` rules that tests pin.
 - `INC-107` and `SEC-405` open because the public release is built with open lab access. If that changes, the pilot's alternate ticket and the grades 9–12 Start here card need membership; the home page already falls back, and the pilot page tells teachers to check.
 - The availability requests to `/api/reach` and `/api/telemetry` still go out in every link mode. The district pages disclose them.
