@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {mountLearningGuides} from '../src/activity-guidance.js';
+import {bindNavGroups} from '../src/site-menu.js';
 
 const source=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/gu,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -28,7 +29,7 @@ function makeDocument(){const document={activeElement:null,listeners:new Map()};
 function menuHarness(){
   const document=makeDocument(),nav=new Element(document),toggle=new Element(document),main=new Element(document),outside=new Element(document),link=new Element(document);link.parent=nav;link.hash='#home';link.closest=selector=>selector==='a[href]'?link:null;
   const elements=new Map([['#site-nav',nav],['#menu-toggle',toggle],['#main',main]]),location={hash:'#home'};
-  const context=vm.createContext({mountLearningGuides,document,location,$:selector=>elements.get(selector)});
+  const context=vm.createContext({mountLearningGuides,bindNavGroups,document,location,$:selector=>elements.get(selector)});
   const start=source.indexOf('function setSiteMenuOpen('),end=source.indexOf("\n$('.skip-link').addEventListener",start);assert.ok(start>=0&&end>start);
   vm.runInContext(source.slice(start,end),context);
   return {document,nav,toggle,main,outside,link,location};

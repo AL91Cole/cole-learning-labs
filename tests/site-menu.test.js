@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {PUBLIC_LANDING_PAGES} from '../scripts/build.mjs';
+import {bindNavGroups} from '../src/site-menu.js';
 
 const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8');
 const source = read('src/app.js'), styles = read('src/styles.css');
@@ -91,7 +92,7 @@ function menuHarness({stacked = false} = {}) {
   });
   nav.querySelectorAll = selector => selector === '.nav-group' ? groups.map(item => item.group) : [];
   const elements = new Map([['#site-nav', nav], ['#menu-toggle', toggle], ['#main', main]]);
-  const context = vm.createContext({document, location: {hash: '#home'}, setTimeout: callback => callback(), matchMedia: () => ({matches: state.stacked}), $: selector => elements.get(selector)});
+  const context = vm.createContext({document, bindNavGroups, location: {hash: '#home'}, matchMedia: () => ({matches: state.stacked}), $: selector => elements.get(selector)});
   const start = source.indexOf('function setSiteMenuOpen('), end = source.indexOf("\n$('#menu-toggle').addEventListener", start);
   assert.ok(start >= 0 && end > start);
   vm.runInContext(source.slice(start, end) + '\nbindMenuDismissal();', context);
@@ -127,6 +128,32 @@ test('with a mouse, hover opens a category, choosing a link puts it away, and le
   h.state.hovered = null; first.group.fire('pointerleave', {pointerType: 'mouse'});
   assert.equal(first.group.classList.contains('dismissed'), false); assert.equal(expanded(first), 'false');
   assert.notEqual(h.document.activeElement, first.name, 'a mouse press does not leave the category stuck open');
+});
+
+test('Escape closes a category that hover opened, without moving the pointer and wherever the focus is', () => {
+  const h = menuHarness(), [first] = h.groups;
+  h.main.focus();
+  h.state.hovered = first.group; first.group.fire('pointerenter', {pointerType: 'mouse'});
+  assert.equal(expanded(first), 'true');
+  const escape = h.document.fire('keydown', {key: 'Escape', target: h.main});
+  assert.equal(escape.defaultPrevented, true);
+  assert.equal(first.group.classList.contains('dismissed'), true, 'the panel is put away while the pointer is still over it');
+  assert.equal(expanded(first), 'false');
+  assert.equal(h.document.activeElement, h.main, 'focus stays where it was');
+  const again = h.document.fire('keydown', {key: 'Escape', target: h.main});
+  assert.equal(again.defaultPrevented, false, 'with nothing showing, Escape is left alone');
+  h.state.hovered = null; first.group.fire('pointerleave', {pointerType: 'mouse'});
+  h.state.hovered = first.group; first.group.fire('pointerenter', {pointerType: 'mouse'});
+  assert.equal(expanded(first), 'true', 'hovering again reopens it');
+});
+
+test('the menu helper is the only script on the landing pages and it touches nothing but the header', () => {
+  const helper = read('src/site-menu.js');
+  for (const word of ['fetch(', 'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'localStorage', 'sessionStorage', 'indexedDB', 'document.cookie', 'import ', 'innerHTML', 'eval(']) assert.equal(helper.includes(word), false, 'the helper does not use ' + word);
+  assert.ok(helper.includes("document.querySelector('.school-header nav')"), 'on a plain page it binds the header menu by itself');
+  assert.ok(source.includes("import {bindNavGroups} from './site-menu.js?release="), 'the home page uses the same helper');
+  // Without the script the menus still open: every rule that shows a panel is plain CSS.
+  assert.equal(helper.includes('.style.'), false);
 });
 
 test('inside the small-screen menu a category opens when chosen, one at a time, and Escape closes it first', () => {

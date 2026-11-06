@@ -240,7 +240,7 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
   if(typeof split!=='boolean'||(split&&entry!=='app.js'))throw new Error('Route splitting is reviewed for the main application only.');
   if(typeof ownerPreview!=='boolean')throw new Error('A boolean owner-preview build option is required.');
   if(ownerPreview&&(!member||!localOnly||entry!=='app.js'))throw new Error('Owner preview navigation requires the full local-only main application.');
-  if(!['app.js','secure-reports.js','receipt-verifier.js'].includes(entry))throw new Error('Only reviewed application, local report-reader, or code-verifier entries may be bundled.');
+  if(!['app.js','secure-reports.js','receipt-verifier.js','site-menu.js'].includes(entry))throw new Error('Only reviewed application, local report-reader, code-verifier, or header-menu entries may be bundled.');
   const root=path.resolve(sourceRoot),info=await lstat(root);
   if(info.isSymbolicLink()||!info.isDirectory()||await realpath(root)!==root)throw new Error('Tier source root must be a canonical real directory.');
   const sourceDirectory=path.join(root,'src'),sourceInfo=await lstat(sourceDirectory);

@@ -23,7 +23,7 @@ The idea behind every change: **you're the tech team. Follow the clues, try a fi
 - **Everyday Tech** (`/everyday-tech`) is a path for families and adult beginners that reuses the phishing, AI fact-checking and troubleshooting activities with everyday scenarios.
 - Personal projects moved from the home page to **About Mx. Cole**. The home page links there once; `#projects` still works and is no longer in the header.
 - The Listen and Display tools no longer cover the hero buttons. See "Listen and Display tools" below.
-- **Header menus.** The header has five categories: Labs and games, Students and families, Teachers, Schools, About. Each opens on hover or keyboard focus and lists its pages, so the student guide, Everyday Tech, Teach a lesson and the school review pages are reachable from the top of the page. The same menu is on the nine landing pages, where it works without scripts. On the home page a script adds Escape, closes a category once a link is chosen and keeps `aria-expanded` accurate. Below 1050 px the home page puts the categories inside the Menu button, where each opens when chosen. A link mode that hides every link in a category hides the category.
+- **Header menus.** The header has five categories: Labs and games, Students and families, Teachers, Schools, About. Each opens on hover or keyboard focus and lists its pages, so the student guide, Everyday Tech, Teach a lesson and the school review pages are reachable from the top of the page. The same menu is on the nine landing pages. The menus open through CSS, so they still work if scripts are blocked. One small shared script, `src/site-menu.js`, adds Escape (it closes whichever category is showing, without moving the pointer and wherever the focus is), and keeps `aria-expanded` accurate. On the home page it also closes a category once a link is chosen. Below 1050 px the home page puts the categories inside the Menu button, where each opens when chosen. A link mode that hides every link in a category hides the category.
 - **Footer.** The home page footer groups its 13 links under four headings (Learn, Teachers, Schools, Site) in columns: four across on a wide screen, two across on a narrow one. It measured 290 px tall at 1366 × 768. Links are 34 px tall for a mouse or trackpad and 44 px on any device with a touch screen.
 
 ### 2. The Blank Monitor and Inbox Defender
@@ -46,7 +46,7 @@ The idea behind every change: **you're the tech team. Follow the clues, try a fi
 
 ### 4. Teacher toolkit
 
-Script-free pages at ordinary addresses:
+Plain pages at ordinary addresses. Their content needs no JavaScript; the only script they load is the header menu helper:
 
 | Address | Purpose |
 | --- | --- |
@@ -70,7 +70,7 @@ Standards codes appear only on these pages, only for codes whose wording was rea
 
 ### 6. Discovery and sharing
 
-All nine pages are in `sitemap.xml`, have their own title, description and canonical address, and need no JavaScript. Existing hash routes, classroom link modes and redirects are unchanged. Sharing is a link and text; there is no account, roster or grade connection, and the site still cannot be framed.
+All nine pages are in `sitemap.xml`, have their own title, description and canonical address, and their content needs no JavaScript. Each loads one script, `src/site-menu.js` (1,548 bytes built), which only handles the header menu: it reads nothing, stores nothing and makes no requests. Existing hash routes, classroom link modes and redirects are unchanged. Sharing is a link and text; there is no account, roster or grade connection, and the site still cannot be framed.
 
 ## Listen and Display tools
 
@@ -117,9 +117,9 @@ Measured locally, uncompressed, from a cleared cache:
 | Page | Scripts | Script bytes | Style bytes | HTML bytes |
 | --- | --- | --- | --- | --- |
 | Home | 15 | 324,654 | 380,691 | — |
-| `/lessons/blank-monitor` | 0 | 0 | 188,533 | 17,661 |
+| `/lessons/blank-monitor` | 1 | 1,548 | 193,313 | 19,778 |
 
-The home page was 317,820 script bytes and 376,848 style bytes before this change. The hero preview button answered in under 1 ms. These are local figures; no network timing was taken.
+The lesson row is the size of the built files after the header menus and footer columns were added. The home row was measured in the browser before them and was not measured again. The home page was 317,820 script bytes and 376,848 style bytes before this release. The hero preview button answered in under 1 ms. These are local figures; no network timing was taken.
 
 ## Not checked
 
@@ -134,7 +134,7 @@ The home page was 317,820 script bytes and 376,848 style bytes before this chang
 
 - Each landing page gets its own 188 KB stylesheet bundle because it reuses the main site styles. A small dedicated stylesheet would make these pages lighter.
 - The home page still delivers all route styles up front (381 KB).
-- On the nine script-free pages a header category opened by hover closes when the pointer moves away, not with Escape, because those pages run no scripts. WCAG 2.2 success criterion 1.4.13 asks for a way to dismiss hover content without moving the pointer, so this is a known gap on those pages. The home page handles Escape. Closing the gap means either a small menu script on those pages or click-to-open menus there.
+- The header menus open on hover. Escape closing a hovered category was checked on the home page and a lesson page in desktop Chromium with a real pointer hover and a real key press. It has not been checked by a person with a screen reader or on a touch screen.
 - Live route chunks are served with two joined `Cache-Control` values, so their one-year caching may not take effect. Fixing it changes `_headers` rules that tests pin.
 - `INC-107` and `SEC-405` open because the public release is built with open lab access. If that changes, the pilot's alternate ticket and the grades 9–12 Start here card need membership; the home page already falls back, and the pilot page tells teachers to check.
 - The availability requests to `/api/reach` and `/api/telemetry` still go out in every link mode. The district pages disclose them.

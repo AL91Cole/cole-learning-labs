@@ -45,7 +45,7 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // The single test action with its list of remaining steps, the report summary, the
   // sentence helper, the Start here section, clue feedback in Inbox Defender, and the
   // capstone reasons, pair roles and debrief add about 19 KB of source. Teacher, family
-  // and district content lives in script-free pages outside this graph; compiled caps
+  // and district content lives in plain pages outside this graph; compiled caps
   // stay unchanged.
   assert.ok(bytes<1_665_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });

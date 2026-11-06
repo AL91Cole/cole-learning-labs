@@ -12,7 +12,8 @@ import {PART_ART} from '../src/part-art.js';
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 
-// Script-free pages at ordinary URLs: the teacher hub, featured lessons, the family path and the district review.
+// Plain pages at ordinary URLs: the teacher hub, featured lessons, the family path and the district review.
+// Their only script is src/site-menu.js, which lets Escape close a header menu.
 // They are published on the public site only and never join the member or owner bundles.
 export const PUBLIC_LANDING_PAGES = Object.freeze([
   'teach.html', 'everyday-tech.html', 'district-review.html',
@@ -23,7 +24,7 @@ export const PUBLIC_LANDING_PAGES = Object.freeze([
 export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/turnstile-client.js', 'src/receipt-schema.js', 'src/lab-telemetry.js', 'src/receipt-verifier.js', 'src/receipt-verifier.css',
   'index.html', '404.html', 'classroom.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', 'teacher/index.html', 'student-workbook.html', 'practice-quizzes.html',
-  ...PUBLIC_LANDING_PAGES, 'src/landing.css',
+  ...PUBLIC_LANDING_PAGES, 'src/landing.css', 'src/site-menu.js',
   'manifest.webmanifest', 'sw.js', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/icon-maskable-512.png', 'assets/apple-touch-icon.png',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
@@ -65,7 +66,7 @@ const PREVIEW_FILES = Object.freeze([
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   ...PUBLIC_METADATA_FILES, ...PUBLIC_SHELL_FILES,
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png', ...Object.values(PART_ART),
-  'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js',
+  'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js', 'src/site-menu.js',
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
 const OPEN_RESOURCES=Object.freeze(['student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
@@ -209,6 +210,9 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   content.set('src/secure-reports.js',Buffer.from(localTool.javascript));
   const verifier = await bundleTier({sourceRoot:root,member:false,entry:'receipt-verifier.js'});
   content.set('src/receipt-verifier.js',Buffer.from(verifier.javascript));
+  // The landing pages load the header menu helper on its own; the home page gets it inside the application bundle.
+  const siteMenu = await bundleTier({sourceRoot:root,member:false,entry:'site-menu.js'});
+  content.set('src/site-menu.js',Buffer.from(siteMenu.javascript));
   content.set('sw.js',Buffer.from(offlineWorkerSource(content.get('sw.js').toString('utf8'),offlinePrecacheList(content))));
   await safeBuildDirectory(outputParent, output, 'dist');
 

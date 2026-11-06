@@ -707,7 +707,7 @@ body:not(.lab-view) .part-art img{border-color:#cfdbe1}body:not(.lab-view) .part
 @media(max-width:580px){.start-here-grid{grid-template-columns:minmax(0,1fr)}}
 
 /* Header category menus. A category opens when the pointer is over it or the keyboard focus is inside it, through
-   CSS alone, so the menus also work on pages that run no scripts. */
+   CSS alone, so the menus still open if scripts are blocked. src/site-menu.js adds Escape and aria-expanded. */
 .site-header nav .nav-group{position:relative}
 .site-header nav .nav-group-name{appearance:none;display:inline-flex;align-items:center;gap:7px;min-height:44px;margin:0;padding:4px 0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;font:inherit;font-size:.9rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
 .site-header nav .nav-group-name::after{content:"";flex:none;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg)}
@@ -741,7 +741,7 @@ body:not(.lab-view) .part-art img{border-color:#cfdbe1}body:not(.lab-view) .part
   .site-header:not(.school-header) nav .nav-panel a{white-space:normal;padding:8px 0}
 }
 @media(max-width:900px){
-  /* Script-free pages: a panel spans the whole menu row, so it never runs off a narrow screen. */
+  /* Landing pages: a panel spans the whole menu row, so it never runs off a narrow screen. */
   .site-header.school-header nav{position:relative;gap:6px 18px}
   .site-header.school-header nav .nav-group{position:static}
   .site-header.school-header nav .nav-panel,.site-header.school-header nav .nav-group:nth-last-of-type(-n+2) .nav-panel{left:0;right:0;min-width:0}

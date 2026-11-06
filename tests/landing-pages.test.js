@@ -53,14 +53,17 @@ test('every landing page is a reviewed, published, public-only file', () => {
   assert.equal(MEMBER_FILES.includes('src/landing.css'), false);
 });
 
-test('landing pages are script-free documents with one heading, a canonical URL and shared safeguards last', () => {
+test('landing pages are plain documents whose only script is the header menu helper, with one heading, a canonical URL and shared safeguards last', () => {
   const titles = new Set(), descriptions = new Set();
   for (const name of PUBLIC_SOURCE_FILES.filter(file => file.endsWith('.html') && !PUBLIC_LANDING_PAGES.includes(file))) {
     titles.add(read(name).match(/<title>([^<]+)<\/title>/u)?.[1]);
   }
   for (const [file, html] of pages) {
     assert.match(html, /^<!doctype html>\s*<html lang="en">/u, file);
-    assert.doesNotMatch(html, /<script\b|<iframe\b|<form\b|<input\b|<base\b|<object\b|<embed\b|\son[a-z]+\s*=|javascript:/iu, file + ' stays inert');
+    const menuScript = '<script type="module" src="/src/site-menu.js?release=' + release + '"></script>';
+    assert.equal(html.split('<script').length, 2, file + ' loads one script');
+    assert.ok(html.includes(menuScript + '\n</body>'), file + ' loads only the header menu helper, last in the page');
+    assert.doesNotMatch(html.replace(menuScript, ''), /<script\b|<iframe\b|<form\b|<input\b|<base\b|<object\b|<embed\b|\son[a-z]+\s*=|javascript:/iu, file + ' stays inert');
     const title = html.match(/<title>([^<]+)<\/title>/u)?.[1];
     assert.ok(title && title.endsWith(' · Cole Learning Labs') && !titles.has(title), file + ' has a unique title');
     titles.add(title);

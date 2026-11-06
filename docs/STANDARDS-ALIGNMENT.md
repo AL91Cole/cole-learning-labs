@@ -38,7 +38,7 @@ The educator table filters by pathway, state concept, national concept and lab s
 
 ## Codes on featured lesson pages
 
-The script-free lesson pages under `/teach` show a New York State code only where the lesson's own evidence supports it. Each code is quoted exactly from the NYSED grade-band documents (read on November 5, 2026), linked to its source, paired with one thing a teacher can observe, and followed by the statement that this is the author's mapping and not an official NYSED review or endorsement. One lesson is practice toward a standard, not proof that a student has met it.
+The lesson pages under `/teach` show a New York State code only where the lesson's own evidence supports it. Each code is quoted exactly from the NYSED grade-band documents (read on November 5, 2026), linked to its source, paired with one thing a teacher can observe, and followed by the statement that this is the author's mapping and not an official NYSED review or endorsement. One lesson is practice toward a standard, not proof that a student has met it.
 
 | Lesson | Code | Observable |
 | --- | --- | --- |
