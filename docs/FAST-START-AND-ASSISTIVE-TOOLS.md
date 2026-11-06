@@ -32,7 +32,7 @@ The static import graph from `src/app.js` now holds 35 small modules: catalogs, 
 
 ## Display menu
 
-`src/display-menu.js` renders a Display button and panel at the bottom-left of every page, including lab views that hide the header. Choices: text size (standard, larger, largest), spacing (standard, more space), contrast (standard, stronger), motion (follow device, reduce animation). Each choice becomes a `data-*` attribute on the root element; `src/accessibility.css` carries the rules. Values are validated against a fixed list, stored under one device-only key, and removed again when everything is standard. Storage failures are reported, never thrown.
+`src/display-menu.js` renders a Display button and panel at the bottom-left of every page, including lab views that hide the header. On viewports up to 1500 px wide or 860 px tall the Listen and Display buttons show their icons only, with the words kept in each button's accessible name, so they cover less of the page; see [TECH-TEAM-EXPERIENCE.md](TECH-TEAM-EXPERIENCE.md) for the measurements. Choices: text size (standard, larger, largest), spacing (standard, more space), contrast (standard, stronger), motion (follow device, reduce animation). Each choice becomes a `data-*` attribute on the root element; `src/accessibility.css` carries the rules. Values are validated against a fixed list, stored under one device-only key, and removed again when everything is standard. Storage failures are reported, never thrown.
 
 ## Read-aloud
 

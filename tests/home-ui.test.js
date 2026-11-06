@@ -13,6 +13,7 @@ import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
 import {isFreeLab,routeAccess} from '../src/access-policy.js';
 import {CATALOG} from '../src/lab-catalog.js';
+import {learningRoute} from '../src/learning-routes.js';
 import {ELEMENTARY_LABS} from '../src/elementary-labs.js';
 
 const source=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
@@ -59,8 +60,11 @@ test('the homepage explains its counts, real privacy boundaries, and manual repo
   for(const copy of ['No account required for public labs','Practice stays on this device','School IT review available','Built-in replies remain available','downloaded reports','approved LMS'])assert.ok(html.includes(copy),copy);
   assert.match(html,/preview your report.*\.txt.*review it for personal information.*upload/iu);
   assert.doesNotMatch(html,/zero PII|FERPA.compliant|COPPA.compliant|automatically.*Google Classroom|guaranteed school approval/iu);
-  const beginnerStart=html.indexOf('id="basics-heading"'),portfolioStart=html.indexOf('class="project-feature"');
-  assert.ok(beginnerStart>=0&&beginnerStart<portfolioStart,'Beginner activities appear before the portfolio projects.');
+  assert.ok(html.indexOf('id="basics-heading"')>=0);
+  assert.equal(html.includes('class="project-feature"'),false,'Personal projects live on About Mx. Cole, not the home page.');
+  assert.ok(html.includes('<a class="text-link" href="#about">About Mx. Cole and my projects'));
+  assert.ok(source.slice(source.indexOf('function about(){'),source.indexOf('function connect(')).includes('${featuredProjects()}'),'About renders the featured projects.');
+  assert.ok(source.includes("if(page==='home'||page==='about')bindHome();"),'The project preview buttons are wired on About as well.');
   const free=harness({memberContent:false}),library=free.context.library();
   assert.match(free.context.home(),/>48<\/b><span>free learning activities/u);
   assert.match(free.context.home(),/>27<\/b><span>investigations, games &amp; coding paths/u);
@@ -96,6 +100,42 @@ test('library and unavailable membership notice list all 15 free K–6 activitie
   assert.match(gate,/<button class="button" type="button" disabled>Subscriptions unavailable<\/button>/u);
 });
 
+test('the hero names the job, gives students and educators one clear button each and keeps browsing easy to find',()=>{
+  const html=harness().context.home(),hero=html.slice(0,html.indexOf('class="hero-lab-preview"'));
+  assert.ok(hero.includes('<h1>Let’s work<br><em>it out.</em></h1>'));
+  assert.ok(hero.includes('You’re the tech team. Follow the clues, try a fix, and show how you know it worked.'));
+  assert.ok(hero.includes('<a class="button" href="#play/inbox-defender">Play Inbox Defender · 8 minutes '));
+  assert.ok(hero.includes('<a class="button button-outline" href="teach.html">Teach a lesson '));
+  assert.ok(hero.includes('<a class="text-link" href="#labs">Browse all labs '));
+  assert.equal(hero.includes('href="#projects"'),false);
+  assert.equal((hero.match(/class="button(?: button-outline)?"/gu)||[]).length,2,'Two primary choices, not a wall of buttons.');
+});
+
+test('Start here links one real activity per grade band with a time estimate and plain adult-help guidance',()=>{
+  const h=harness(),html=h.context.home(),start=html.slice(html.indexOf('class="wrap basics-section start-here"'),html.indexOf('class="wrap ga-entry"'));
+  assert.ok(html.indexOf('class="fact-strip"')<html.indexOf('id="start-here-heading"')&&html.indexOf('id="start-here-heading"')<html.indexOf('id="game-entry-title"'));
+  const cards=[...start.matchAll(/<li><a class="basics-card" href="#([^"]+)"><p class="eyebrow">([^<]+)<\/p><h3>([^<]+)<\/h3><p>([^<]+)<br>([^<]+)<\/p>/gu)].map(match=>match.slice(1));
+  assert.deepEqual(cards.map(card=>card.slice(0,3)),[
+    ['explore/EX-SEC-1','K–1',ELEMENTARY_LABS.find(lab=>lab.id==='EX-SEC-1').title],
+    ['play/inbox-defender?style=picture','Grades 2–3','Inbox Defender: Picture patrol'],
+    ['arcade/packet-post','Grades 4–6','Packet Post'],
+    ['lab/INC-101','Grades 7–8','The Blank Monitor'],
+    ['lab/SEC-405','Grades 9–12','Ransomware Response &amp; Evidence']
+  ]);
+  for(const [href,,,time,help] of cards){
+    const route=learningRoute('#'+href);assert.notEqual(route.page,'unknown',href);assert.notEqual(routeAccess(route),'unknown',href);
+    assert.match(time,/^About \d+(?:–\d+)? minutes$/u,href);assert.ok(help.length>10,href);
+  }
+  assert.match(cards[0][4],/grown-up/u);assert.match(cards[1][4],/trusted adult/u);
+  assert.equal(cards[3][3],'About '+SCENARIOS.find(s=>s.id==='INC-101').minutes+' minutes');
+  assert.equal(cards[4][3],'About '+SCENARIOS.find(s=>s.id==='SEC-405').minutes+' minutes');
+  assert.ok(start.includes('<p class="start-here-more"><a class="text-link" href="everyday-tech.html">Learning at home, or new to this as an adult? Try the Everyday Tech path '),'The whole sentence is the link, so student mode hides it cleanly.');
+  assert.equal(SCENARIOS.find(s=>s.id==='SEC-405').grade,'9–10','The school catalog keeps its own grade label.');
+  const free=harness({memberContent:false}).context.home();
+  assert.ok(free.includes('<a class="basics-card" href="#lab/SEC-402"><p class="eyebrow">Grades 9–12</p>'),'A build without open labs starts older students on a free investigation.');
+  assert.equal(free.includes('href="#lab/SEC-405"'),false);
+});
+
 test('all three native preview buttons give relevant immediate observations without touching a lab record',()=>{
   const h=harness(),html=h.context.home();h.context.bindHome();
   for(const label of ['Check video cable','Test wall outlet','Swap keyboard'])assert.ok(html.includes(label));
@@ -121,7 +161,8 @@ test('Guardian before and after is reversible, accessible, and uses inert exampl
 });
 
 test('featured work reuses authored portfolio data and every project has a closed technical disclosure',()=>{
-  const h=harness(),home=h.context.home(),portfolio=h.context.projectPage();
+  const h=harness(),home=h.context.featuredProjects(),portfolio=h.context.projectPage();
+  assert.equal((h.context.home().match(/<details class="project-details">/gu)||[]).length,0);
   assert.match(home,/AI Guardian Assistant — Project Labyrinth/u);assert.match(portfolio,/AI Guardian Assistant — Project Labyrinth/u);
   assert.match(home,/conflicting trust signals.*identity-aware decisions, audit trails, and decoy containment/su);
   assert.equal((portfolio.match(/<details class="project-details">/gu)||[]).length,4);

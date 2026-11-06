@@ -28,6 +28,16 @@ On October 17, 2026, a real report downloaded in connected desktop Chrome was co
 
 Physical Microsoft Edge, Chromebook, Android and iPad sessions were not connected for this verification. Treat those as required school-device acceptance checks before classroom use. Responsive layout and synthetic pointer-type tests are useful evidence but do not replace those checks. No independent accessibility or universal-device certification is claimed.
 
+## Checks that still need a real school Chromebook — November 5, 2026
+
+None of the checks below has been run on a managed school Chromebook. Automated tests and desktop-browser observations do not stand in for them. The full step list is the managed Chromebook checklist in [SCHOOL-PILOT.md](SCHOOL-PILOT.md); record results here with the date, device model, ChromeOS version and policy in force.
+
+- **ChromeVox:** navigation, the classroom link-mode strip, lab controls, the requester log and the report dialog.
+- **Device read-aloud voices:** whether the managed device offers a local English voice to the Listen panel. The panel selects no online voice and says so when no local voice exists.
+- **Managed download policy:** whether **Download .txt report** is allowed, where the file lands, whether it opens from Files and whether it survives sign-out.
+- **Lid-close behaviour:** in shared-device mode (`?cart=true`), whether a page asleep past the 40-minute limit clears when the device wakes under the district's sleep and sign-out settings, and whether the 38-minute warning appears on an open page.
+- **District filter and student network:** the real filter category and the student organizational unit's policy for `www.colelearninglabs.com`.
+
 ## Ticket controls and powered components — October 18, 2026
 
 The context21 local browser preview showed two tools for external display/power tickets, four for memory/storage work and the complete six-tool set for full assembly. All eight profiles kept complete controls closed and unchecked initially. Explicitly enabling complete controls preserved the action count and equipment. Native selector and action-row tests check the same ticket boundaries, with the full set available for saved repairs when explicitly chosen.

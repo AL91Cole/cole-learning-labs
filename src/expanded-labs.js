@@ -1,11 +1,11 @@
-import {EXPANDED_SCENARIOS} from './expanded-scenarios.js?release=20261106-fast-start';
+import {EXPANDED_SCENARIOS} from './expanded-scenarios.js?release=20261107-tech-team';
 export {EXPANDED_SCENARIOS};
-import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261106-fast-start';
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261106-fast-start';
-import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261106-fast-start';
-import {getNetworkBenchSpec,networkBenchInitial,normalizeNetworkBench,networkBenchSignature,networkCableChecks,applyNetworkBenchAction} from './network-bench.js?release=20261106-fast-start';
-import {NETWORK_CONFIG,networkChecks,networkDiagnostic} from './network-labs.js?release=20261106-fast-start';
-import {renderNetworkVisual,mountNetworkVisual} from './network-visuals.js?release=20261106-fast-start';
+import {supportsLearningActivity,renderLearningActivity,mountLearningActivity,disposeLearningActivity} from './learning-activities.js?release=20261107-tech-team';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261107-tech-team';
+import {renderInteractiveTools,mountInteractiveTools} from './interactive-tools.js?release=20261107-tech-team';
+import {getNetworkBenchSpec,networkBenchInitial,normalizeNetworkBench,networkBenchSignature,networkCableChecks,applyNetworkBenchAction} from './network-bench.js?release=20261107-tech-team';
+import {NETWORK_CONFIG,networkChecks,networkDiagnostic} from './network-labs.js?release=20261107-tech-team';
+import {renderNetworkVisual,mountNetworkVisual} from './network-visuals.js?release=20261107-tech-team';
 /** Local, fictional equipment and decision models. No service, shell, or AI calls. */
 const code = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));

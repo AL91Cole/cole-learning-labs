@@ -1,4 +1,4 @@
-import {SCENARIOS} from './scenarios.js?release=20261106-fast-start';
+import {SCENARIOS} from './scenarios.js?release=20261107-tech-team';
 
 const esc=value=>String(value??'').replace(/[&<>"']/gu,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const NYS_CONCEPTS=Object.freeze(['Impacts of Computing','Computational Thinking','Networks and Systems Design','Cybersecurity','Digital Literacy']);
@@ -83,7 +83,7 @@ export function standardsAlignmentHTML() {
   </tbody></table></div>
   <p data-standards-empty hidden>No pathways match all these filters. Clear a concept or choose another pathway.</p>
   <div class="guide-callout"><p><strong>Choose the expectation; review the work.</strong> This task-based interpretation is not an official NYSED or CSTA review, endorsement, complete curriculum crosswalk, or proof of student mastery. Choose the individual grade-band expectation and assess the learner’s explanation and tests.</p></div>
-  <details><summary>Official sources · checked October 25, 2026</summary><p><a href="${STANDARDS_SOURCES.nys}" target="_blank" rel="noopener noreferrer">NYSED state standards</a> · <a href="${STANDARDS_SOURCES.nysBands}" target="_blank" rel="noopener noreferrer">NYSED grade bands</a> · <a href="${STANDARDS_SOURCES.nysGuidance}" target="_blank" rel="noopener noreferrer">NYSED instructional guidance</a> · <a href="${STANDARDS_SOURCES.cstaNewYork}" target="_blank" rel="noopener noreferrer">CSTA New York’s guide</a> · <a href="${STANDARDS_SOURCES.csta}" target="_blank" rel="noopener noreferrer">2026 CSTA PK–12 standards</a> · <a href="${STANDARDS_SOURCES.cstaView}" target="_blank" rel="noopener noreferrer">CSTA’s official standards browser</a>. No individual standard codes are asserted here.</p></details>
+  <details><summary>Official sources · checked October 25, 2026</summary><p><a href="${STANDARDS_SOURCES.nys}" target="_blank" rel="noopener noreferrer">NYSED state standards</a> · <a href="${STANDARDS_SOURCES.nysBands}" target="_blank" rel="noopener noreferrer">NYSED grade bands</a> · <a href="${STANDARDS_SOURCES.nysGuidance}" target="_blank" rel="noopener noreferrer">NYSED instructional guidance</a> · <a href="${STANDARDS_SOURCES.cstaNewYork}" target="_blank" rel="noopener noreferrer">CSTA New York’s guide</a> · <a href="${STANDARDS_SOURCES.csta}" target="_blank" rel="noopener noreferrer">2026 CSTA PK–12 standards</a> · <a href="${STANDARDS_SOURCES.cstaView}" target="_blank" rel="noopener noreferrer">CSTA’s official standards browser</a>. No individual standard codes are asserted here. The featured lesson pages under <a href="teach.html">Teach a lesson</a> list any code separately, with the official wording and what to look for.</p></details>
   </section>`;
 }
 

@@ -1,5 +1,5 @@
-import {normalizeNetworkBench} from './network-bench.js?release=20261106-fast-start';
-import {NETWORK_SCENARIOS} from './network-scenarios.js?release=20261106-fast-start';
+import {normalizeNetworkBench} from './network-bench.js?release=20261107-tech-team';
+import {NETWORK_SCENARIOS} from './network-scenarios.js?release=20261107-tech-team';
 export {NETWORK_SCENARIOS};
 /** Original local networking adaptations. No live network, capture, or emulator calls. */
 const code=id=>typeof id==='string'?id.replaceAll('-','').toUpperCase():'';

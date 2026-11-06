@@ -13,7 +13,8 @@ An original SVG scene shows a message, shield and class portal. A supported deci
 - Messages are fixed, inert text. The `.invalid` addresses are fictional; there are no live message links, QR codes, uploads, credential fields or real reporting actions.
 - The controller accepts only fixed inspection, response, check, advance and restart actions. It cannot invoke the workspace reducer, grant evidence, save reports or unlock content.
 - State exists only in the mounted controller. Navigation, page exit and disposal release it and remove listeners. No storage, collection, network, timers, AI or runtime dependencies are added.
-- Only `#play/inbox-defender` is recognized. URL flags, paths and completion claims cannot select a round or confer membership. Public builds contain the reviewed game within the compiled application; the raw module is not a public endpoint.
+- Only `#play/inbox-defender` is recognized. One optional flag, `?style=picture`, opens the picture style first so a lesson page can link straight to it; the learner can still switch style on the page. No other flag is read. URL flags, paths and completion claims cannot select a round, a decision or a finished shift, or confer membership, and no age or grade is recorded from a link.
+- After each supported decision the game shows the clue or clues that supported it and one rule for that response: stop and report, verify another way, or continue through a known bookmark. A retry hint names what the message needs and which clue to look at again. Public builds contain the reviewed game within the compiled application; the raw module is not a public endpoint.
 - Existing classroom, improvement collection, member-content and owner-preview boundaries remain in force. Hosting and authentication configuration do not change.
 
 ## Delivery checks

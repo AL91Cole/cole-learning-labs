@@ -9,6 +9,8 @@ Two optional addresses a teacher can post for a class. They can be combined as `
 
 Both are implemented in [`src/session-modes.js`](../src/session-modes.js) and mounted once from `src/app.js`. A visible strip above the page names the active mode.
 
+The combined link is the launch link of the [no-account school pilot](SCHOOL-PILOT.md). That document lists which pilot controls the build or code enforces and which it does not.
+
 ## Student mode
 
 - The mode comes from `location.search`. Lab links are hash links, so the mode stays in the address while a learner moves between activities and when the page reloads.
@@ -27,6 +29,7 @@ Both are implemented in [`src/session-modes.js`](../src/session-modes.js) and mo
 ## Boundaries
 
 - The modes only restrict the page that was opened. They do not unlock an activity, confer membership, select a round, send a request or store anything. The module has no storage, network or dynamic-import calls.
+- The page's ordinary availability requests still go out in either mode: one `GET /api/reach` per page load and one `GET /api/telemetry` when a lab, course or game page opens, neither carrying learner work. See [SCHOOL-PILOT.md](SCHOOL-PILOT.md).
 - They are a classroom convenience, not a content filter or a device policy. A learner can open the plain address and get the standard page with optional device saving.
 - Shared-device mode does not delete work saved earlier in that browser. It is not offered there, and stays until someone uses the clear-local-work control on the standard page.
 - Downloaded reports, clipboard contents and submitted files are outside the page and are not cleared.

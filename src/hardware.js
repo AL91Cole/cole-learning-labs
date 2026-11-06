@@ -1,6 +1,6 @@
-import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261106-fast-start';
-import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261106-fast-start';
-import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261106-fast-start';
+import { initialAssemblyState, normalizeAssemblyState, applyAssemblyAction, assemblyFailure, assemblyActions } from './assembly-model.js?release=20261107-tech-team';
+import { mountAssemblyWorkbench } from './assembly-workbench.js?release=20261107-tech-team';
+import { mountWorkbenchInteractions } from './workbench-interactions.js?release=20261107-tech-team';
 /** Browser-only hardware simulations. All actions modify this model, never the host computer. */
 const CASES = {
   'INC-101': { title: 'The blank monitor', fault: 'The PC runs, but the monitor reports no signal.', select: 'rear' },
@@ -418,7 +418,7 @@ function hardwareMission(id, s) {
     'INC-104': 'Find the original classroom desktop.',
     'INC-105': 'Choose the connection that fits.',
     'INC-106': 'Build a workstation ready for class.',
-    'INC-107': 'Match the monitor source to the cable.',
+    'INC-107': 'Bring the picture back after the presentation.',
     'INC-108': 'Complete the display signal path.'
   };
   let feedback, action, label;

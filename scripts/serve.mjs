@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_FILES, publicFilesFor, buildSite } from './build.mjs';
+import { PUBLIC_FILES, PUBLIC_LANDING_PAGES, publicFilesFor, buildSite } from './build.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 
@@ -26,7 +26,9 @@ const ROUTES = new Map([
   ['/compliance', 'compliance.html'], ['/compliance/', 'compliance.html'],
   ['/verify', 'verify.html'], ['/verify/', 'verify.html'],
   ['/student-workbook', 'student-workbook.html'], ['/practice-quizzes', 'practice-quizzes.html'],
-  ['/teacher', 'teacher/index.html'], ['/teacher/', 'teacher/index.html']
+  ['/teacher', 'teacher/index.html'], ['/teacher/', 'teacher/index.html'],
+  // Landing pages are served at their extensionless address, as on the published site.
+  ...PUBLIC_LANDING_PAGES.map(file=>['/'+file.slice(0,-'.html'.length),file])
 ]);
 const MEMBER_PATHS = new Set(['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html',
   '/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html']);

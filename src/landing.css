@@ -1,0 +1,55 @@
+/* Lesson, teacher, family and district landing pages. These pages are plain HTML with no script, so every pattern here works without JavaScript and prints cleanly. */
+.landing-nav-current{font-weight:800;text-decoration:underline;text-underline-offset:6px}
+.lesson-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:28px 0;padding:0}
+.lesson-facts>div{padding:16px 18px;border:1px solid #cfdcde;border-radius:10px;background:#fff}
+.lesson-facts dt{font-size:.72rem;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:#3f5868;margin:0 0 6px}
+.lesson-facts dd{margin:0;font-size:1rem;line-height:1.5;color:#152b3d;font-weight:600}
+.lesson-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin:28px 0;padding:0;list-style:none;max-width:none}
+.lesson-card{display:flex;flex-direction:column;gap:8px;margin:0;padding:22px;border:1px solid #cfdcde;border-top:5px solid #007f78;border-radius:12px;background:#fff;line-height:1.6}
+.lesson-card h3{margin:0;font-size:1.25rem}
+.lesson-card p{margin:0}
+.lesson-card .lesson-meta{font-size:.86rem;font-weight:700;color:#3f5868}
+.lesson-card .button-row{margin:auto 0 0;padding-top:12px}
+.lesson-steps{counter-reset:lesson-step;list-style:none;padding:0;margin:24px 0;display:grid;gap:12px;max-width:none}
+.lesson-steps>li{counter-increment:lesson-step;position:relative;margin:0;padding:16px 18px 16px 64px;border:1px solid #dce6e7;border-radius:10px;background:#fff;line-height:1.6}
+.lesson-steps>li::before{content:counter(lesson-step);position:absolute;left:16px;top:14px;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#0b5f5a;color:#fff;font-weight:800}
+.lesson-steps strong{display:block;color:#153d45}
+.lesson-steps .lesson-time{display:inline-block;margin-left:6px;font-size:.84rem;font-weight:700;color:#3f5868}
+.lesson-share{margin:24px 0;padding:20px 22px;border:2px dashed #7fb3ae;border-radius:12px;background:#f1f8f6}
+.lesson-share h3{margin:0 0 8px}
+.lesson-share-text{margin:10px 0 0;padding:14px 16px;border:1px solid #b9d2cf;border-radius:8px;background:#fff;color:#152b3d;line-height:1.6;overflow-wrap:anywhere;-webkit-user-select:all;user-select:all}
+.lesson-share-link{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.95rem}
+.check-list{list-style:none;padding:0;margin:20px 0;display:grid;gap:10px;max-width:none}
+.check-list>li{position:relative;margin:0;padding:10px 12px 10px 46px;border:1px solid #dce6e7;border-radius:8px;background:#fff;line-height:1.55}
+.check-list>li::before{content:"";position:absolute;left:14px;top:13px;width:18px;height:18px;border:2px solid #2f5560;border-radius:3px;background:#fff}
+.fill-box{display:block;min-height:76px;margin:8px 0 18px;padding:10px 12px;border:1px solid #6d8792;border-radius:6px;background:#fff;color:#3f5868;font-size:.9rem}
+.fill-box.fill-tall{min-height:132px}
+.fill-line{display:block;height:34px;border-bottom:1px solid #6d8792}
+.landing-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:none}
+.landing-wide{max-width:1040px}
+.landing-note{padding:14px 18px;border-left:4px solid #b7791f;background:#fff7e6;color:#4a3410;border-radius:4px;line-height:1.6}
+.standard-code{display:inline-block;padding:2px 8px;border:1px solid #9bc9c5;border-radius:6px;background:#eef8f6;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:700;color:#0d3a3f;white-space:nowrap}
+.print-only{display:none}
+@media(max-width:600px){.lesson-steps>li{padding-left:56px}.lesson-card{padding:18px}.lesson-share{padding:16px}}
+@media print{
+  .skip-link,.site-header nav,.site-footer,.no-print,.button-row{display:none!important}
+  .print-only{display:block}
+  .print-new-page{break-before:page}
+  body{background:#fff;color:#000}
+  .site-header{min-height:0;padding:0 0 8px;border:0}
+  .site-header img{width:150px;height:auto}
+  .wrap{padding-left:0;padding-right:0;max-width:none}
+  .page-intro{padding-top:8px;padding-bottom:8px}
+  .section{padding-top:8px;padding-bottom:8px}
+  .prose{max-width:none}
+  .prose h2{margin-top:22px;font-size:1.3rem;break-after:avoid}
+  .prose h3{break-after:avoid}
+  h1{font-size:1.9rem}
+  a{text-decoration:none;color:#000}
+  .lesson-facts>div,.lesson-card,.lesson-steps>li,.check-list>li,.fill-box,.lesson-share,.school-table-scroll{break-inside:avoid;background:#fff}
+  .school-table-scroll{overflow:visible;border-color:#000}
+  .school-review-table{min-width:0;font-size:12px}
+  .school-review-table th,.school-review-table td{padding:8px;border-color:#000}
+  .lesson-steps>li::before{background:#fff;color:#000;border:2px solid #000}
+  .fill-box,.fill-line,.check-list>li::before{border-color:#000}
+}

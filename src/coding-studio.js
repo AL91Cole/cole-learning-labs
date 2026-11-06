@@ -1,6 +1,6 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261106-fast-start';
-import {executeCoding} from './coding-lab.js?release=20261106-fast-start';
-import {CODING_PROJECTS,INPUTS,SOURCE_LIMIT,projectFor,dataRecord,initialCodingStudioState,normalizeCodingStudioState,codingStudioHasWork} from './coding-studio-model.js?release=20261106-fast-start';
+import {renderLearningBrief} from './activity-guidance.js?release=20261107-tech-team';
+import {executeCoding} from './coding-lab.js?release=20261107-tech-team';
+import {CODING_PROJECTS,INPUTS,SOURCE_LIMIT,projectFor,dataRecord,initialCodingStudioState,normalizeCodingStudioState,codingStudioHasWork} from './coding-studio-model.js?release=20261107-tech-team';
 export {CODING_PROJECTS,initialCodingStudioState,normalizeCodingStudioState,codingStudioHasWork};
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));

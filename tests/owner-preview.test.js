@@ -140,7 +140,7 @@ test('the real private app uses the local-only compile option while public build
   const javascript=await readFile(path.join(result.directory,'learn/src/app.js'),'utf8');assert.match(javascript,/INC-103/u);
   assert.ok(javascript.includes('Owner preview navigation.'),'The guarded full owner artifact contains the preview navigation UI.');
   assert.equal(javascript.includes('/api/telemetry'),false,'Owner navigation cannot send engagement events or mint receipts.');
-  assert.doesNotMatch(javascript,/href=\\?["'](?:\.?\/)?(?:compliance|verify)(?:\.html)?\\?["']/iu,'Public-only pages must be linked by absolute URL in the private bundle.');
+  assert.doesNotMatch(javascript,/href=\\?["'](?:\.?\/)?(?:compliance|verify|teach|everyday-tech|district-review)(?:\.html)?\\?["']/iu,'Public-only pages must be linked by absolute URL in the private bundle.');
   // Compare whole link targets exactly; a substring test could be satisfied by a different host or path.
   const linkTargets=new Set([...javascript.matchAll(/href=\\?["']([^"'\\]+)\\?["']/gu)].map(match=>match[1]));
   assert.ok(linkTargets.has('https://www.colelearninglabs.com/compliance'),'The privacy page link points at the public site.');

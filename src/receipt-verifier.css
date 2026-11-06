@@ -10,6 +10,10 @@
 .verifier-actions button.primary:hover,.verifier-actions button.primary:focus-visible{background:#103e46;color:#fff}
 .verifier-actions button:disabled{opacity:1;background:#e6ecec;color:#3f5a61;border-color:#9db4b8;cursor:wait}
 #completion-codes[aria-invalid="true"]{border-width:2px;border-color:#912e28!important}
+#completion-codes:disabled{background:#e6ecec;color:#3f5a61;border-color:#9db4b8;cursor:not-allowed}
+.verifier-availability{margin:24px 0 0;padding:14px 16px;border:1px solid #8ca9ad;border-left-width:6px;border-radius:8px;background:#f3f8f8;color:#123540;font-weight:600;overflow-wrap:anywhere}
+.verifier-availability[data-state="disabled"],.verifier-availability[data-state="unreachable"],noscript .verifier-availability{border-color:#795400;background:#fff8e5}
+.verifier-availability[data-state="disabled"]~form button:disabled,.verifier-availability[data-state="unreachable"]~form button:disabled{cursor:not-allowed}
 #verify-status{padding:14px 0;font-weight:600;overflow-wrap:anywhere}
 .verifier-table{min-width:1050px}
 .verifier-table caption{text-align:left;padding:16px;font-weight:700;color:#153d45;background:#f3f8f8}

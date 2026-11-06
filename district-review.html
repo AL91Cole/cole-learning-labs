@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#102c46">
+  <meta name="description" content="A short district IT review of Cole Learning Labs: what stays in the browser, what the host receives, which optional services are off, and a Chromebook checklist.">
+  <meta property="og:title" content="District Review in Brief">
+  <meta property="og:description" content="What stays in the browser, what the host receives, which optional services are off, a no-account pilot and a Chromebook checklist.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.colelearninglabs.com/district-review">
+  <meta property="og:image" content="https://www.colelearninglabs.com/assets/cole-learning-labs-social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>District Review in Brief · Cole Learning Labs</title>
+  <link rel="canonical" href="https://www.colelearninglabs.com/district-review">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/src/styles.css?release=20261107-tech-team">
+  <link rel="stylesheet" href="/src/school.css?release=20261107-tech-team">
+  <link rel="stylesheet" href="/src/landing.css?release=20261107-tech-team">
+  <link rel="stylesheet" href="/src/accessibility.css?release=20261107-tech-team">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header school-header"><a class="brand" href="/#home"><img src="/assets/cole-learning-labs-logo.webp" alt="Cole Learning Labs" width="336" height="140"></a><nav aria-label="Site menu"><div class="nav-group"><button type="button" class="nav-group-name">Labs and games</button><div class="nav-panel"><a href="/#labs">Browse all labs</a><a href="/#explore">K–6 activities</a><a href="/#play/inbox-defender">Inbox Defender</a><a href="/#arcade">Game arcade</a></div></div><div class="nav-group"><button type="button" class="nav-group-name">Students and families</button><div class="nav-panel"><a href="/#guide">Student guide</a><a href="/student-workbook">Student workbook</a><a href="/practice-quizzes">Practice quizzes</a><a href="/everyday-tech">Everyday Tech</a></div></div><div class="nav-group"><button type="button" class="nav-group-name">Teachers</button><div class="nav-panel"><a href="/teach">Teach a lesson</a><a href="/#educators">Teaching resources</a><a href="/lessons/k-6">K–6 teacher lane</a><a href="/lessons/troubleshooting-pilot">Troubleshooting pilot pack</a><a href="/verify">Teacher code verifier</a></div></div><div class="nav-group"><button type="button" class="nav-group-name">Schools</button><div class="nav-panel"><a class="landing-nav-current" aria-current="page" href="/district-review">District review in brief</a><a href="/school-it">School IT review</a><a href="/compliance">Data privacy and district review</a><a href="/#privacy">Privacy and accessibility</a></div></div><div class="nav-group"><button type="button" class="nav-group-name">About</button><div class="nav-panel"><a href="/#about">About Mx. Cole</a><a href="/#connect">Contact</a></div></div></nav></header>
+  <main id="main" tabindex="-1">
+    <section class="wrap page-intro"><p class="eyebrow">FOR DISTRICT IT AND DATA PRIVACY TEAMS</p><h1>District review,<br><em>in brief.</em></h1><p>For district technology staff, data protection officers and anyone deciding whether students may use Cole Learning Labs. It answers the questions most reviews start with and points to the full pages for the detail.</p><p>This page describes how the public site works. It is not an approval, a certification or a legal determination.</p><p class="quiet-note">Operator: Alan “Al” Cole · Updated November 5, 2026 · Readable without JavaScript</p><div class="button-row"><a class="button" href="/school-it">Full School IT review</a><a class="button button-outline" href="/compliance">Data privacy and district review</a><a class="button button-outline" href="/#privacy">Privacy and accessibility</a><a class="button button-outline" href="/ai-use-notice">AI use and limits</a><a class="button button-outline" href="/verify">Teacher Code Verifier</a></div><p class="print-only">Full detail: www.colelearninglabs.com/school-it · /compliance · /#privacy · /ai-use-notice · /verify</p></section>
+    <section class="wrap prose section landing-wide">
+      <h2 id="data-in-brief">Data in brief</h2>
+      <p>Public activities open without an account, a roster or a class code. Everything in them is fictional: the requesters, messages, computers and networks.</p>
+
+      <h3 id="in-memory">What stays in browser memory</h3>
+      <p>Lab work starts in the memory of the open page: the clues collected, questions asked, typed notes, answers, workbench state and the report text built from them. The site does not upload it. It is gone when the tab closes or reloads, or when the learner clears it, unless the learner turned on device saving first.</p>
+
+      <h3 id="device-saving">What optional device saving does</h3>
+      <p>Lab work is saved on the device only after the learner chooses it. The learner selects <strong>Save on this device</strong>, ticks a confirmation that this is their own approved browser profile, and selects <strong>Enable device saving</strong>. Where a copy was saved before, <strong>Resume saved work</strong> asks for the same confirmation, loads that copy and turns saving back on. The lab records are then kept, unencrypted, in this browser’s local storage on this device, under keys that begin <code>cole-learning-labs:</code>. They are not sent to the site. Anyone who uses the same browser profile can read them. <strong>Clear local lab data</strong> in the same panel removes them. Pausing saving does not delete a copy saved earlier.</p>
+      <p>Display menu choices (text size, spacing, contrast, motion) are also kept in local storage on the standard page. They hold no learner work.</p>
+
+      <h3 id="shared-device">How shared-device work is cleared</h3>
+      <p>Open the site with <code>/?cart=true</code>. The page is never given the browser’s local storage, so no work is saved, an earlier saved copy is not offered and display choices are not kept. After 40 minutes without activity the page clears its work and returns to the home page. A warning with a <strong>Keep working</strong> button appears at 38 minutes. Time with the lid closed counts, so a device woken after the limit clears before the next learner starts. <strong>Clear this page now</strong> in the strip at the top does the same on request.</p>
+      <p>It does not clear work saved earlier from a plain link, downloaded reports or the clipboard. The offline cache of public site files is separate and holds no learner work.</p>
+
+      <h3 id="host-receives">What Cloudflare receives during ordinary delivery</h3>
+      <p>Cloudflare hosts and protects the site. As with any website, each request gives the host the IP address, the requested path, browser information, and security and traffic metadata. Using the site without an account does not prevent this.</p>
+      <p>Lab addresses are hash routes such as <code>#lab/INC-101</code>. Browsers do not send that part of an address to the server.</p>
+      <p>The lab application makes two availability checks to its own website: one request to <code>/api/reach</code> when the page loads, and one to <code>/api/telemetry</code> when an activity opens. They carry no learner work, no cookie and no referrer. With the current configuration both answer that the service is off. The <code>/api/reach</code> check is skipped when the browser sends Global Privacy Control or Do Not Track. For the host’s own processing, see <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare’s privacy policy on cloudflare.com (opens in a new tab)</a>.</p>
+
+      <h3 id="exports">What an export contains</h3>
+      <p><strong>My report</strong> shows the whole report for the learner to review before anything leaves the page. It leads with a four-line summary (clue, change, result, next step) made from the learner’s own entries. The full record holds:</p>
+      <ul>
+        <li>the lab ID and title, grade band, topic and status</li>
+        <li>the original task</li>
+        <li>the clues collected</li>
+        <li>the questions asked, with the authored replies</li>
+        <li>the learner’s typed notes: symptoms, working hypothesis, test notes and reflection</li>
+        <li>the experiment record and the action log</li>
+        <li>in hardware labs, the cable connections</li>
+        <li>in coding labs, the practice code and its output</li>
+      </ul>
+      <p>After ticking a review confirmation, the learner can copy the text or download a UTF-8 <code>.txt</code> file named with the lab ID, for example <code>cole-learning-labs-INC-101.txt</code>. Some devices also offer their own share sheet. The site adds no name to the report or the file name. A report holds personal details only if the learner typed them, and the site does not detect them.</p>
+
+      <h3 id="outside-destinations">What leaves the site when someone chooses an outside destination</h3>
+      <p>A downloaded or copied report goes wherever the person puts it: the district LMS, a drive, an email. From then on that system’s rules apply, and the site cannot recall the copy. Some investigations show an optional Google Classroom share link. It passes Google the public lab address only: no notes, alias, roster or grades. Links to other websites open without a referrer. In student mode, links to other websites are turned off.</p>
+
+      <h2 id="release-states">Release states of optional services</h2>
+      <p>Each row is a separate feature with its own switch. Aggregate activity counts, lab telemetry and signed completion codes are three different features. “If enabled” describes a prepared design, not something that happens today. These states were read from the repository’s code and configuration on November 5, 2026, not from the live deployment.</p>
+      <div class="school-table-scroll" role="region" aria-label="Release states of optional services" tabindex="0"><table class="school-review-table"><thead><tr><th scope="col">Feature</th><th scope="col">Current state in the public release</th><th scope="col">Transmitted if enabled</th><th scope="col">Retained if enabled</th></tr></thead><tbody>
+        <tr><th scope="row">Connected classrooms</th><td>Off. Locked in source: the classroom service refuses every request before it reads configuration, and the published site does not route classroom addresses to it. A hosting setting cannot turn it on.</td><td>Prepared design, not approved for release: a teacher’s email address, a class code, a session cookie, a neutral alias, assigned lab drafts and submitted work.</td><td>Prepared design: class, alias, drafts, submitted work, grade, feedback and timestamps. No retention schedule has been approved.</td></tr>
+        <tr><th scope="row">Online requester replies</th><td>Not offered in the current public build. The build removes the choice, so replies are the built-in authored ones and the page sends no reply request. The reply gateway is still enabled on the server in production. The published page does not call it.</td><td>A fictional lab ID and an authored topic code, sent through the website to its private Cloudflare AI service after a security check. Not the typed question, notes or history.</td><td>By the application: daily usage-budget totals only. No question or reply text.</td></tr>
+        <tr><th scope="row">Lab telemetry</th><td>Off in the current configuration. It would also need the learner to choose it inside the lab.</td><td>Lab code, start or complete, active seconds, step number and a completion percentage, with a security-check token.</td><td>Daily counts per lab in broad time, score and step bands, kept for 30 days. No event rows, exact durations or identifiers.</td></tr>
+        <tr><th scope="row">Aggregate activity counts</th><td>Off in the current configuration. Its source review flag is already set; two hosting settings and an unprovisioned database keep it off. This is a configuration state, not a code lock.</td><td>A fixed activity code, start or complete, and a format version, with a security-check token.</td><td>Monthly totals per activity for the current and two previous months, plus short-lived daily and per-minute limit counters. No event rows or connection data.</td></tr>
+        <tr><th scope="row">Signed completion codes</th><td>Off in the current configuration. Learners are not shown the option.</td><td>Only when a learner asks for a code: lab code, browser-reported completion percentage and active seconds, with a security-check token.</td><td>Nothing by the application. The signed code goes back to the browser.</td></tr>
+        <tr><th scope="row">Teacher Code Verifier</th><td>The page is published. The checking service is off in the current configuration, and the page says so before any code is sent.</td><td>The pasted codes, up to 200 in a batch, with a security-check token. The page’s availability request to <code>/api/verify</code> carries no codes.</td><td>Nothing by the application. Repeats are flagged within the pasted batch only.</td></tr>
+        <tr><th scope="row">Improvement summaries</th><td>Off. Locked in source in both the page and the server, and not routed.</td><td>A fixed activity code and three fixed-choice answers: outcome, attempt range and problem category.</td><td>Monthly counters for the current and two previous months, plus short-lived daily and per-minute limit counters.</td></tr>
+        <tr><th scope="row">School integrations (rosters, sign-in, grade sync)</th><td>Not built. There is no roster import, school sign-in or grade sync. The only connection to a school system is the optional Google Classroom share link described above.</td><td>Nothing exists to enable.</td><td>Nothing exists to enable.</td></tr>
+      </tbody></table></div>
+      <p>In every “if enabled” case Cloudflare would still receive ordinary connection and security metadata, and its security check (Turnstile, from <code>challenges.cloudflare.com</code>) processes browser and connection signals. Any feature that would receive covered school data needs a separate district review and the applicable agreements before it is turned on.</p>
+
+      <h2 id="school-pilot">A no-account school pilot</h2>
+      <p>This is a proposed way to try the site with one class without adding any data flow. It is a plan, not a report.</p>
+      <ul>
+        <li><strong>Requester replies:</strong> built-in authored replies only. Online replies are not offered.</li>
+        <li><strong>Student collection:</strong> off. No accounts, rosters or grade sync.</li>
+        <li><strong>Submissions:</strong> the learner reviews the report, downloads the <code>.txt</code> file and hands it in through the district’s approved LMS.</li>
+        <li><strong>Device saving:</strong> off by default everywhere, and unavailable with the shared-device link.</li>
+        <li><strong>Launch:</strong> the existing combined student-mode and shared-device link below.</li>
+      </ul>
+      <div class="lesson-share"><h3 id="pilot-link">Pilot launch link</h3><p>Copy this address to post it for the class.</p><p class="lesson-share-text lesson-share-link">https://www.colelearninglabs.com/?mode=student&amp;cart=true</p><p>To start in one lab, add the lab route. This one opens The Blank Monitor.</p><p class="lesson-share-text lesson-share-link">https://www.colelearninglabs.com/?mode=student&amp;cart=true#lab/INC-101</p></div>
+      <div class="landing-two">
+        <div><h3 id="pilot-enforced">Enforced</h3><p>By the build or the code. A hosting setting cannot undo these:</p>
+          <ul>
+            <li>Online requester replies are removed from the public build.</li>
+            <li>Classroom collection and improvement summaries are locked in source.</li>
+            <li>With the shared-device link the page is never given the browser’s local storage. There is no Save control and no resume, and the page clears after 40 minutes without activity.</li>
+            <li>With the student-mode link the portfolio, contact, teacher-resource and sign-in pages are hidden and links to other websites are turned off.</li>
+            <li>No account, roster or grade-sync feature exists to switch on.</li>
+          </ul>
+        </div>
+        <div><h3 id="pilot-config">Set by hosting configuration</h3><p>The operator can change these without a code release:</p>
+          <ul>
+            <li>Aggregate activity counts, lab telemetry and signed completion codes are off in the hosting configuration.</li>
+            <li>The reply gateway is still enabled on the server in production. The published page does not call it.</li>
+          </ul>
+        </div>
+        <div><h3 id="pilot-not-enforced">Not enforced</h3><p>These stay with the district, the teacher or the learner:</p>
+          <ul>
+            <li>The link is a convenience, not access control. A learner can open the plain address and choose device saving.</li>
+            <li>Work saved earlier in that browser, downloaded reports and the clipboard stay until someone clears them.</li>
+            <li>Web filtering, device policy and separation between classes are the district’s, for example ChromeOS ephemeral mode or managed guest sessions.</li>
+            <li>Cloudflare still receives delivery metadata, including the IP address.</li>
+            <li>The two availability requests still go out with these links.</li>
+            <li>The offline cache of public site files is still installed, and <code>?mode=student&amp;cart=true</code> is part of the requested address.</li>
+            <li>What a learner types. Ask for fictional details only; the site does not detect personal information.</li>
+          </ul>
+        </div>
+      </div>
+      <p>The pilot is not a data-sharing agreement and not a research study. It has not been run with a school, and the site receives no learner work from it. A classroom plan for teachers is on the <a href="/lessons/troubleshooting-pilot">troubleshooting pilot page</a>. More on the two link modes is under “Classroom link options” in the <a href="/school-it">School IT review</a>.</p>
+
+      <h2 id="chromebook-checklist">Managed Chromebook test checklist</h2>
+      <p>Run these on a real managed Chromebook, signed in as a test student on the student network. Use fictional test content only.</p>
+      <ul class="check-list">
+        <li>Allow <code>https://www.colelearninglabs.com</code> for the student organizational unit, and confirm <code>colelearninglabs.com</code> redirects to it.</li>
+        <li>Open one lab on the student organizational unit and network: <a href="/#lab/INC-101">The Blank Monitor</a>.</li>
+        <li>Work one step with the keyboard only, then with touch. No step needs a precise drag.</li>
+        <li>Set the browser to 200% zoom and confirm the lab controls can still be reached and read.</li>
+        <li>Open the Listen and Display tools in the bottom-left corner. On smaller screens they show as icons only: a speaker and “Aa”. Change the text size, then start and stop reading. Listen uses only voices built into the device.</li>
+        <li>Open <strong>My report</strong>, tick the review confirmation, choose <strong>Download .txt report</strong>, then open the file from the Files app. <a href="https://support.google.com/chromebook/answer/1700055?hl=en" target="_blank" rel="noopener noreferrer">Find and open files, on support.google.com (opens in a new tab)</a>.</li>
+        <li>Open the combined link <code>/?mode=student&amp;cart=true#lab/INC-101</code>. Confirm the strip names both modes, the adult navigation is hidden, an outside link no longer opens and the lab’s saving panel has no Save control.</li>
+        <li>Select <strong>Clear this page now</strong>, confirm, and check that the lab is empty and the page is back on the home screen.</li>
+        <li>Leave the page untouched. Confirm the warning at 38 minutes and the clear at 40. Repeat with the lid closed past 40 minutes, then reopen.</li>
+        <li>With <code>challenges.cloudflare.com</code> blocked, confirm the labs and built-in replies still work.</li>
+      </ul>
+      <p class="landing-note">ChromeVox and the device’s own read-aloud should be checked on a real managed Chromebook. The site’s recorded device checks were made in desktop browsers and resized windows, which do not reproduce a managed device, a school filter or assistive technology.</p>
+
+      <h2 id="contact">Contact</h2>
+      <p>For a district questionnaire, a data-flow question or an accessibility barrier, email <a href="mailto:support@colelearninglabs.com">support@colelearninglabs.com</a> or use the <a href="/#connect">Connect page</a>. Say which feature you are reviewing and how you plan to use it. Do not send student records, reports, keys or passwords.</p>
+      <p>For a security finding, use the private reporting route: <a href="https://github.com/AL91Cole/cole-learning-labs/security/advisories" target="_blank" rel="noopener noreferrer">Security advisories on github.com (opens in a new tab)</a>. Use fictional evidence. No security contact email is published.</p>
+      <p class="print-only">Connect page: www.colelearninglabs.com/#connect · Security advisories: github.com/AL91Cole/cole-learning-labs/security/advisories</p>
+    </section>
+  </main>
+  <footer class="site-footer"><div><strong>Cole Learning Labs</strong><p>Public educational simulations · Grades K–12</p></div><div class="footer-links"><a href="/#home">Home</a><a href="/teach">Teach a lesson</a><a href="/#labs">Browse all labs</a><a href="/everyday-tech">Everyday Tech</a><a href="/district-review">District review</a><a href="/#privacy">Privacy &amp; accessibility</a></div></footer>
+<script type="module" src="/src/site-menu.js?release=20261107-tech-team"></script>
+</body>
+</html>

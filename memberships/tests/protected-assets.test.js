@@ -181,7 +181,7 @@ test('the real member build contains premium cases only behind private paths wit
   for(const [name,asset]of assets){
     assert.ok(name.startsWith('/learn/'),name);
     if(/text|javascript|json/u.test(asset.contentType))assert.doesNotMatch(new TextDecoder().decode(asset.bytes),/\?release=/u,name);
-    if(/javascript/u.test(asset.contentType))assert.doesNotMatch(new TextDecoder().decode(asset.bytes),/href=\\?["'](?:\.?\/)?(?:compliance|verify)(?:\.html)?\\?["']/iu,name+' links to a page that is not in the private artifact');
+    if(/javascript/u.test(asset.contentType))assert.doesNotMatch(new TextDecoder().decode(asset.bytes),/href=\\?["'](?:\.?\/)?(?:compliance|verify|teach|everyday-tech|district-review)(?:\.html)?\\?["']/iu,name+' links to a page that is not in the private artifact');
     if(name.endsWith('.html')||name==='/learn/'){
       const html=new TextDecoder().decode(asset.bytes);
       assert.ok([...html.matchAll(/<link\b[^>]*rel=["']stylesheet/giu)].length<=1,name);

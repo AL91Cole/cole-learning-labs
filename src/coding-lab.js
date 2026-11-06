@@ -1,8 +1,8 @@
-import {codingVisualHTML} from './coding-visuals.js?release=20261106-fast-start';
-import {CODING_SCENARIOS} from './coding-scenarios.js?release=20261106-fast-start';
+import {codingVisualHTML} from './coding-visuals.js?release=20261107-tech-team';
+import {CODING_SCENARIOS} from './coding-scenarios.js?release=20261107-tech-team';
 export {CODING_SCENARIOS};
-import {captureWorkspaceView} from './workspace-accessibility.js?release=20261106-fast-start';
-import {renderCodingWorkbench,mountCodingWorkbench} from './coding-workbench.js?release=20261106-fast-start';
+import {captureWorkspaceView} from './workspace-accessibility.js?release=20261107-tech-team';
+import {renderCodingWorkbench,mountCodingWorkbench} from './coding-workbench.js?release=20261107-tech-team';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';

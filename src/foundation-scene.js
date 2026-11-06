@@ -1,5 +1,5 @@
-import { pcActivity } from './pc-activity.js?release=20261106-fast-start';
-import { partArtHTML, sceneArtHTML } from './part-art.js?release=20261106-fast-start';
+import { pcActivity } from './pc-activity.js?release=20261107-tech-team';
+import { partArtHTML, sceneArtHTML } from './part-art.js?release=20261107-tech-team';
 /** Beginner equipment views. The model owns every answer and practice result. */
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tracks=new Set(['hardware','network','ai','security','coding']);

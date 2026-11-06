@@ -4,6 +4,10 @@ The public website no longer includes the previous per-lab rubric arrays or a st
 
 The earlier criteria were already published in browser assets and the public GitHub repository. This release retires them from the current website; it cannot make previously published information secret or remove copies held by others. They must not be reused as confidential answer keys.
 
+## Public look-fors are not answer keys
+
+The featured lesson pages (`/lessons/blank-monitor`, `/lessons/inbox-defender`, `/lessons/packet-post` and the pilot pack) each show a short table of reasoning look-fors at three levels. They describe how well a student noticed a clue, chose one change and checked the result. They do not state a lab's cause or fix, and they are not a grading scheme. Anything that reveals a solution, and any school's own scoring, still belongs in the private places below.
+
 ## Keep new grading criteria private
 
 - Create any new teacher-only rubric in the school's approved learning management or document system.

@@ -1,6 +1,6 @@
-import {renderLearningBrief} from './activity-guidance.js?release=20261106-fast-start';
-import {SCENARIOS} from './scenarios.js?release=20261106-fast-start';
-import {initialWorkspaceState,normalizeWorkspaceState,applyWorkspaceAction,renderWorkspace,disposeWorkspace,getWorkspaceMission} from './workspaces.js?release=20261106-fast-start';
+import {renderLearningBrief} from './activity-guidance.js?release=20261107-tech-team';
+import {SCENARIOS} from './scenarios.js?release=20261107-tech-team';
+import {initialWorkspaceState,normalizeWorkspaceState,applyWorkspaceAction,renderWorkspace,disposeWorkspace,getWorkspaceMission} from './workspaces.js?release=20261107-tech-team';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const TRACKS=Object.freeze({network:'Networking',ai:'AI literacy',security:'Cybersecurity'});
 export const practiceScenarioFor=id=>typeof id==='string'?SCENARIOS.find(scenario=>scenario.id===id&&Object.hasOwn(TRACKS,scenario.track))||null:null;

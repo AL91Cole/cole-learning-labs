@@ -1,9 +1,9 @@
-import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261106-fast-start';
+import {renderLessonPlans,mountLessonPlans} from './lesson-plans.js?release=20261107-tech-team';
 /** Public teaching supports. This module never reads student work or contacts a provider. */
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const validId = value => /^(?:INC|NET|AI|SEC|CODE)-\d{3}$/.test(String(value));
 
-import {learningModes} from './learning-routes.js?release=20261106-fast-start';
+import {learningModes} from './learning-routes.js?release=20261107-tech-team';
 export {learningModes};
 const modeFor = value => learningModes.find(item => item.id === value) || learningModes[0];
 const glossary = Object.freeze({
@@ -184,7 +184,7 @@ export function renderLabLearning(scenario,mode='guided') {
 }
 
 function renderPlan(plan) {
-  const roles=plan.grouping==='pairs'?'<p><strong>Investigator:</strong> operates the virtual equipment and says the prediction aloud. <strong>Evidence partner:</strong> records observations and asks what they support. Swap after the first meaningful test. Both explain the final result.</p>':'<p><strong>Working individually:</strong> pause before each change to predict a result. After testing, compare your observation with that prediction before choosing the next action.</p>';
+  const roles=plan.grouping==='pairs'?'<p><strong>Operator:</strong> operates the virtual equipment and says the prediction aloud. <strong>Evidence lead:</strong> records observations and asks what they support. Swap after the first meaningful test. Both explain the final result.</p>':'<p><strong>Working individually:</strong> pause before each change to predict a result. After testing, compare your observation with that prediction before choosing the next action.</p>';
   return `<article class="teaching-plan" aria-labelledby="teaching-plan-title"><p class="eyebrow">${esc(plan.id)} · ${plan.duration} minutes · ${esc(plan.modeLabel)}</p><h2 id="teaching-plan-title">${esc(plan.title)}</h2>${plan.transferFrom?'<p class="teaching-transfer-note"><strong>Fresh transfer case:</strong> This assignment opens '+esc(plan.id)+' after '+esc(plan.transferFrom)+'. The familiar no-picture symptom has a different cause. Use this case’s evidence instead of repeating a previous repair.</p>':''}
     <div class="teaching-plan-actions"><a class="button" data-assignment-link href="${esc(plan.link)}">Open student assignment</a><button class="button button-outline" type="button" data-teaching-action="copy-link">Copy assignment link</button><button class="button button-outline" type="button" data-teaching-action="print">Print lesson plan</button></div>
     <p class="teaching-link-note">This link contains only a public lab ID and support mode. It contains no roster, student information, teacher key, or work.</p>

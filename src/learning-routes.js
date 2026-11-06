@@ -12,6 +12,8 @@ export function learningRoute(hash) {
   const route={page:page||'home',id,mode,sequence:params.get('sequence')==='opening-day'?'opening-day':null};
   if(['arcade','quests'].includes(page)&&path.split('/').length>2)return {page:'unknown',id:undefined,mode:'guided',sequence:null};
   if(page==='play'&&path!=='play/inbox-defender')return {page:'unknown',id:undefined,mode:'guided',sequence:null};
+  // Starting style only. A link never selects a message, a decision or a finished shift.
+  if(page==='play'&&params.get('style')==='picture')route.style='picture';
   if(page==='signin'&&path!=='signin')return {page:'unknown',id:undefined,mode:'guided',sequence:null};
   if(page==='explore'){
     if(path.split('/').length>2)return {page:'unknown',id:undefined,mode:'guided',sequence:null};

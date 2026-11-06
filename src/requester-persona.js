@@ -1,6 +1,6 @@
 /** Authored offline character lines. These are fictional personality details,
  * never evidence about a lab, a real person, or the learner's equipment. */
-import {requesterLibraryReply,requesterLibraryFollowUp} from './requester-library.js?release=20261106-fast-start';
+import {requesterLibraryReply,requesterLibraryFollowUp} from './requester-library.js?release=20261107-tech-team';
 const clean = value => typeof value==='string'?value.replace(/[’‘]/gu,"'").replace(/\s+/gu,' ').trim().toLowerCase().replace(/[?!.]+$/gu,''):'';
 const hash = value => [...value].reduce((total,letter) => (total * 31 + letter.charCodeAt(0)) >>> 0,0);
 const pick = (items,seed) => items[seed % items.length];

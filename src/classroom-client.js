@@ -1,8 +1,8 @@
 /* Optional sharing only after an explicit classroom join. No live AI or device surveillance. */
-import { SCENARIOS } from './scenarios.js?release=20261106-fast-start';
-import { inquiryProtectedEvents } from './interview.js?release=20261106-fast-start';
-import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261106-fast-start';
-import {CLASSROOM_ACTIVE_KEY,classroomSelection,classroomStorageKey} from './classroom-session.js?release=20261106-fast-start';
+import { SCENARIOS } from './scenarios.js?release=20261107-tech-team';
+import { inquiryProtectedEvents } from './interview.js?release=20261107-tech-team';
+import {retainExperimentEvents,experimentEventText} from './experiments.js?release=20261107-tech-team';
+import {CLASSROOM_ACTIVE_KEY,classroomSelection,classroomStorageKey} from './classroom-session.js?release=20261107-tech-team';
 export {CLASSROOM_ACTIVE_KEY,classroomSelection,classroomStorageKey};
 // Saved sessions and page settings cannot authorize network sharing while the
 // school, privacy, insurance and operating requirements await review.

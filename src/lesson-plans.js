@@ -1,8 +1,8 @@
 /** Public lesson starters and a private, page-memory planning workspace. */
-import {SCENARIOS} from './scenarios.js?release=20261106-fast-start';
-import {FOUNDATION_LABS} from './foundation-model.js?release=20261106-fast-start';
-import {SANDBOX_STARTERS} from './coding-sandbox.js?release=20261106-fast-start';
-import {createTextReport,createReportURLs} from './report-downloads.js?release=20261106-fast-start';
+import {SCENARIOS} from './scenarios.js?release=20261107-tech-team';
+import {FOUNDATION_LABS} from './foundation-model.js?release=20261107-tech-team';
+import {SANDBOX_STARTERS} from './coding-sandbox.js?release=20261107-tech-team';
+import {createTextReport,createReportURLs} from './report-downloads.js?release=20261107-tech-team';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 export const LESSON_GRADES=Object.freeze([7,8,9,10,11,12]);
 export const LESSON_CATEGORIES=Object.freeze([{id:'hardware',label:'Hardware'},{id:'network',label:'Networking'},{id:'ai',label:'AI'},{id:'security',label:'Cybersecurity'},{id:'coding',label:'Coding'}].map(Object.freeze));
