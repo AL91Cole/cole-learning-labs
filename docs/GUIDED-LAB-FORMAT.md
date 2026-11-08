@@ -101,6 +101,12 @@ Those activity markers are stored as acknowledged ids (`used-terminal`,
 
 ### Pluggable environments (`src/lab-environment.js`)
 
+A second provider, `remote-terminal` (`src/lab-remote.js`), connects the same
+guide to a real Linux container served by the optional terminal service; see
+[Real-machine labs](REAL-MACHINE-LABS.md). `src/lab-environment-config.js`
+selects the environment and lists the labs the service hosts; unlisted labs
+keep the simulated desktop.
+
 The guide mounts whatever provider `preferredLabEnvironment()` returns. The
 simulated desktop registers itself as `simulated-desktop`. A provider is
 `{id, label, render(scenario, record), mount(root, context)}` where `mount`

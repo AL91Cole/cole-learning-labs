@@ -11,6 +11,7 @@
 //   render(scenario, record): HTML string for the environment pane
 //   mount(root, context): {refresh(), dispose(), open(app?), hasUnsavedDraft()}
 //   context: {scenario, record, getState, action, verify, renderConsole, onActivity, showNotice}
+import {LAB_ENVIRONMENT_CONFIG} from './lab-environment-config.js?release=20261107-tech-team';
 const providers = new Map();
 export const DEFAULT_LAB_ENVIRONMENT = 'simulated-desktop';
 
@@ -22,7 +23,10 @@ export function registerLabEnvironment(provider) {
 
 export const listLabEnvironments = () => [...providers.values()].map(provider => ({id:provider.id, label:provider.label || provider.id}));
 
-export function preferredLabEnvironment(preferred) {
-  const requested = typeof preferred === 'string' && preferred ? preferred : (globalThis.COLE_LAB_ENVIRONMENT ?? globalThis.document?.documentElement?.dataset?.labEnvironment ?? '');
-  return providers.get(requested) || providers.get(DEFAULT_LAB_ENVIRONMENT) || null;
+/** The provider for a lab: the requested or configured one when it supports the lab, otherwise the default. */
+export function preferredLabEnvironment(preferred, scenario = null) {
+  const requested = typeof preferred === 'string' && preferred ? preferred : (globalThis.COLE_LAB_ENVIRONMENT ?? globalThis.document?.documentElement?.dataset?.labEnvironment ?? LAB_ENVIRONMENT_CONFIG.environment ?? '');
+  const candidate = providers.get(requested);
+  if (candidate && (typeof candidate.supports !== 'function' || !scenario || candidate.supports(scenario))) return candidate;
+  return providers.get(DEFAULT_LAB_ENVIRONMENT) || null;
 }

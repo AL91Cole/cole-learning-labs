@@ -17,6 +17,7 @@ import {codingDefinition} from './coding-lab.js?release=20261107-tech-team';
 import {labPageHash} from './learning-routes.js?release=20261107-tech-team';
 import {preferredLabEnvironment} from './lab-environment.js?release=20261107-tech-team';
 import './lab-desktop.js?release=20261107-tech-team';
+import './lab-remote.js?release=20261107-tech-team';
 export {labFormat} from './lab-format.js?release=20261107-tech-team';
 
 export const SHELL_PROMPT = 'student@lab-pc:~/lab$';
@@ -62,6 +63,13 @@ export function guideOverview(scenario) {
 }
 
 function demonstrationSteps(scenario, facts) {
+  if (Array.isArray(facts.remoteSteps)) {
+    return [
+      {id:'remote-start', instruction:'In the environment, choose Start machine and wait for the shell prompt.', detail:'A real Linux shell opens in an isolated container on the lab server. Only your keystrokes and the lab id are sent, and the machine is reset when you leave.', check:'remoteReady'},
+      ...facts.remoteSteps.map(item => ({id:'remote-' + item.id, instruction:item.title, detail:[item.description, item.hint].filter(Boolean).join(' '), check:'remote', remoteDone:item.completed === true})),
+      {id:'remote-check', instruction:'Choose Check my work so the machine verifies every step.', detail:'The service reads the files in your container and marks each check. Finish any step still open, then check again.', check:'tested'}
+    ];
+  }
   if (scenario.track === 'coding') {
     const language = facts.language === 'python' ? 'python' : 'javascript', fix = codingDemonstration(scenario.id, language), other = language === 'python' ? 'JavaScript' : 'Python';
     const file = language === 'python' ? 'program.py' : 'program.js', runner = language === 'python' ? 'python3 program.py' : 'node program.js', first = facts.firstInput ?? 2;
@@ -117,7 +125,7 @@ export function labGuide(scenario, facts = {}) {
     challenge:() => challengeSteps(scenario, facts)
   };
   const sections = GUIDE_SECTIONS.map(meta => {
-    const steps = builders[meta.id]().map(step => ({...step, done: step.check === 'ack' ? acknowledged.has(step.id) : facts[step.check] === true}));
+    const steps = builders[meta.id]().map(step => ({...step, done: step.check === 'ack' ? acknowledged.has(step.id) : step.check === 'remote' ? step.remoteDone === true : facts[step.check] === true}));
     const required = steps.filter(step => !step.optional);
     return {...meta, steps, done:required.filter(step => step.done).length, total:required.length, complete:required.every(step => step.done)};
   });
@@ -127,20 +135,22 @@ export function labGuide(scenario, facts = {}) {
 }
 
 /** Facts the guide reads, derived from the record and the live workspace. Nothing is stored. */
-export function labGuideFacts(scenario, record, {taskResult = null} = {}) {
+export function labGuideFacts(scenario, record, {taskResult = null, remote = null} = {}) {
   const state = record.state || {}, experiments = readExperiments(record), draft = experiments.draft || {}, latest = experiments.attempts.at(-1);
-  const result = taskResult || verifyWorkspace(scenario.id, state), testing = workbenchProgress(scenario, record, taskResult || result), coding = scenario.track === 'coding';
+  const live = remote && remote.active === true ? remote : null;
+  const result = taskResult || (live ? {ok:live.complete === true, message:live.complete ? 'The machine verified every lab step.' : 'Not every lab step is verified yet.', remote:true} : verifyWorkspace(scenario.id, state)), testing = workbenchProgress(scenario, record, taskResult || result), coding = scenario.track === 'coding';
   const mission = coding ? null : getWorkspaceMission(scenario.id, state);
   const transfer = transferCaseFor(scenario.id);
   const text = (value, minimum) => typeof value === 'string' && value.trim().length >= minimum;
   const acknowledged = Array.isArray(record.manual) ? record.manual : [];
   return {
     language:state.language, acknowledged, mission:mission ? {next:mission.next, hints:mission.hints} : null, tools:labTools(scenario.id), firstInput:coding ? codingDefinition(scenario.id)?.values[0] : undefined,
-    terminal:acknowledged.includes('used-terminal'), tool:acknowledged.includes('used-tool'), ran:acknowledged.includes('ran-program'),
+    terminal:live ? live.typed === true : acknowledged.includes('used-terminal'), tool:live ? live.typed === true : acknowledged.includes('used-tool'), ran:live ? live.typed === true : acknowledged.includes('ran-program'),
+    remoteSteps:live ? live.milestones : undefined, remoteReady:live ? ['ready'].includes(live.phase) || live.typed === true || live.verified === true : false,
     transfer, transferHref:transfer ? labPageHash(transfer, 1, {mode:'challenge'}) : '',
     resources:scenario.clues.length > 0 && scenario.clues.every(clue => record.evidence.includes(clue.id)),
-    edited:coding ? typeof state.code === 'string' && state.code.trim() !== codingStarter(scenario.id, state.language).trim() : (Number(state.workspaceEdits) || 0) > 0,
-    tested:state.tested === true, works:result.ok === true,
+    edited:live ? live.typed === true : coding ? typeof state.code === 'string' && state.code.trim() !== codingStarter(scenario.id, state.language).trim() : (Number(state.workspaceEdits) || 0) > 0,
+    tested:live ? live.verified === true : state.tested === true, works:result.ok === true,
     planned:text(draft.predict, 12) && text(draft.evidence, 12) && !!draft.before || (!!latest && text(latest.predict, 12)),
     recorded:!!draft.check || !!latest?.check, ready:testing.ready === true, testing,
     verified:record.verified === true, notes:text(record.notes, 15), reflection:text(record.reflection, 15), closed:record.closed === true,
@@ -166,7 +176,7 @@ const stepsHTML = (section, facts) => section.steps.map((step, index) => {
 
 /** The lab page: the guide on the left and the simulated environment on the right. */
 export function renderLabGuidePage(scenario, record, {trackName = '', sceneArt = '', saveStatus = '', environment = null} = {}) {
-  const overview = guideOverview(scenario), coding = scenario.track === 'coding', provider = environment || preferredLabEnvironment();
+  const overview = guideOverview(scenario), coding = scenario.track === 'coding', provider = environment || preferredLabEnvironment(undefined, scenario);
   const resources = overview.resources.map(resource => '<details class="guide-resource" data-resource="' + esc(resource.id) + '"' + (record.evidence.includes(resource.id) ? ' open' : '') + '><summary>' + esc(resource.label) + '<span data-resource-state>' + (record.evidence.includes(resource.id) ? 'Opened' : 'Open') + '</span></summary><p>' + esc(resource.text) + '</p></details>').join('');
   const section = (meta, body) => '<details class="guide-section" data-guide-section="' + meta.id + '"' + (meta.id === 'introduction' ? ' open' : '') + '><summary><span class="guide-section-title">' + esc(meta.title) + '</span><span class="guide-section-state" data-guide-section-state="' + meta.id + '"></span></summary><div class="guide-section-body">' + body + '</div></details>';
   const introduction = '<p class="guide-lead">' + esc(overview.introduction) + '</p><p class="guide-requester"><b>Requested by</b> ' + esc(overview.requester) + '</p><h3>Goal</h3><p>' + esc(overview.goal) + '</p><h3>Learning objectives</h3><ul>' + overview.objectives.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul><h3>Tools in this simulation</h3><ul>' + overview.tools.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul><h3>Deliverables</h3><ul>' + overview.deliverables.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul><h3>Lab resources</h3><p class="panel-help">' + (coding ? 'The input contract, the rule and the test inputs for this program.' : 'The case details you would otherwise gather from the requester and the equipment.') + '</p><div class="guide-resources">' + resources + '</div><p class="guide-scope">Every device, person and record in this lab is simulated. Nothing here connects to a real system.</p><ol class="guide-steps" data-guide-steps="introduction" aria-label="Introduction steps"></ol>';
@@ -193,8 +203,9 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
   const controller = new AbortController(), signal = controller.signal, listen = (node, event, handler, capture = false) => node?.addEventListener(event, handler, {signal, capture});
   bindWorkPrivacy(s);
   const shell = $('.lab-guide-shell'), environmentHost = $('[data-lab-environment]'), feedback = $('#action-feedback');
-  const provider = environment || preferredLabEnvironment();
+  const provider = environment || preferredLabEnvironment(undefined, s);
   const mode = route?.mode || 'guided';
+  const remoteState = () => (typeof desktop.remoteState === 'function' ? desktop.remoteState() : null);
   let refreshing = false, experiments = {refresh(){}, dispose(){}}, desktop = {refresh(){}, dispose(){}, hasUnsavedDraft:() => false}, doneSteps = null;
   const acknowledge = id => {if (!Array.isArray(r.manual)) r.manual = []; if (r.manual.includes(id)) return false; r.manual.push(id); return true;};
   const view = () => {const open = $$('[data-guide-section]').find(node => node.open); return GUIDE_SECTIONS.find(section => section.id === open?.dataset.guideSection) || GUIDE_SECTIONS[0];};
@@ -207,6 +218,8 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
   }
   const renderBench = () => desktop.refresh();
   function currentTaskResult() {
+    const live = remoteState();
+    if (live?.active) return {ok:live.complete === true, message:live.complete ? 'The machine verified every lab step.' : 'Not every lab step is verified yet. Finish the steps in the terminal, then choose Check my work.', remote:true};
     const editor = $('#coding-editor');
     if (s.track === 'coding' && editor && editor.value !== r.state.code) return {ok:false, message:'The Lab Console editor contains untested changes. Run all fixtures for this version before checking.'};
     if (s.track === 'coding' && desktop.hasUnsavedDraft()) return {ok:false, message:'The Text Editor has unsaved changes. Save them, then run ./check or Run all fixtures before checking.'};
@@ -226,10 +239,13 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
   }
   function runHypothesisTest(prediction) {
     if (typeof prediction !== 'string' || prediction.trim().length < 12) {$('#workbench-test-status').textContent = 'Write a full sentence for your prediction before testing.'; return false;}
-    const input = s.track === 'coding' ? {code:$('#coding-editor')?.value ?? r.state.code} : undefined;
-    const again = r.state.tested === true ? applyWorkspaceAction(s.id, r.state, 'run-check', input).state : null, settled = value => JSON.stringify({...value, checkRuns:0});
-    if (!again || settled(again) !== settled(r.state)) action('run-check', input);
-    const result = verifyWorkspace(s.id, r.state);
+    const live = remoteState();
+    if (!live?.active) {
+      const input = s.track === 'coding' ? {code:$('#coding-editor')?.value ?? r.state.code} : undefined;
+      const again = r.state.tested === true ? applyWorkspaceAction(s.id, r.state, 'run-check', input).state : null, settled = value => JSON.stringify({...value, checkRuns:0});
+      if (!again || settled(again) !== settled(r.state)) action('run-check', input);
+    }
+    const result = currentTaskResult();
     r.verified = result.ok; r.closed = false;
     logEvent({kind:result.ok ? 'success' : 'warning', message:'Applied test — ' + prediction.trim().slice(0, 140) + ' / Observed: ' + (result.ok ? 'The task works. ' : 'Not fixed yet. ') + result.message});
     $('#verify-result').textContent = (result.ok ? '✓ ' : 'Try again: ') + result.message;
@@ -238,7 +254,7 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
   function refresh() {
     if (refreshing) return; refreshing = true;
     try {
-      const facts = labGuideFacts(s, r, {taskResult:currentTaskResult()}), guide = labGuide(s, facts), testing = facts.testing;
+      const facts = labGuideFacts(s, r, {taskResult:currentTaskResult(), remote:remoteState()}), guide = labGuide(s, facts), testing = facts.testing;
       // A desktop notification marks each newly completed step, like a real desktop would.
       const nowDone = new Map(guide.sections.flatMap(section => section.steps.filter(step => step.done).map(step => [section.id + '/' + step.id, {section, step}])));
       if (doneSteps && typeof desktop.notify === 'function') for (const [id, {section, step}] of nowDone) if (!doneSteps.has(id)) desktop.notify((section.complete && section.steps.at(-1) === step ? section.title + ' complete' : 'Step done: ' + step.instruction.split(/[.:(]/)[0].trim().slice(0, 72)), {kind:'success'});
@@ -258,8 +274,8 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
       const missing = finishBlockers(facts);
       $('#finish-status').textContent = r.closed ? 'Lab finished. Review your report, or keep improving your answers.' : missing.length ? 'Before you finish: ' + missing.join('; ') + '.' : 'Everything is ready. Finish the lab to open your report.';
       $('#finish-lab').disabled = !ownerPreview && !r.closed && missing.length > 0;
-      const mission = s.track === 'coding' ? null : getWorkspaceMission(s.id, r.state);
-      $('[data-environment-status]').textContent = mission ? mission.stage + ' · ' + mission.passed + ' / ' + mission.total + ' checks' : (facts.works ? 'All input cards match' : facts.tested ? 'Some input cards differ' : 'Not tested yet');
+      const live = remoteState(), mission = s.track === 'coding' || live?.active ? null : getWorkspaceMission(s.id, r.state);
+      $('[data-environment-status]').textContent = live?.active ? (live.milestones.length ? live.milestones.filter(item => item.completed).length + ' / ' + live.milestones.length + ' checks' : 'Real machine · ' + live.phase) : mission ? mission.stage + ' · ' + mission.passed + ' / ' + mission.total + ' checks' : (facts.works ? 'All input cards match' : facts.tested ? 'Some input cards differ' : 'Not tested yet');
       $('.save-status').textContent = saveStatus(r);
       experiments.refresh();
     } finally {refreshing = false;}
@@ -294,6 +310,7 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
     renderLog:node => {node.innerHTML = '<p class="lab-log-count">' + r.events.length + ' action' + (r.events.length === 1 ? '' : 's') + ' recorded in this lab · up to 100 are kept</p><ol class="lab-log-list" tabindex="0" aria-label="Saved lab steps">' + eventList(r) + '</ol>';},
     onActivity:activity => {
       let changed = false;
+      if (activity?.type === 'remote') {if (activity.ready) logEvent({kind:'info', message:'Real machine: Linux session started on the lab server.'}); if (activity.verified) logEvent({kind:'info', message:'Real machine: asked the server to verify the lab checks.'}); if (activity.complete === true) logEvent({kind:'success', message:'Real machine: every lab check verified on the server.'});}
       if (activity?.type === 'terminal') {changed = acknowledge('used-terminal') || changed; if (activity.tool) changed = acknowledge('used-tool') || changed; if (/^(?:sudo\s+)?(?:python3?|node)\b/.test(String(activity.command || '').trim())) changed = acknowledge('ran-program') || changed; const command = String(activity.command || '').trim(); if (command && !activity.tool) {logEvent({kind:'info', message:'Terminal: ' + command.slice(0, 160)}); changed = true;}}
       if (changed) save();
       refresh();
@@ -326,7 +343,7 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
   listen($('#verify-task'), 'click', () => {const result = currentTaskResult(); r.verified = result.ok; r.closed = r.closed && result.ok; logEvent({message:'Verification: ' + result.message, kind:result.ok ? 'success' : 'warning'}); $('#verify-result').textContent = (result.ok ? '✓ ' : 'Try again: ') + result.message; save(); refresh();});
   for (const field of ['notes', 'reflection']) listen($('#' + field), 'input', event => {r[field] = event.target.value; r.closed = false; const error = $('#' + field + '-error'); if (r[field].trim().length >= 15) {error.textContent = ''; error.hidden = true; event.target.removeAttribute('aria-invalid');} save(); refresh();});
   listen($('#finish-lab'), 'click', () => {
-    const facts = labGuideFacts(s, r, {taskResult:currentTaskResult()}), missing = finishBlockers(facts);
+    const facts = labGuideFacts(s, r, {taskResult:currentTaskResult(), remote:remoteState()}), missing = finishBlockers(facts);
     if (!ownerPreview && missing.length) {
       for (const field of ['notes', 'reflection']) {const short = r[field].trim().length < 15, error = $('#' + field + '-error'); error.textContent = short ? 'Write a sentence for this answer.' : ''; error.hidden = !short; if (short) $('#' + field).setAttribute('aria-invalid', 'true');}
       showNotice('Before you finish: ' + missing[0] + '.');

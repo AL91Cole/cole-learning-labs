@@ -11,6 +11,7 @@ import {
   verifyGoogleWorkspaceToken,
   createSandboxOrchestrator,
   validSnapshot,
+  verifySessionMilestones,
 } from "../server.js";
 
 const ORIGIN = "http://127.0.0.1:8080",
@@ -673,7 +674,7 @@ test("only allowlisted static assets are served under restrictive no-store heade
     "xterm needs its runtime CSS elements without permitting inline scripts",
   );
   assert.equal(response.headers.get("cache-control"), "no-store");
-  assert.equal((await response.json()).labs.length, 3);
+  assert.equal((await response.json()).labs.length, 4);
   for (const [target, type] of [
     ["/vendor/xterm/xterm.js", "javascript"],
     ["/vendor/xterm/addon-fit.js", "javascript"],
@@ -689,4 +690,15 @@ test("only allowlisted static assets are served under restrictive no-store heade
     source,
     /FallbackAlpineSandbox|FORCE_FALLBACK|createSessionToken|decode.*JWT|spawn\(['"](?:sh|bash|powershell|cmd)/i,
   );
+});
+
+test("CODE-501 milestones read command history and the fixture results file", async () => {
+  const history = ["cd ~/lab/code", "cat program.py", "python3 program.py 2", "./check"];
+  const files = new Map([["/home/learner/lab/code/results.txt", "PASS quantity=2 -> 6\nPASS quantity=5 -> 15\nPASS quantity=0 -> 0\nALL_FIXTURES_PASS\n"]]);
+  const session = { labId: "CODE-501", commandHistory: history, sandbox: { readFile: async (file) => files.get(file) || null } };
+  const results = await verifySessionMilestones(session);
+  assert.deepEqual(results.map((m) => [m.id, m.completed]), [["m1-read-program", true], ["m2-run-program", true], ["m3-fixtures-pass", true]]);
+  files.set("/home/learner/lab/code/results.txt", "FAIL quantity=2 -> got: 5 expected: 6\n0 of 3 fixtures pass\n");
+  const failing = await verifySessionMilestones({ ...session, commandHistory: ["ls"] });
+  assert.deepEqual(failing.map((m) => m.completed), [false, false, false]);
 });

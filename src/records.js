@@ -9,7 +9,8 @@ import { labFormat } from './lab-format.js?release=20261107-tech-team';
 // This guides the lesson; imported learner work is not an assessment credential.
 export function workbenchProgress(scenario, record, result) {
   const {attempts,draft}=readExperiments(record),latest=attempts.at(-1);
-  const actual=scenario.track==='hardware'?verifyHardware(scenario.id,record.state):verifyWorkspace(scenario.id,record.state);
+  // A real-machine lab reports its own verified result; it has no simulated workspace to re-check.
+  const actual=result?.remote===true?{ok:result.ok===true,message:String(result.message||'')}:scenario.track==='hardware'?verifyHardware(scenario.id,record.state):verifyWorkspace(scenario.id,record.state);
   const passed=record.verified===true&&actual.ok&&result?.ok!==false;
   const answered=!!latest&&['predict','evidence','changed','observed','explain'].every(field=>typeof latest[field]==='string'&&latest[field].trim().length>=(['predict','evidence'].includes(field)?12:1));
   const current=!!latest&&sameSetup(latest.after,observationSnapshot(scenario,record.state));
