@@ -11,4 +11,7 @@ export {retainExperimentEvents,experimentEventText,experimentReport,readExperime
 export {renderCapstone,mountCapstone,capstoneReport,capstoneProgress,capstoneHandoff} from './capstone.js?release=20261107-tech-team';
 export {practiceScenarioFor,practiceHasWork,renderPracticeWorkbench,mountPracticeWorkbench} from './practice-workbench.js?release=20261107-tech-team';
 export {normalizeLabRecord,workbenchProgress} from './records.js?release=20261107-tech-team';
+export {getWorkspaceMission} from './workspaces.js?release=20261107-tech-team';
+export {codingChallengeComplete,codingStarter} from './coding-lab.js?release=20261107-tech-team';
+export {labFormat,renderLabManual,labManualReport} from './lab-manual.js?release=20261107-tech-team';
 export {attachClassroomLab} from './classroom-client.js?release=20261107-tech-team';

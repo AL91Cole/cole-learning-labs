@@ -14,7 +14,7 @@ export function workbenchProgress(scenario, record, result) {
   const current=!!latest&&sameSetup(latest.after,observationSnapshot(scenario,record.state));
   const unfinished=Object.values(draft).some(value=>typeof value==='string'?value.trim().length>0:value!==undefined&&value!==null);
   const ready=passed&&answered&&latest.check?.ok===true&&current&&!unfinished;
-  const message=ready?'Step 2 complete. Continue to Check & explain.':actual.needsDocument?'Click the lesson file on the monitor. Then test and save your attempt.':unfinished?'Complete your notebook answers, test your idea, and select Save this attempt.':!passed?'Test your idea. The task must work before you can continue.':!answered?'Complete and save the notebook: idea, evidence, change, result, and what you learned.':!current?'The setup changed. Run a new test and save your attempt.':'Save a test that shows the task works before continuing.';
+  const message=ready?'Section 2 complete. Continue to Challenge & report.':actual.needsDocument?'Click the lesson file on the monitor. Then test and save your attempt.':unfinished?'Complete your notebook answers, test your idea, and select Save this attempt.':!passed?'Test your idea. The task must work before you can continue.':!answered?'Complete and save the notebook: idea, evidence, change, result, and what you learned.':!current?'The setup changed. Run a new test and save your attempt.':'Save a test that shows the task works before continuing.';
   // What is left on this step, in the order a learner does it. Derived from the notebook; nothing new is stored.
   const idea=draft.predict.trim().length>=12&&draft.evidence.trim().length>=12,recorded=!!draft.after&&!!draft.check;
   const explained=['changed','observed','explain'].every(field=>draft[field].trim().length>0);
@@ -42,7 +42,9 @@ export function normalizeLabRecord(scenario, value) {
     questions: Array.isArray(r.questions) ? [...new Set(r.questions.filter(i => Number.isInteger(i) && i >= 0 && i < scenario.questions.length))] : [],
     events: Array.isArray(r.events) ? retainExperimentEvents(scenario,r.events.slice(-2000).filter(e => e && typeof e === 'object' && typeof e.message === 'string').map(e => ({ time: text(e.time, 40), message: text(e.message, 600), kind: ['info', 'warning', 'success'].includes(e.kind) ? e.kind : 'info' }))) : [],
     symptoms: text(r.symptoms, 2000), notes: text(r.notes, 4000), plan: text(r.plan, 2000), reflection: text(r.reflection, 2000),
-    ideaSaved: r.ideaSaved === true, verified: r.verified === true, closed: r.closed === true
+    ideaSaved: r.ideaSaved === true, verified: r.verified === true, closed: r.closed === true,
+    // Lab manual steps the learner marked as read. Ids only; the manual decides what they mean.
+    manual: Array.isArray(r.manual) ? [...new Set(r.manual.filter(id => typeof id === 'string' && /^[a-z-]{1,40}$/.test(id)))].slice(0, 40) : []
   };
   // Older drafts keep their writing, but require the learner to review and save
   // both first-idea answers before continuing through the revised first page.

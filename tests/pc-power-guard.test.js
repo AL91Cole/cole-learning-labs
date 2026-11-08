@@ -56,7 +56,7 @@ test('the eight authored initial faults and a legitimately delivered repair reta
     assert.deepEqual(normalized,state);assert.equal(verifyHardware(id,normalized).ok,true);
     assert.match(getHardwareReadouts(id,normalized).display.value,/Original lesson file open/);
     const record=normalizeLabRecord(scenario,{state,verified:true,closed:false,notes:'The original classroom file opens.'});
-    assert.match(report(scenario,record),/Status: TECHNICALLY VERIFIED — TICKET OPEN/);
+    assert.match(report(scenario,record),/Status: TASK VERIFIED — LAB OPEN/);
     assert.match(report(scenario,record),/AC power: connected/);
   }
 });
@@ -88,14 +88,14 @@ test('report content preserves the actual disconnected power path after rejectin
     assert.equal(record.state.booted,false);assert.equal(record.state.documentOpened,false);
     assert.equal(record.verified,false);assert.equal(record.closed,false);assert.equal(record.plan,'Trace both power and display paths.');assert.equal(record.reflection,'A saved success flag does not supply power.');assert.deepEqual(record.evidence,[scenario.clues[0].id]);assert.equal(record.events[0].message,'I checked the original classroom task.');
     const text=report(scenario,record);assert.match(text,/Status: IN PROGRESS/);assert.match(text,/AC power: disconnected/);assert.match(text,/fresh startup test is needed/);
-    assert.doesNotMatch(text,/Status: (?:DELIVERED|TECHNICALLY VERIFIED)/);
+    assert.doesNotMatch(text,/Status: (?:DELIVERED|TASK VERIFIED)/);
   }
 });
 
 test('hardware record completion is rechecked for component faults while healthy delivery and software flags are retained',()=>{
   for(const detailed of [false,true]) {
     const record=normalizeLabRecord(scenario,{state:delivered(detailed),verified:true,closed:true,notes:'The original lesson works.'});
-    assert.equal(record.verified,true);assert.match(report(scenario,record),/Status: (?:DELIVERED|TECHNICALLY VERIFIED)/);
+    assert.equal(record.verified,true);assert.match(report(scenario,record),/Status: (?:DELIVERED|TASK VERIFIED)/);
     for(const field of ['atxConnected','cpuPowerConnected','ramSeated','sataDataConnected','sataPowerConnected']) {
       const failed=normalizeLabRecord(scenario,{state:{...delivered(detailed),[field]:false},verified:true,closed:true,notes:'Keep my investigation notes.'});
       assert.equal(failed.verified,false,field);assert.equal(failed.closed,false,field);assert.equal(failed.notes,'Keep my investigation notes.');assert.match(report(scenario,failed),/Status: IN PROGRESS/);

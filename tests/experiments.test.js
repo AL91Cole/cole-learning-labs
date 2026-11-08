@@ -134,7 +134,7 @@ test('drafts use the existing opt-in save/resume and clear lifecycle, without ne
   assert.equal(readExperiments(restored.labs[hardware.id]).draft.changed,'My retained draft change.');
   assert.equal(readExperiments(restored.labs[hardware.id]).draft.before.length,6);
   manager.clearAll();assert.equal(data.has(WORK_PREFIX),false);
-  assert.deepEqual(Object.keys(record).sort(),['closed','events','evidence','ideaSaved','notes','plan','questions','reflection','state','symptoms','verified']);
+  assert.deepEqual(Object.keys(record).sort(),['closed','events','evidence','ideaSaved','manual','notes','plan','questions','reflection','state','symptoms','verified']);
 });
 
 test('network comparisons distinguish applied settings from a freshly run check',()=>{

@@ -1,0 +1,41 @@
+/* Lab manual: the guided-lab instruction panel shown above every investigation page. */
+.lab-manual{margin:0;padding:16px 24px 18px;background:#0d2230;border-bottom:1px solid #2b5360;color:#e7f4f5}
+.manual-sections{list-style:none;margin:0 0 14px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.manual-section{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #2f5b66;border-radius:10px;background:#0b1c2a;font-size:.86rem;line-height:1.3;color:#b9d6dc}
+.manual-section b{display:block;color:#f0f7fa;font-size:.95rem}
+.manual-section.is-current{border-color:#67e0c9;background:#113d43;box-shadow:inset 0 -3px #67e0c9}
+.manual-section.is-complete .manual-section-number{background:#1d6b5a;color:#fff}
+.manual-section.is-locked{opacity:.65}
+.manual-section-number{flex:none;display:inline-grid;place-items:center;min-width:28px;height:28px;border-radius:50%;background:#0c202c;color:#96f3dd;font-weight:800}
+.manual-overview{margin:0 0 14px;border:1px solid #2f5b66;border-radius:10px;background:#0b1c2a}
+.manual-overview>summary{cursor:pointer;min-height:44px;padding:10px 14px;font-weight:700;color:#c9ecf2}
+.manual-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:4px 14px 10px}
+.manual-overview-grid h3{margin:0 0 6px;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:#7be4d2}
+.manual-overview-grid p,.manual-overview-grid li{font-size:.94rem;line-height:1.6;color:#dcecef;margin:0}
+.manual-overview-grid ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.manual-scope{margin:0;padding:0 14px 12px;font-size:.86rem;color:#a9cfc5}
+.manual-current .eyebrow{margin:0 0 2px}
+.manual-current h2{margin:0 0 4px;font-size:1.3rem;letter-spacing:-.02em;color:#f0f7fa}
+.manual-summary{margin:0 0 10px;font-size:.92rem;color:#a9cfc5}
+.manual-steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.manual-step{display:flex;gap:12px;padding:12px 14px;border:1px solid #2f5b66;border-left:5px solid #3d6a63;border-radius:8px;background:#102a2c}
+.manual-step.is-current{border-left-color:#67e0c9;background:#113d43}
+.manual-step.is-done{border-left-color:#58cdb4;color:#a9cfc5}
+.manual-step.is-done .manual-step-instruction{text-decoration:line-through;text-decoration-color:#58cdb4;text-decoration-thickness:1px}
+.manual-step.is-optional{border-style:dashed}
+.manual-step.is-challenge{border-left-color:#f3ce85;background:#1d2635}
+.manual-step-mark{flex:none;display:inline-grid;place-items:center;min-width:28px;height:28px;border-radius:50%;background:#0c202c;color:#96f3dd;font-weight:800}
+.manual-step.is-done .manual-step-mark{background:#1d6b5a;color:#fff}
+.manual-step.is-challenge .manual-step-mark{color:#f3ce85}
+.manual-step-body{min-width:0;flex:1;display:grid;gap:8px}
+.manual-step-instruction{margin:0;font-size:1rem;line-height:1.55;color:#eaf6f3}
+.manual-step.is-done .manual-step-instruction{color:#a9cfc5}
+.manual-optional{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:999px;background:#1f3b4a;color:#c9ecf2;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.manual-show-me>summary{cursor:pointer;min-height:36px;display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;border:1px solid #58cdb4;color:#8febd8;font-size:.9rem;font-weight:700}
+.manual-show-me>p{margin:8px 0 0;font-size:.95rem;line-height:1.6;color:#dcecef}
+.manual-code{margin:8px 0 0;padding:10px 12px;background:#071820;color:#a1f2e3;border-radius:6px;font-size:.9rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.manual-no-hint{margin:0;font-size:.9rem;color:#f3ce85}
+.manual-ack-link{display:inline-block}
+.lab-manual [data-lab-next]:not(:empty){margin-top:14px}
+@media (max-width:760px){.lab-manual{padding:14px 16px 16px}.manual-sections{grid-template-columns:1fr;gap:6px}.manual-section{padding:8px 10px}.manual-step{padding:10px 12px;gap:10px}}
+@media (prefers-reduced-motion:no-preference){.manual-step{transition:background-color .2s ease,border-color .2s ease}}

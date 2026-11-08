@@ -32,6 +32,9 @@ const pythonStarters={
 const starterFor=(id,language)=>language==='python'?pythonStarters[key(id)]||'':definitions[key(id)]?.starter||'';
 
 export const supportsCodingLab = id => Object.hasOwn(definitions,key(id));
+export const codingStarter = (id,language) => starterFor(id,language);
+/** Both practice languages have a remembered passing solution: the unguided challenge is complete. */
+export const codingChallengeComplete = saved => record(saved)&&record(saved.solutions)&&CODING_LANGUAGES.every(item=>typeof saved.solutions[item.id]==='string'&&saved.solutions[item.id].trim().length>0);
 export const codingFixtureCount = id => definitions[key(id)]?.values.length||0;
 export const codingBlockContract = id => definitions[key(id)]?.blocks||null;
 class CodeError extends Error { constructor(message,line=1) { super(message);this.line=line; } }
@@ -250,7 +253,7 @@ function fixtureRuns(id,code,language='javascript') {
 function matrix(id,code,language='javascript') {return fixtureRuns(id,code,language).map(run=>({label:run.input+' = '+run.value+': '+(run.error?'line '+run.error.line+' — '+run.error.message:run.passed?'output matches the request':'output does not match the request'),ok:run.passed}));}
 
 export function initialCodingState(id) {
-  return {tested:false,results:[],workspaceEdits:0,checkRuns:0,language:'javascript',languageAtRun:'',code:starterFor(id,'javascript'),sourceAtRun:'',fixtureIndex:0,output:[],errors:[]};
+  return {tested:false,results:[],workspaceEdits:0,checkRuns:0,language:'javascript',languageAtRun:'',code:starterFor(id,'javascript'),sourceAtRun:'',fixtureIndex:0,output:[],errors:[],solutions:{}};
 }
 export function normalizeCodingState(id,saved) {
   const state=initialCodingState(id);if(!record(saved)) return state;
@@ -261,6 +264,9 @@ export function normalizeCodingState(id,saved) {
   if(typeof saved.sourceAtRun==='string') state.sourceAtRun=saved.sourceAtRun.slice(0,LIMITS.source);
   state.languageAtRun=saved.languageAtRun===undefined&&saved.language===undefined&&saved.tested===true?'javascript':CODING_LANGUAGES.some(item=>item.id===saved.languageAtRun)?saved.languageAtRun:'';
   state.tested=saved.tested===true&&state.sourceAtRun===state.code&&state.languageAtRun===state.language;
+  // A remembered passing solution per language supports the unguided challenge. It only
+  // counts when the saved source still passes every fixture in that language today.
+  if(record(saved.solutions)) for(const item of CODING_LANGUAGES) {const source=saved.solutions[item.id];if(typeof source==='string'&&source.length<=LIMITS.source&&source.trim()&&fixtureRuns(id,source,item.id).every(run=>run.passed)) state.solutions[item.id]=source;}
   if(state.tested) {
     const runs=fixtureRuns(id,state.code,state.language),selected=runs[state.fixtureIndex];
     state.results=matrix(id,state.code,state.language);state.output=selected?.output || [];state.errors=selected?.error?[selected.error]:[];
@@ -285,6 +291,7 @@ export function applyCodingAction(id,previous,action,value) {
     if(value!==undefined && (!record(value) || !save(value.code))) return {state,message:'Keep the program at or below 4,000 characters.',kind:'warning'};
     state.checkRuns++;state.tested=true;state.sourceAtRun=state.code;state.languageAtRun=state.language;
     const next=normalizeCodingState(id,state),passed=next.results.filter(result=>result.ok).length;
+    if(passed===next.results.length&&next.results.length>0) next.solutions={...next.solutions,[next.language]:next.code};
     return {state:next,message:passed+' of '+next.results.length+' coding fixtures passed. '+(passed===next.results.length?'Check the original task and explain your evidence.':'Read the actual and expected output, then revise and rerun.'),kind:passed===next.results.length?'success':'warning'};
   }
   return {state,message:'Use Save code, Run all fixtures, or Reset starter in this practice editor.',kind:'info'};
@@ -296,7 +303,7 @@ export function verifyCoding(id,saved) {
 }
 export function getCodingMission(id,saved) {
   const state=normalizeCodingState(id,saved),results=matrix(id,state.code,state.language),passed=state.tested?results.filter(result=>result.ok).length:0,complete=state.tested && passed===results.length && results.length>0;
-  return {stage:complete?'Verified':state.tested?'Troubleshoot':state.workspaceEdits?'Ready to test':'Investigate',tested:state.tested,passed,total:results.length,complete,currentCheck:results.findIndex(result=>!result.ok),attempts:state.checkRuns,next:complete?'Choose Check & explain. Verify the original task and explain how the fixtures support your reasoning.':state.tested?'Compare actual and expected output. Change one part of your program, then run all fixtures again.':'Read the input contract, edit the starter program, and run all fixtures.',hints:['Use the supplied input variable rather than a fixed answer.','Every fixture runs the same program with a different input. Passing one fixture is not enough.','The language reference below the editor explains the supported statements and limits.']};
+  return {stage:complete?'Verified':state.tested?'Troubleshoot':state.workspaceEdits?'Ready to test':'Investigate',tested:state.tested,passed,total:results.length,complete,currentCheck:results.findIndex(result=>!result.ok),attempts:state.checkRuns,next:complete?'Continue to Challenge & report. Verify the original task and explain how the fixtures support your reasoning.':state.tested?'Compare actual and expected output. Change one part of your program, then run all fixtures again.':'Read the input contract, edit the starter program, and run all fixtures.',hints:['Use the supplied input variable rather than a fixed answer.','Every fixture runs the same program with a different input. Passing one fixture is not enough.','The language reference below the editor explains the supported statements and limits.']};
 }
 
 /** Fixed read-only diagnostics, never a shell or a second code-execution entry point. */

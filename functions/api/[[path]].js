@@ -164,7 +164,7 @@ const networkBenchField = id => value => {
   return Object.keys(value).length===2;
 };
 const expandedWorkspaceFields=Object.fromEntries(SCENARIOS.filter(scenario=>Object.keys(expandedStateFields(scenario.id)).length>0).map(scenario=>[scenario.id,{testSignature:workString(512),...(getNetworkBenchSpec(scenario.id)?{networkBench:networkBenchField(scenario.id)}:{}),...Object.fromEntries(Object.entries(expandedStateFields(scenario.id)).map(([field,values])=>[field,workEnum(values)]))}]));
-const codingWorkspaceFields=Object.fromEntries(CODING_SCENARIOS.map(scenario=>[scenario.id,{code:workString(4000),sourceAtRun:workString(4000),language:workEnum(['javascript','python']),languageAtRun:workEnum(['','javascript','python']),fixtureIndex:value=>Number.isInteger(value)&&value>=0&&value<codingFixtureCount(scenario.id),output:workList(workString(300),20),errors:workList(workRecord({line:value=>Number.isInteger(value)&&value>=1&&value<=4001,message:workString(300)}),1)}]));
+const codingWorkspaceFields=Object.fromEntries(CODING_SCENARIOS.map(scenario=>[scenario.id,{code:workString(4000),sourceAtRun:workString(4000),language:workEnum(['javascript','python']),languageAtRun:workEnum(['','javascript','python']),fixtureIndex:value=>Number.isInteger(value)&&value>=0&&value<codingFixtureCount(scenario.id),output:workList(workString(300),20),errors:workList(workRecord({line:value=>Number.isInteger(value)&&value>=1&&value<=4001,message:workString(300)}),1),solutions:workRecord({javascript:workString(4000),python:workString(4000)})}]));
 const workspaceStateFields = {
   ...expandedWorkspaceFields, ...codingWorkspaceFields,
   'NET-201': Object.fromEntries(['ip', 'mask', 'gateway', 'dns'].map(key => [key, workString(64)])),
@@ -186,7 +186,9 @@ function workPayload(value, labId) {
     evidence: workList(workEnum(scenario.clues.map(clue => clue.id)), scenario.clues.length),
     questions: workList(index => Number.isInteger(index) && index >= 0 && index < scenario.questions.length, scenario.questions.length),
     events: workList(workRecord({ time: workString(40), message: workString(600), kind: workEnum(['info', 'warning', 'success']) }), 100),
-    symptoms: workString(2000), plan: workString(2000), ideaSaved: workBoolean, notes: workString(4000), reflection: workString(2000), verified: workBoolean, closed: workBoolean
+    symptoms: workString(2000), plan: workString(2000), ideaSaved: workBoolean, notes: workString(4000), reflection: workString(2000), verified: workBoolean, closed: workBoolean,
+    // Lab manual steps marked as read: short authored ids only, never free text.
+    manual: workList(value => typeof value === 'string' && /^[a-z-]{1,40}$/.test(value), 40)
   });
   if (scenario.track === 'hardware' && value.state) {
     // Legacy drafts may omit both assembly fields. Once detailed mode is
