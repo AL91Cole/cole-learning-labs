@@ -102,7 +102,7 @@ test('the rendered page puts the lab guide beside the environment with no reques
     const html = renderLabGuidePage(scenario, record, {trackName:'Track'});
     assert.ok(html.indexOf('id="lab-guide"') < html.indexOf('id="lab-environment"'), scenario.id + ' guide precedes the environment');
     assert.ok(html.includes('LAB GUIDE') && html.includes('LAB ENVIRONMENT') && html.includes('id="workspace"'), scenario.id);
-    for (const section of GUIDE_SECTIONS) assert.ok(html.includes('data-guide-section="' + section.id + '"') && html.includes(section.title.replace('&', '&amp;')), scenario.id + ' ' + section.id);
+    for (const section of GUIDE_SECTIONS) assert.ok(html.includes('data-guide-section="' + section.id + '"') && html.includes(section.title.replaceAll('&', '&amp;')), scenario.id + ' ' + section.id);
     for (const clue of scenario.clues) assert.ok(html.includes('data-resource="' + clue.id + '"'), scenario.id + ' resource ' + clue.id);
     for (const forbidden of ['question-form', 'student-question', 'interview-history', 'READ THE TICKET', 'idea-form', 'Ask at least one question']) assert.ok(!html.includes(forbidden), scenario.id + ' has no ' + forbidden);
     for (const id of ['experiment-tools', 'verify-task', 'notes', 'reflection', 'finish-lab', 'reset-ticket', 'lab-dialog', 'work-privacy', 'coding-editor'.replace('coding-editor', 'action-feedback')]) assert.ok(html.includes('id="' + id + '"'), scenario.id + ' needs #' + id);
