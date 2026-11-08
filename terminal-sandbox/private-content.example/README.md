@@ -1,7 +1,8 @@
 # Private content starter
 
-Copy this folder to a **private** repository (for example
-`cole-learning-labs-private`). It holds everything about paid real-machine labs
+This folder is the starter the private repository
+`AL91Cole/cole-learning-labs-private-labs` began from; keep it in sync when
+the content rules change. It holds everything about paid real-machine labs
 that should not be public: lab definitions with their checks and hints, the
 seed files placed in each learner's container, and deployment settings. The
 public repository keeps the site, the simulated labs and the generic terminal

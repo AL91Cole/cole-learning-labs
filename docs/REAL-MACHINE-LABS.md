@@ -39,7 +39,8 @@ it costs, and what is still to do before charging.
    `https://colelearninglabs.com`).
 2. Reach it **same-origin** so the site's Content-Security-Policy stays as it
    is: route `https://<site>/terminal/*` to the service (Cloudflare route or
-   tunnel; `terminal-sandbox/cloudflare/` has starting configurations), so the
+   tunnel; the private repository's `deploy/` folder has the configurations and
+   `terminal-sandbox/cloudflare/` has placeholder templates), so the
    WebSocket is `wss://<site>/terminal/ws` and xterm loads from
    `/terminal/vendor/xterm/`. A separate origin also works, but then that
    origin must be added to `script-src`, `style-src` and `connect-src` in

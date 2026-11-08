@@ -20,8 +20,9 @@ public does not mean free to reuse. It holds:
 
 ## Private repository
 
-Create an empty private repository (for example `cole-learning-labs-private`)
-and copy `terminal-sandbox/private-content.example/` into its root. It holds:
+The private repository is
+[`AL91Cole/cole-learning-labs-private-labs`](https://github.com/AL91Cole/cole-learning-labs-private-labs).
+It started from `terminal-sandbox/private-content.example/` and holds:
 
 - `labs/index.js`: paid lab definitions with their checks and hints;
 - `sandbox/`: a Dockerfile layer and the seed files each learner receives;
@@ -37,9 +38,9 @@ desktop.
 
 ## Moving existing pieces
 
-- `terminal-sandbox/cloudflare/` holds deployment templates with a real
-  hostname; move them to the private `deploy/` folder when you deploy and
-  replace them here with the placeholder versions.
+- The Cloudflare tunnel and nginx configurations with the real hostname now
+  live in the private repository's `deploy/` folder; the copies under
+  `terminal-sandbox/cloudflare/` are placeholder templates.
 - The sample labs may stay public. If a sample later becomes paid content,
   delete it from `SELF_PACED_LABS` and add it to the private `labs/index.js`.
 

@@ -20,7 +20,7 @@ services:
       SANDBOX_ENABLED: "false"
       SANDBOX_IMAGE: cole-learning-labs/sandbox:alpine
       TEACHER_ACCESS_KEY: ${TEACHER_ACCESS_KEY:?set a random secret of at least 32 characters}
-      ALLOWED_ORIGINS: https://terminal.colelearninglabs.com
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://terminal.your-site.example}
       # Set the exact private reverse-proxy peer address after inspecting deployment networking.
       TRUSTED_PROXY_ADDRESSES: ${TRUSTED_PROXY_ADDRESSES:-}
       # Private lab content mounted from the private repository (see private-content.example/).
