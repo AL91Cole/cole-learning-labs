@@ -403,10 +403,57 @@ const secureEquals = (a, b) =>
     crypto.createHash("sha256").update(b).digest(),
   );
 const failure = (code) => Object.assign(new Error(code), { code });
-const labFor = (id) =>
-  typeof id === "string" && Object.hasOwn(SELF_PACED_LABS, id)
-    ? SELF_PACED_LABS[id]
-    : null;
+// The lab catalog: the sample labs above plus any content registered at start-up
+// from a private content module (LAB_CONTENT_MODULE). Paid lab definitions, their
+// seed files and deployment settings live outside this public repository.
+const LAB_CATALOG = new Map(Object.entries(SELF_PACED_LABS));
+const LAB_ID = /^[A-Z]{2,5}-\d{3}$/;
+const CHECK_TYPES = new Set(["history_regex", "file_contains", "file_contains_all"]);
+export function validateLabDefinition(lab) {
+  if (!lab || typeof lab !== "object") return "lab must be an object";
+  if (typeof lab.id !== "string" || !LAB_ID.test(lab.id)) return "lab id must look like ABC-123";
+  for (const field of ["title", "track", "grade", "summary", "markdown"])
+    if (typeof lab[field] !== "string" || !lab[field].trim() || lab[field].length > (field === "markdown" ? 20000 : 300))
+      return lab.id + ": " + field + " must be a bounded non-empty string";
+  if (!Number.isInteger(lab.minutes) || lab.minutes < 1 || lab.minutes > 240) return lab.id + ": minutes must be 1-240";
+  if (!Array.isArray(lab.milestones) || !lab.milestones.length || lab.milestones.length > 20) return lab.id + ": 1-20 milestones are required";
+  const ids = new Set();
+  for (const item of lab.milestones) {
+    if (!item || typeof item !== "object" || typeof item.id !== "string" || !/^[a-z0-9-]{1,48}$/.test(item.id) || ids.has(item.id)) return lab.id + ": every milestone needs a unique lowercase id";
+    ids.add(item.id);
+    for (const field of ["title", "description", "hint"]) if (typeof item[field] !== "string" || item[field].length > 400) return lab.id + "/" + item.id + ": " + field + " must be a string";
+    if (!CHECK_TYPES.has(item.checkType)) return lab.id + "/" + item.id + ": unknown checkType";
+    if (item.checkType === "history_regex") {
+      if (!(item.pattern instanceof RegExp)) return lab.id + "/" + item.id + ": pattern must be a RegExp";
+    } else {
+      if (typeof item.filePath !== "string" || !item.filePath.startsWith("/home/learner/") || item.filePath.includes("..")) return lab.id + "/" + item.id + ": filePath must be inside /home/learner";
+      if (item.checkType === "file_contains" && (typeof item.expectedSubstring !== "string" || !item.expectedSubstring)) return lab.id + "/" + item.id + ": expectedSubstring is required";
+      if (item.checkType === "file_contains_all" && (!Array.isArray(item.expectedSubstrings) || !item.expectedSubstrings.length || !item.expectedSubstrings.every((value) => typeof value === "string" && value))) return lab.id + "/" + item.id + ": expectedSubstrings are required";
+    }
+  }
+  return null;
+}
+/** Register lab definitions (an array, or an object keyed by id). Invalid content is refused as a whole. */
+export function registerLabs(content) {
+  const list = Array.isArray(content) ? content : content && typeof content === "object" ? Object.values(content) : null;
+  if (!list) throw new Error("Lab content must be an array or an object of labs.");
+  for (const lab of list) {
+    const problem = validateLabDefinition(lab);
+    if (problem) throw new Error("Lab content refused: " + problem);
+  }
+  for (const lab of list) LAB_CATALOG.set(lab.id, Object.freeze({ ...lab, milestones: lab.milestones.map((m) => Object.freeze({ ...m })) }));
+  return list.map((lab) => lab.id);
+}
+export const labCatalog = () => [...LAB_CATALOG.values()];
+/** Load a private content module (absolute path or file: URL) that exports `labs`. */
+export async function loadLabContent(specifier) {
+  if (typeof specifier !== "string" || !specifier.trim()) return [];
+  const url = /^file:/.test(specifier) ? specifier : "file://" + path.resolve(specifier);
+  const module = await import(url);
+  return registerLabs(module.labs ?? module.default);
+}
+export const labFor = (id) =>
+  typeof id === "string" && LAB_CATALOG.has(id) ? LAB_CATALOG.get(id) : null;
 
 export function buildDockerRunArgs(
   name,
@@ -536,7 +583,7 @@ export async function spawnSandboxContainer(session, cfg = CONFIG, deps = {}) {
       },
     );
     const allowedFiles = new Set(
-      Object.values(SELF_PACED_LABS).flatMap((lab) =>
+      labCatalog().flatMap((lab) =>
         lab.milestones.map((m) => m.filePath).filter(Boolean),
       ),
     );
@@ -724,7 +771,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       });
     if (url.pathname === "/api/labs")
       return json(res, 200, {
-        labs: Object.values(SELF_PACED_LABS).map(publicLab),
+        labs: labCatalog().map(publicLab),
       });
     const file = FILES.get(url.pathname);
     if (!file) return json(res, 404, { error: "not_found" });
@@ -1351,6 +1398,10 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+  if (process.env.LAB_CONTENT_MODULE) {
+    const loaded = await loadLabContent(process.env.LAB_CONTENT_MODULE);
+    console.log("Loaded " + loaded.length + " lab definition(s) from LAB_CONTENT_MODULE.");
+  }
   const service = createSandboxOrchestrator();
   service.server.listen(CONFIG.port, CONFIG.host, () => {
     console.log(

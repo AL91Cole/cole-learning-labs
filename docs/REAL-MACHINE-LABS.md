@@ -76,6 +76,8 @@ Docker's API instead of `docker run`.
 - Pilot one class on the Docker credit: confirm 30 sandboxes can start at the
   top of a period, measure cold-start time, and watch the output and
   inactivity limits.
-- Decide the repository split: keep this repository public (site and
-  simulated labs); move `terminal-sandbox/` lab content, deployment
-  configuration and keys to a private repository.
+- Finish the repository split described in
+  [Repository split](REPOSITORY-SPLIT.md): this repository stays public (site,
+  simulated labs, the generic terminal controller with sample labs); paid lab
+  content, seed files, deployment configuration and keys live in the private
+  repository and load through `LAB_CONTENT_MODULE`.

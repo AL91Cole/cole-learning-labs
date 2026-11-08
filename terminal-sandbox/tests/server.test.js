@@ -12,6 +12,11 @@ import {
   createSandboxOrchestrator,
   validSnapshot,
   verifySessionMilestones,
+  registerLabs,
+  validateLabDefinition,
+  loadLabContent,
+  labFor,
+  labCatalog,
 } from "../server.js";
 
 const ORIGIN = "http://127.0.0.1:8080",
@@ -701,4 +706,21 @@ test("CODE-501 milestones read command history and the fixture results file", as
   files.set("/home/learner/lab/code/results.txt", "FAIL quantity=2 -> got: 5 expected: 6\n0 of 3 fixtures pass\n");
   const failing = await verifySessionMilestones({ ...session, commandHistory: ["ls"] });
   assert.deepEqual(failing.map((m) => m.completed), [false, false, false]);
+});
+
+test("private lab content registers only well-formed labs and is found by labFor", async () => {
+  const good = { id: "PAID-101", title: "Paid lab", track: "Networking", grade: "Grades 9-12", minutes: 30, summary: "Paid content.", markdown: "# PAID-101", milestones: [{ id: "m1", title: "Read", description: "Read a file.", hint: "cat ~/lab/paid/notes.txt", checkType: "history_regex", pattern: /cat\s+.*notes\.txt/ }, { id: "m2", title: "Write", description: "Write a result.", hint: "echo DONE > ~/lab/paid/result.txt", checkType: "file_contains", filePath: "/home/learner/lab/paid/result.txt", expectedSubstring: "DONE" }] };
+  assert.equal(validateLabDefinition(good), null);
+  assert.match(validateLabDefinition({ ...good, id: "bad id" }), /lab id/);
+  assert.match(validateLabDefinition({ ...good, milestones: [{ ...good.milestones[1], filePath: "/etc/passwd" }] }), /inside \/home\/learner/);
+  assert.match(validateLabDefinition({ ...good, milestones: [{ ...good.milestones[0], pattern: "cat" }] }), /RegExp/);
+  assert.throws(() => registerLabs([good, { ...good, id: "PAID-102", minutes: 0 }]), /refused/);
+  assert.equal(labFor("PAID-101"), null, "a refused batch registers nothing");
+  assert.deepEqual(registerLabs({ "PAID-101": good }), ["PAID-101"]);
+  assert.equal(labFor("PAID-101").title, "Paid lab");
+  assert.ok(labCatalog().some((lab) => lab.id === "PAID-101"));
+  const example = new URL("../private-content.example/labs/index.js", import.meta.url);
+  const loaded = await loadLabContent(example.href);
+  assert.ok(loaded.length >= 1 && loaded.every((id) => labFor(id)), "the starter content module loads");
+  await assert.rejects(loadLabContent("/nonexistent/labs.js"));
 });

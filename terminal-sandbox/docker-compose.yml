@@ -23,6 +23,8 @@ services:
       ALLOWED_ORIGINS: https://terminal.colelearninglabs.com
       # Set the exact private reverse-proxy peer address after inspecting deployment networking.
       TRUSTED_PROXY_ADDRESSES: ${TRUSTED_PROXY_ADDRESSES:-}
+      # Private lab content mounted from the private repository (see private-content.example/).
+      LAB_CONTENT_MODULE: ${LAB_CONTENT_MODULE:-}
     group_add:
       - ${DOCKER_SOCKET_GID:?set the host Docker socket group ID}
     volumes:
