@@ -43,36 +43,51 @@ derived from the record and the current workspace by `labGuideFacts`.
 
 ## The lab environment: a simulated desktop (`src/lab-desktop.js`, `src/lab-shell.js`)
 
-The right pane is a small Linux-style desktop that runs entirely in the browser.
+The right pane is a Lubuntu-style desktop that runs entirely in the browser:
+a panel with an application menu, quick launchers, task buttons, a system tray
+and clock; Computer, Home, Lab Folder, Terminal, Text Editor, Lab Console and
+Trash icons; and windows that drag, resize, minimise, maximise and close.
 Learners do the work themselves, the way they would on a real machine, while
-every result still comes from the lab's own simulation engines. Nothing runs
-real software, touches real files or reaches a network.
+every result still comes from the lab's own simulation engines. Completed guide
+steps appear as desktop notifications. Nothing runs real software, touches real
+files or reaches a network.
 
-- **Terminal.** A practice shell with the prompt `student@lab-pc:~/lab$`. It
-  understands `help`, `ls`, `cd`, `pwd`, `cat`, `nano`, `clear`, `history`,
-  `echo`, `whoami`, `hostname`, `date`, `man`, `console` and `files`, plus each
-  lab's own practice tools verbatim (for example `ipconfig`, `ping 10.24.8.1`,
-  `inspect sender`, `show queue`). Coding labs add `python3 program.py <input>`,
-  `node program.js <input>` and `./check` (every fixture at once). NET-201 also
-  accepts `ip addr`, `ip addr add <address>/<prefix> dev eth0`,
-  `ip route add default via <gateway>` and `resolvectl dns eth0 <server>`,
-  which save the same settings as the Lab Console. Unknown commands get a
-  `command not found` with a pointer to `help`; real-network commands such as
-  `curl` or `nmap` are refused with an explanation.
-- **Files.** The lab folder: `README.txt`, a `resources/` folder with every
-  resource card as a text file, and either `program.py`/`program.js`,
+- **Terminal.** A practice shell with a coloured `student@lab-pc:~/lab$` prompt,
+  Tab completion of commands and file names, command history, Ctrl+L and
+  Ctrl+C, and `exit`. It understands `ls` (with `-l` and `-a` in GNU format),
+  `cd`, `pwd`, `cat`, `head`, `tail`, `grep`, `wc`, `nano`, `touch`, `mkdir`,
+  `rm`, `cp`, `mv`, `echo > file`, `whoami`, `id`, `hostname`, `uname`, `date`,
+  `uptime`, `ps`, `df`, `free`, `env`, `which`, `man`, `history`, `clear`,
+  `console` and `files`, plus each lab's own practice tools verbatim (for
+  example `ipconfig`, `ping 10.24.8.1`, `inspect sender`, `show queue`). Coding
+  labs add `python3 program.py <input>`, `node program.js <input>` and
+  `./check` (every fixture at once). NET-201 also accepts `ip addr`,
+  `ip addr add <address>/<prefix> dev eth0`, `ip route add default via
+  <gateway>` and `resolvectl dns eth0 <server>`, which save the same settings
+  as the Lab Console. Unknown commands get `command not found` with a pointer
+  to `help`; real-network and package commands are refused with an explanation.
+- **A home folder of their own.** `/home/student` has `Desktop`, `Documents`,
+  `Downloads` and `lab`. Learners can create, copy, move and remove their own
+  files there for the session (bounded to 40 files of 4,000 characters); lab
+  files are read-only except the program file, and `/etc/os-release` and
+  `/etc/hostname` describe the simulated system.
+- **Files.** A file manager with a Places sidebar (Home, Desktop, Documents,
+  Downloads, Lab Folder, Computer, Trash), breadcrumbs, up and home buttons,
+  and a folder grid. The lab folder holds `README.txt`, a `resources/` folder
+  with every resource card as a text file, and either `program.py`/`program.js`,
   `fixtures.txt` and `check` (coding) or `settings.txt` and `tools.txt`.
-- **Text Editor.** Opens any lab file; the program file is editable. Save writes
-  the program to the lab state (the same `save-code` action as before) and Run
-  all fixtures runs the check.
+- **Text Editor.** A menu bar (Save, Run all fixtures, Close file), line
+  numbers, a status bar with the cursor position and language, Ctrl+S and Tab
+  indentation. The program file saves to the lab state (the same `save-code`
+  action as before); learners' own files save to their session home folder.
 - **Lab Console.** The lab's existing settings and test workbench, opened as a
   window instead of a fixed form. Changing a setting there or in the terminal
   updates the same state.
 
-Windows open from desktop icons, the Menu button or the taskbar, can be dragged
-by their title bar, minimised and closed; on phones they fill the desktop. Guide
-steps watch what the learner does: running any terminal command, running a lab
-tool, running the program and editing or saving the file each complete a step.
+Windows open from desktop icons, the application menu, the quick launchers or
+the task buttons; on phones they fill the desktop. Guide steps watch what the
+learner does: running any terminal command, running a lab tool, running the
+program and editing or saving the file each complete a step.
 Those activity markers are stored as acknowledged ids (`used-terminal`,
 `used-tool`, `ran-program`) in the record's `manual` list.
 

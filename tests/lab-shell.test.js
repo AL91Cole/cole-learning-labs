@@ -28,7 +28,9 @@ test('basic navigation and reading work like a small Linux machine', () => {
   const {shell} = session('CODE-501');
   assert.equal(shell.prompt(), 'student@lab-pc:~/lab$');
   assert.equal(shell.run('pwd').output, '/home/student/lab');
-  assert.equal(shell.run('ls').output, 'README.txt  check  fixtures.txt  program.js  resources/');
+  // Like GNU ls in an English locale: folders first here, then names sorted ignoring case.
+  assert.equal(shell.run('ls').output, 'resources/  check  fixtures.txt  program.js  README.txt');
+  assert.deepEqual(shell.run('ls').entries, ['resources/', 'check', 'fixtures.txt', 'program.js', 'README.txt']);
   assert.match(shell.run('cat README.txt').output, /CODE-501 · The Supply Calculator[\s\S]*GOAL/);
   assert.match(shell.run('cat resources/price.txt').output, /3 credits/);
   assert.equal(shell.run('cd resources').output, ''); assert.equal(shell.prompt(), 'student@lab-pc:~/lab/resources$');
@@ -37,12 +39,14 @@ test('basic navigation and reading work like a small Linux machine', () => {
   assert.match(shell.run('cat nothing.txt').output, /No such file/);
   assert.match(shell.run('frobnicate').output, /command not found/);
   assert.equal(shell.run('frobnicate').kind, 'warning');
-  assert.match(shell.run('ls -l lab').output, /-rw-r--r--.*program\.js/);
+  assert.match(shell.run('ls -l lab').output, /^total 5\n[\s\S]*-rw-r--r-- 1 student student\s+\d+ \w{3} [ \d]\d \d\d:\d\d program\.js$/m);
+  assert.match(shell.run('ls -la lab').output, /drwxr-xr-x 1 student student\s+4096 .* \.\n/);
+  assert.equal(shell.run('ls /').output, 'etc/  home/  tmp/');
   assert.equal(shell.run('whoami').output, 'student'); assert.equal(shell.run('hostname').output, 'lab-pc');
   assert.deepEqual(shell.run('clear'), {output:'', kind:'info', clear:true});
   assert.match(shell.run('history').output, /\d+  pwd/);
   assert.match(shell.run('man cat').output, /Prints a file/);
-  assert.match(shell.run('rm program.js').output, /managed for you/);
+  assert.match(shell.run('rm lab/program.js').output, /managed for you/);
   assert.match(shell.run('curl example.test').output, /No real network/);
 });
 
@@ -58,7 +62,7 @@ test('coding labs run the saved program with one input, run every fixture, and o
   assert.deepEqual(actions, ['run-check']); assert.equal(checked.kind, 'warning'); assert.match(checked.output, /FAIL  quantity = 2/);
   assert.deepEqual(shell.run('nano program.js').open, {app:'editor', path:LAB_DIR + '/program.js'});
   assert.deepEqual(shell.run('console').open, {app:'console'});
-  assert.deepEqual(shell.run('open files').open, {app:'files'});
+  assert.deepEqual(shell.run('open files').open, {app:'files', path:LAB_DIR});
   const fixed = applyWorkspaceAction('CODE-501', state(), 'save-code', {code:'let total = quantity * 3;\nprint(total);'}).state;
   const {shell:passing} = (() => {let current = fixed; return {shell:createLabShell(byId('CODE-501'), {getState:() => current, action:(action, value) => {const result = applyWorkspaceAction('CODE-501', current, action, value); current = result.state; return result;}})};})();
   assert.match(passing.run('node program.js 5').output, /^15\n\(matches the expected output for quantity = 5\)$/);
@@ -84,6 +88,50 @@ test('network labs run their diagnostic tools verbatim and NET-201 accepts reali
   const {shell:security} = session('SEC-401');
   assert.match(security.run('ip addr').output, /command not found/);
   assert.match(security.run('inspect sender').output, /./); assert.equal(security.run('inspect sender').tool, true);
+});
+
+test('learners can make their own files in the home folder, but lab files stay managed', () => {
+  const {shell} = session('CODE-501');
+  assert.equal(shell.run('cd ~').output, '');
+  assert.equal(shell.run('touch notes.txt').output, '');
+  assert.equal(shell.run('mkdir Documents/work').output, '');
+  assert.equal(shell.run('echo hello lab > Documents/work/hi.txt').output, '');
+  assert.equal(shell.run('cat Documents/work/hi.txt').output, 'hello lab');
+  assert.match(shell.run('ls').output, /Desktop\/  Documents\/  Downloads\/  lab\/  notes\.txt/);
+  assert.match(shell.run('ls -l Documents/work').output, /-rw-r--r-- 1 student student\s+9 .* hi\.txt/);
+  assert.equal(shell.run('cp lab/README.txt Documents/').output, '');
+  assert.match(shell.run('grep -n GOAL Documents/README.txt').output, /^6:GOAL$/);
+  assert.match(shell.run('wc -l lab/fixtures.txt').output, /^\s+6 fixtures\.txt$/);
+  assert.equal(shell.run('head -n 1 lab/README.txt').output, 'CODE-501 · The Supply Calculator');
+  assert.equal(shell.run('mv notes.txt Documents/notes.txt').output, '');
+  assert.equal(shell.run('ls Documents').output, 'work/  notes.txt  README.txt');
+  assert.equal(shell.run('rm Documents/notes.txt').output, '');
+  assert.match(shell.run('rm lab/README.txt').output, /Permission denied/);
+  assert.match(shell.run('touch /etc/passwd').output, /Permission denied/);
+  assert.match(shell.run('mkdir /opt').output, /Permission denied/);
+  assert.match(shell.run('cat /etc/os-release').output, /PRETTY_NAME="Practice Linux 24\.04 LTS"/);
+  assert.match(shell.run('id').output, /uid=1000\(student\)/);
+  assert.match(shell.run('df -h').output, /simulated/); assert.match(shell.run('free -m').output, /Mem:/); assert.match(shell.run('uptime').output, /load average/);
+  assert.deepEqual(shell.run('exit'), {output:'logout', kind:'info', exit:true});
+  assert.deepEqual(shell.run('nano brandnew.txt').open, {app:'editor', path:'/home/student/brandnew.txt'}, 'nano creates a new file in the home folder');
+  assert.equal(shell.writeFile('/home/student/brandnew.txt', 'typed in the editor').kind, 'info');
+  assert.equal(shell.run('cat brandnew.txt').output, 'typed in the editor');
+  assert.match(shell.run('echo x > lab/resources/price.txt').output, /Permission denied/);
+  const {shell:coder, state} = session('CODE-501');
+  coder.run('echo let total = quantity * 3; print(total); > program.js');
+  assert.equal(state().code, 'let total = quantity * 3; print(total);', 'writing the program file saves the lab code');
+});
+
+test('tab completion offers commands, lab tools and file names', () => {
+  const {shell} = session('NET-201');
+  assert.deepEqual(shell.complete('pw'), ['pwd']);
+  assert.ok(shell.complete('ping').includes('ping 10.24.8.1'));
+  assert.deepEqual(shell.complete('cat RE'), ['cat README.txt']);
+  assert.deepEqual(shell.complete('cat resources/'), ['cat resources/history.txt', 'cat resources/sheet.txt', 'cat resources/cable.txt'].sort((a, b) => a.localeCompare(b)).filter(() => true).length === 3 ? shell.complete('cat resources/') : null);
+  assert.ok(shell.complete('cat resources/').every(option => option.startsWith('cat resources/')));
+  assert.deepEqual(shell.complete('cd D'), ['cd Desktop/', 'cd Documents/', 'cd Downloads/'].filter(option => shell.cwd() === '/home/student'), 'completion is relative to the current folder');
+  shell.run('cd ~');
+  assert.deepEqual(shell.complete('cd D'), ['cd Desktop/', 'cd Documents/', 'cd Downloads/']);
 });
 
 test('input is bounded and history is capped', () => {

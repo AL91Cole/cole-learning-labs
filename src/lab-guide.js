@@ -193,7 +193,7 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
   const shell = $('.lab-guide-shell'), environmentHost = $('[data-lab-environment]'), feedback = $('#action-feedback');
   const provider = environment || preferredLabEnvironment();
   const mode = route?.mode || 'guided';
-  let refreshing = false, experiments = {refresh(){}, dispose(){}}, desktop = {refresh(){}, dispose(){}, hasUnsavedDraft:() => false};
+  let refreshing = false, experiments = {refresh(){}, dispose(){}}, desktop = {refresh(){}, dispose(){}, hasUnsavedDraft:() => false}, doneSteps = null;
   const acknowledge = id => {if (!Array.isArray(r.manual)) r.manual = []; if (r.manual.includes(id)) return false; r.manual.push(id); return true;};
   const view = () => {const open = $$('[data-guide-section]').find(node => node.open); return GUIDE_SECTIONS.find(section => section.id === open?.dataset.guideSection) || GUIDE_SECTIONS[0];};
   function logEvent(event) {
@@ -237,6 +237,10 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
     if (refreshing) return; refreshing = true;
     try {
       const facts = labGuideFacts(s, r, {taskResult:currentTaskResult()}), guide = labGuide(s, facts), testing = facts.testing;
+      // A desktop notification marks each newly completed step, like a real desktop would.
+      const nowDone = new Map(guide.sections.flatMap(section => section.steps.filter(step => step.done).map(step => [section.id + '/' + step.id, {section, step}])));
+      if (doneSteps && typeof desktop.notify === 'function') for (const [id, {section, step}] of nowDone) if (!doneSteps.has(id)) desktop.notify((section.complete && section.steps.at(-1) === step ? section.title + ' complete' : 'Step done: ' + step.instruction.split(/[.:(]/)[0].trim().slice(0, 72)), {kind:'success'});
+      doneSteps = new Set(nowDone.keys());
       const bar = $('[data-guide-progress]'); bar.value = guide.percent; bar.textContent = guide.percent + '%'; $('[data-guide-percent]').textContent = guide.percent + '%';
       for (const section of guide.sections) {
         const list = $('[data-guide-steps="' + section.id + '"]'), html = stepsHTML(section, facts);
