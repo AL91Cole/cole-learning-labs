@@ -1,0 +1,11 @@
+# Private deployment override. Place next to the public docker-compose.yml:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.override.yml up -d
+services:
+  orchestrator:
+    environment:
+      SANDBOX_ENABLED: "true"
+      SANDBOX_IMAGE: cole-learning-labs/sandbox:private
+      LAB_CONTENT_MODULE: /content/labs/index.js
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set the public site origin, for example https://colelearninglabs.com}
+    volumes:
+      - ./labs:/content/labs:ro

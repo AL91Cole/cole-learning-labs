@@ -112,8 +112,8 @@ export function getExpandedMission(id,saved) {
   const passed=state.tested?matrix.filter(item=>item.ok).length:0, complete=state.tested && matrix.length>0 && passed===matrix.length;
   const currentCheck=matrix.findIndex(item=>!item.ok);
   return {stage:complete?'Verified':state.tested?'Troubleshoot':state.workspaceEdits?'Ready to test':'Investigate',tested:state.tested,passed,total:matrix.length,complete,currentCheck,attempts:state.checkRuns,
-    next:complete?'Choose Check & explain, verify the original task, and explain what the test showed.':state.tested?`Investigate: ${matrix[currentCheck]?.label ?? 'apply a change and test again'}.`:supportsLearningActivity(id)?'Read the source, change a choice, and choose Test this setup.':'Read the case artifacts, choose a plan, apply it, and run the workspace test.',
-    hints:[config?.concept ?? 'Inspect the supplied fictional evidence.', 'Use Request & clues to compare the case requirements with each saved setting.', supportsLearningActivity(id)?'Watch the preview after a change, then choose Test this setup. A preview does not replace the full test.':'Inspect a device readout after applying choices. A readout is evidence, but it does not replace the full workspace test.']};
+    next:complete?'Open Section 3: Challenge and Analysis, verify the original task, and explain what the test showed.':state.tested?`Investigate: ${matrix[currentCheck]?.label ?? 'apply a change and test again'}.`:supportsLearningActivity(id)?'Read the source, change a choice, and choose Test this setup.':'Read the case artifacts, choose a plan, apply it, and run the workspace test.',
+    hints:[config?.concept ?? 'Inspect the supplied fictional evidence.', 'Use the lab guide’s Introduction to compare the case requirements with each saved setting.', supportsLearningActivity(id)?'Watch the preview after a change, then choose Test this setup. A preview does not replace the full test.':'Inspect a device readout after applying choices. A readout is evidence, but it does not replace the full workspace test.']};
 }
 
 export function expandedDiagnostic(id,saved,command) {

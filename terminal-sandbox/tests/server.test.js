@@ -11,6 +11,12 @@ import {
   verifyGoogleWorkspaceToken,
   createSandboxOrchestrator,
   validSnapshot,
+  verifySessionMilestones,
+  registerLabs,
+  validateLabDefinition,
+  loadLabContent,
+  labFor,
+  labCatalog,
 } from "../server.js";
 
 const ORIGIN = "http://127.0.0.1:8080",
@@ -673,7 +679,7 @@ test("only allowlisted static assets are served under restrictive no-store heade
     "xterm needs its runtime CSS elements without permitting inline scripts",
   );
   assert.equal(response.headers.get("cache-control"), "no-store");
-  assert.equal((await response.json()).labs.length, 3);
+  assert.equal((await response.json()).labs.length, 4);
   for (const [target, type] of [
     ["/vendor/xterm/xterm.js", "javascript"],
     ["/vendor/xterm/addon-fit.js", "javascript"],
@@ -689,4 +695,32 @@ test("only allowlisted static assets are served under restrictive no-store heade
     source,
     /FallbackAlpineSandbox|FORCE_FALLBACK|createSessionToken|decode.*JWT|spawn\(['"](?:sh|bash|powershell|cmd)/i,
   );
+});
+
+test("CODE-501 milestones read command history and the fixture results file", async () => {
+  const history = ["cd ~/lab/code", "cat program.py", "python3 program.py 2", "./check"];
+  const files = new Map([["/home/learner/lab/code/results.txt", "PASS quantity=2 -> 6\nPASS quantity=5 -> 15\nPASS quantity=0 -> 0\nALL_FIXTURES_PASS\n"]]);
+  const session = { labId: "CODE-501", commandHistory: history, sandbox: { readFile: async (file) => files.get(file) || null } };
+  const results = await verifySessionMilestones(session);
+  assert.deepEqual(results.map((m) => [m.id, m.completed]), [["m1-read-program", true], ["m2-run-program", true], ["m3-fixtures-pass", true]]);
+  files.set("/home/learner/lab/code/results.txt", "FAIL quantity=2 -> got: 5 expected: 6\n0 of 3 fixtures pass\n");
+  const failing = await verifySessionMilestones({ ...session, commandHistory: ["ls"] });
+  assert.deepEqual(failing.map((m) => m.completed), [false, false, false]);
+});
+
+test("private lab content registers only well-formed labs and is found by labFor", async () => {
+  const good = { id: "PAID-101", title: "Paid lab", track: "Networking", grade: "Grades 9-12", minutes: 30, summary: "Paid content.", markdown: "# PAID-101", milestones: [{ id: "m1", title: "Read", description: "Read a file.", hint: "cat ~/lab/paid/notes.txt", checkType: "history_regex", pattern: /cat\s+.*notes\.txt/ }, { id: "m2", title: "Write", description: "Write a result.", hint: "echo DONE > ~/lab/paid/result.txt", checkType: "file_contains", filePath: "/home/learner/lab/paid/result.txt", expectedSubstring: "DONE" }] };
+  assert.equal(validateLabDefinition(good), null);
+  assert.match(validateLabDefinition({ ...good, id: "bad id" }), /lab id/);
+  assert.match(validateLabDefinition({ ...good, milestones: [{ ...good.milestones[1], filePath: "/etc/passwd" }] }), /inside \/home\/learner/);
+  assert.match(validateLabDefinition({ ...good, milestones: [{ ...good.milestones[0], pattern: "cat" }] }), /RegExp/);
+  assert.throws(() => registerLabs([good, { ...good, id: "PAID-102", minutes: 0 }]), /refused/);
+  assert.equal(labFor("PAID-101"), null, "a refused batch registers nothing");
+  assert.deepEqual(registerLabs({ "PAID-101": good }), ["PAID-101"]);
+  assert.equal(labFor("PAID-101").title, "Paid lab");
+  assert.ok(labCatalog().some((lab) => lab.id === "PAID-101"));
+  const example = new URL("../private-content.example/labs/index.js", import.meta.url);
+  const loaded = await loadLabContent(example.href);
+  assert.ok(loaded.length >= 1 && loaded.every((id) => labFor(id)), "the starter content module loads");
+  await assert.rejects(loadLabContent("/nonexistent/labs.js"));
 });

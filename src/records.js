@@ -3,12 +3,14 @@ import { normalizeWorkspaceState, verifyWorkspace } from './workspaces.js?releas
 import { inquiryProgress } from './interview.js?release=20261107-tech-team';
 import { retainExperimentEvents, readExperiments, observationSnapshot, sameSetup } from './experiments.js?release=20261107-tech-team';
 import { registerRecordNormalizer } from './record-engines.js?release=20261107-tech-team';
+import { labFormat } from './lab-format.js?release=20261107-tech-team';
 
 // A saved explanation and a fresh working setup are both needed for page 3.
 // This guides the lesson; imported learner work is not an assessment credential.
 export function workbenchProgress(scenario, record, result) {
   const {attempts,draft}=readExperiments(record),latest=attempts.at(-1);
-  const actual=scenario.track==='hardware'?verifyHardware(scenario.id,record.state):verifyWorkspace(scenario.id,record.state);
+  // A real-machine lab reports its own verified result; it has no simulated workspace to re-check.
+  const actual=result?.remote===true?{ok:result.ok===true,message:String(result.message||'')}:scenario.track==='hardware'?verifyHardware(scenario.id,record.state):verifyWorkspace(scenario.id,record.state);
   const passed=record.verified===true&&actual.ok&&result?.ok!==false;
   const answered=!!latest&&['predict','evidence','changed','observed','explain'].every(field=>typeof latest[field]==='string'&&latest[field].trim().length>=(['predict','evidence'].includes(field)?12:1));
   const current=!!latest&&sameSetup(latest.after,observationSnapshot(scenario,record.state));
@@ -42,12 +44,17 @@ export function normalizeLabRecord(scenario, value) {
     questions: Array.isArray(r.questions) ? [...new Set(r.questions.filter(i => Number.isInteger(i) && i >= 0 && i < scenario.questions.length))] : [],
     events: Array.isArray(r.events) ? retainExperimentEvents(scenario,r.events.slice(-2000).filter(e => e && typeof e === 'object' && typeof e.message === 'string').map(e => ({ time: text(e.time, 40), message: text(e.message, 600), kind: ['info', 'warning', 'success'].includes(e.kind) ? e.kind : 'info' }))) : [],
     symptoms: text(r.symptoms, 2000), notes: text(r.notes, 4000), plan: text(r.plan, 2000), reflection: text(r.reflection, 2000),
-    ideaSaved: r.ideaSaved === true, verified: r.verified === true, closed: r.closed === true
+    ideaSaved: r.ideaSaved === true, verified: r.verified === true, closed: r.closed === true,
+    // Lab guide steps the learner marked as read. Ids only; the guide decides what they mean.
+    manual: Array.isArray(r.manual) ? [...new Set(r.manual.filter(id => typeof id === 'string' && /^[a-z-]{1,40}$/.test(id)))].slice(0, 40) : []
   };
   // Older drafts keep their writing, but require the learner to review and save
   // both first-idea answers before continuing through the revised first page.
+  // Guided labs (non-hardware) have no first-idea form or requester interview, so those
+  // ticket-flow completion rules do not reopen them.
+  const ticket = !labFormat(scenario).guide;
   record.ideaSaved = record.ideaSaved && record.symptoms.trim().length >= 12 && record.plan.trim().length >= 12;
-  if (!record.ideaSaved) record.closed = false;
+  if (ticket && !record.ideaSaved) record.closed = false;
   // Technical completion follows the current equipment, not a stale saved flag.
   // Written work remains available for correction and the next startup test.
   if (scenario.track === 'hardware' && !verifyHardware(scenario.id, record.state).ok) {
@@ -60,7 +67,9 @@ export function normalizeLabRecord(scenario, value) {
   }
   // Earlier v2 records can predate the requester-clarification step. Keep their
   // technical result and written work, but reopen an incomplete investigation.
-  if (record.closed && !inquiryProgress(scenario, record.events).complete) record.closed = false;
+  if (ticket && record.closed && !inquiryProgress(scenario, record.events).complete) record.closed = false;
+  // A guided lab is finished only once both Section 3 analysis answers are written.
+  if (!ticket && record.closed && !(record.notes.trim().length >= 15 && record.reflection.trim().length >= 15)) record.closed = false;
   return record;
 }
 // The storage manager in the start-up bundle reaches this normalizer only after

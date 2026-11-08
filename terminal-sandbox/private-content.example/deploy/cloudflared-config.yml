@@ -1,0 +1,12 @@
+# Cloudflare Tunnel template: route the public site's /terminal/* path to the
+# controller so the browser keeps a same-origin connection and the site's
+# Content-Security-Policy stays unchanged. Replace the placeholders.
+tunnel: <tunnel-id>
+credentials-file: /etc/cloudflared/<tunnel-id>.json
+ingress:
+  - hostname: your-site.example
+    path: ^/terminal/.*
+    service: http://127.0.0.1:8080
+    originRequest:
+      noTLSVerify: false
+  - service: http_status:404

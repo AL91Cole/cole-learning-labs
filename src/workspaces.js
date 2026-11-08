@@ -222,7 +222,7 @@ export function getWorkspaceMission(id, savedState) {
   const target=currentCheck<0?null:coach?.checks[currentCheck];
   const changed=(Number(state.workspaceEdits)||0)>0;
   const stage=complete?'Verified':tested?'Troubleshoot':changed?'Ready to test':'Investigate';
-  const next=complete?'Choose Check & explain, then Check the original task. Explain which results support your decision in your report.':currentCheck<0?'Your saved choices are ready to check. Run the workspace test to gather evidence.':target?.[0] || 'Inspect the request, apply a change, and test its effect.';
+  const next=complete?'Open Section 3: Challenge and Analysis, then Check the original task. Explain which results support your decision in your report.':currentCheck<0?'Your saved choices are ready to check. Run the workspace test to gather evidence.':target?.[0] || 'Inspect the request, apply a change, and test its effect.';
   return {
     stage,tested,passed,total:checks.length,complete,currentCheck,
     attempts:Math.max(0,Number(state.checkRuns)||0),
@@ -407,7 +407,7 @@ export function applyWorkspaceAction(id, previous, action, value) {
     state.results=testMatrix(id,state); state.tested=true; state.checkRuns+=1;
     const passed=state.results.length>0 && state.results.every(result=>result.ok);
     const mission=getWorkspaceMission(id,state);
-    return outcome(state,passed?`All ${mission.total} practice checks passed. Choose Check & explain, check the original task, then finish your report.`:`${mission.passed} of ${mission.total} checks pass. ${mission.next} ${supportsLearningActivity(id)?'Choose Test this setup after another change.':'Save your change and test again.'}`,passed?'success':'warning');
+    return outcome(state,passed?`All ${mission.total} practice checks passed. Open Section 3: Challenge and Analysis, check the original task, then finish your report.`:`${mission.passed} of ${mission.total} checks pass. ${mission.next} ${supportsLearningActivity(id)?'Choose Test this setup after another change.':'Save your change and test again.'}`,passed?'success':'warning');
   }
   return outcome(state,'That action is not available in this workspace.','warning');
 }
@@ -435,7 +435,7 @@ const run = (label='Test my choices') => `<button class="ws-button ws-button-tes
 function results(state) {
   if (!state.tested) return '<div class="ws-test-placeholder"><span class="ws-status-dot" aria-hidden="true"></span><span>No current test results. Save your choices, then use the Test or Check button. Test again after every change.</span></div>';
   const complete=state.results.length>0 && state.results.every(item=>item.ok);
-  return `<section class="ws-test-results" aria-label="Simulation test results"><h3>Your latest test results</h3><p>${complete?'All checks passed. Choose “Check & explain”, then “Check the original task”.':'A “Try again” result is a clue. Change your choices, save, and test again.'}</p><ul>${state.results.map(item=>`<li class="${item.ok?'ws-pass':'ws-fail'}"><span>${item.ok?'Passed':'Try again'}</span>${esc(item.label)}</li>`).join('')}</ul></section>`;
+  return `<section class="ws-test-results" aria-label="Simulation test results"><h3>Your latest test results</h3><p>${complete?'All checks passed. Open “Section 3: Challenge and Analysis”, then “Check the original task”.':'A “Try again” result is a clue. Change your choices, save, and test again.'}</p><ul>${state.results.map(item=>`<li class="${item.ok?'ws-pass':'ws-fail'}"><span>${item.ok?'Passed':'Try again'}</span>${esc(item.label)}</li>`).join('')}</ul></section>`;
 }
 function terminal(lines) { return `<div class="ws-terminal" tabindex="0" role="region" aria-label="Simulated console"><div class="ws-console-heading">LOCAL SIMULATION OUTPUT</div>${lines.map(line=>`<div>${esc(line)}</div>`).join('')}</div>`; }
 function recoveryConsole(state) {

@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {labFormat} from '../src/lab-format.js';
 import assert from 'node:assert/strict';
 import {SCENARIOS} from '../src/scenarios.js';
 import {normalizeLabRecord} from '../src/records.js';
@@ -36,11 +37,19 @@ for(const scenario of SCENARIOS.filter(s=>s.intake?.kind==='follow-up')){
   test(`${scenario.id}: an older completion without clarification reopens without losing work`,()=>{
     const saved={closed:true,verified:true,plan:'My earlier explanation.',notes:'My original test notes.',reflection:'What I learned.',questions:[0],evidence:[scenario.clues[0].id],events:[],...(scenario.track==='hardware'?{state:deliveredHardware(scenario.id)}:{})};
     const before=structuredClone(saved),record=normalizeLabRecord(scenario,saved);
-    assert.equal(record.closed,false);assert.equal(record.verified,true);
+    assert.equal(record.closed,labFormat(scenario).guide);assert.equal(record.verified,true);
     for(const key of ['plan','notes','reflection','questions','evidence'])assert.deepEqual(record[key],saved[key]);
     assert.deepEqual(saved,before,'Loading must not mutate saved input.');
     const collection=normalizeWorkCollection(SCENARIOS,{version:2,labs:{[scenario.id]:saved}});
-    assert.equal(Object.values(collection.labs).filter(r=>r.closed).length,0,'The library must not count the old incomplete record as delivered.');
+    assert.equal(Object.values(collection.labs).filter(r=>r.closed).length,labFormat(scenario).guide?1:0,'The library must not count an old incomplete ticket record as delivered.');
+    if(labFormat(scenario).guide){
+      // Guided labs have no interview. Completion needs every resource card opened and both analysis answers.
+      const completed=normalizeLabRecord(scenario,saved);
+      assert.equal(completed.closed,true,'Written analysis answers keep a guided lab finished without an interview.');
+      assert.equal(normalizeLabRecord(scenario,{...completed,reflection:'short'}).closed,false,'A guided lab without its second analysis answer reopens.');
+      assert.equal(normalizeLabRecord(scenario,completed).closed,true,'Resuming valid work retains completion.');
+      return;
+    }
     const question=scenario.questions[0].label,event=questionEvent(question,answerQuestion(scenario,question));
     const completed=normalizeLabRecord(scenario,{...saved,symptoms:'The reported task does not work as expected.',ideaSaved:true,events:[event]});
     assert.equal(inquiryProgress(scenario,completed.events).complete,true);assert.equal(completed.closed,true);
@@ -65,7 +74,7 @@ function deliveredCoding(id){
 
 test('detailed requests retain completion with reviewed first-idea writing',()=>{
   for(const scenario of SCENARIOS.filter(s=>s.intake?.kind!=='follow-up')){
-    const record=normalizeLabRecord(scenario,{closed:true,verified:true,symptoms:'The reported task does not work as expected.',plan:'I will compare the clues with the reported behavior.',ideaSaved:true,events:[],...(scenario.track==='hardware'?{state:deliveredHardware(scenario.id)}:scenario.track==='coding'?{state:deliveredCoding(scenario.id)}:{})});
+    const record=normalizeLabRecord(scenario,{closed:true,verified:true,symptoms:'The reported task does not work as expected.',plan:'I will compare the clues with the reported behavior.',ideaSaved:true,notes:'I changed the setting the resource card named.',reflection:'The test result shows the original task works.',events:[],...(scenario.track==='hardware'?{state:deliveredHardware(scenario.id)}:scenario.track==='coding'?{state:deliveredCoding(scenario.id)}:{})});
     assert.equal(record.closed,true,scenario.id);assert.equal(record.verified,true,scenario.id);
   }
 });
