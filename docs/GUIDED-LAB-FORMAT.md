@@ -1,87 +1,66 @@
 # Guided lab format
 
-Every investigation (`#lab/<id>`) now reads like a published virtual-lab manual
-in the style of JBLearning Cloud Labs and CompTIA CertMaster Labs: an
-introduction with objectives, a guided hands-on section with a demonstration
-for each step, and a challenge section the learner completes alone. The three
-pages keep their URLs (`request`, `workbench`, `explain`), their saved record and
-every existing gate; the manual sits above them and tells the learner what to
-do next, in order, and checks each step off from the work they actually did.
+Networking, cybersecurity, AI and coding investigations (`#lab/<id>`) open as
+guided labs in the style of published virtual labs (JBLearning Cloud Labs,
+CompTIA CertMaster Labs): a **lab guide** on the left and the **simulated
+environment** on the right. Hardware cases (INC-101 to INC-108) keep the
+original ticket-style flow: request and clues, requester conversation, first
+idea, workbench and test, check and explain. `src/lab-format.js` decides which
+format a scenario uses; nothing else about a scenario changes.
 
-## The lab manual panel (`src/lab-manual.js`, `src/lab-manual.css`)
+## The lab guide (`src/lab-guide.js`, `src/lab-guide.css`)
 
-- **Section stepper.** Three sections mirror the three pages: *1 Read the lab*,
-  *2 Hands-on walkthrough*, *3 Challenge & analysis*. Later sections show as
-  locked until the previous one is complete.
-- **Introduction, objectives & tools.** The scenario brief, learning objectives
-  (the lab goal plus three track objectives), the simulated tools in use, and
-  the deliverables that end up in the report. Open by default on Section 1.
-- **Numbered steps for the open page.** Each step has an instruction and a
-  collapsed **Show me** demonstration. Steps are checked off from facts the
-  page already tracks (questions asked, clues read, plan saved, fixtures
-  passing, notebook saved, task verified, writing done). Steps that only ask
-  the learner to read something have a **Mark step done** button; those
-  acknowledgements are stored as short authored ids in the record's `manual`
-  list and accepted by the classroom save schema.
-- **Challenge.** The last step in Section 3 has no walkthrough text. Coding
-  labs ask for the same task in the other practice language; the hardware
-  transfer cases link to their alternate ticket in challenge mode; every other
-  lab poses an analysis question for the reflection. The challenge is optional
-  for finishing and is reported as *complete* or *not attempted*.
-- **Report.** `LAB REPORT` adds a `LAB MANUAL` section listing section progress
-  and the challenge state. Status reads `TASK VERIFIED — LAB OPEN` instead of
-  the former ticket wording.
+The guide is an accordion with a progress bar. Only one section is open at a
+time; the open section is reflected in the lab URL (`request`, `workbench`,
+`explain`) so links and browser history keep working.
 
-The manual is pure: `labManual(scenario, facts)` builds it, `renderLabManual`
-returns HTML, `labManualReport` returns text. `app.js` assembles the facts in
-`labManualFacts` from the record, the current workspace result, the experiment
-notebook and the workspace mission hint; nothing new is executed or stored.
+- **Introduction.** The scenario in narrative form, who requested it, the goal,
+  learning objectives, the simulated tools, the deliverables, and the **lab
+  resources**: the former clue cards, opened in place. There is no requester
+  conversation and nothing to ask. Opening every resource card completes the
+  introduction.
+- **Section 1: Hands-On Demonstration.** Numbered steps that say exactly what to
+  do in the environment. Coding labs quote the starter line to change in the
+  selected practice language and why (CODE-501 to CODE-506, JavaScript and
+  Python; tests prove each demonstrated fix passes every fixture). Network, AI
+  and security labs use the workspace's live mission hint, which names the
+  setting to change and the value to enter. Steps are checked off from the
+  live workspace: edited, run, every check or input card passing.
+- **Section 2: Applied Learning.** The experiment notebook with less direction:
+  write a prediction and the resource that supports it, start the test, run the
+  real test, describe the change, result and learning, save the attempt. The
+  existing `workbenchProgress` rule decides when the section is complete.
+- **Section 3: Challenge and Analysis.** Check the original task, answer two
+  analysis questions (what changed and what the test showed; why the evidence
+  shows the task works), an optional unguided challenge (coding: the same task
+  in the other practice language, tracked per language in `state.solutions`;
+  hardware transfer cases link their alternate ticket; other labs pose an
+  analysis prompt), then **Finish lab** to open the report.
 
-## Coding labs are no longer ticket-style
+Read-only steps have a **Mark step done** button; those ids are the record's
+`manual` list, accepted by the classroom save schema. Everything else is
+derived from the record and the current workspace by `labGuideFacts`.
 
-- The first page is an introduction: **Lab scenario**, a **Reference sheet** (the
-  former clue cards: input contract, rule, fixture inputs) and **Plan your fix**
-  (what the starter gets wrong, what change will fix it). Reading two
-  reference cards and saving the plan opens the editor. Asking the lab
-  assistant is optional and no longer gates the page.
-- Section 2 is an authored walkthrough for each of CODE-501 through CODE-506 in
-  both practice languages: choose the language and read the first input card,
-  edit the quoted starter line (**Show me** shows the exact line to change and
-  why), run all fixtures, make every card match, then record the test in the
-  notebook. Tests prove each demonstrated fix passes every fixture.
-- Section 3's challenge is the same task in the other language without the
-  walkthrough. `coding-lab.js` remembers one passing solution per language in
-  `state.solutions` (re-verified on restore, so a pasted record cannot claim
-  it) and `codingChallengeComplete` reports when both languages pass.
+## Records and reports
 
-## Other tracks
-
-Section 1 keeps the requester conversation, two clues and the first idea as
-numbered steps with suggested questions and sentence starters. Section 2's
-"make the change" step uses an authored demonstration for the eight hardware
-cases (which cable, port or part, and in what order) and the live workspace
-mission hint for network, AI and security cases. Section 3 is verify, explain,
-reflect, finish, plus the analysis challenge.
-
-## Page wording
-
-The pages are **Introduction & setup**, **Guided practice** and **Challenge &
-report**. "Read the ticket" became "Lab scenario", "Finish investigation" became
-"Finish lab", and workspace, notebook and guidance messages point to the new
-page names. Element ids (`close-ticket`, `reset-ticket`, `page-one-next`,
-`coding-editor`) are unchanged so saved classroom links and tests keep working.
+- A guided lab counts as finished only when both analysis answers are written
+  (`normalizeLabRecord`). The ticket-only rules (saved first idea, clarified
+  request) do not apply to it.
+- The report for a guided lab is a `LAB REPORT` with a `LAB GUIDE` section
+  listing section progress and the challenge state. Hardware reports keep the
+  `INVESTIGATION REPORT` wording.
 
 ## Verification
 
-- `npm test`: the full suite passes, including the new `tests/lab-manual.test.js`
-  (manual structure for all 42 labs, every coding demonstration passes its
-  fixtures in both languages, acknowledgement and challenge rules, page wording
-  for every scenario, the first-page gate for coding versus other tracks).
-- Bundle budgets: the free application grew by about 24 KB for the manual, so
-  the reviewed size guards moved from 1,000,000 to 1,050,000 bytes (compiled
-  public app), 1,300,000 to 1,350,000 (open delivery) and 1,665,000 to
-  1,700,000 (runtime module graph).
-- Browser check (Chromium, 1280 wide): CODE-501 opens on the manual, reading
-  two reference cards and saving a plan completes Section 1 without a question,
-  the walkthrough ticks off edit, run and match after the demonstrated fix, and
-  INC-101 shows the hardware manual. No console errors.
+- `npm test`: the full suite passes, including `tests/lab-guide.test.js` (format
+  split, guide structure for all 34 guided labs, coding demonstrations in both
+  languages, fact derivation, page rendering without any interview controls,
+  record completion rules, application routing).
+- Browser check (Chromium, 1366 wide and 390 wide): CODE-501 runs end to end
+  through the guide — resources, demonstration, notebook, verification,
+  analysis answers, finish and report — with no console errors; NET-201 and
+  SEC-401 show live demonstration steps; INC-101 still opens the ticket flow;
+  the phone layout stacks the guide above the environment.
+- Bundle budgets: the runtime module graph guard moved from 1,665,000 to
+  1,750,000 bytes, the compiled public application guard from 1,000,000 to
+  1,050,000 and the open delivery guard from 1,300,000 to 1,350,000.

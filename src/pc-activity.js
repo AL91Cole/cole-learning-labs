@@ -119,7 +119,7 @@ export function pcActivity(hardware) {
   display.readout=`${display.label}. Selected input: ${source}. ${display.detail}`;
   const power = {state:powered?'running':standby?'standby':'off',label:powered?'Main power active':standby?'AC connected · standby only':psuInstalled?'AC disconnected':'Power supply not fitted'};
   const startup = {state:startupState,label:startupState==='booted'?'Original OS loaded':startupState==='pending'?'Powered · test startup':startupState==='blocked'?'Startup blocked':'Startup not requested',reason,phase,videoInitialized,bootManager:booted?'completed':videoInitialized&&detectedStorage&&!reason?'ready':'not-reached'};
-  const status = documentOpened ? {tone:'success',label:'Original lesson file open',detail:'Explain and verify the original task in Challenge & report.'}
+  const status = documentOpened ? {tone:'success',label:'Original lesson file open',detail:'Explain and verify the original task in the lab guide’s Section 3.'}
     : booted ? {tone:desktop?'running':'warning',label:desktop?'Original OS loaded · desktop visible':'Original OS loaded · display needs attention',detail:display.detail}
     : powered ? {tone:'warning',label:reason?'Powered · startup blocked':'Powered · startup not yet confirmed',detail:reason||'Run Test PC. Fans moving and power being available do not prove a successful startup.'}
     : h.pcOn ? {tone:'warning',label:'Power requested · main power unavailable',detail:reason}

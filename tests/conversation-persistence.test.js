@@ -148,7 +148,8 @@ test('previously saved requester wording keeps its clarification credit after vo
     for(const answer of fact.legacyAnswers){
       const event=questionEvent(question,{accepted:true,kind:'answer',answer});
       assert.equal(inquiryProgress(scenario,[event]).complete,true,scenario.id);
-      assert.equal(normalizeLabRecord(scenario,{closed:true,symptoms:'The reported task does not work as expected.',plan:'I will compare the clues with the reported behavior.',ideaSaved:true,events:[event],...(scenario.track==='hardware'?{state:deliveredHardware(scenario.id)}:{})}).closed,true,scenario.id);
+      // Guided (non-hardware) labs finish on their Section 3 analysis answers instead of an interview.
+      assert.equal(normalizeLabRecord(scenario,{closed:true,symptoms:'The reported task does not work as expected.',plan:'I will compare the clues with the reported behavior.',ideaSaved:true,notes:'I changed the setting the resource card named.',reflection:'The test result shows the original task works.',events:[event],...(scenario.track==='hardware'?{state:deliveredHardware(scenario.id)}:{})}).closed,true,scenario.id);
     }
   }
 });

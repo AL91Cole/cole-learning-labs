@@ -65,7 +65,7 @@ export function investigationNextStep({section=1,asked=false,clarified=false,clu
     return {message:'Your request and clues are ready. Try your idea at the workbench.',target:'lab-next',action:'Find the next step'};
   }
   if(section===2){
-    if(ready)return {message:'Your current test and evidence are ready. Explain what changed and what the result supports.',target:'lab-explain',action:'Find Challenge & report'};
+    if(ready)return {message:'Your current test and evidence are ready. Explain what changed and what the result supports.',target:'lab-explain',action:'Find Check & explain'};
     if(passed&&(unfinished||!answered))return {message:'Record your prediction, evidence, change, observation and explanation in the notebook. Then save the tested attempt.',target:'lab-notebook',action:'Find the experiment notebook'};
     if(passed&&!current)return {message:'The setup changed after the saved attempt. Test it again and save the new evidence.',target:'lab-test',action:'Find Test my idea'};
     if(passed)return {message:'Review the notebook and save the attempt that shows the original task working.',target:'lab-attempt',action:'Find Save this attempt'};

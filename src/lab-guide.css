@@ -1,0 +1,78 @@
+/* Guided lab: lab guide on the left, simulated environment on the right. */
+.lab-guide-shell{background:#0b1c2a}
+.lab-guide-layout{display:grid;grid-template-columns:minmax(300px,34%) minmax(0,1fr);min-height:calc(100dvh - 140px);align-items:stretch}
+.lab-guide{background:#0d2230;color:#e7f4f5;border-right:1px solid #2b5360;display:flex;flex-direction:column;min-width:0}
+.lab-guide-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:14px 20px 10px;border-bottom:1px solid #2b5360}
+.lab-guide-head .eyebrow{margin:0;color:#7be4d2}
+.guide-progress{display:flex;align-items:center;gap:10px;flex:1;min-width:160px}
+.guide-progress progress{flex:1;height:10px;appearance:none;border:0;border-radius:999px;overflow:hidden;background:#143442}
+.guide-progress progress::-webkit-progress-bar{background:#143442;border-radius:999px}
+.guide-progress progress::-webkit-progress-value{background:#58cdb4;border-radius:999px}
+.guide-progress progress::-moz-progress-bar{background:#58cdb4;border-radius:999px}
+.guide-progress span{font-size:.82rem;font-weight:700;color:#8febd8;min-width:3ch;text-align:right}
+.lab-guide-sections{display:grid;gap:1px;background:#2b5360;border-bottom:1px solid #2b5360}
+.guide-section{background:#0d2230}
+.guide-section>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;min-height:48px;padding:12px 20px;font-weight:700;color:#f0f7fa;list-style:none}
+.guide-section>summary::-webkit-details-marker{display:none}
+.guide-section>summary::before{content:"▸";flex:none;color:#7be4d2;transition:transform .15s ease}
+.guide-section[open]>summary::before{transform:rotate(90deg)}
+.guide-section.is-current>summary{box-shadow:inset 4px 0 #67e0c9}
+.guide-section-title{flex:1;font-size:.98rem}
+.guide-section-state{font-size:.78rem;font-weight:700;color:#a9cfc5;white-space:nowrap}
+.guide-section-state.is-complete{color:#8febd8}
+.guide-section-body{padding:4px 20px 18px;display:grid;gap:12px}
+.guide-section-body h3{margin:6px 0 0;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:#7be4d2}
+.guide-section-body p,.guide-section-body li{font-size:.95rem;line-height:1.6;color:#dcecef}
+.guide-section-body ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.guide-section-body .panel-help{margin:0;color:#a9cfc5;font-size:.9rem}
+.guide-lead{margin:0;font-size:1rem;line-height:1.65;color:#f0f7fa}
+.guide-requester{margin:0;font-size:.88rem;color:#a9cfc5}
+.guide-requester b{color:#c9ecf2}
+.guide-resources{display:grid;gap:6px}
+.guide-resource{border:1px solid #2f5b66;border-radius:8px;background:#0b1c2a}
+.guide-resource>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;min-height:44px;padding:8px 12px;font-weight:600;color:#eaf6f3;list-style:none}
+.guide-resource>summary::-webkit-details-marker{display:none}
+.guide-resource>summary span{font-size:.76rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8febd8}
+.guide-resource[open]>summary{border-bottom:1px solid #2f5b66}
+.guide-resource>p{margin:0;padding:10px 12px}
+.guide-scope{margin:0;font-size:.84rem;color:#a9cfc5}
+.guide-steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.guide-step{display:flex;gap:12px;padding:12px 14px;border:1px solid #2f5b66;border-left:5px solid #3d6a63;border-radius:8px;background:#102a2c}
+.guide-step.is-current{border-left-color:#67e0c9;background:#113d43}
+.guide-step.is-done{border-left-color:#58cdb4}
+.guide-step.is-done .guide-step-instruction{color:#a9cfc5;text-decoration:line-through;text-decoration-color:#58cdb4;text-decoration-thickness:1px}
+.guide-step.is-optional{border-style:dashed}
+.guide-step.is-challenge{border-left-color:#f3ce85;background:#1d2635}
+.guide-step-mark{flex:none;display:inline-grid;place-items:center;min-width:28px;height:28px;border-radius:50%;background:#0c202c;color:#96f3dd;font-weight:800}
+.guide-step.is-done .guide-step-mark{background:#1d6b5a;color:#fff}
+.guide-step.is-challenge .guide-step-mark{color:#f3ce85}
+.guide-step-body{min-width:0;flex:1;display:grid;gap:8px}
+.guide-step-instruction{margin:0;font-size:.98rem;line-height:1.55;color:#eaf6f3}
+.guide-step-detail{margin:0;font-size:.9rem;line-height:1.6;color:#c9dfe3}
+.guide-code{margin:0;padding:10px 12px;background:#071820;color:#a1f2e3;border-radius:6px;font-size:.88rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.guide-hint>summary{cursor:pointer;min-height:36px;display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;border:1px solid #58cdb4;color:#8febd8;font-size:.86rem;font-weight:700}
+.guide-hint>p{margin:8px 0 0}
+.guide-no-hint{margin:0;font-size:.88rem;color:#f3ce85}
+.guide-link{display:inline-block}
+.lab-guide .case-panel{margin:0}
+.lab-guide .verification-panel .eyebrow{margin:0 0 4px}
+.lab-guide .guide-finish{display:grid;gap:10px}
+.lab-guide .lab-reset{padding:14px 20px 24px;margin-top:auto}
+.lab-environment{display:flex;flex-direction:column;min-width:0;background:#0b1c2a}
+.environment-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:1px solid #2b5360;background:#102a35}
+.environment-bar .eyebrow{margin:0;color:#7be4d2}
+.environment-bar [data-environment-status]{font-size:.82rem;font-weight:700;color:#a9cfc5}
+.lab-environment .workspace{padding:16px 20px 8px}
+.lab-environment .action-feedback{margin:0 20px 12px}
+.guide-log{margin:0 20px 20px}
+.guide-log>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700}
+.guide-log>summary span{font-size:.78rem;color:#a9cfc5}
+.lab-guide-shell .workbench-remaining{margin:0}
+@media (max-width:980px){
+  .lab-guide-layout{grid-template-columns:1fr;min-height:0}
+  .lab-guide{border-right:0;border-bottom:1px solid #2b5360}
+  .lab-guide .lab-reset{margin-top:0}
+  .lab-environment .workspace,.lab-environment .action-feedback,.guide-log{margin-left:0;margin-right:0;padding-left:16px;padding-right:16px}
+  .guide-section>summary,.guide-section-body,.lab-guide-head{padding-left:16px;padding-right:16px}
+}
+@media (prefers-reduced-motion:reduce){.guide-section>summary::before{transition:none}}

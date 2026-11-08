@@ -214,7 +214,7 @@ test('a fresh first page blocks every route forward until the question, two clue
   assert.equal(h.record.ideaSaved,false);assert.equal(next.disabled,true,'Typing both answers does not count as Save first idea.');
   h.elements.get('#idea-form').fire('submit');assert.equal(h.record.ideaSaved,true);assert.equal(next.disabled,false);
   assert.deepEqual(h.groups.get('[data-lab-section]').map(button=>button.disabled),[false,false,true]);
-  h.section(3);assert.deepEqual(h.visible(),[true,false,false],'Challenge & report cannot skip visiting the workbench.');
+  h.section(3);assert.deepEqual(h.visible(),[true,false,false],'Check & explain cannot skip visiting the workbench.');
   next.fire('click');assert.deepEqual(h.visible(),[false,true,false]);
   assert.equal(h.groups.get('[data-lab-section]')[2].disabled,true,'Visiting page two does not replace a complete saved test.');
   h.section(3);assert.deepEqual(h.visible(),[false,true,false]);
@@ -443,7 +443,7 @@ test('Test my idea distinguishes a failed test, a changed setup and a fresh succ
   assert.match(h.elements.get('#experiment-result').textContent,/changed|test again|fresh test/i);
   h.elements.get('#run-hypothesis-test').fire('click');
   assert.equal(h.record.verified,true);assert.match(h.elements.get('#experiment-result').textContent,/works|success/i);
-  assert.match(h.elements.get('#experiment-result').textContent,/Challenge.*report/i,'A successful result directs the learner to the challenge and report page.');
+  assert.match(h.elements.get('#experiment-result').textContent,/Check.*explain/i,'A successful result directs the learner to explain the result.');
   assert.equal(h.record.closed,false);assert.equal(h.calls.reports,0);
 });
 
@@ -515,7 +515,7 @@ test('coding editor drafts remain intact across all three tabs without being sav
 
 
 test('direct entry opens the requested lab page without stealing focus or executing work',()=>{
-  for(const [index,title] of ['Introduction & setup','Guided practice','Challenge & report'].entries()) {
+  for(const [index,title] of ['Request & clues','Workbench & test','Check & Explain'].entries()) {
     const h=readyHarness('CODE-501',index+1,answerQuestion,record=>{record.state=applyWorkspaceAction('CODE-501',record.state,'run-check',{code:codingPrograms['CODE-501']}).state;saveSuccessfulTest(SCENARIOS.find(s=>s.id==='CODE-501'),record);});
     assert.deepEqual(h.visible(),[0,1,2].map(value=>value===index));
     assert.equal(h.elements.get('#lab-page-title').textContent,title);
@@ -526,7 +526,7 @@ test('direct entry opens the requested lab page without stealing focus or execut
   }
 });
 
-test('starting a lab over clears its work and forces a fresh Introduction & setup page',()=>{
+test('starting a lab over clears its work and forces a fresh Request & clues page',()=>{
   const h=harness('CODE-501',3,answerQuestion,record=>{record.notes='Earlier fictional notes';},{mode:'challenge',sequence:'opening-day'});
   h.elements.get('#coding-editor').value='print("Draft to discard");';
   h.elements.get('#reset-ticket').fire('click');assert.equal(h.elements.get('#reset-confirm').hidden,false);
@@ -891,7 +891,7 @@ test('hypothesis tests observe actual equipment state and cannot finish the inve
   assert.equal(h.elements.get('.case-sidebar').focused,1,'The first-page gate returns focus to the work that must be completed.');
   assert.match(h.calls.notices.at(-1),/Ask a question/i);
   h.ask('What changed?');saveFirstIdea(h);h.input('plan','The monitor cable may be using the wrong graphics output.');h.elements.get('#idea-form').fire('submit'); h.section(2); h.elements.get('#run-hypothesis-test').fire('click'); assert.match(h.elements.get('#experiment-result').textContent,/not ready|not fixed yet/iu); assert.equal(h.record.verified,false); assert.equal(h.record.closed,false);
-  h.action('video-gpu'); h.action('open-document'); h.elements.get('#run-hypothesis-test').fire('click'); assert.match(h.elements.get('#experiment-result').textContent,/task works/iu); assert.match(h.elements.get('#experiment-result').textContent,/Challenge.*report/iu); assert.equal(h.record.verified,true); assert.equal(h.record.closed,false); assert.equal(h.calls.reports,0);
+  h.action('video-gpu'); h.action('open-document'); h.elements.get('#run-hypothesis-test').fire('click'); assert.match(h.elements.get('#experiment-result').textContent,/task works/iu); assert.match(h.elements.get('#experiment-result').textContent,/Check.*explain/iu); assert.equal(h.record.verified,true); assert.equal(h.record.closed,false); assert.equal(h.calls.reports,0);
   h.section(3); h.elements.get('#close-ticket').fire('click'); assert.equal(h.record.closed,false,'Verification cannot bypass the saved notebook answers.'); assert.deepEqual(h.visible(),[false,true,false]);
   h.action('video-board'); assert.equal(h.record.verified,false); assert.match(h.elements.get('#experiment-result').textContent,/setup changed.*(?:Test my idea|fresh test)/iu);
 });
@@ -1284,7 +1284,7 @@ test('the workbench step lists exactly what remains, and a passing test alone ne
   h.action('open-document');h.elements.get('#run-hypothesis-test').fire('click');
   assert.equal(h.record.verified,true);
   const card=h.elements.get('#experiment-result').textContent;
-  assert.match(card,/The task works\./u);assert.match(card,/Save this attempt/u);assert.match(card,/unlocks Challenge & report\.$/u);
+  assert.match(card,/The task works\./u);assert.match(card,/Save this attempt/u);assert.match(card,/unlocks Check & explain\.$/u);
   assert.equal(h.groups.get('[data-lab-section]')[2].disabled,true,'A working task still needs its saved explanation.');
   assert.equal(h.elements.get('#workbench-next').disabled,true);
   assert.equal(remainingList(h).includes('Click the lesson file on the monitor'),false);
@@ -1293,7 +1293,7 @@ test('the workbench step lists exactly what remains, and a passing test alone ne
   assert.equal(remainingList(h),'','Nothing is listed once the step is complete.');
   assert.equal(h.groups.get('[data-lab-section]')[2].disabled,false);assert.equal(h.elements.get('#workbench-next').disabled,false);
   h.elements.get('#run-hypothesis-test').fire('click');
-  assert.match(h.elements.get('#experiment-result').textContent,/The task works\..* Continue to Challenge & report\.$/u,'With the attempt saved, the same button points straight to the next page.');
+  assert.match(h.elements.get('#experiment-result').textContent,/The task works\..* Continue to Check & explain\.$/u,'With the attempt saved, the same button points straight to the next page.');
   h.action('video-board');h.controller.refreshStatus();
   assert.ok(remainingList(h).includes('The setup changed after your saved test, so this step needs one fresh test.'));
   assert.equal(h.groups.get('[data-lab-section]')[2].disabled,true);
@@ -1315,13 +1315,13 @@ test('Start this lab again sits outside the three pages, so a learner stuck on t
 
 test('the report leads with a four-line summary and keeps every detailed section after it',()=>{
   const h=finishedHarness('INC-101',3),lines=h.report().split('\n');
-  assert.equal(lines[0],'COLE LEARNING LABS — LAB REPORT');assert.match(lines[3],/^Status: /u);
+  assert.equal(lines[0],'COLE LEARNING LABS — INVESTIGATION REPORT');assert.match(lines[3],/^Status: /u);
   assert.equal(lines.indexOf('SUMMARY'),5,'The summary follows the status line directly.');
   assert.deepEqual(lines.slice(6,10).map(line=>line.slice(0,line.indexOf(': '))),['Clue','Change','Result','Next step']);
   assert.equal(lines[6],'Clue: The collected clues and the current task result support this test.');
   assert.equal(lines[7],'Change: I applied the change described by my test idea.');
   assert.match(lines[8],/^Result: The task worked\. Fixed and delivered/u);
-  assert.match(lines[9],/^Next step: Check the original task, finish the explanation and finish the lab\.$/u);
+  assert.match(lines[9],/^Next step: Check the original task, finish the explanation and close the ticket\.$/u);
   const order=['SUMMARY','FULL RECORD','ORIGINAL TASK','EVIDENCE','QUESTIONS I ASKED','SYMPTOMS','WORKING HYPOTHESIS','TEST NOTES','EXPERIMENT RECORD','CABLE CONNECTIONS','ACTION LOG','REFLECTION'].map(heading=>lines.indexOf(heading));
   assert.ok(order.every(index=>index>=0),'Every detailed section is still in the report.');
   assert.deepEqual(order,[...order].sort((a,b)=>a-b));
