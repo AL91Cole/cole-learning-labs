@@ -10,7 +10,7 @@ import {applyWorkspaceAction} from '../src/workspaces.js';
 
 const byId = id => SCENARIOS.find(item => item.id === id);
 const guided = SCENARIOS.filter(scenario => labFormat(scenario).guide);
-const facts = (overrides = {}) => ({language:'javascript', acknowledged:[], mission:null, transfer:null, transferHref:'', resources:false, edited:false, tested:false, works:false, planned:false, recorded:false, ready:false, verified:false, notes:false, reflection:false, closed:false, challenge:false, ...overrides});
+const facts = (overrides = {}) => ({language:'javascript', acknowledged:[], mission:null, transfer:null, transferHref:'', tools:[], firstInput:2, terminal:false, tool:false, ran:false, resources:false, edited:false, tested:false, works:false, planned:false, recorded:false, ready:false, verified:false, notes:false, reflection:false, closed:false, challenge:false, ...overrides});
 
 test('hardware stays ticket-style; networking, AI, cybersecurity and coding labs open as guided labs', () => {
   assert.deepEqual(GUIDE_TRACKS, ['network', 'ai', 'security', 'coding']);
@@ -55,21 +55,24 @@ test('coding demonstrations quote a real starter line in each language and the d
 
 test('non-coding demonstrations use the live workspace mission hint and fall back to a bench instruction', () => {
   const change = labGuide(byId('NET-201'), facts({mission:{next:'Investigate: the saved address.', hints:['Read the sheet.', 'Compare it.', 'Test it.']}})).sections[1].steps.find(step => step.id === 'change');
-  assert.equal(change.instruction, 'Investigate: the saved address.');
+  assert.equal(change.instruction, 'Open the Lab Console (desktop icon, or type console in Terminal). Investigate: the saved address.');
   assert.equal(change.detail, 'Read the sheet. Compare it. Test it.');
   assert.match(labGuide(byId('SEC-401'), facts()).sections[1].steps.find(step => step.id === 'change').instruction, /security console/);
+  const terminal = labGuide(byId('NET-201'), facts({tools:['ipconfig', 'ping 10.24.8.1']})).sections[1].steps.find(step => step.id === 'terminal');
+  assert.match(terminal.instruction, /open Terminal and run the lab tools before changing anything: ipconfig, ping 10\.24\.8\.1\./);
+  assert.equal(terminal.check, 'tool');
 });
 
 test('steps complete from facts, acknowledgements count only for read steps, and the percent tracks required steps', () => {
   const scenario = byId('NET-201');
-  const partial = labGuide(scenario, facts({acknowledged:['read-introduction', 'verify', 'inspect'], resources:true}));
+  const partial = labGuide(scenario, facts({acknowledged:['read-introduction', 'verify', 'terminal'], resources:true, tool:true}));
   assert.equal(partial.sections[0].complete, true);
-  assert.equal(partial.sections[1].steps.find(step => step.id === 'inspect').done, true);
+  assert.equal(partial.sections[1].steps.find(step => step.id === 'terminal').done, true, 'running a lab tool completes the terminal step');
   assert.equal(partial.sections[3].steps.find(step => step.id === 'verify').done, false, 'an acknowledgement cannot verify the task');
   assert.equal(partial.current, 'demonstration');
   const total = partial.sections.reduce((sum, section) => sum + section.total, 0), done = partial.sections.reduce((sum, section) => sum + section.done, 0);
   assert.equal(partial.percent, Math.round(100 * done / total));
-  const finished = labGuide(scenario, facts({acknowledged:['read-introduction', 'inspect'], resources:true, works:true, tested:true, planned:true, recorded:true, ready:true, verified:true, notes:true, reflection:true, closed:true}));
+  const finished = labGuide(scenario, facts({acknowledged:['read-introduction'], resources:true, tool:true, works:true, tested:true, planned:true, recorded:true, ready:true, verified:true, notes:true, reflection:true, closed:true}));
   assert.equal(finished.percent, 100);
   assert.ok(finished.sections.every(section => section.complete));
   assert.equal(finished.sections[3].steps.find(step => step.challenge).done, false, 'the optional challenge never blocks completion');
@@ -84,6 +87,10 @@ test('facts come from the record and the workspace: resources, edits, tests, the
   record.evidence = scenario.clues.map(clue => clue.id);
   current = labGuideFacts(scenario, record);
   assert.equal(current.resources, true); assert.equal(current.edited, true); assert.equal(current.tested, true); assert.equal(current.works, true);
+  assert.equal(current.terminal, false); assert.equal(current.ran, false);
+  record.manual = ['used-terminal', 'ran-program', 'used-tool'];
+  assert.deepEqual([labGuideFacts(scenario, record).terminal, labGuideFacts(scenario, record).ran, labGuideFacts(scenario, record).tool], [true, true, true], 'terminal activity is remembered as acknowledged ids');
+  record.manual = [];
   assert.equal(current.ready, false, 'a passing run is not a saved experiment');
   const py = 'total = quantity * 3\nprint(total)';
   record.state = applyCodingAction(scenario.id, applyCodingAction(scenario.id, record.state, 'set-language', {language:'python', code:py}).state, 'run-check', {code:py}).state;
@@ -101,7 +108,8 @@ test('the rendered page puts the lab guide beside the environment with no reques
     const record = normalizeLabRecord(scenario, {});
     const html = renderLabGuidePage(scenario, record, {trackName:'Track'});
     assert.ok(html.indexOf('id="lab-guide"') < html.indexOf('id="lab-environment"'), scenario.id + ' guide precedes the environment');
-    assert.ok(html.includes('LAB GUIDE') && html.includes('LAB ENVIRONMENT') && html.includes('id="workspace"'), scenario.id);
+    assert.ok(html.includes('LAB GUIDE') && html.includes('LAB ENVIRONMENT') && html.includes('data-lab-environment') && html.includes('data-lab-desktop') && html.includes('data-desktop-open="terminal"'), scenario.id + ' hosts the simulated desktop');
+    assert.ok(!html.includes('id="workspace"'), scenario.id + ' opens the lab console as a desktop window, not a fixed form');
     for (const section of GUIDE_SECTIONS) assert.ok(html.includes('data-guide-section="' + section.id + '"') && html.includes(section.title.replaceAll('&', '&amp;')), scenario.id + ' ' + section.id);
     for (const clue of scenario.clues) assert.ok(html.includes('data-resource="' + clue.id + '"'), scenario.id + ' resource ' + clue.id);
     for (const forbidden of ['question-form', 'student-question', 'interview-history', 'READ THE TICKET', 'idea-form', 'Ask at least one question']) assert.ok(!html.includes(forbidden), scenario.id + ' has no ' + forbidden);
@@ -114,7 +122,7 @@ test('the rendered page puts the lab guide beside the environment with no reques
 
 test('the report block lists section progress and the challenge; records keep analysis answers as the finish rule', () => {
   const scenario = byId('CODE-502'), record = normalizeLabRecord(scenario, {});
-  assert.equal(labGuideReport(scenario, record), 'Introduction: 0 of 2 steps\nSection 1: Hands-On Demonstration: 0 of 4 steps\nSection 2: Applied Learning: 0 of 3 steps\nSection 3: Challenge and Analysis: 0 of 4 steps\nChallenge: not attempted');
+  assert.equal(labGuideReport(scenario, record), 'Introduction: 0 of 2 steps\nSection 1: Hands-On Demonstration: 0 of 5 steps\nSection 2: Applied Learning: 0 of 3 steps\nSection 3: Challenge and Analysis: 0 of 4 steps\nChallenge: not attempted');
   const written = {closed:true, verified:true, notes:'I changed the comparison and the test showed every card matching.', reflection:'The reference card explains the three ranges and the test proves them.'};
   assert.equal(normalizeLabRecord(byId('NET-202'), written).closed, true, 'a guided lab stays finished with its analysis answers');
   assert.equal(normalizeLabRecord(byId('NET-202'), {...written, reflection:'too short'}).closed, false);

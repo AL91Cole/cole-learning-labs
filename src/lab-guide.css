@@ -69,6 +69,7 @@
 .guide-log>summary span{font-size:.78rem;color:#a9cfc5}
 .lab-guide-shell .workbench-remaining{margin:0}
 @media (max-width:980px){
+  .environment-bar .environment-provider{display:none}
   .lab-guide-layout{grid-template-columns:1fr;min-height:0}
   .lab-guide{border-right:0;border-bottom:1px solid #2b5360}
   .lab-guide .lab-reset{margin-top:0}

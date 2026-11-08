@@ -41,6 +41,59 @@ Read-only steps have a **Mark step done** button; those ids are the record's
 `manual` list, accepted by the classroom save schema. Everything else is
 derived from the record and the current workspace by `labGuideFacts`.
 
+## The lab environment: a simulated desktop (`src/lab-desktop.js`, `src/lab-shell.js`)
+
+The right pane is a small Linux-style desktop that runs entirely in the browser.
+Learners do the work themselves, the way they would on a real machine, while
+every result still comes from the lab's own simulation engines. Nothing runs
+real software, touches real files or reaches a network.
+
+- **Terminal.** A practice shell with the prompt `student@lab-pc:~/lab$`. It
+  understands `help`, `ls`, `cd`, `pwd`, `cat`, `nano`, `clear`, `history`,
+  `echo`, `whoami`, `hostname`, `date`, `man`, `console` and `files`, plus each
+  lab's own practice tools verbatim (for example `ipconfig`, `ping 10.24.8.1`,
+  `inspect sender`, `show queue`). Coding labs add `python3 program.py <input>`,
+  `node program.js <input>` and `./check` (every fixture at once). NET-201 also
+  accepts `ip addr`, `ip addr add <address>/<prefix> dev eth0`,
+  `ip route add default via <gateway>` and `resolvectl dns eth0 <server>`,
+  which save the same settings as the Lab Console. Unknown commands get a
+  `command not found` with a pointer to `help`; real-network commands such as
+  `curl` or `nmap` are refused with an explanation.
+- **Files.** The lab folder: `README.txt`, a `resources/` folder with every
+  resource card as a text file, and either `program.py`/`program.js`,
+  `fixtures.txt` and `check` (coding) or `settings.txt` and `tools.txt`.
+- **Text Editor.** Opens any lab file; the program file is editable. Save writes
+  the program to the lab state (the same `save-code` action as before) and Run
+  all fixtures runs the check.
+- **Lab Console.** The lab's existing settings and test workbench, opened as a
+  window instead of a fixed form. Changing a setting there or in the terminal
+  updates the same state.
+
+Windows open from desktop icons, the Menu button or the taskbar, can be dragged
+by their title bar, minimised and closed; on phones they fill the desktop. Guide
+steps watch what the learner does: running any terminal command, running a lab
+tool, running the program and editing or saving the file each complete a step.
+Those activity markers are stored as acknowledged ids (`used-terminal`,
+`used-tool`, `ran-program`) in the record's `manual` list.
+
+### Pluggable environments (`src/lab-environment.js`)
+
+The guide mounts whatever provider `preferredLabEnvironment()` returns. The
+simulated desktop registers itself as `simulated-desktop`. A provider is
+`{id, label, render(scenario, record), mount(root, context)}` where `mount`
+returns `{refresh, dispose, open, hasUnsavedDraft}` and `context` carries
+`scenario`, `record`, `getState`, `action`, `renderConsole`, `onActivity` and
+`showNotice`. To use another environment, register it and set
+`window.COLE_LAB_ENVIRONMENT` (or `data-lab-environment` on `<html>`) to its id.
+
+This is the seam for the optional Docker terminal service in
+`terminal-sandbox/`: a `remote-terminal` provider would render the xterm pane,
+stream the real shell, and report activity through `onActivity`, with no change
+to the guide or the records. Hosting it costs real money per running
+container-second (Docker's platform lists Micro at about $0.07 an hour and Small
+at about $0.14), so it stays an opt-in for paid labs; the simulated desktop is
+the default and costs nothing to host.
+
 ## Records and reports
 
 - A guided lab counts as finished only when both analysis answers are written
@@ -55,12 +108,16 @@ derived from the record and the current workspace by `labGuideFacts`.
 - `npm test`: the full suite passes, including `tests/lab-guide.test.js` (format
   split, guide structure for all 34 guided labs, coding demonstrations in both
   languages, fact derivation, page rendering without any interview controls,
-  record completion rules, application routing).
-- Browser check (Chromium, 1366 wide and 390 wide): CODE-501 runs end to end
-  through the guide — resources, demonstration, notebook, verification,
-  analysis answers, finish and report — with no console errors; NET-201 and
-  SEC-401 show live demonstration steps; INC-101 still opens the ticket flow;
-  the phone layout stacks the guide above the environment.
+  record completion rules, application routing) and `tests/lab-shell.test.js`
+  (lab folder and tools for every guided lab, navigation and reading, coding
+  runs and checks, NET-201 network commands, input bounds).
+- Browser check (Chromium, 1440 wide and 390 wide): CODE-501 runs end to end on
+  the desktop — `ls`, `cat fixtures.txt`, `nano program.js`, edit and Save in
+  the Text Editor, `node program.js 2`, `./check` all PASS — then the notebook,
+  verification and analysis answers; NET-201 completes Section 1 with
+  `ipconfig`, `ip addr add`, `ip route add`, `resolvectl dns` and Test
+  connection in the Lab Console; no console errors; INC-101 still opens the
+  ticket flow; the phone layout stacks the guide, then the desktop.
 - Bundle budgets: the runtime module graph guard moved from 1,665,000 to
   1,750,000 bytes, the compiled public application guard from 1,000,000 to
-  1,050,000 and the open delivery guard from 1,300,000 to 1,350,000.
+  1,100,000 and the open delivery guard from 1,300,000 to 1,400,000.

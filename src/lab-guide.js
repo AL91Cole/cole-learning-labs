@@ -12,9 +12,14 @@ import {codingChallengeComplete, codingStarter, CODING_LANGUAGES} from './coding
 import {renderExperiments, mountExperiments, readExperiments, experimentEventText, retainExperimentEvents} from './experiments.js?release=20261107-tech-team';
 import {workbenchProgress} from './records.js?release=20261107-tech-team';
 import {transferCaseFor} from './scenarios.js?release=20261107-tech-team';
+import {labTools} from './lab-shell.js?release=20261107-tech-team';
+import {codingDefinition} from './coding-lab.js?release=20261107-tech-team';
 import {labPageHash} from './learning-routes.js?release=20261107-tech-team';
+import {preferredLabEnvironment} from './lab-environment.js?release=20261107-tech-team';
+import './lab-desktop.js?release=20261107-tech-team';
 export {labFormat} from './lab-format.js?release=20261107-tech-team';
 
+export const SHELL_PROMPT = 'student@lab-pc:~/lab$';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const key = id => typeof id === 'string' ? id.replaceAll('-', '').toUpperCase() : '';
 
@@ -59,20 +64,23 @@ export function guideOverview(scenario) {
 function demonstrationSteps(scenario, facts) {
   if (scenario.track === 'coding') {
     const language = facts.language === 'python' ? 'python' : 'javascript', fix = codingDemonstration(scenario.id, language), other = language === 'python' ? 'JavaScript' : 'Python';
+    const file = language === 'python' ? 'program.py' : 'program.js', runner = language === 'python' ? 'python3 program.py' : 'node program.js', first = facts.firstInput ?? 2;
     return [
-      {id:'editor', instruction:'In the environment, keep the ' + (language === 'python' ? 'Python' : 'JavaScript') + ' subset selected. Select the first input card and read the expected reference beside the editor.', detail:'The reference pane shows the exact output every input card expects. Switching to ' + other + ' keeps your draft and clears results.', check:'ack'},
-      {id:'edit', instruction:'In Your code, change the starter so it follows the rule from the resource cards.', detail:fix ? 'Change this line:\n' + fix.from + '\nto:\n' + fix.to + '\n' + fix.why : 'Change one line at a time and keep the input variable; the fixture supplies its value.', check:'edited', code:true},
-      {id:'run', instruction:'Choose Run all fixtures to test the saved program with every input card.', detail:'Each card turns to MATCH or CHECK. Select a CHECK card to read its actual and expected output side by side.', check:'tested'},
-      {id:'match', instruction:'Keep revising until every input card shows MATCH.', detail:fix ? 'If a card still says CHECK, compare your line with:\n' + fix.to : 'Read the first failing card, change one part of your program and rerun.', check:'works', code:!!fix}
+      {id:'terminal', instruction:'On the desktop, open Terminal. Run ls, then cat README.txt and cat fixtures.txt to read the task and the test inputs.', detail:'The prompt is ' + SHELL_PROMPT + '. Type a command and press Enter. help lists everything this terminal understands. Switching the practice language in the Lab Console changes the program file to ' + (language === 'python' ? 'program.js' : 'program.py') + ' (' + other + ').', check:'terminal'},
+      {id:'edit', instruction:'Open ' + file + ' in the Text Editor (type nano ' + file + ', or open it from Files), change the starter line, then choose Save.', detail:fix ? 'Change this line:\n' + fix.from + '\nto:\n' + fix.to + '\n' + fix.why : 'Change one line at a time and keep the input variable; the fixture supplies its value.', check:'edited', code:true},
+      {id:'run', instruction:'Back in Terminal, run ' + runner + ' ' + first + ' to see your program’s output for one input.', detail:'The last line says whether that output matches the expected output for ' + first + '. Try the other inputs from fixtures.txt the same way.', check:'ran'},
+      {id:'check', instruction:'Run ./check to test the saved program with every input at once.', detail:'Each line reads PASS or FAIL with the input it used. Run all fixtures in the Text Editor or Lab Console does the same thing.', check:'tested'},
+      {id:'match', instruction:'Keep editing, saving and running ./check until every line reads PASS.', detail:fix ? 'If a line still reads FAIL, compare your line with:\n' + fix.to : 'Read the first failing input, change one part of your program, save and run ./check again.', check:'works', code:!!fix}
     ];
   }
   const mission = facts.mission || {}, track = TRACKS[scenario.track] || TRACKS.network;
   const instruction = typeof mission.next === 'string' && mission.next.trim() ? mission.next : 'Make the change at ' + track.bench + ' that the resource cards call for.';
   const detail = Array.isArray(mission.hints) ? mission.hints.filter(Boolean).join(' ') : '';
+  const tools = Array.isArray(facts.tools) && facts.tools.length ? facts.tools : [];
   return [
-    {id:'inspect', instruction:'In the environment, read the current settings and any readouts or inspection tools before changing anything.', detail:'Compare each saved setting with the requirement on the matching resource card. A readout is evidence, but it does not replace the workspace test.', check:'ack'},
-    {id:'change', instruction:instruction, detail:detail, check:'works'},
-    {id:'test', instruction:'Run the workspace test and read each check until all of them pass.', detail:'A saved setting is not a tested result. The test runs every check against the current setup; a failing check names what to revisit.', check:'tested'}
+    {id:'terminal', instruction:'On the desktop, open Terminal and run the lab tools before changing anything' + (tools.length ? ': ' + tools.join(', ') : '') + '.', detail:'The prompt is ' + SHELL_PROMPT + '. Type a tool name exactly and press Enter; cat settings.txt shows the saved settings and help lists everything. A readout is evidence, but it does not replace the test.', check:'tool'},
+    {id:'change', instruction:'Open the Lab Console (desktop icon, or type console in Terminal). ' + instruction, detail:detail, check:'works'},
+    {id:'test', instruction:'In the Lab Console, run the test and read each check until all of them pass.', detail:'A saved setting is not a tested result. The test runs every check against the current setup; a failing check names what to revisit. Run the lab tools again in Terminal to see what changed.', check:'tested'}
   ];
 }
 
@@ -125,8 +133,10 @@ export function labGuideFacts(scenario, record, {taskResult = null} = {}) {
   const mission = coding ? null : getWorkspaceMission(scenario.id, state);
   const transfer = transferCaseFor(scenario.id);
   const text = (value, minimum) => typeof value === 'string' && value.trim().length >= minimum;
+  const acknowledged = Array.isArray(record.manual) ? record.manual : [];
   return {
-    language:state.language, acknowledged:record.manual || [], mission:mission ? {next:mission.next, hints:mission.hints} : null,
+    language:state.language, acknowledged, mission:mission ? {next:mission.next, hints:mission.hints} : null, tools:labTools(scenario.id), firstInput:coding ? codingDefinition(scenario.id)?.values[0] : undefined,
+    terminal:acknowledged.includes('used-terminal'), tool:acknowledged.includes('used-tool'), ran:acknowledged.includes('ran-program'),
     transfer, transferHref:transfer ? labPageHash(transfer, 1, {mode:'challenge'}) : '',
     resources:scenario.clues.length > 0 && scenario.clues.every(clue => record.evidence.includes(clue.id)),
     edited:coding ? typeof state.code === 'string' && state.code.trim() !== codingStarter(scenario.id, state.language).trim() : (Number(state.workspaceEdits) || 0) > 0,
@@ -155,8 +165,8 @@ const stepsHTML = (section, facts) => section.steps.map((step, index) => {
 }).join('');
 
 /** The lab page: the guide on the left and the simulated environment on the right. */
-export function renderLabGuidePage(scenario, record, {trackName = '', sceneArt = '', saveStatus = ''} = {}) {
-  const overview = guideOverview(scenario), coding = scenario.track === 'coding';
+export function renderLabGuidePage(scenario, record, {trackName = '', sceneArt = '', saveStatus = '', environment = null} = {}) {
+  const overview = guideOverview(scenario), coding = scenario.track === 'coding', provider = environment || preferredLabEnvironment();
   const resources = overview.resources.map(resource => '<details class="guide-resource" data-resource="' + esc(resource.id) + '"' + (record.evidence.includes(resource.id) ? ' open' : '') + '><summary>' + esc(resource.label) + '<span data-resource-state>' + (record.evidence.includes(resource.id) ? 'Opened' : 'Open') + '</span></summary><p>' + esc(resource.text) + '</p></details>').join('');
   const section = (meta, body) => '<details class="guide-section" data-guide-section="' + meta.id + '"' + (meta.id === 'introduction' ? ' open' : '') + '><summary><span class="guide-section-title">' + esc(meta.title) + '</span><span class="guide-section-state" data-guide-section-state="' + meta.id + '"></span></summary><div class="guide-section-body">' + body + '</div></details>';
   const introduction = '<p class="guide-lead">' + esc(overview.introduction) + '</p><p class="guide-requester"><b>Requested by</b> ' + esc(overview.requester) + '</p><h3>Goal</h3><p>' + esc(overview.goal) + '</p><h3>Learning objectives</h3><ul>' + overview.objectives.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul><h3>Tools in this simulation</h3><ul>' + overview.tools.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul><h3>Deliverables</h3><ul>' + overview.deliverables.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul><h3>Lab resources</h3><p class="panel-help">' + (coding ? 'The input contract, the rule and the test inputs for this program.' : 'The case details you would otherwise gather from the requester and the equipment.') + '</p><div class="guide-resources">' + resources + '</div><p class="guide-scope">Every device, person and record in this lab is simulated. Nothing here connects to a real system.</p><ol class="guide-steps" data-guide-steps="introduction" aria-label="Introduction steps"></ol>';
@@ -166,7 +176,7 @@ export function renderLabGuidePage(scenario, record, {trackName = '', sceneArt =
   return '<section class="lab-shell lab-guide-shell" data-track="' + esc(scenario.track) + '"><div class="lab-topbar">' + sceneArt + '<a href="#labs" class="back-link">← All labs</a><div><span class="eyebrow">' + esc(scenario.id) + ' / ' + esc(trackName || (TRACKS[scenario.track]?.name ?? scenario.track)) + '</span><h1>' + esc(scenario.title) + '</h1></div><span class="tag">GRADES ' + esc(scenario.grade) + '</span><div class="lab-tools"><button id="reading-toggle" class="lab-tool" aria-pressed="false">Larger text</button><button id="saving-options" class="lab-tool">Saving &amp; privacy</button><button id="report-button" class="lab-tool">My report</button></div></div>' +
     '<div class="lab-guide-layout"><aside class="lab-guide" id="lab-guide" aria-label="Lab guide" tabindex="0"><header class="lab-guide-head"><p class="eyebrow">LAB GUIDE</p><div class="guide-progress"><progress data-guide-progress value="0" max="100" aria-label="Lab guide progress">0%</progress><span data-guide-percent aria-live="polite">0%</span></div></header><div class="lab-guide-sections">' + section(GUIDE_SECTIONS[0], introduction) + section(GUIDE_SECTIONS[1], demonstration) + section(GUIDE_SECTIONS[2], applied) + section(GUIDE_SECTIONS[3], challenge) + '</div>' +
     '<div class="lab-reset"><button class="text-button" id="reset-ticket" aria-expanded="false" aria-controls="reset-confirm">Start this lab again</button><div id="reset-confirm" role="group" aria-labelledby="reset-question" hidden><p id="reset-question">This clears this lab’s current work and any saved copy when device saving is on. Export first.</p><button id="confirm-reset" class="lab-tool">Start over</button> <button id="cancel-reset" class="lab-tool">Keep my work</button></div></div></aside>' +
-    '<div class="lab-environment" id="lab-environment" role="region" aria-label="Lab environment"><div class="environment-bar"><span class="eyebrow">LAB ENVIRONMENT</span><span data-environment-status role="status"></span></div><div id="classroom-status"></div><div id="workspace" class="workspace"></div><div id="action-feedback" class="action-feedback" role="status">' + esc(record.events.length ? (experimentEventText(record.events.at(-1), {compact:true}) || record.events.at(-1).message) : 'Follow Section 1 of the lab guide. Your actions are recorded here.') + '</div><details class="case-panel bench-log guide-log"><summary>Action log <span id="action-count">' + record.events.length + ' actions</span></summary><ol id="bench-log" tabindex="0" aria-label="Saved lab steps">' + eventList(record) + '</ol></details><div id="work-privacy" hidden></div></div></div></section>' +
+    '<div class="lab-environment" id="lab-environment" role="region" aria-label="Lab environment"><div class="environment-bar"><span class="eyebrow">LAB ENVIRONMENT</span><span class="environment-provider">' + esc(provider?.label || 'Lab environment') + '</span><span data-environment-status role="status"></span></div><div id="classroom-status"></div><div data-lab-environment data-environment-id="' + esc(provider?.id || '') + '">' + (provider ? provider.render(scenario, record) : '<p class="panel-help">No lab environment is available.</p>') + '</div><div id="action-feedback" class="action-feedback" role="status">' + esc(record.events.length ? (experimentEventText(record.events.at(-1), {compact:true}) || record.events.at(-1).message) : 'Follow Section 1 of the lab guide. Open Terminal on the desktop to begin; your actions are recorded here.') + '</div><details class="case-panel bench-log guide-log"><summary>Action log <span id="action-count">' + record.events.length + ' actions</span></summary><ol id="bench-log" tabindex="0" aria-label="Saved lab steps">' + eventList(record) + '</ol></details><div id="work-privacy" hidden></div></div></div></section>' +
     '<dialog id="lab-dialog"><div id="dialog-content"></div><button id="dialog-close" class="button button-outline">Close</button></dialog>';
 }
 
@@ -176,13 +186,15 @@ function eventList(record) {
 }
 
 /** Mount the guided lab. The app supplies saving, the report dialog, notices and reset. */
-export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPreview = false, save = () => {}, openReport = () => {}, showNotice = () => {}, onComplete = () => {}, onReset = () => {}, saveStatus = () => '', onSection = () => {}, bindWorkPrivacy = () => {}}) {
+export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPreview = false, save = () => {}, openReport = () => {}, showNotice = () => {}, onComplete = () => {}, onReset = () => {}, saveStatus = () => '', onSection = () => {}, bindWorkPrivacy = () => {}, environment = null}) {
   const $ = selector => root.querySelector(selector), $$ = selector => [...root.querySelectorAll(selector)];
   const controller = new AbortController(), signal = controller.signal, listen = (node, event, handler, capture = false) => node?.addEventListener(event, handler, {signal, capture});
   bindWorkPrivacy(s);
-  const shell = $('.lab-guide-shell'), workspace = $('#workspace'), feedback = $('#action-feedback');
+  const shell = $('.lab-guide-shell'), environmentHost = $('[data-lab-environment]'), feedback = $('#action-feedback');
+  const provider = environment || preferredLabEnvironment();
   const mode = route?.mode || 'guided';
-  let refreshing = false, experiments = {refresh(){}, dispose(){}};
+  let refreshing = false, experiments = {refresh(){}, dispose(){}}, desktop = {refresh(){}, dispose(){}, hasUnsavedDraft:() => false};
+  const acknowledge = id => {if (!Array.isArray(r.manual)) r.manual = []; if (r.manual.includes(id)) return false; r.manual.push(id); return true;};
   const view = () => {const open = $$('[data-guide-section]').find(node => node.open); return GUIDE_SECTIONS.find(section => section.id === open?.dataset.guideSection) || GUIDE_SECTIONS[0];};
   function logEvent(event) {
     const entry = {time:new Date().toISOString(), kind:event.kind || 'info', message:String(event.message || '').slice(0, 600)};
@@ -191,10 +203,11 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
     r.events.push(entry); r.events = retainExperimentEvents(s, r.events);
     $('#bench-log').innerHTML = eventList(r); $('#action-count').textContent = r.events.length + ' actions';
   }
-  const renderBench = () => renderWorkspace(workspace, s, r.state, action);
+  const renderBench = () => desktop.refresh();
   function currentTaskResult() {
     const editor = $('#coding-editor');
-    if (s.track === 'coding' && editor && editor.value !== r.state.code) return {ok:false, message:'Your editor contains untested changes. Run all fixtures for this version before checking.'};
+    if (s.track === 'coding' && editor && editor.value !== r.state.code) return {ok:false, message:'The Lab Console editor contains untested changes. Run all fixtures for this version before checking.'};
+    if (s.track === 'coding' && desktop.hasUnsavedDraft()) return {ok:false, message:'The Text Editor has unsaved changes. Save them, then run ./check or Run all fixtures before checking.'};
     return verifyWorkspace(s.id, r.state);
   }
   function action(id, value) {
@@ -268,8 +281,16 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
     openSection(id, {writeHistory:false});
     return true;
   }
-  // Environment first: the workspace mounts once and stays visible beside the guide.
-  renderBench();
+  // Environment first: the desktop mounts once and stays visible beside the guide. The lab's own
+  // settings and test render inside its Lab Console window whenever that window is open.
+  desktop = provider ? provider.mount(environmentHost, {scenario:s, record:r, getState:() => r.state, action, showNotice,
+    renderConsole:node => renderWorkspace(node, s, r.state, action),
+    onActivity:activity => {
+      let changed = false;
+      if (activity?.type === 'terminal') {changed = acknowledge('used-terminal') || changed; if (activity.tool) changed = acknowledge('used-tool') || changed; if (/^(?:sudo\s+)?(?:python3?|node)\b/.test(String(activity.command || '').trim())) changed = acknowledge('ran-program') || changed;}
+      if (changed) save();
+      refresh();
+    }}) : desktop;
   const host = $('#experiment-tools'); host.innerHTML = renderExperiments(s, r);
   experiments = mountExperiments(host, {scenario:s, record:r, getState:() => r.state, getResult:() => currentTaskResult(), onSave:() => {save(); refresh();}, onTest:prediction => runHypothesisTest(prediction)});
   const initial = route?.section === 3 ? 'challenge' : route?.section === 2 ? 'applied' : (labGuide(s, labGuideFacts(s, r)).sections[0].complete ? 'demonstration' : 'introduction');
@@ -288,7 +309,7 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
     save(); refresh();
     $('.lab-guide [aria-current="step"] button, .lab-guide [aria-current="step"]')?.focus?.({preventScroll:true});
   });
-  if (s.track === 'coding') listen(workspace, 'input', () => refresh());
+  if (s.track === 'coding') listen(environmentHost, 'input', () => refresh());
   listen($('#verify-task'), 'click', () => {const result = currentTaskResult(); r.verified = result.ok; r.closed = r.closed && result.ok; logEvent({message:'Verification: ' + result.message, kind:result.ok ? 'success' : 'warning'}); $('#verify-result').textContent = (result.ok ? '✓ ' : 'Try again: ') + result.message; save(); refresh();});
   for (const field of ['notes', 'reflection']) listen($('#' + field), 'input', event => {r[field] = event.target.value; r.closed = false; const error = $('#' + field + '-error'); if (r[field].trim().length >= 15) {error.textContent = ''; error.hidden = true; event.target.removeAttribute('aria-invalid');} save(); refresh();});
   listen($('#finish-lab'), 'click', () => {
@@ -312,5 +333,5 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
   listen($('#reset-confirm'), 'keydown', event => {if (event.key === 'Escape') {event.preventDefault(); cancelReset();}});
   listen($('#confirm-reset'), 'click', () => onReset());
   refresh();
-  return {runHypothesisTest, currentTaskResult, refreshStatus:refresh, syncRoute, dispose() {controller.abort(); experiments.dispose(); disposeWorkspace(workspace);}};
+  return {runHypothesisTest, currentTaskResult, refreshStatus:refresh, syncRoute, dispose() {controller.abort(); experiments.dispose(); const console = environmentHost?.querySelector('#workspace'); if (console) disposeWorkspace(console); desktop.dispose();}};
 }

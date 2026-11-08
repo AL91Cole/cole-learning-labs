@@ -36,6 +36,8 @@ export const codingStarter = (id,language) => starterFor(id,language);
 /** Both practice languages have a remembered passing solution: the unguided challenge is complete. */
 export const codingChallengeComplete = saved => record(saved)&&record(saved.solutions)&&CODING_LANGUAGES.every(item=>typeof saved.solutions[item.id]==='string'&&saved.solutions[item.id].trim().length>0);
 export const codingFixtureCount = id => definitions[key(id)]?.values.length||0;
+/** Read-only fixture contract for shells and guides: the input name, its test values and the expected lines. */
+export const codingDefinition = id => {const definition=definitions[key(id)];return definition?Object.freeze({input:definition.input,values:[...definition.values],expected:value=>definition.expected(value)}):null;};
 export const codingBlockContract = id => definitions[key(id)]?.blocks||null;
 class CodeError extends Error { constructor(message,line=1) { super(message);this.line=line; } }
 const fail = (message,line) => { throw new CodeError(message,line); };
