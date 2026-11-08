@@ -22,33 +22,40 @@ const ICONS = Object.freeze({
   lab:'<path d="M4 11a3 3 0 0 1 3-3h9l3 3h14a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="#2f8a76"/><path d="M4 16h32v15a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="#58cdb4"/><path d="M14 27h12M20 21v12" stroke="#0b1c2a" stroke-width="2.4" stroke-linecap="round"/>',
   network:'<rect x="6" y="6" width="10" height="8" rx="1.5" fill="#dbe9fb"/><rect x="24" y="6" width="10" height="8" rx="1.5" fill="#dbe9fb"/><rect x="15" y="26" width="10" height="8" rx="1.5" fill="#dbe9fb"/><path d="M11 14v6h18v-6M20 20v6" stroke="#dbe9fb" stroke-width="2" fill="none"/>',
   volume:'<path d="M8 15h6l8-6v22l-8-6H8z" fill="#dbe9fb"/><path d="M26 14a8 8 0 0 1 0 12M30 10a14 14 0 0 1 0 20" stroke="#dbe9fb" stroke-width="2" fill="none" stroke-linecap="round"/>',
-  menu:'<circle cx="20" cy="20" r="15" fill="#2f7fd6"/><path d="M12 15h16M12 20h16M12 25h16" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>'
+  menu:'<path d="M8 24c2-9 9-15 18-15 4 0 7 1 9 3-5 0-9 2-12 6 4-1 8 0 11 3-5-1-9 0-12 3 3 1 6 3 8 6-5-2-10-2-14 0 3-3 4-7 2-11-3 1-6 3-10 5z" fill="#1a73c7"/><circle cx="29" cy="13" r="1.6" fill="#fff"/>',
+  log:'<rect x="9" y="6" width="22" height="30" rx="3" fill="#f6f7f3" stroke="#60778a" stroke-width="1.5"/><rect x="15" y="3" width="10" height="6" rx="2" fill="#8d96a3"/><path d="M14 16h12M14 22h12M14 28h8" stroke="#3c5668" stroke-width="2.2" stroke-linecap="round"/>',
+  keyboard:'<rect x="4" y="11" width="32" height="18" rx="3" fill="none" stroke="#2b2f36" stroke-width="2"/><path d="M9 17h2M14 17h2M19 17h2M24 17h2M29 17h2M9 23h2M14 23h12M29 23h2" stroke="#2b2f36" stroke-width="2" stroke-linecap="round"/>'
 });
+// A procedural wireframe swoosh for the wallpaper: two offset curves triangulated into a mesh.
+function wallpaperSVG() {
+  const curve = (t, flip) => {const angle = 0.6 + t * 4.2, radius = 420 - t * 300, cx = 1180, cy = 520; return [cx + Math.cos(angle) * radius * (flip ? 0.55 : 1), cy + Math.sin(angle) * radius * 0.62 * (flip ? 1.25 : 1)];};
+  const mesh = (flip, steps, width) => {const polys = []; for (let i = 0; i < steps; i++) {const t0 = i / steps, t1 = (i + 1) / steps; const [x0, y0] = curve(t0, flip), [x1, y1] = curve(t1, flip); const w0 = width * (1 - t0 * 0.6), w1 = width * (1 - t1 * 0.6); const nx = -(y1 - y0), ny = x1 - x0, len = Math.hypot(nx, ny) || 1; const o0 = [x0 + nx / len * w0, y0 + ny / len * w0], o1 = [x1 + nx / len * w1, y1 + ny / len * w1]; polys.push([[x0, y0], [x1, y1], o1].map(p => p.map(v => Math.round(v)).join(',')).join(' ')); polys.push([[x0, y0], o1, o0].map(p => p.map(v => Math.round(v)).join(',')).join(' '));} return polys.map(points => '<polygon points="' + points + '"/>').join('');};
+  return '<svg class="desktop-wallpaper" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><defs><linearGradient id="lab-wall" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a2a85"/><stop offset=".45" stop-color="#2d3b9c"/><stop offset="1" stop-color="#1c7fc9"/></linearGradient></defs><rect width="1600" height="1000" fill="url(#lab-wall)"/><g fill="none" stroke="#ffffff" stroke-opacity=".32" stroke-width="1.2">' + mesh(false, 46, 150) + mesh(true, 34, 90) + '</g><path d="M80 960c320-110 760-80 1120 40" fill="none" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/><path d="M0 1000c360-150 820-120 1240 30" fill="none" stroke="#ffffff" stroke-opacity=".18" stroke-width="1.5"/></svg>';
+}
 const icon = (name, className = '') => '<svg class="' + className + '" viewBox="0 0 40 40" aria-hidden="true" focusable="false">' + (ICONS[name] || '') + '</svg>';
 export const DESKTOP_APPS = Object.freeze([
   Object.freeze({id:'terminal', title:'Terminal', hint:'Run commands', icon:'terminal'}),
   Object.freeze({id:'files', title:'Files', hint:'Browse your folders', icon:'files'}),
   Object.freeze({id:'editor', title:'Text Editor', hint:'Edit a file', icon:'editor'}),
-  Object.freeze({id:'console', title:'Lab Console', hint:'Lab settings and test', icon:'console'})
+  Object.freeze({id:'console', title:'Lab Console', hint:'Lab settings and test', icon:'console'}),
+  Object.freeze({id:'log', title:'Lab Log', hint:'Your recorded actions', icon:'log'})
 ]);
 const TRASH = HOME + '/.local/share/Trash';
 const DESKTOP_ICONS = Object.freeze([
   Object.freeze({id:'computer', title:'Computer', icon:'computer', app:'files', path:'/'}),
-  Object.freeze({id:'home', title:'Home', icon:'home', app:'files', path:HOME}),
   Object.freeze({id:'lab', title:'Lab Folder', icon:'lab', app:'files', path:LAB_DIR}),
   Object.freeze({id:'terminal', title:'Terminal', icon:'terminal', app:'terminal'}),
-  Object.freeze({id:'editor', title:'Text Editor', icon:'editor', app:'editor'}),
   Object.freeze({id:'console', title:'Lab Console', icon:'console', app:'console'}),
-  Object.freeze({id:'trash', title:'Trash', icon:'trash', app:'files', path:TRASH})
+  Object.freeze({id:'trash', title:'Trash (Empty)', icon:'trash', app:'files', path:TRASH})
 ]);
 const PLACES = Object.freeze([['Home', HOME, 'home'], ['Desktop', HOME + '/Desktop', 'files'], ['Documents', HOME + '/Documents', 'files'], ['Downloads', HOME + '/Downloads', 'files'], ['Lab Folder', LAB_DIR, 'lab'], ['Computer', '/', 'computer'], ['Trash', TRASH, 'trash']]);
 
 export function renderLabDesktop(scenario) {
   const launcher = (app) => '<button type="button" class="panel-launcher" data-desktop-open="' + app.id + '" title="' + esc(app.title) + '" aria-label="Open ' + esc(app.title) + '">' + icon(app.icon) + '</button>';
-  return '<div class="lab-desktop" data-lab-desktop><div class="desktop-surface" data-desktop-surface><div class="desktop-icons" role="group" aria-label="Desktop icons">' + DESKTOP_ICONS.map(item => '<button type="button" class="desktop-icon" data-desktop-open="' + item.app + '"' + (item.path ? ' data-desktop-path="' + esc(item.path) + '"' : '') + '>' + icon(item.icon) + '<span>' + esc(item.title) + '</span></button>').join('') + '</div><div class="desktop-windows" data-desktop-windows></div><div class="desktop-toasts" data-desktop-toasts aria-live="polite"></div><p class="desktop-brand" aria-hidden="true">' + esc(OS_NAME.split(' ')[0].toLowerCase()) + '<b>linux</b><small>' + esc(OS_NAME.split(' ').slice(2).join(' ')) + '</small></p></div><div class="desktop-panel"><button type="button" class="panel-menu" data-desktop-menu aria-expanded="false" aria-controls="desktop-menu" aria-label="Application menu">' + icon('menu') + '</button><div id="desktop-menu" class="desktop-menu" hidden><p class="desktop-menu-title">' + esc(SHELL_USER) + ' on ' + esc(SHELL_HOST) + '</p>' + DESKTOP_APPS.map(app => '<button type="button" data-desktop-open="' + app.id + '">' + icon(app.icon) + '<span>' + esc(app.title) + '<small>' + esc(app.hint) + '</small></span></button>').join('') + '<p class="desktop-menu-foot">' + esc(OS_NAME) + ' · simulated</p></div><div class="panel-launchers">' + DESKTOP_APPS.slice(0, 3).map(launcher).join('') + '</div><div class="panel-tasks" data-desktop-tasks role="group" aria-label="Open windows"></div><div class="panel-tray"><span class="tray-item" data-tray-network title="Lab network (simulated)">' + icon('network') + '</span><span class="tray-item" title="Volume (simulated)">' + icon('volume') + '</span><button type="button" class="tray-clock" data-desktop-clock-button title="Calendar"><time data-desktop-clock></time><small data-desktop-date></small></button></div></div></div>';
+  return '<div class="lab-desktop" data-lab-desktop><div class="desktop-surface" data-desktop-surface>' + wallpaperSVG() + '<div class="desktop-icons" role="group" aria-label="Desktop icons">' + DESKTOP_ICONS.map(item => '<button type="button" class="desktop-icon" data-desktop-open="' + item.app + '"' + (item.path ? ' data-desktop-path="' + esc(item.path) + '"' : '') + '>' + icon(item.icon) + '<span>' + esc(item.title) + '</span></button>').join('') + '</div><div class="desktop-windows" data-desktop-windows></div><div class="desktop-toasts" data-desktop-toasts aria-live="polite"></div><p class="desktop-brand" aria-hidden="true"><span>' + esc(OS_NAME.split(' ').slice(0, 2).join(' ').toLowerCase()) + '</span><b>' + esc(OS_NAME.split(' ')[2]) + '</b></p></div><div class="desktop-panel"><button type="button" class="panel-menu" data-desktop-menu aria-expanded="false" aria-controls="desktop-menu" aria-label="Application menu">' + icon('menu') + '</button><div id="desktop-menu" class="desktop-menu" hidden><p class="desktop-menu-title">' + esc(SHELL_USER) + ' on ' + esc(SHELL_HOST) + '</p>' + DESKTOP_APPS.map(app => '<button type="button" data-desktop-open="' + app.id + '">' + icon(app.icon) + '<span>' + esc(app.title) + '<small>' + esc(app.hint) + '</small></span></button>').join('') + '<p class="desktop-menu-foot">' + esc(OS_NAME) + ' · simulated</p></div><div class="panel-pager" role="group" aria-label="Workspaces">' + [1, 2, 3, 4].map(n => '<button type="button" data-desktop-workspace="' + n + '" aria-pressed="' + (n === 1) + '" aria-label="Workspace ' + n + '">' + n + '</button>').join('') + '</div><div class="panel-launchers">' + DESKTOP_APPS.slice(0, 4).map(launcher).join('') + '</div><div class="panel-tasks" data-desktop-tasks role="group" aria-label="Open windows"></div><div class="panel-tray"><button type="button" class="tray-item tray-button" data-desktop-open="log" title="Lab Log" aria-label="Open the Lab Log">' + icon('log') + '</button><span class="tray-item" data-tray-network title="Lab network (simulated)">' + icon('network') + '</span><span class="tray-item" title="Volume (simulated)">' + icon('volume') + '</span><span class="tray-item tray-keyboard" title="Keyboard layout: English (US), simulated">' + icon('keyboard') + '<small>en</small></span><button type="button" class="tray-clock" data-desktop-clock-button title="Calendar"><time data-desktop-clock></time><small data-desktop-date></small></button></div></div></div>';
 }
 
-export function mountLabDesktop(root, {scenario, record, getState, action, renderConsole, onActivity = () => {}, showNotice = () => {}}) {
+export function mountLabDesktop(root, {scenario, record, getState, action, renderConsole, renderLog = null, onActivity = () => {}, showNotice = () => {}}) {
   const controller = new AbortController(), signal = controller.signal, $ = selector => root.querySelector(selector);
   const listen = (node, event, handler, options = {}) => node?.addEventListener(event, handler, {...options, signal});
   const windowsHost = $('[data-desktop-windows]'), tasks = $('[data-desktop-tasks]'), toasts = $('[data-desktop-toasts]');
@@ -127,6 +134,10 @@ export function mountLabDesktop(root, {scenario, record, getState, action, rende
       win.lineNumbers = lineNumbers; win.position = position;
       if (editorPath) loadEditor(win, editorPath);
       win.focusTarget = text;
+    } else if (win.app.id === 'log') {
+      body.innerHTML = '<div class="desk-log" data-desk-log></div>';
+      if (renderLog) renderLog(body.querySelector('[data-desk-log]')); else body.querySelector('[data-desk-log]').textContent = 'No log is available.';
+      win.focusTarget = body.querySelector('[data-desk-log] ol') || body;
     } else if (win.app.id === 'console') {
       body.innerHTML = '<div id="workspace" class="workspace desk-console" data-desk-console></div>';
       consoleRoot = body.querySelector('[data-desk-console]');
@@ -184,8 +195,10 @@ export function mountLabDesktop(root, {scenario, record, getState, action, rende
     while (toasts.children.length > 3) toasts.firstChild.remove();
     setTimeout(() => toast.remove(), 6000);
   }
+  function refreshLog() {const log = windows.get('log'); if (log && !log.node.hidden && renderLog) renderLog(log.body.querySelector('[data-desk-log]'));}
   function refresh() {
     if (consoleRoot && windows.get('console') && !windows.get('console').node.hidden) renderConsole(consoleRoot);
+    refreshLog();
     const files = windows.get('files'); if (files && !files.node.hidden) renderFiles(files);
     const editor = windows.get('editor');
     if (editor && editorPath && !editorDirty) {const file = shell.files().get(editorPath); const text = editor.body.querySelector('[data-editor-text]'); if (file && text && text.value !== file.content) {text.value = file.content; editor.lineNumbers?.();} if (!file) {editorPath = null; text.value = ''; text.readOnly = true; editor.body.querySelector('[data-editor-file]').textContent = 'No file open'; setTitle(editor, 'Text Editor');}}
@@ -200,6 +213,7 @@ export function mountLabDesktop(root, {scenario, record, getState, action, rende
     const go = event.target.closest?.('[data-files-go]'); if (go) {const win = windows.get('files'); if (win) {renderFiles(win, go.dataset.filesGo); win.focusTarget?.focus?.({preventScroll:true});} return;}
     const fileButton = event.target.closest?.('[data-file-open]'); if (fileButton) {open('editor', {path:fileButton.dataset.fileOpen}); return;}
     if (event.target.closest?.('[data-desktop-clock-button]')) {notify(new Date().toLocaleDateString([], {weekday:'long', year:'numeric', month:'long', day:'numeric'}) + ' · ' + new Date().toLocaleTimeString()); return;}
+    const workspace = event.target.closest?.('[data-desktop-workspace]'); if (workspace) {if (workspace.dataset.desktopWorkspace !== '1') notify('Workspace ' + workspace.dataset.desktopWorkspace + ' is empty in this practice session. Your lab stays on workspace 1.'); return;}
     const win = event.target.closest?.('.desk-window');
     if (win) {const entry = windows.get(win.dataset.app); if (event.target.closest('[data-desk-close]')) close(win.dataset.app); else if (event.target.closest('[data-desk-minimize]')) {win.hidden = true; updateTasks();} else if (event.target.closest('[data-desk-maximize]')) {if (entry) toggleMaximize(entry);} else if (entry) focusWindow(entry); return;}
     if (!event.target.closest?.('#desktop-menu')) closeMenu();
@@ -223,7 +237,7 @@ export function mountLabDesktop(root, {scenario, record, getState, action, rende
   });
   listen(root, 'pointerup', () => {drag = null;}); listen(root, 'pointercancel', () => {drag = null;});
   refresh();
-  return {refresh, open, close, notify, dispose() {controller.abort(); clearInterval(ticker); windows.clear();}, hasUnsavedDraft:() => editorDirty, shell};
+  return {refresh, refreshLog, open, close, notify, dispose() {controller.abort(); clearInterval(ticker); windows.clear();}, hasUnsavedDraft:() => editorDirty, shell};
 }
 
 registerLabEnvironment({

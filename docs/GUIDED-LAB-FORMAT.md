@@ -43,7 +43,12 @@ derived from the record and the current workspace by `labGuideFacts`.
 
 ## The lab environment: a simulated desktop (`src/lab-desktop.js`, `src/lab-shell.js`)
 
-The right pane is a Lubuntu-style desktop that runs entirely in the browser:
+The lab opens as a VM console: a dark top bar with the lab title and the
+Larger text, Saving & privacy, My report and Exit lab controls; a light lab
+guide on the left with its own text-size, report and collapse («) buttons; and
+the environment on the right as a letterboxed 16:10 screen. The shell fills the
+viewport, so the guide and the windows scroll while the page stays put, like a
+VM console. The right pane is a Lubuntu-style desktop that runs entirely in the browser:
 a panel with an application menu, quick launchers, task buttons, a system tray
 and clock; Computer, Home, Lab Folder, Terminal, Text Editor, Lab Console and
 Trash icons; and windows that drag, resize, minimise, maximise and close.
@@ -83,6 +88,9 @@ files or reaches a network.
 - **Lab Console.** The lab's existing settings and test workbench, opened as a
   window instead of a fixed form. Changing a setting there or in the terminal
   updates the same state.
+- **Lab Log.** The action log as a window (tray icon or application menu):
+  every workspace action, lab tool, test and terminal command, in order. The
+  same list is in the report.
 
 Windows open from desktop icons, the application menu, the quick launchers or
 the task buttons; on phones they fill the desktop. Guide steps watch what the
@@ -108,6 +116,20 @@ to the guide or the records. Hosting it costs real money per running
 container-second (Docker's platform lists Micro at about $0.07 an hour and Small
 at about $0.14), so it stays an opt-in for paid labs; the simulated desktop is
 the default and costs nothing to host.
+
+## Devices
+
+The guided lab is plain HTML, CSS and JavaScript with no plugins or downloads,
+so it runs in current Chrome, Edge, Firefox and Safari on Chromebooks, Windows,
+macOS and Linux. Every control is a button, link or form field: the desktop is
+keyboard operable (Tab to an icon, Enter to open; Tab completion and history in
+the terminal; Ctrl+S in the editor), and touch works for opening, dragging and
+scrolling. The layout is checked at 1366 × 768 (a typical Chromebook), 1440 ×
+900 and 390 × 844. Learner work follows the site's existing saving model: it
+stays on the page until the learner turns on device saving or exports it from
+Saving & privacy, and an exported file can be imported on another device to
+continue a lab there. Files a learner makes in the simulated home folder are
+session-only.
 
 ## Records and reports
 
