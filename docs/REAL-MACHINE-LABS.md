@@ -61,10 +61,52 @@ months (about 160 to 240 student-hours per active week, six weeks a year):
 
 Idle weeks cost nothing on per-second sandboxes. A 16 GB always-on VPS for 30
 concurrent learners would be $30 to $50 a month; renting it hourly only for
-active weeks is $8 to $10 a week. The controller as written needs Docker daemon
-access; if Docker's sandbox product does not give you a host, the next step is a
-small adapter in the controller that starts one sandbox per learner through
-Docker's API instead of `docker run`.
+active weeks is $8 to $10 a week.
+
+## Docker Cloud Sandboxes backend
+
+The controller has two learner-machine backends, chosen with
+`SANDBOX_BACKEND`:
+
+- `docker` (default): containers on the controller's own host through the
+  Docker socket, as before.
+- `cloud`: one **Docker Cloud Sandbox** per learner through Docker's Sandboxes
+  API (`terminal-sandbox/cloud-sandboxes.js`). The controller needs no Docker
+  daemon, only outbound HTTPS to `hub.docker.com` and `connect.docker.com`, so
+  it can run on any small host or even a laptop during a pilot.
+
+How a cloud session works: the personal access token (`DOCKER_ID`,
+`DOCKER_PAT`, with "Allow Cloud Sandboxes access") is exchanged for a
+short-lived access token and cached; the sandbox is created from
+`SANDBOX_IMAGE_REF` at `SANDBOX_SIZE` (micro by default) with a deny-all
+network policy and labels naming the lab and session; the controller waits for
+`running`, requests a five-minute endpoint credential limited to running
+processes and reading files, starts the learner's `/bin/sh -i` with a PTY and
+relays keystrokes, output and resizes over the endpoint's WebSocket. Lab checks
+read only the files the lab definitions name, at most 16 KiB each. Ending the
+session deletes the sandbox (`DELETE` with the observed version in `If-Match`,
+retried once if the version moved), and a start that fails part-way deletes
+whatever it created. Tokens are never logged or sent to the browser.
+
+Setting it up:
+
+1. Build the lab image and push it to a Docker Hub repository (a private one
+   is fine): `docker build -f terminal-sandbox/Dockerfile.sandbox -t
+   docker.io/<account>/cll-sandbox:cloud terminal-sandbox && docker push
+   docker.io/<account>/cll-sandbox:cloud` (with the private layer on top when
+   labs are paid).
+2. Create a Docker personal access token with "Allow Cloud Sandboxes access"
+   and store it in the deployment's secret store, never in a file or URL.
+3. Set `SANDBOX_BACKEND=cloud`, `DOCKER_ID`, `DOCKER_PAT`,
+   `SANDBOX_IMAGE_REF` and optionally `SANDBOX_SIZE`; the controller refuses to
+   start with any of them missing. Remove the Docker socket mount from the
+   compose file, it is no longer needed.
+4. Smoke-test once on your own computer:
+   `RUN_CLOUD_TESTS=1 npm test --prefix terminal-sandbox` with the same
+   settings in the environment starts one micro sandbox, checks the PTY and a
+   lab file, and deletes it (a cent or so of compute).
+5. Ask Docker to raise the default quota of 10 concurrent sandboxes before a
+   class of 20 to 30; measured cold start was about 5 seconds.
 
 ## Before charging (remaining work)
 
@@ -74,9 +116,9 @@ Docker's API instead of `docker run`.
 - Decide how paid access is granted (the prepared membership service), and
   gate `environment: 'remote-terminal'` or the service's `ALLOWED_ORIGINS`
   accordingly.
-- Pilot one class on the Docker credit: confirm 30 sandboxes can start at the
-  top of a period, measure cold-start time, and watch the output and
-  inactivity limits.
+- Pilot one class on the Docker credit with `SANDBOX_BACKEND=cloud`: confirm
+  the raised quota lets 30 sandboxes start at the top of a period, and watch
+  the output and inactivity limits.
 - Finish the repository split described in
   [Repository split](REPOSITORY-SPLIT.md): this repository stays public (site,
   simulated labs, the generic terminal controller with sample labs); paid lab

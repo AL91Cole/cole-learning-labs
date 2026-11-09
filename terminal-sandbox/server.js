@@ -7,6 +7,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { WebSocketServer } from "ws";
+import {
+  cloudConfiguration,
+  cloudConfigurationProblems,
+  spawnCloudSandbox,
+  CLOUD_SIZES,
+} from "./cloud-sandboxes.js";
 
 const execFileAsync = promisify(execFile),
   ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -25,6 +31,9 @@ export function configuration(env = process.env) {
     port: integer(env.PORT, 8080, 1, 65535),
     teacherKey: env.TEACHER_ACCESS_KEY || "",
     sandboxImage: env.SANDBOX_IMAGE || "cole-learning-labs/sandbox:alpine",
+    // "docker": containers on this host. "cloud": one Docker Cloud Sandbox per learner.
+    sandboxBackend: env.SANDBOX_BACKEND === "cloud" ? "cloud" : "docker",
+    cloud: cloudConfiguration(env),
     allowedOrigins: new Set(
       (env.ALLOWED_ORIGINS || "https://terminal.colelearninglabs.com")
         .split(",")
@@ -735,13 +744,40 @@ const FILES = new Map([
   ],
 ]);
 
+/** The files a lab check may read inside a learner's machine; nothing else is readable. */
+export const allowedLabFiles = () =>
+  labCatalog().flatMap((lab) =>
+    lab.milestones.map((m) => m.filePath).filter(Boolean),
+  );
+
+/** Human-readable runtime name and limits for the selected backend. */
+export function runtimeDescription(cfg = CONFIG) {
+  if (cfg.sandboxBackend === "cloud") {
+    const size = CLOUD_SIZES[cfg.cloud?.size] || CLOUD_SIZES.micro;
+    return {
+      runtime: "docker-cloud-sandbox",
+      limits: { memory: size.memoryMib + "m", cpus: String(size.cpus) },
+    };
+  }
+  return {
+    runtime: "docker-pty",
+    limits: { memory: cfg.memoryLimit, cpus: cfg.cpuLimit },
+  };
+}
+
 export function createSandboxOrchestrator(overrides = {}, deps = {}) {
   const cfg = { ...CONFIG, ...overrides },
     sessions = new Map(),
     classrooms = new Map(),
     connections = new Set(),
     upgradeRates = new Map();
-  const sandboxFactory = deps.sandboxFactory || spawnSandboxContainer,
+  const runtime = runtimeDescription(cfg);
+  const sandboxFactory =
+      deps.sandboxFactory ||
+      (cfg.sandboxBackend === "cloud"
+        ? (session, c) =>
+            spawnCloudSandbox(session, c, { allowedFiles: allowedLabFiles() })
+        : spawnSandboxContainer),
     now = deps.now || Date.now;
   let stopping = false,
     pendingStarts = 0;
@@ -766,7 +802,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     if (url.pathname === "/api/health")
       return json(res, 200, {
         status: cfg.enabled ? "enabled" : "disabled",
-        runtime: "docker-pty",
+        runtime: runtime.runtime,
         productionApproved: false,
       });
     if (url.pathname === "/api/labs")
@@ -992,10 +1028,9 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         labId: s.labId,
         mode: s.mode,
         classroomCode: s.classroomCode,
-        runtimeMode: "docker-pty",
+        runtimeMode: runtime.runtime,
         limits: {
-          memory: "512m",
-          cpus: "0.5",
+          ...runtime.limits,
           inactivityTimeoutSeconds: cfg.inactivityTimeoutMs / 1000,
         },
         lab: publicLab(lab),
@@ -1402,11 +1437,22 @@ if (
     const loaded = await loadLabContent(process.env.LAB_CONTENT_MODULE);
     console.log("Loaded " + loaded.length + " lab definition(s) from LAB_CONTENT_MODULE.");
   }
+  if (CONFIG.enabled && CONFIG.sandboxBackend === "cloud") {
+    const problems = cloudConfigurationProblems(CONFIG.cloud);
+    if (problems.length) {
+      console.error(
+        "SANDBOX_BACKEND=cloud cannot start: " + problems.join("; "),
+      );
+      process.exit(1);
+    }
+  }
   const service = createSandboxOrchestrator();
   service.server.listen(CONFIG.port, CONFIG.host, () => {
     console.log(
       "Terminal service listening; " +
-        (CONFIG.enabled ? "explicitly enabled" : "DISABLED"),
+        (CONFIG.enabled ? "explicitly enabled" : "DISABLED") +
+        "; backend " +
+        runtimeDescription(CONFIG).runtime,
     );
   });
   for (const signal of ["SIGTERM", "SIGINT"])

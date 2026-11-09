@@ -1,0 +1,21 @@
+# Private deployment override for the Docker Cloud Sandboxes backend. Place next
+# to the public docker-compose.yml and start with:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.cloud.override.yml up -d
+# The controller needs no Docker socket in this mode; only HTTPS to Docker's API.
+services:
+  sandbox-image-builder:
+    profiles: ["unused"]
+  orchestrator:
+    depends_on: !reset []
+    group_add: !reset []
+    volumes: !override
+      - ./labs:/content/labs:ro
+    environment:
+      SANDBOX_ENABLED: "true"
+      SANDBOX_BACKEND: cloud
+      LAB_CONTENT_MODULE: /content/labs/index.js
+      DOCKER_ID: ${DOCKER_ID:?set the Docker ID that owns the sandboxes}
+      DOCKER_PAT: ${DOCKER_PAT:?set the personal access token from the host's secret store}
+      SANDBOX_IMAGE_REF: ${SANDBOX_IMAGE_REF:?set the pushed image, for example docker.io/al91cole/cll-sandbox:private}
+      SANDBOX_SIZE: ${SANDBOX_SIZE:-micro}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set the public site origin, for example https://colelearninglabs.com}

@@ -40,6 +40,19 @@ The service requires an explicit `SANDBOX_ENABLED=true`. To test teacher functio
 
 For a containerized controller, build using `docker compose build`. Configure the required environment and Docker socket path before starting it. The operator-facing controller needs Docker daemon access; this is powerful host access. Use a dedicated lab host/VM with no school production workloads, preferably a correctly configured rootless engine with enforced cgroup limits. Student containers must never receive the Docker socket, host mounts, controller secrets or host environment. The controller's access is not a claim of VM-grade tenant isolation.
 
+## Learner machine backends
+
+`SANDBOX_BACKEND` chooses where learner machines run; everything above it (the WebSocket protocol, labs, checks, teacher view) is the same.
+
+| Backend | Setting | Needs | Isolation |
+|---|---|---|---|
+| Host containers (default) | `SANDBOX_BACKEND=docker` | Docker daemon on the controller host, node-pty | `docker run` with no network, dropped capabilities, read-only root (see below) |
+| Docker Cloud Sandboxes | `SANDBOX_BACKEND=cloud` | HTTPS to `hub.docker.com` and `connect.docker.com`; `DOCKER_ID`, `DOCKER_PAT`, `SANDBOX_IMAGE_REF`, optional `SANDBOX_SIZE` | One Docker-hosted micro-VM per learner, created with a deny-all network policy, deleted when the session ends |
+
+The cloud backend (`cloud-sandboxes.js`) exchanges the personal access token for a short-lived access token, creates a sandbox from `SANDBOX_IMAGE_REF` with the chosen size and `networkPolicies: [{mode: "denyAll"}]`, waits for it to run, requests a five-minute endpoint credential with only `sandboxesExec` and `sandboxesFilesRead`, starts `/bin/sh -i` with a PTY through the sandbox endpoint and relays it over the endpoint's `interact` WebSocket. Lab checks read files through the endpoint's file API, limited to the paths the lab definitions name and 16 KiB each. `destroy` deletes the sandbox with the version it last observed (`If-Match`) and retries once if the version moved. Neither token is logged or sent to a browser, and a start that cannot reach a running endpoint deletes whatever was created.
+
+The lab image must be reachable by Docker's pull: build `Dockerfile.sandbox` (plus the private layer) and push it to a Docker Hub repository, then set `SANDBOX_IMAGE_REF=docker.io/<account>/<repository>:<tag>`. The sandbox's main process is the image entrypoint followed by a sleep loop (`SANDBOX_START_COMMAND` overrides it as a JSON array), so the seeded `~/lab` folder is in place before the learner's shell starts. Docker's default quota is 10 concurrent sandboxes per account; ask for an increase before a class larger than that. The live smoke test `tests/cloud-live.test.js` runs when `RUN_CLOUD_TESTS=1` and the cloud settings are present.
+
 ## Student and teacher flow
 
 Students explicitly start an anonymous self-paced container, or join a teacher-generated classroom code. The server assigns a random alias and an ephemeral socket session; no student name, email, ID or Google login is requested. The class code grants only student membership. It never grants teacher privileges.

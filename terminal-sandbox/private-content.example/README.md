@@ -13,7 +13,8 @@ labs/index.js                 exports `labs`: paid lab definitions (see template
 sandbox/Dockerfile            adds private seed files on top of the public sandbox image
 sandbox/seed/<lab>/…          files copied into /home/learner/lab/<folder> for each learner
 deploy/.env.production        real settings; never commit a populated copy
-deploy/docker-compose.override.yml   mounts labs/ and sets LAB_CONTENT_MODULE
+deploy/docker-compose.override.yml   mounts labs/ and sets LAB_CONTENT_MODULE (host containers)
+deploy/docker-compose.cloud.override.yml   same, with learner machines as Docker Cloud Sandboxes
 deploy/cloudflared-config.yml  tunnel or proxy configuration with your hostnames
 ```
 
@@ -26,6 +27,13 @@ deploy/cloudflared-config.yml  tunnel or proxy configuration with your hostnames
    (the compose override does this for you).
 3. In the public site's `src/lab-environment-config.js`, list each paid lab id
    under `remote.labs` and set `environment: 'remote-terminal'`.
+4. To run learner machines as Docker Cloud Sandboxes instead of containers on
+   your own host, push the private image to a Docker Hub repository and set
+   `SANDBOX_BACKEND=cloud`, `DOCKER_ID`, `DOCKER_PAT` (a token with "Allow Cloud
+   Sandboxes access", stored only in the deployment's secrets) and
+   `SANDBOX_IMAGE_REF=docker.io/<account>/<repository>:<tag>`. The controller then
+   needs no Docker socket; remove the socket mount and `group_add` from the
+   compose override.
 
 ## Rules the controller enforces
 
