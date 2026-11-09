@@ -11,7 +11,11 @@ import {
   DEFAULT_START_COMMAND,
   trimTrailingSlashes,
   processResourceName,
+  buildSeedScript,
+  loadSeedFiles,
 } from "../cloud-sandboxes.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { configuration, runtimeDescription, createSandboxOrchestrator } from "../server.js";
 
 const jwt = (expSeconds) =>
@@ -35,9 +39,11 @@ const ENV = {
 };
 
 /** A fake of Docker's management API plus one sandbox endpoint. */
-function fakeDocker({ pollsBeforeRunning = 1, failCreate = null, deleteStatuses = [200] } = {}) {
+function fakeDocker({ pollsBeforeRunning = 1, failCreate = null, deleteStatuses = [200], setupExitCode = 0, setupPolls = 2 } = {}) {
   const calls = [];
   const sockets = [];
+  const processes = [];
+  let setupLookups = 0;
   let polls = 0,
     exchanges = 0,
     credentials = 0,
@@ -99,10 +105,21 @@ function fakeDocker({ pollsBeforeRunning = 1, failCreate = null, deleteStatuses 
       assert.match(headers.Authorization, /^Bearer scoped-/);
       const path = url.slice("https://sbx-123.endpoint.example/api".length);
       if (method === "POST" && path === "/v1/processes") {
+        processes.push(body);
+        if (body.cmd[0] === "/bin/sh" && body.cmd[1] === "-c") {
+          assert.equal(body.pty, undefined, "setup runs without a terminal");
+          return response(200, { name: "processes/setup-1", uid: "setup-1", state: "running", label: body.label });
+        }
         assert.deepEqual(body.cmd, ["/bin/sh", "-i"]);
         assert.equal(body.workingDir, "/home/learner");
+        assert.equal(body.user, "1000:1000");
         assert.deepEqual(body.pty, { initialSize: { rows: 24, cols: 80 } });
         return response(200, { name: "processes/p-9", uid: "p-9", state: "running", label: body.label });
+      }
+      if (method === "GET" && path === "/v1/processes/setup-1") {
+        setupLookups++;
+        if (setupLookups < setupPolls) return response(200, { name: "processes/setup-1", state: "running" });
+        return response(200, { name: "processes/setup-1", state: "exited", exitCode: setupExitCode });
       }
       if (method === "GET" && path.startsWith("/v1/files/content?path=")) {
         const file = decodeURIComponent(path.slice("/v1/files/content?path=".length));
@@ -146,6 +163,7 @@ function fakeDocker({ pollsBeforeRunning = 1, failCreate = null, deleteStatuses 
     calls,
     sockets,
     files,
+    processes,
     get exchanges() {
       return exchanges;
     },
@@ -162,6 +180,7 @@ const deps = (docker, extra = {}) => ({
   sleep: async () => {},
   pollIntervalMs: 0,
   allowedFiles: ["/home/learner/lab/code/results.txt"],
+  seedScript: "set -e\necho SEED_OK\n",
   ...extra,
 });
 
@@ -172,10 +191,16 @@ test("cloud configuration reads the backend, account, image and size from the en
   assert.equal(cfg.cloud.size, "small");
   assert.equal(cfg.cloud.apiBase, "https://connect.docker.com/sandboxes/v1");
   assert.deepEqual(cloudConfigurationProblems(cfg.cloud), []);
+  assert.equal(cfg.cloud.shellUser, "1000:1000");
+  assert.ok(cfg.cloud.seedDirs[0].endsWith("sandbox-seed"), "the public sample seed is the default");
+  assert.deepEqual(cloudConfiguration({ ...ENV, SANDBOX_SEED_DIRS: "/a/seed:/b/seed" }).seedDirs, ["/a/seed", "/b/seed"]);
+  assert.deepEqual(cloudConfiguration({ ...ENV, SANDBOX_SEED_DIRS: "" }).seedDirs, []);
+  assert.equal(cloudConfiguration({ ...ENV, SANDBOX_IMAGE_REF: "" }).imageRef, "docker.io/library/python:3.13-alpine");
+  assert.ok(cloudConfigurationProblems(cloudConfiguration({ ...ENV, SANDBOX_SHELL_USER: "root; rm" }))[0].includes("SANDBOX_SHELL_USER"));
   assert.equal(configuration({}).sandboxBackend, "docker");
   assert.equal(cloudConfiguration({ SANDBOX_SIZE: "gigantic" }).size, "micro");
   const missing = cloudConfigurationProblems(cloudConfiguration({ SANDBOX_BACKEND: "cloud" }));
-  assert.equal(missing.length, 3);
+  assert.equal(missing.length, 2);
   assert.ok(cloudConfigurationProblems(cloudConfiguration({ ...ENV, SANDBOX_IMAGE_REF: "bad image;rm" }))[0].includes("valid"));
   assert.deepEqual(runtimeDescription(cfg), {
     runtime: "docker-cloud-sandbox",
@@ -198,10 +223,30 @@ test("helpers trim slashes and extract process names without regular expressions
   assert.equal(processResourceName({}), "");
 });
 
+test("the seed script creates the learner, writes the sample files safely and the public seed loads", async () => {
+  const seed = await loadSeedFiles([path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "sandbox-seed")]);
+  const paths = seed.files.map((f) => f.path);
+  assert.ok(paths.includes("code/program.py") && paths.includes("resolv.conf") && paths.includes("backups/lesson-plan-v2.txt"));
+  assert.ok(seed.directories.includes("delivered"), "empty seed folders are created");
+  assert.equal(seed.files.find((f) => f.path === "code/check").mode & 0o111, 0o111, "check keeps its executable bit");
+  const script = buildSeedScript(seed);
+  assert.match(script, /^set -e\n/);
+  assert.match(script, /adduser -D -u 1000 .*\|\| useradd/);
+  assert.match(script, /mkdir -p '\/home\/learner\/lab\/delivered'/);
+  assert.ok(script.includes("printf '%s' '" + Buffer.from(seed.files.find((f) => f.path === "code/program.py").content).toString("base64") + "' | base64 -d > '/home/learner/lab/code/program.py'"));
+  assert.match(script, /chmod 755 '\/home\/learner\/lab\/code\/check'/);
+  assert.match(script, /chown -R 1000:1000 \/home\/learner\nchmod 700 \/home\/learner\necho SEED_OK\n$/);
+  assert.ok(!/[^\x20-\x7e\n]/.test(script), "the script is plain ASCII, file contents stay base64");
+  assert.throws(() => buildSeedScript({ directories: [], files: [{ path: "../etc/passwd", content: Buffer.from("x") }] }), /sandbox_seed_invalid/);
+  assert.throws(() => buildSeedScript({ directories: ["a'b"], files: [] }), /sandbox_seed_invalid/);
+  assert.deepEqual(await loadSeedFiles(["/nonexistent/seed/dir"]), { directories: [], files: [] });
+  await assert.rejects(loadSeedFiles([path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "sandbox-seed")], 100), /sandbox_seed_too_large/);
+});
+
 test("the sandbox request isolates the machine from the network and labels it for clean-up", () => {
   const request = buildCloudSandboxRequest({ id: "s1", labId: "CODE-501" }, cloudConfiguration({ ...ENV }));
   assert.equal(request.imageRef, ENV.SANDBOX_IMAGE_REF);
-  assert.deepEqual(request.networkPolicies, [{ mode: "denyAll" }]);
+  assert.deepEqual(request.networkPolicies, [{ mode: "denyAll", denyNetworks: ["**"] }], "a bare denyAll is composed with Docker's default allow-all layer and blocks nothing");
   assert.deepEqual(request.resources, CLOUD_SIZES.small);
   assert.equal(request.labels["io.colelearninglabs.lab"], "CODE-501");
   assert.equal(request.displayNamePrefix, "cll-");
@@ -209,7 +254,7 @@ test("the sandbox request isolates the machine from the network and labels it fo
   const custom = cloudConfiguration({ ...ENV, SANDBOX_START_COMMAND: '["/bin/sleep","infinity"]' });
   assert.deepEqual(buildCloudSandboxRequest({}, custom).startupExecution.rawImage.start.argv, ["/bin/sleep", "infinity"]);
   assert.equal(cloudConfigurationProblems(cloudConfiguration({ ...ENV, SANDBOX_START_COMMAND: "sleep" }))[0].includes("SANDBOX_START_COMMAND"), true);
-  assert.throws(() => buildCloudSandboxRequest({}, cloudConfiguration({ ...ENV, SANDBOX_IMAGE_REF: "" })), /invalid_container_configuration/);
+  assert.throws(() => buildCloudSandboxRequest({}, cloudConfiguration({ ...ENV, SANDBOX_IMAGE_REF: "bad image" })), /invalid_container_configuration/);
 });
 
 test("the token source exchanges the personal access token once and refreshes it before expiry", async () => {
@@ -245,10 +290,13 @@ test("a learner session creates a sandbox, attaches a PTY, relays input and outp
   assert.equal(sandbox.mode, "docker-cloud-sandbox");
   assert.equal(sandbox.name, "sbx-123");
   const create = docker.calls.find((c) => c.method === "POST" && c.url.endsWith("/sandboxes"));
-  assert.deepEqual(create.body.networkPolicies, [{ mode: "denyAll" }]);
+  assert.deepEqual(create.body.networkPolicies, [{ mode: "denyAll", denyNetworks: ["**"] }]);
   assert.equal(create.body.labels["io.colelearninglabs.session"], "sess-1");
   assert.equal(docker.exchanges, 1, "one token exchange for the whole start");
   assert.equal(docker.credentials, 1, "the scoped credential is reused while valid");
+  assert.equal(docker.processes.length, 2, "a root setup process, then the learner's shell");
+  assert.deepEqual(docker.processes[0].cmd, ["/bin/sh", "-c", "set -e\necho SEED_OK\n"]);
+  assert.equal(docker.processes[1].user, "1000:1000");
 
   const socket = docker.sockets[0];
   assert.equal(socket.url, "wss://sbx-123.endpoint.example/api/v1/processes/p-9/interact");
@@ -298,6 +346,17 @@ test("a stale version on delete is refreshed and retried, and a terminal error f
   const deletes = docker.calls.filter((c) => c.method === "DELETE");
   assert.equal(deletes.length, 2);
   assert.equal(deletes[1].headers["If-Match"], '"v2"');
+});
+
+test("a seed script that fails stops the start and deletes the sandbox", async () => {
+  const docker = fakeDocker({ setupExitCode: 1 });
+  await assert.rejects(spawnCloudSandbox({ id: "s6", labId: "NET-201" }, cfgFor(), deps(docker)), (error) => {
+    assert.equal(error.code, "sandbox_seed_failed");
+    assert.match(error.message, /exit code 1/);
+    return true;
+  });
+  assert.equal(docker.sockets.length, 0, "no shell is started");
+  assert.equal(docker.calls.filter((c) => c.method === "DELETE").length, 1);
 });
 
 test("a refused or failed sandbox start is reported with a controller error code and cleaned up", async () => {

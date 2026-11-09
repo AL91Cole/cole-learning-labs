@@ -28,12 +28,14 @@ deploy/cloudflared-config.yml  tunnel or proxy configuration with your hostnames
 3. In the public site's `src/lab-environment-config.js`, list each paid lab id
    under `remote.labs` and set `environment: 'remote-terminal'`.
 4. To run learner machines as Docker Cloud Sandboxes instead of containers on
-   your own host, push the private image to a Docker Hub repository and set
-   `SANDBOX_BACKEND=cloud`, `DOCKER_ID`, `DOCKER_PAT` (a token with "Allow Cloud
-   Sandboxes access", stored only in the deployment's secrets) and
-   `SANDBOX_IMAGE_REF=docker.io/<account>/<repository>:<tag>`. The controller then
-   needs no Docker socket; remove the socket mount and `group_add` from the
-   compose override.
+   your own host, set `SANDBOX_BACKEND=cloud`, `DOCKER_ID`, `DOCKER_PAT` (a
+   token with "Allow Cloud Sandboxes access", stored only in the deployment's
+   secrets) and `SANDBOX_SEED_DIRS=/app/sandbox-seed:/content/sandbox/seed` so
+   the controller writes both the public sample seed and this repository's
+   `sandbox/seed/` tree into each machine. No image has to be built or pushed:
+   the default public `python:3.13-alpine` image is seeded at start. Use
+   `deploy/docker-compose.cloud.override.yml`; the controller then needs no
+   Docker socket.
 
 ## Rules the controller enforces
 

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Runs program.py against every fixture and records the result.
+cd "$(dirname "$0")"
+pass=0; total=0; : > results.txt
+for pair in 2:6 5:15 0:0; do
+  q=${pair%%:*}; want=${pair#*:}; total=$((total+1))
+  got=$(python3 program.py "$q" 2>&1 | tail -n 1)
+  if [ "$got" = "$want" ]; then echo "PASS quantity=$q -> $got" | tee -a results.txt; pass=$((pass+1)); else echo "FAIL quantity=$q -> got: $got expected: $want" | tee -a results.txt; fi
+done
+if [ "$pass" = "$total" ]; then echo ALL_FIXTURES_PASS | tee -a results.txt; else echo "$pass of $total fixtures pass" | tee -a results.txt; fi

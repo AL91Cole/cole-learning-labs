@@ -10,12 +10,16 @@ services:
     group_add: !reset []
     volumes: !override
       - ./labs:/content/labs:ro
+      - ./sandbox/seed:/content/sandbox/seed:ro
     environment:
       SANDBOX_ENABLED: "true"
       SANDBOX_BACKEND: cloud
       LAB_CONTENT_MODULE: /content/labs/index.js
       DOCKER_ID: ${DOCKER_ID:?set the Docker ID that owns the sandboxes}
       DOCKER_PAT: ${DOCKER_PAT:?set the personal access token from the host's secret store}
-      SANDBOX_IMAGE_REF: ${SANDBOX_IMAGE_REF:?set the pushed image, for example docker.io/al91cole/cll-sandbox:private}
+      # Public image seeded by the controller; override only for a custom image.
+      SANDBOX_IMAGE_REF: ${SANDBOX_IMAGE_REF:-docker.io/library/python:3.13-alpine}
+      # Public sample seed plus this repository's private seed tree.
+      SANDBOX_SEED_DIRS: ${SANDBOX_SEED_DIRS:-/app/sandbox-seed:/content/sandbox/seed}
       SANDBOX_SIZE: ${SANDBOX_SIZE:-micro}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set the public site origin, for example https://colelearninglabs.com}

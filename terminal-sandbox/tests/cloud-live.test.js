@@ -2,10 +2,12 @@
 // Run it on your own computer with the deployment's settings in the environment:
 //
 //   RUN_CLOUD_TESTS=1 SANDBOX_BACKEND=cloud DOCKER_ID=<id> DOCKER_PAT=<token> \
-//   SANDBOX_IMAGE_REF=docker.io/<account>/cll-sandbox:cloud npm test --prefix terminal-sandbox
+//   npm test --prefix terminal-sandbox
 //
-// It starts one micro sandbox (about a cent of compute), runs a command in the
-// learner's shell, reads a lab file through the endpoint and deletes the sandbox.
+// It starts one micro sandbox from the default public image (about a cent of
+// compute), checks that the controller seeded it, that the learner's shell is a
+// real PTY running as uid 1000, that a lab file is readable through the
+// endpoint, that the machine has no network, and deletes the sandbox.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
@@ -31,8 +33,14 @@ test(
       sandbox.write("id -u; stty size; test -t 0 && echo REAL_PTY; ls ~/lab/code; echo COMPLETED_CHECK\r");
       for (let i = 0; i < 200 && !/COMPLETED_CHECK\s*$/m.test(output.replace(/echo COMPLETED_CHECK/, "")); i++) await delay(100);
       assert.match(output, /REAL_PTY/);
-      assert.match(output, /100 rows|30 100/);
+      assert.match(output, /^1000\r?$/m, "the learner's shell runs as uid 1000");
+      assert.match(output, /30 100/);
       assert.match(output, /program\.py/);
+      output = "";
+      sandbox.write("wget -T 3 -q -O - http://example.com >/dev/null 2>&1 && echo HAS_NETWORK || echo NO_NETWORK; echo NET_CHECKED\r");
+      for (let i = 0; i < 100 && !/NET_CHECKED\s*$/m.test(output.replace(/echo NET_CHECKED/, "")); i++) await delay(100);
+      assert.match(output, /NO_NETWORK/);
+      assert.doesNotMatch(output, /HAS_NETWORK/);
       const fixtures = await sandbox.readFile("/home/learner/lab/code/results.txt");
       assert.equal(fixtures, null, "results.txt does not exist before ./check runs");
       sandbox.write("cd ~/lab/code && ./check\r");

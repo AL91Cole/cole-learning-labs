@@ -78,35 +78,65 @@ The controller has two learner-machine backends, chosen with
 How a cloud session works: the personal access token (`DOCKER_ID`,
 `DOCKER_PAT`, with "Allow Cloud Sandboxes access") is exchanged for a
 short-lived access token and cached; the sandbox is created from
-`SANDBOX_IMAGE_REF` at `SANDBOX_SIZE` (micro by default) with a deny-all
-network policy and labels naming the lab and session; the controller waits for
+`SANDBOX_IMAGE_REF` (default: the public `python:3.13-alpine` image, so nothing
+has to be pushed to a registry) at `SANDBOX_SIZE` (micro by default) with every
+network denied and labels naming the lab and session; the controller waits for
 `running`, requests a five-minute endpoint credential limited to running
-processes and reading files, starts the learner's `/bin/sh -i` with a PTY and
-relays keystrokes, output and resizes over the endpoint's WebSocket. Lab checks
-read only the files the lab definitions name, at most 16 KiB each. Ending the
-session deletes the sandbox (`DELETE` with the observed version in `If-Match`,
-retried once if the version moved), and a start that fails part-way deletes
-whatever it created. Tokens are never logged or sent to the browser.
+processes and reading files, runs a root setup step that creates the `learner`
+user and writes the lab seed files from `SANDBOX_SEED_DIRS` (the public sample
+seed by default, plus the private repository's seed for paid labs), then starts
+the learner's `/bin/sh -i` as uid 1000 with a PTY and relays keystrokes, output
+and resizes over the endpoint's WebSocket. Lab checks read only the files the
+lab definitions name, at most 16 KiB each. Ending the session deletes the
+sandbox (`DELETE` with the observed version in `If-Match`, retried once if the
+version moved), and a start that fails part-way deletes whatever it created.
+Tokens are never logged or sent to the browser.
+
+Verified live (2026-11-09): learner shell as uid 1000 with a real PTY about
+8.5 seconds after the create call, Python available, seed files in place,
+`./check` output read and the CODE-501 milestones verified by the controller,
+`/root` not writable, and no HTTP, DNS or direct-IP egress from the machine. One
+finding shaped the code: Docker composes an inline `denyAll` policy with the
+account's default "allow everything" layer, so only an explicit
+`denyNetworks: ["**"]` isolates the machine; the adapter always sends it.
 
 Setting it up:
 
-1. Build the lab image and push it to a Docker Hub repository (a private one
-   is fine): `docker build -f terminal-sandbox/Dockerfile.sandbox -t
-   docker.io/<account>/cll-sandbox:cloud terminal-sandbox && docker push
-   docker.io/<account>/cll-sandbox:cloud` (with the private layer on top when
-   labs are paid).
-2. Create a Docker personal access token with "Allow Cloud Sandboxes access"
+1. Create a Docker personal access token with "Allow Cloud Sandboxes access"
    and store it in the deployment's secret store, never in a file or URL.
-3. Set `SANDBOX_BACKEND=cloud`, `DOCKER_ID`, `DOCKER_PAT`,
-   `SANDBOX_IMAGE_REF` and optionally `SANDBOX_SIZE`; the controller refuses to
-   start with any of them missing. Remove the Docker socket mount from the
-   compose file, it is no longer needed.
-4. Smoke-test once on your own computer:
+2. Set `SANDBOX_BACKEND=cloud`, `DOCKER_ID` and `DOCKER_PAT`; the controller
+   refuses to start with either missing. Optional: `SANDBOX_SIZE`,
+   `SANDBOX_IMAGE_REF` (any public image with a POSIX shell, `adduser` or
+   `useradd`, and the tools the labs need), `SANDBOX_SEED_DIRS`
+   (colon-separated; add the private repository's seed for paid labs) and
+   `SANDBOX_START_COMMAND` (JSON array) for an image that needs its entrypoint.
+   The controller needs no Docker socket in this mode; the private repository's
+   `deploy/docker-compose.cloud.override.yml` drops it.
+3. Smoke-test once on your own computer:
    `RUN_CLOUD_TESTS=1 npm test --prefix terminal-sandbox` with the same
-   settings in the environment starts one micro sandbox, checks the PTY and a
-   lab file, and deletes it (a cent or so of compute).
-5. Ask Docker to raise the default quota of 10 concurrent sandboxes before a
-   class of 20 to 30; measured cold start was about 5 seconds.
+   settings in the environment starts one micro sandbox, checks the learner
+   user, the PTY, a lab file and the absence of network, and deletes it (a cent
+   or so of compute).
+4. Ask Docker to raise the default quota of 10 concurrent sandboxes before a
+   class of 20 to 30; measured cold start was about 8.5 seconds including
+   seeding.
+5. Host the controller where the site can reach it same-origin (see
+   "Hosting the controller" below), then set `environment: 'remote-terminal'`
+   in `src/lab-environment-config.js`.
+
+## Hosting the controller
+
+The controller is a small Node WebSocket service. With the cloud backend it
+needs no Docker daemon, so it can run anywhere that keeps one Node process up
+and reachable at `https://<site>/terminal/*`:
+
+- A small always-on VPS or container host plus a Cloudflare Tunnel or Worker
+  route for `/terminal/*` (configurations in the private repository's
+  `deploy/`). Typical cost $4 to $6 a month.
+- A Cloudflare Worker or Pages Function rewrite of the session protocol, so
+  the site itself relays the browser's WebSocket to the sandbox endpoint and no
+  server is rented at all. Not written yet; it is the cheapest path if the
+  controller is ever rewritten.
 
 ## Before charging (remaining work)
 

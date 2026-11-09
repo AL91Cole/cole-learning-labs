@@ -1,0 +1,5 @@
+WORKSTATION CONFIGURATION SHEET (VLAN 8)
+Assigned IPv4: 10.24.8.25/24
+Default Gateway: 10.24.8.1
+School DNS Resolver: 10.24.8.53
+Target Portal: learn.school.test
