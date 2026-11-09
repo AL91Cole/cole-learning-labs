@@ -9,6 +9,8 @@ import {
   spawnCloudSandbox,
   CLOUD_SIZES,
   DEFAULT_START_COMMAND,
+  trimTrailingSlashes,
+  processResourceName,
 } from "../cloud-sandboxes.js";
 import { configuration, runtimeDescription, createSandboxOrchestrator } from "../server.js";
 
@@ -183,6 +185,17 @@ test("cloud configuration reads the backend, account, image and size from the en
     runtime: "docker-pty",
     limits: { memory: "512m", cpus: "0.5" },
   });
+});
+
+test("helpers trim slashes and extract process names without regular expressions", () => {
+  assert.equal(trimTrailingSlashes("https://x.example/api///"), "https://x.example/api");
+  assert.equal(trimTrailingSlashes("////"), "");
+  assert.equal(trimTrailingSlashes("plain"), "plain");
+  assert.equal(processResourceName({ name: "processes/p-9" }), "processes/p-9");
+  assert.equal(processResourceName({ name: "sandboxes/s/processes/p-9" }), "processes/p-9");
+  assert.equal(processResourceName({ name: "processes/p-9/extra" }), "");
+  assert.equal(processResourceName({ uid: "u-1" }), "processes/u-1");
+  assert.equal(processResourceName({}), "");
 });
 
 test("the sandbox request isolates the machine from the network and labels it for clean-up", () => {

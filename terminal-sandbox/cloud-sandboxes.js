@@ -56,6 +56,13 @@ export function parseStartCommand(value) {
   return null;
 }
 
+/** Removes trailing slashes without a regular expression (linear on any input). */
+export function trimTrailingSlashes(value) {
+  let end = String(value).length;
+  while (end > 0 && value[end - 1] === "/") end--;
+  return String(value).slice(0, end);
+}
+
 const failure = (code, detail) =>
   Object.assign(new Error(detail ? code + ": " + detail : code), { code });
 const IMAGE_REF = /^[a-z0-9][a-z0-9._/@:-]{1,300}$/;
@@ -70,7 +77,7 @@ export function cloudConfiguration(env = process.env) {
     imageRef: (env.SANDBOX_IMAGE_REF || "").trim(),
     size: CLOUD_SIZES[size] ? size : "micro",
     startCommand: parseStartCommand(env.SANDBOX_START_COMMAND),
-    apiBase: (env.SANDBOX_API_BASE || CLOUD_DEFAULTS.apiBase).replace(/\/+$/, ""),
+    apiBase: trimTrailingSlashes(env.SANDBOX_API_BASE || CLOUD_DEFAULTS.apiBase),
     exchangeUrl: env.DOCKER_TOKEN_EXCHANGE_URL || CLOUD_DEFAULTS.exchangeUrl,
     startTimeoutMs: CLOUD_DEFAULTS.startTimeoutMs,
   };
@@ -178,6 +185,18 @@ export function buildCloudSandboxRequest(session, cloud, extra = {}) {
   };
 }
 
+/** The `processes/{id}` resource name from a Process report, whatever prefix the endpoint adds. */
+export function processResourceName(proc) {
+  if (typeof proc?.name === "string" && proc.name) {
+    const marker = proc.name.lastIndexOf("processes/");
+    if (marker >= 0) {
+      const id = proc.name.slice(marker + "processes/".length);
+      if (id && !id.includes("/")) return "processes/" + id;
+    }
+  }
+  return typeof proc?.uid === "string" && proc.uid ? "processes/" + proc.uid : "";
+}
+
 const sleep = (ms, sleeper) => (sleeper ? sleeper(ms) : new Promise((resolve) => setTimeout(resolve, ms)));
 
 /**
@@ -249,7 +268,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
     return scoped.token;
   }
 
-  const endpointUrl = (path) => endpoint.uri.replace(/\/+$/, "") + path;
+  const endpointUrl = (path) => trimTrailingSlashes(endpoint.uri) + path;
 
   async function endpointRequest(method, path, { body, timeout = CLOUD_DEFAULTS.requestTimeoutMs, accept = "application/json" } = {}) {
     const token = await scopedToken(["sandboxesExec", "sandboxesFilesRead"]);
@@ -337,7 +356,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
     });
     if (!createdProcess.ok) throw failure("docker_pty_unavailable", "HTTP " + createdProcess.status + " " + (await readError(createdProcess)));
     const proc = await createdProcess.json();
-    const processName = typeof proc.name === "string" && proc.name ? proc.name.replace(/^.*?(processes\/[^/]+)$/, "$1") : proc.uid ? "processes/" + proc.uid : "";
+    const processName = processResourceName(proc);
     if (!/^processes\/[^/]+$/.test(processName)) throw failure("docker_pty_unavailable", "no process name");
 
     // 3. Attach to the shell over the endpoint's WebSocket.
