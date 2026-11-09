@@ -40,6 +40,7 @@
       }],
       "vars": {
         "TURNSTILE_SITE_KEY": "0x4AAAAAAFxZYtuWgDCSGAU5",
+        "TERMINAL_ORIGIN": "https://terminal.colelearninglabs.com",
         "NODE_VERSION": "24.22.0",
         "REQUESTER_ENABLED": "true",
         "REQUESTER_BILLING_REVIEWED": "true",

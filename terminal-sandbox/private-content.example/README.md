@@ -13,8 +13,10 @@ labs/index.js                 exports `labs`: paid lab definitions (see template
 sandbox/Dockerfile            adds private seed files on top of the public sandbox image
 sandbox/seed/<lab>/…          files copied into /home/learner/lab/<folder> for each learner
 deploy/.env.production        real settings; never commit a populated copy
-deploy/docker-compose.override.yml   mounts labs/ and sets LAB_CONTENT_MODULE (host containers)
-deploy/docker-compose.cloud.override.yml   same, with learner machines as Docker Cloud Sandboxes
+deploy/docker-compose.cloud.yml   production stack for a small VPS: controller + Cloudflare Tunnel (recommended)
+deploy/VPS-SETUP.md               step-by-step server, tunnel and Docker account setup
+deploy/docker-compose.override.yml   alternative: controller beside the public compose file (host containers)
+deploy/docker-compose.cloud.override.yml   alternative: same, with learner machines as Docker Cloud Sandboxes
 deploy/cloudflared-config.yml  tunnel or proxy configuration with your hostnames
 ```
 

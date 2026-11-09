@@ -73,6 +73,9 @@ Containers share a kernel. These flags do not make an untrusted multi-tenant pub
 
 ## Cloudflare routing
 
+The public site reaches the controller same-origin through its Pages Function gateway (`functions/terminal/[[path]].js`), which relays `/terminal/ws`, `/terminal/api/health`, `/terminal/api/labs` and `/terminal/vendor/*` to `TERMINAL_ORIGIN` and refuses everything else. Publish the controller behind that origin with a Cloudflare Tunnel whose connector runs beside the controller (the private repository's `deploy/docker-compose.cloud.yml` and `deploy/VPS-SETUP.md`); the connector's address is the controller's `TRUSTED_PROXY_ADDRESSES` entry and it forwards `X-Forwarded-Proto: https`. The site enables the real machines only when `/terminal/api/health` answers `status: "enabled"`.
+
+
 Two templates are supplied: `cloudflare/nginx-cloudflare-ws.conf` for a TLS origin behind the Cloudflare proxy, and `cloudflare/cloudflared-config.yml` for an optional outbound connector. Select and test one trusted ingress route; do not expose the controller directly. Production must require an exact HTTPS Origin and trust forwarding headers only from the configured local proxy. Cloudflare headers by themselves are not authentication.
 
 Use an origin certificate, Cloudflare **Full (strict)**, an exact hostname, WebSocket upgrades and suitable idle timeouts. Do not add the terminal backend to the existing Pages `_routes.json`, relax its CSP, change `www`, or expose Docker port 2375. A separately reviewed terminal hostname/host deployment is still required. The supplied templates do not provision it.

@@ -121,22 +121,34 @@ Setting it up:
    class of 20 to 30; measured cold start was about 8.5 seconds including
    seeding.
 5. Host the controller where the site can reach it same-origin (see
-   "Hosting the controller" below), then set `environment: 'remote-terminal'`
-   in `src/lab-environment-config.js`.
+   "Hosting the controller" below); the site switches to it on its own once
+   the health check answers `enabled`.
 
-## Hosting the controller
+## Hosting the controller (set up)
 
-The controller is a small Node WebSocket service. With the cloud backend it
-needs no Docker daemon, so it can run anywhere that keeps one Node process up
-and reachable at `https://<site>/terminal/*`:
+The site is wired for the real machines already:
 
-- A small always-on VPS or container host plus a Cloudflare Tunnel or Worker
-  route for `/terminal/*` (configurations in the private repository's
-  `deploy/`). Typical cost $4 to $6 a month.
-- A Cloudflare Worker or Pages Function rewrite of the session protocol, so
-  the site itself relays the browser's WebSocket to the sandbox endpoint and no
-  server is rented at all. Not written yet; it is the cheapest path if the
-  controller is ever rewritten.
+- **Gateway.** `functions/terminal/[[path]].js` is a Cloudflare Pages Function
+  that relays `https://<site>/terminal/*` (the WebSocket, the health and lab
+  listings, the xterm assets) to the controller named by `TERMINAL_ORIGIN`,
+  forwarding only the headers the controller needs and never cookies. The
+  browser stays same-origin, so the Content-Security-Policy is unchanged.
+  Production sets `TERMINAL_ORIGIN=https://terminal.colelearninglabs.com` in
+  `wrangler.jsonc`; previews leave it unset and the gateway answers 503.
+- **Automatic switch.** `src/lab-environment-config.js` names
+  `remote-terminal`, but the provider only takes a lab when the service's
+  health check has answered `status: "enabled"` (`probeRemoteService` in
+  `src/lab-remote.js`, run once per page load). Until the controller is
+  deployed, or whenever it is down, every lab keeps the simulated desktop. No
+  site deploy is needed on the day the server goes live.
+- **Server kit.** The private repository's `deploy/VPS-SETUP.md` walks through
+  the one-time setup: a $4 to $6 a month VPS, `deploy/docker-compose.cloud.yml`
+  (controller plus Cloudflare Tunnel connector on a private network, no Docker
+  socket, nothing listening on the server) and `deploy/.env.production`. The
+  tunnel publishes the controller as `terminal.colelearninglabs.com`; the
+  connector is the controller's only peer and is the trusted proxy that
+  forwards `https`. `terminal-sandbox/private-content.example/deploy/` holds
+  the same kit with placeholders.
 
 ## Before charging (remaining work)
 
