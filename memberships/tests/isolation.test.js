@@ -8,7 +8,7 @@ const json=async path=>JSON.parse(await readFile(new URL(path,import.meta.url),'
 
 test('student publishing and collection remain independent of adult memberships',async()=>{
   assert.equal(IMPROVEMENT_SHARING_ENABLED,false);
-  assert.deepEqual((await json('../../_routes.json')).include,['/api/requester','/api/reach','/api/telemetry','/api/verify']);
+  assert.deepEqual((await json('../../_routes.json')).include,['/api/requester','/api/reach','/api/telemetry','/api/verify','/terminal/*']);
   assert.equal(PUBLIC_FILES.some(path=>path.startsWith('memberships/')),false);
   const student=await json('../../wrangler.jsonc');
   for(const config of [student,...Object.values(student.env)]){
