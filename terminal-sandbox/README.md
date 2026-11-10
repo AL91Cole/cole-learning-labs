@@ -40,6 +40,19 @@ The service requires an explicit `SANDBOX_ENABLED=true`. To test teacher functio
 
 For a containerized controller, build using `docker compose build`. Configure the required environment and Docker socket path before starting it. The operator-facing controller needs Docker daemon access; this is powerful host access. Use a dedicated lab host/VM with no school production workloads, preferably a correctly configured rootless engine with enforced cgroup limits. Student containers must never receive the Docker socket, host mounts, controller secrets or host environment. The controller's access is not a claim of VM-grade tenant isolation.
 
+## Learner machine backends
+
+`SANDBOX_BACKEND` chooses where learner machines run; everything above it (the WebSocket protocol, labs, checks, teacher view) is the same.
+
+| Backend | Setting | Needs | Isolation |
+|---|---|---|---|
+| Host containers (default) | `SANDBOX_BACKEND=docker` | Docker daemon on the controller host, node-pty | `docker run` with no network, dropped capabilities, read-only root (see below) |
+| Docker Cloud Sandboxes | `SANDBOX_BACKEND=cloud` | HTTPS to `hub.docker.com`, `connect.docker.com` and `*.sandboxes-cloud.docker.com`; `DOCKER_ID`, `DOCKER_PAT`; optional `SANDBOX_IMAGE_REF`, `SANDBOX_SIZE`, `SANDBOX_SEED_DIRS` | One Docker-hosted micro-VM per learner, seeded by the controller, all egress denied, deleted when the session ends |
+
+The cloud backend (`cloud-sandboxes.js`) exchanges the personal access token for a short-lived access token, creates a sandbox from `SANDBOX_IMAGE_REF` (default `docker.io/library/python:3.13-alpine`, a public image: nothing has to be pushed to a registry) at the chosen size with `networkPolicies: [{mode: "denyAll", denyNetworks: ["**"]}]`, and waits for it to run. It then requests a five-minute endpoint credential with only `sandboxesExec` and `sandboxesFilesRead`, runs a root setup process that creates the `learner` user (uid 1000) and writes the seed tree from `SANDBOX_SEED_DIRS` (default `sandbox-seed/`, the same files `Dockerfile.sandbox` bakes in) under `/home/learner/lab`, and only then starts `/bin/sh -i` as the learner with a PTY, relayed over the endpoint's `interact` WebSocket. Lab checks read files through the endpoint's file API, limited to the paths the lab definitions name and 16 KiB each. `destroy` deletes the sandbox with the version it last observed (`If-Match`) and retries once if the version moved. Neither token is logged or sent to a browser, and a start that fails at any step deletes whatever was created.
+
+Verified live on 2026-11-09 with the default image: learner shell as uid 1000 with a real PTY about 8.5 seconds after the create call, Python 3.13 available, seed files owned by the learner, `./check` results readable by the controller and the CODE-501 milestones verified, `/root` not writable, and no HTTP, DNS or direct-IP egress. A bare `{mode: "denyAll"}` is composed with Docker's account-level "allow `**`" layer and blocks nothing; the explicit `denyNetworks: ["**"]` is what isolates the machine. Docker's default quota is 10 concurrent sandboxes per account; ask for an increase before a class larger than that. The live smoke test `tests/cloud-live.test.js` runs when `RUN_CLOUD_TESTS=1` and the cloud settings are present.
+
 ## Student and teacher flow
 
 Students explicitly start an anonymous self-paced container, or join a teacher-generated classroom code. The server assigns a random alias and an ephemeral socket session; no student name, email, ID or Google login is requested. The class code grants only student membership. It never grants teacher privileges.
@@ -59,6 +72,9 @@ The service bounds active/pending sessions, connections, messages, input, output
 Containers share a kernel. These flags do not make an untrusted multi-tenant public shell universally safe. Before broader use, verify host isolation, patching, capacity, incident handling, orphan cleanup after host failure, backups/deletion policy and school-approved data processing. The existing public site's student-data release gate stays closed.
 
 ## Cloudflare routing
+
+The public site reaches the controller same-origin through its Pages Function gateway (`functions/terminal/[[path]].js`), which relays `/terminal/ws`, `/terminal/api/health`, `/terminal/api/labs` and `/terminal/vendor/*` to `TERMINAL_ORIGIN` and refuses everything else. Publish the controller behind that origin with a Cloudflare Tunnel whose connector runs beside the controller (the private repository's `deploy/docker-compose.cloud.yml` and `deploy/VPS-SETUP.md`); the connector's address is the controller's `TRUSTED_PROXY_ADDRESSES` entry and it forwards `X-Forwarded-Proto: https`. The site enables the real machines only when `/terminal/api/health` answers `status: "enabled"`.
+
 
 Two templates are supplied: `cloudflare/nginx-cloudflare-ws.conf` for a TLS origin behind the Cloudflare proxy, and `cloudflare/cloudflared-config.yml` for an optional outbound connector. Select and test one trusted ingress route; do not expose the controller directly. Production must require an exact HTTPS Origin and trust forwarding headers only from the configured local proxy. Cloudflare headers by themselves are not authentication.
 

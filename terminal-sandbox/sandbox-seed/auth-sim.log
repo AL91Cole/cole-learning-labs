@@ -1,0 +1,5 @@
+2026-10-18T08:11:02Z INFO sshd: accepted fictional teacher account from 10.24.8.14
+2026-10-18T08:14:19Z WARN telnetd: FAILED from 198.51.100.24 port 23
+2026-10-18T08:14:22Z WARN telnetd: FAILED from 198.51.100.24 port 23
+2026-10-18T08:14:25Z ALERT telnetd: session from 198.51.100.24 port 23
+2026-10-18T08:15:00Z INFO httpd: fictional classroom portal port 443

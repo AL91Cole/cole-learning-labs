@@ -1,0 +1,77 @@
+# Production stack for the real-machine labs on a small VPS, Docker Cloud
+# Sandboxes backend. Two containers: the terminal controller (built from the
+# public repository checked out beside this one) and a Cloudflare Tunnel
+# connector that publishes it as https://terminal.your-site.example. The site
+# reaches it through the same-origin gateway functions/terminal/[[path]].js.
+#
+# Layout on the server (both repositories cloned side by side):
+#   ~/apps/cole-learning-labs                 public repository
+#   ~/apps/<private-repository>    this repository
+#
+# Start from this repository's root:
+#   docker compose --env-file deploy/.env.production -f deploy/docker-compose.cloud.yml up -d --build
+#
+# Nothing listens on the VPS itself: the controller is reachable only from the
+# tunnel connector inside this private network, and learner machines run in
+# Docker's cloud, not on this server. No Docker socket is mounted anywhere.
+name: cole-learning-labs-terminal
+services:
+  orchestrator:
+    build:
+      context: ../../cole-learning-labs/terminal-sandbox
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      SANDBOX_ENABLED: "true"
+      SANDBOX_BACKEND: cloud
+      HOST: 0.0.0.0
+      PORT: "8080"
+      DOCKER_ID: ${DOCKER_ID:?set the Docker ID that owns the sandboxes}
+      DOCKER_PAT: ${DOCKER_PAT:?set the Docker personal access token (Allow Cloud Sandboxes access)}
+      SANDBOX_IMAGE_REF: ${SANDBOX_IMAGE_REF:-docker.io/library/python:3.13-alpine}
+      SANDBOX_SIZE: ${SANDBOX_SIZE:-micro}
+      SANDBOX_SEED_DIRS: /app/sandbox-seed:/content/sandbox/seed
+      LAB_CONTENT_MODULE: /content/labs/index.js
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://your-site.example}
+      # The tunnel connector below is the only peer; it forwards https.
+      TRUSTED_PROXY_ADDRESSES: 172.31.250.10,::ffff:172.31.250.10
+      MAX_UPGRADES_PER_PEER_MINUTE: ${MAX_UPGRADES_PER_PEER_MINUTE:-240}
+      TEACHER_ACCESS_KEY: ${TEACHER_ACCESS_KEY:?set a random secret of at least 32 characters}
+    volumes:
+      - ../labs:/content/labs:ro
+      - ../sandbox/seed:/content/sandbox/seed:ro
+    networks:
+      terminal:
+        ipv4_address: 172.31.250.20
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:?set the Cloudflare Tunnel token from Zero Trust}
+    depends_on:
+      - orchestrator
+    networks:
+      terminal:
+        ipv4_address: 172.31.250.10
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+networks:
+  terminal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24

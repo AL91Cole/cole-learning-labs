@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createRemoteSession, remoteSocketUrl, remoteAssetUrl} from '../src/lab-remote-client.js';
 import {preferredLabEnvironment, listLabEnvironments, DEFAULT_LAB_ENVIRONMENT} from '../src/lab-environment.js?release=20261107-tech-team';
 import {LAB_ENVIRONMENT_CONFIG} from '../src/lab-environment-config.js';
-import {remoteLabFor, renderLabRemote} from '../src/lab-remote.js';
+import {remoteLabFor, renderLabRemote, probeRemoteService, remoteServiceState, setRemoteServiceState, remoteServiceAvailable} from '../src/lab-remote.js?release=20261107-tech-team';
 import {labGuide, labGuideFacts} from '../src/lab-guide.js';
 import {normalizeLabRecord, workbenchProgress} from '../src/records.js';
 import {SCENARIOS} from '../src/scenarios.js';
@@ -21,14 +21,40 @@ class FakeSocket {
   close() {this.readyState = 3; this.emit('close');}
 }
 
-test('the default configuration keeps the simulated desktop and lists the labs the terminal service hosts', () => {
-  assert.equal(LAB_ENVIRONMENT_CONFIG.environment, 'simulated-desktop');
+test('the configuration names the real machines but labs keep the simulated desktop until the service reports enabled', () => {
+  assert.equal(LAB_ENVIRONMENT_CONFIG.environment, 'remote-terminal');
+  assert.equal(LAB_ENVIRONMENT_CONFIG.remote.base, '/terminal', 'same-origin through the Pages gateway keeps the Content-Security-Policy as it is');
   assert.deepEqual(Object.keys(LAB_ENVIRONMENT_CONFIG.remote.labs), ['NET-201', 'SEC-402', 'CODE-501']);
   assert.deepEqual(listLabEnvironments().map(item => item.id).sort(), ['remote-terminal', 'simulated-desktop']);
-  assert.equal(preferredLabEnvironment(undefined, byId('CODE-501')).id, DEFAULT_LAB_ENVIRONMENT);
+  assert.equal(remoteServiceState(), 'unknown', 'Node never probes the service on import');
+  assert.equal(preferredLabEnvironment(undefined, byId('CODE-501')).id, DEFAULT_LAB_ENVIRONMENT, 'unknown service: simulated desktop');
+  setRemoteServiceState('unavailable');
+  assert.equal(preferredLabEnvironment(undefined, byId('CODE-501')).id, DEFAULT_LAB_ENVIRONMENT, 'service down: simulated desktop');
+  setRemoteServiceState('enabled');
+  assert.equal(remoteServiceAvailable(), true);
+  assert.equal(preferredLabEnvironment(undefined, byId('CODE-501')).id, 'remote-terminal', 'service enabled: the configured real machine');
   assert.equal(preferredLabEnvironment('remote-terminal', byId('CODE-501')).id, 'remote-terminal', 'a hosted lab can use the real machine');
   assert.equal(preferredLabEnvironment('remote-terminal', byId('CODE-502')).id, DEFAULT_LAB_ENVIRONMENT, 'an unhosted lab falls back to the simulated desktop');
+  assert.equal(preferredLabEnvironment(undefined, byId('AI-301')).id, DEFAULT_LAB_ENVIRONMENT, 'labs the service does not host stay simulated');
   assert.equal(remoteLabFor(byId('NET-201')), 'NET-201'); assert.equal(remoteLabFor(byId('AI-301')), null);
+  setRemoteServiceState('unknown');
+});
+
+test('the health probe enables the real machines only for an enabled service and fails closed otherwise', async () => {
+  const calls = [];
+  const fetchWith = reply => async (url, init) => {calls.push({url, init}); return reply();};
+  assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => new Response(JSON.stringify({status:'enabled', runtime:'docker-cloud-sandbox'}), {status:200}))}), 'enabled');
+  assert.equal(calls[0].url, '/terminal/api/health');
+  assert.equal(calls[0].init.credentials, 'omit');
+  assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => new Response(JSON.stringify({status:'disabled'}), {status:200}))}), 'unavailable', 'a deployed but disabled service keeps the simulated desktop');
+  assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => new Response(JSON.stringify({error:'terminal_unavailable'}), {status:503}))}), 'unavailable', 'the gateway without a controller');
+  assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => {throw new Error('offline');})}), 'unavailable');
+  assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => new Response('<html>', {status:200}))}), 'unavailable', 'a non-JSON answer is not a service');
+  const cached = probeRemoteService({fetch:fetchWith(() => new Response('{"status":"enabled"}', {status:200}))});
+  assert.equal(await cached, 'unavailable', 'without force the earlier probe result is reused');
+  assert.equal(calls.length, 5);
+  assert.equal(await probeRemoteService({force:true, fetch:undefined}), 'unavailable', 'no fetch at all fails closed');
+  setRemoteServiceState('unknown');
 });
 
 test('service URLs stay same-origin by default and accept a separate origin when configured', () => {

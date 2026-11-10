@@ -25,6 +25,13 @@ services:
       TRUSTED_PROXY_ADDRESSES: ${TRUSTED_PROXY_ADDRESSES:-}
       # Private lab content mounted from the private repository (see private-content.example/).
       LAB_CONTENT_MODULE: ${LAB_CONTENT_MODULE:-}
+      # Learner machine backend: docker (this host's socket) or cloud (Docker Cloud Sandboxes).
+      SANDBOX_BACKEND: ${SANDBOX_BACKEND:-docker}
+      DOCKER_ID: ${DOCKER_ID:-}
+      DOCKER_PAT: ${DOCKER_PAT:-}
+      SANDBOX_IMAGE_REF: ${SANDBOX_IMAGE_REF:-docker.io/library/python:3.13-alpine}
+      SANDBOX_SEED_DIRS: ${SANDBOX_SEED_DIRS:-/app/sandbox-seed}
+      SANDBOX_SIZE: ${SANDBOX_SIZE:-micro}
     group_add:
       - ${DOCKER_SOCKET_GID:?set the host Docker socket group ID}
     volumes:

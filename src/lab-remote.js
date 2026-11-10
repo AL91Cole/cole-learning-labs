@@ -14,6 +14,28 @@ const ansi = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007]*\u0007|\u001b[()][A-
 export const remoteConfig = () => {const override = globalThis.COLE_LAB_REMOTE; const base = override && typeof override === 'object' ? override : LAB_ENVIRONMENT_CONFIG.remote; return {base:typeof base.base === 'string' ? base.base : '/terminal', labs:base.labs && typeof base.labs === 'object' ? base.labs : {}};};
 export const remoteLabFor = scenario => {const labs = remoteConfig().labs; const id = scenario?.id; return typeof id === 'string' && Object.hasOwn(labs, id) && typeof labs[id] === 'string' ? labs[id] : null;};
 
+// The real machines are used only once the service has answered its health
+// check (status "enabled"). Until then, and whenever the service is missing or
+// disabled, the guided labs keep the simulated desktop, so the configuration can
+// name the service before it is deployed and nothing breaks for learners.
+let serviceState = 'unknown', servicePromise = null;
+export const remoteServiceState = () => serviceState;
+export const remoteServiceAvailable = () => serviceState === 'enabled';
+export function setRemoteServiceState(state) {serviceState = ['unknown', 'enabled', 'unavailable'].includes(state) ? state : 'unavailable'; return serviceState;}
+/** Asks the service once whether it is enabled. Resolves to the state; safe to call repeatedly. */
+export function probeRemoteService({base = remoteConfig().base, fetch: fetchImpl = globalThis.fetch, timeoutMs = 5000, force = false} = {}) {
+  if (servicePromise && !force) return servicePromise;
+  if (typeof fetchImpl !== 'function') return Promise.resolve(setRemoteServiceState('unavailable'));
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => controller?.abort(), timeoutMs);
+  servicePromise = fetchImpl(remoteAssetUrl(base, 'api/health'), {method:'GET', credentials:'omit', cache:'no-store', signal:controller?.signal})
+    .then(response => response.ok ? response.json() : null)
+    .then(body => setRemoteServiceState(body && body.status === 'enabled' ? 'enabled' : 'unavailable'))
+    .catch(() => setRemoteServiceState('unavailable'))
+    .finally(() => clearTimeout(timer));
+  return servicePromise;
+}
+
 let xtermLoading = null;
 function loadXterm(base, doc) {
   if (globalThis.Terminal && globalThis.FitAddon) return Promise.resolve(true);
@@ -107,7 +129,11 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
 
 registerLabEnvironment({
   id:'remote-terminal', label:'Real Linux machine · terminal service',
-  supports:scenario => remoteLabFor(scenario) !== null,
+  supports:scenario => remoteLabFor(scenario) !== null && remoteServiceAvailable(),
   render:(scenario) => renderLabRemote(scenario),
   mount:(root, context) => mountLabRemote(root, context)
 });
+
+// In a browser, ask the service early so the first lab page already knows; a
+// same-origin GET of the health route sends nothing about the learner.
+if (globalThis.document && typeof globalThis.fetch === 'function' && /^https?:$/.test(globalThis.location?.protocol || '')) probeRemoteService().catch(() => {});

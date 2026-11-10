@@ -1,0 +1,4 @@
+Input variable: quantity (first command-line argument)
+quantity = 2  ->  expected: 6
+quantity = 5  ->  expected: 15
+quantity = 0  ->  expected: 0
