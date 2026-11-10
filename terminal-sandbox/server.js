@@ -778,7 +778,8 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         ? (session, c) =>
             spawnCloudSandbox(session, c, { allowedFiles: allowedLabFiles() })
         : spawnSandboxContainer),
-    now = deps.now || Date.now;
+    now = deps.now || Date.now,
+    logFailure = deps.log || ((...parts) => console.error(...parts));
   let stopping = false,
     pendingStarts = 0;
   const wsServer = new WebSocketServer({
@@ -1036,7 +1037,15 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         lab: publicLab(lab),
         milestones: s.milestones,
       });
-    } catch {
+    } catch (error) {
+      // The learner sees only a generic message; the operator needs the reason.
+      // Adapter errors carry a code and an HTTP status or short provider message,
+      // never a credential.
+      logFailure(
+        "Machine start failed for " + lab.id + ":",
+        String(error?.code || "unknown"),
+        String(error?.message || "").slice(0, 300),
+      );
       sessions.delete(s.id);
       if (c.session === s) c.session = null;
       s.destroyed = true;

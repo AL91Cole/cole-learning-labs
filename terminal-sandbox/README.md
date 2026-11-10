@@ -53,6 +53,10 @@ The cloud backend (`cloud-sandboxes.js`) exchanges the personal access token for
 
 Verified live on 2026-11-09 with the default image: learner shell as uid 1000 with a real PTY about 8.5 seconds after the create call, Python 3.13 available, seed files owned by the learner, `./check` results readable by the controller and the CODE-501 milestones verified, `/root` not writable, and no HTTP, DNS or direct-IP egress. A bare `{mode: "denyAll"}` is composed with Docker's account-level "allow `**`" layer and blocks nothing; the explicit `denyNetworks: ["**"]` is what isolates the machine. Docker's default quota is 10 concurrent sandboxes per account; ask for an increase before a class larger than that. The live smoke test `tests/cloud-live.test.js` runs when `RUN_CLOUD_TESTS=1` and the cloud settings are present.
 
+### Operating a deployed controller
+
+When a machine cannot start, the learner sees only "sandbox unavailable"; the controller's log names the lab and the reason, for example `Machine start failed for CODE-501: cloud_auth_failed cloud_auth_failed: HTTP 401` (read it with `docker logs` on the controller container). `server-tools/set-docker-token.sh` replaces the Docker access token on the host: the token is entered hidden, checked with Docker before anything changes, and refused with the reason if Docker does not accept it. `set-docker-token.sh --check` tests the token that is saved now without changing it.
+
 ## Student and teacher flow
 
 Students explicitly start an anonymous self-paced container, or join a teacher-generated classroom code. The server assigns a random alias and an ephemeral socket session; no student name, email, ID or Google login is requested. The class code grants only student membership. It never grants teacher privileges.
