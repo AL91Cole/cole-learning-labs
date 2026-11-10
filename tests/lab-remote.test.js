@@ -4,7 +4,8 @@ import {createRemoteSession, remoteSocketUrl, remoteAssetUrl} from '../src/lab-r
 import {preferredLabEnvironment, listLabEnvironments, DEFAULT_LAB_ENVIRONMENT} from '../src/lab-environment.js?release=20261107-tech-team';
 import {LAB_ENVIRONMENT_CONFIG} from '../src/lab-environment-config.js';
 import {remoteLabFor, renderLabRemote, probeRemoteService, remoteServiceState, setRemoteServiceState, remoteServiceAvailable} from '../src/lab-remote.js?release=20261107-tech-team';
-import {labGuide, labGuideFacts} from '../src/lab-guide.js';
+import {labGuide, labGuideFacts, renderLabGuidePage} from '../src/lab-guide.js?release=20261107-tech-team';
+import {readFileSync} from 'node:fs';
 import {normalizeLabRecord, workbenchProgress} from '../src/records.js';
 import {SCENARIOS} from '../src/scenarios.js';
 
@@ -118,4 +119,21 @@ test('a real-machine lab drives the guide from its milestones and stands in for 
   const html = renderLabRemote(scenario);
   assert.ok(html.includes('data-remote-start') && html.includes('Real Linux machine · CODE-501') && html.includes('/terminal'));
   assert.ok(!html.includes('<script'));
+});
+
+test('a lab rendered before the health check answers switches to the real machine once the service reports enabled', () => {
+  const scenario = byId('CODE-501'), record = normalizeLabRecord(scenario, {});
+  setRemoteServiceState('unknown');
+  const before = renderLabGuidePage(scenario, record, {trackName:'Coding'});
+  assert.ok(!before.includes('data-lab-remote'), 'unknown service: the simulated desktop renders first');
+  assert.match(before, /Open Terminal on the desktop to begin/);
+  setRemoteServiceState('enabled');
+  const after = renderLabGuidePage(scenario, record, {trackName:'Coding'});
+  assert.ok(after.includes('data-lab-remote'), 'the same lab renders the real machine on the next render');
+  assert.match(after, /Press Start machine to open your Linux machine/);
+  assert.ok(!after.includes('Open Terminal on the desktop to begin'), 'the starting hint matches the environment');
+  setRemoteServiceState('unknown');
+  const guide = readFileSync(new URL('../src/lab-guide.js', import.meta.url), 'utf8'), app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+  assert.match(guide, /provider\?\.id === DEFAULT_LAB_ENVIRONMENT && remoteLabFor\(s\) !== null && remoteServiceState\(\) === 'unknown'\)\n\s+probeRemoteService\(\)\.then\(state => \{if \(state === 'enabled' && !signal\.aborted && !touched && !desktop\.hasUnsavedDraft\?\.\(\)\) onEnvironmentAvailable\(\);\}\)/, 'the guide asks for a re-render only when the learner has not started on the simulated desktop');
+  assert.match(app, /onEnvironmentAvailable:\(\)=>\{if\(currentLab===s\)renderRoute\(false\);\}/, 'the app re-renders the lab that is still open');
 });
