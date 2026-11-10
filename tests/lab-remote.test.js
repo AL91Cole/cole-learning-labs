@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRemoteSession, remoteSocketUrl, remoteAssetUrl} from '../src/lab-remote-client.js';
+import {createRemoteSession, remoteSocketUrl, remoteDesktopUrl, remoteAssetUrl} from '../src/lab-remote-client.js';
 import {preferredLabEnvironment, listLabEnvironments, DEFAULT_LAB_ENVIRONMENT} from '../src/lab-environment.js?release=20261107-tech-team';
 import {LAB_ENVIRONMENT_CONFIG} from '../src/lab-environment-config.js';
-import {remoteLabFor, renderLabRemote, probeRemoteService, remoteServiceState, setRemoteServiceState, remoteServiceAvailable} from '../src/lab-remote.js?release=20261107-tech-team';
+import {remoteLabFor, renderLabRemote, probeRemoteService, remoteServiceState, setRemoteServiceState, remoteServiceAvailable, remoteServiceHosts, setRemoteHostedLabs} from '../src/lab-remote.js?release=20261107-tech-team';
 import {labGuide, labGuideFacts, renderLabGuidePage} from '../src/lab-guide.js?release=20261107-tech-team';
 import {readFileSync} from 'node:fs';
 import {normalizeLabRecord, workbenchProgress} from '../src/records.js';
@@ -25,7 +25,9 @@ class FakeSocket {
 test('the configuration names the real machines but labs keep the simulated desktop until the service reports enabled', () => {
   assert.equal(LAB_ENVIRONMENT_CONFIG.environment, 'remote-terminal');
   assert.equal(LAB_ENVIRONMENT_CONFIG.remote.base, '/terminal', 'same-origin through the Pages gateway keeps the Content-Security-Policy as it is');
-  assert.deepEqual(Object.keys(LAB_ENVIRONMENT_CONFIG.remote.labs), ['NET-201', 'SEC-402', 'CODE-501']);
+  const wanted = SCENARIOS.filter(item => ['network', 'security', 'coding'].includes(item.track)).map(item => item.id).sort();
+  assert.deepEqual(Object.keys(LAB_ENVIRONMENT_CONFIG.remote.labs).sort(), wanted, 'every networking, security and coding lab is listed');
+  assert.equal(wanted.length, 28);
   assert.deepEqual(listLabEnvironments().map(item => item.id).sort(), ['remote-terminal', 'simulated-desktop']);
   assert.equal(remoteServiceState(), 'unknown', 'Node never probes the service on import');
   assert.equal(preferredLabEnvironment(undefined, byId('CODE-501')).id, DEFAULT_LAB_ENVIRONMENT, 'unknown service: simulated desktop');
@@ -35,7 +37,13 @@ test('the configuration names the real machines but labs keep the simulated desk
   assert.equal(remoteServiceAvailable(), true);
   assert.equal(preferredLabEnvironment(undefined, byId('CODE-501')).id, 'remote-terminal', 'service enabled: the configured real machine');
   assert.equal(preferredLabEnvironment('remote-terminal', byId('CODE-501')).id, 'remote-terminal', 'a hosted lab can use the real machine');
-  assert.equal(preferredLabEnvironment('remote-terminal', byId('CODE-502')).id, DEFAULT_LAB_ENVIRONMENT, 'an unhosted lab falls back to the simulated desktop');
+  assert.equal(preferredLabEnvironment('remote-terminal', byId('INC-101')).id, DEFAULT_LAB_ENVIRONMENT, 'a hardware lab keeps its own format');
+  setRemoteHostedLabs(['NET-201', 'SEC-402', 'CODE-501']);
+  assert.equal(remoteServiceHosts('CODE-501'), true);
+  assert.equal(preferredLabEnvironment(undefined, byId('CODE-502')).id, DEFAULT_LAB_ENVIRONMENT, 'a lab the running service does not list stays simulated');
+  assert.equal(preferredLabEnvironment(undefined, byId('CODE-501')).id, 'remote-terminal');
+  setRemoteHostedLabs(null);
+  assert.equal(preferredLabEnvironment(undefined, byId('CODE-502')).id, 'remote-terminal', 'without a list from the service the configured labs are trusted');
   assert.equal(preferredLabEnvironment(undefined, byId('AI-301')).id, DEFAULT_LAB_ENVIRONMENT, 'labs the service does not host stay simulated');
   assert.equal(remoteLabFor(byId('NET-201')), 'NET-201'); assert.equal(remoteLabFor(byId('AI-301')), null);
   setRemoteServiceState('unknown');
@@ -44,9 +52,14 @@ test('the configuration names the real machines but labs keep the simulated desk
 test('the health probe enables the real machines only for an enabled service and fails closed otherwise', async () => {
   const calls = [];
   const fetchWith = reply => async (url, init) => {calls.push({url, init}); return reply();};
-  assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => new Response(JSON.stringify({status:'enabled', runtime:'docker-cloud-sandbox'}), {status:200}))}), 'enabled');
-  assert.equal(calls[0].url, '/terminal/api/health');
-  assert.equal(calls[0].init.credentials, 'omit');
+  const service = async (url, init) => {calls.push({url, init}); return url.endsWith('/api/labs') ? new Response(JSON.stringify({labs:[{id:'NET-201'}, {id:'CODE-501'}]}), {status:200}) : new Response(JSON.stringify({status:'enabled', runtime:'docker-cloud-desktop'}), {status:200});};
+  assert.equal(await probeRemoteService({force:true, fetch:service}), 'enabled');
+  assert.deepEqual(calls.map(call => call.url), ['/terminal/api/health', '/terminal/api/labs'], 'an enabled service is then asked which labs it hosts');
+  assert.equal(calls[0].init.credentials, 'omit'); assert.equal(calls[1].init.credentials, 'omit');
+  assert.equal(remoteServiceHosts('CODE-501'), true); assert.equal(remoteServiceHosts('CODE-502'), false, 'a lab the server does not list is not sent to it');
+  assert.equal(await probeRemoteService({force:true, fetch:async url => url.endsWith('/api/labs') ? new Response('nope', {status:500}) : new Response('{"status":"enabled"}', {status:200})}), 'enabled');
+  assert.equal(remoteServiceHosts('CODE-502'), true, 'when the list cannot be read the configured labs are trusted');
+  calls.length = 0; calls.push({});
   assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => new Response(JSON.stringify({status:'disabled'}), {status:200}))}), 'unavailable', 'a deployed but disabled service keeps the simulated desktop');
   assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => new Response(JSON.stringify({error:'terminal_unavailable'}), {status:503}))}), 'unavailable', 'the gateway without a controller');
   assert.equal(await probeRemoteService({force:true, fetch:fetchWith(() => {throw new Error('offline');})}), 'unavailable');
@@ -55,7 +68,28 @@ test('the health probe enables the real machines only for an enabled service and
   assert.equal(await cached, 'unavailable', 'without force the earlier probe result is reused');
   assert.equal(calls.length, 5);
   assert.equal(await probeRemoteService({force:true, fetch:undefined}), 'unavailable', 'no fetch at all fails closed');
-  setRemoteServiceState('unknown');
+  setRemoteServiceState('unknown'); setRemoteHostedLabs(null);
+});
+
+test('a desktop machine is announced with a ticket and password, and its screen socket is the /desktop path', () => {
+  const location = {protocol:'https:', host:'labs.example.test', hostname:'labs.example.test'};
+  assert.equal(remoteDesktopUrl('/terminal', location), 'wss://labs.example.test/terminal/desktop');
+  assert.equal(remoteDesktopUrl('https://terminal.example.test', location), 'wss://terminal.example.test/desktop');
+  FakeSocket.instances.length = 0;
+  const statuses = [];
+  const session = createRemoteSession({url:'wss://labs.example.test/terminal/ws', labId:'NET-205', WebSocket:FakeSocket, onStatus:(phase, message) => statuses.push(message)});
+  const socket = FakeSocket.instances[0];
+  socket.open(); socket.receive({type:'auth:ok', role:'student', alias:'Comet-12'});
+  socket.receive({type:'session:ready', sessionId:'abc', lab:{id:'NET-205', title:'The Stalled Print Queue', minutes:20}, limits:{memory:'4096m', cpus:'2', inactivityTimeoutSeconds:300}, milestones:[], desktop:{ticket:'a'.repeat(32), password:'Abcd1234', width:1280, height:800, url:'wss://should-be-ignored.example'}});
+  assert.deepEqual(session.state().desktop, {ticket:'a'.repeat(32), password:'Abcd1234', width:1280, height:800}, 'only the expected fields are kept');
+  assert.match(statuses.at(-1), /real Linux desktop/);
+  FakeSocket.instances.length = 0;
+  const bad = createRemoteSession({url:'wss://labs.example.test/terminal/ws', labId:'NET-205', WebSocket:FakeSocket});
+  FakeSocket.instances[0].open(); FakeSocket.instances[0].receive({type:'auth:ok'});
+  FakeSocket.instances[0].receive({type:'session:ready', milestones:[], desktop:{ticket:'not-a-ticket', password:'x y'}});
+  assert.equal(bad.state().desktop, null, 'a malformed desktop announcement is treated as a terminal session');
+  const html = renderLabRemote(byId('NET-205'));
+  assert.match(html, /aria-label="Linux machine screen"/); assert.match(html, /no internet access/);
 });
 
 test('service URLs stay same-origin by default and accept a separate origin when configured', () => {

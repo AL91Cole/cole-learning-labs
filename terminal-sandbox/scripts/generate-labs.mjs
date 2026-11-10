@@ -32,6 +32,9 @@ const SAFE_VALUE = /^[A-Za-z0-9._\/:+,-]+$/;
 const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
 const sh = (text) => "'" + String(text).replaceAll("'", "'\\''") + "'";
 const hash16 = (text) => crypto.createHash("sha256").update(text).digest("hex").slice(0, 16);
+/** Lab files are plain ASCII so they read the same in any terminal or editor, whatever its locale. */
+const ASCII = { "\u00b7": "-", "\u2013": "-", "\u2014": "-", "\u2212": "-", "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"', "\u2026": "...", "\u2192": "->", "\u2190": "<-", "\u00d7": "x", "\u2264": "<=", "\u2265": ">=", "\u00a0": " ", "\u2022": "-", "\u2713": "OK", "\u00b0": " deg" };
+export const ascii = (text) => String(text).replace(/[^\x00-\x7f]/g, (character) => ASCII[character] ?? "?");
 const wrap = (text, width = 78) => String(text).split("\n").map((line) => {
   const words = line.split(/\s+/), lines = [];
   let current = "";
@@ -306,7 +309,7 @@ function settingsLab(scenario) {
     const text = canonical(fields, state);
     rows.set(hash16("T|" + text), spec.checks(state).map((row) => (row.ok ? "1" : "0")).join(" "));
     commands.forEach((command, index) => {
-      const readout = String(spec.readout(state, command) ?? "No readout is available.").replaceAll("\\", "\\\\").replaceAll("\t", " ").replaceAll("\r", "").replaceAll("\n", "\\n");
+      const readout = ascii(spec.readout(state, command) ?? "No readout is available.").replaceAll("\\", "\\\\").replaceAll("\t", " ").replaceAll("\r", "").replaceAll("\n", "\\n");
       rows.set(hash16(`R|${index + 1}|${text}`), readout);
     });
   }
@@ -438,6 +441,7 @@ export function generateLabs() {
     if (!TRACKS[scenario.track] || HAND_WRITTEN.includes(scenario.id)) continue;
     const lab = scenario.track === "coding" ? codingLab(scenario) : settingsLab(scenario);
     if (!lab) throw new Error(`${scenario.id}: no real-machine version could be generated`);
+    lab.files = lab.files.map((file) => (file.encoding === "base64" ? file : { ...file, content: ascii(file.content) }));
     labs[lab.id] = lab;
   }
   return labs;

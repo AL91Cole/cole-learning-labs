@@ -52,6 +52,7 @@ test("every generated lab is small, self-contained and uses only safe relative p
       assert.ok([undefined, 0o644, 0o755].includes(file.mode), lab.id);
     }
     assert.ok(lab.files.some((file) => file.path === "edit.py"), lab.id + " ships the line editor");
+    for (const file of lab.files) if (file.encoding !== "base64") assert.ok(!/[^\x00-\x7f]/.test(file.content), `${lab.id}/${file.path} is plain ASCII, so it reads the same in any terminal`);
   }
 });
 

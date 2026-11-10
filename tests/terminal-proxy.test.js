@@ -78,6 +78,12 @@ test('a WebSocket upgrade is forwarded with the browser origin and the completed
   assert.equal(sent.get('sec-websocket-key'), 'abc');
   assert.equal(sent.get('cookie'), null);
   assert.equal((await proxyTerminal(request('/terminal/api/health', { headers: { Upgrade: 'websocket' } }), ENV, { fetch: upstream.fetch })).status, 400, 'upgrades go only to the socket path');
+  const screen = await proxyTerminal(request('/terminal/desktop', { headers: { ...headers, 'Sec-WebSocket-Protocol': 'cll-desktop, ticket.' + 'a'.repeat(32) } }), ENV, { fetch: upstream.fetch });
+  assert.equal(screen, socketResponse, 'the screen socket is relayed like the session socket');
+  assert.equal(upstream.calls.at(-1).url, 'https://terminal.example.test/desktop');
+  assert.equal(upstream.calls.at(-1).init.headers.get('sec-websocket-protocol'), 'cll-desktop, ticket.' + 'a'.repeat(32), 'the ticket travels in the subprotocol, never in the URL');
+  assert.equal((await proxyTerminal(request('/terminal/desktop'), ENV, { fetch: upstream.fetch })).status, 426);
+  assert.equal((await proxyTerminal(request('/terminal/vendor/novnc/core/rfb.js'), ENV, { fetch: recorder(() => new Response('js', { status: 200, headers: { 'Content-Type': 'text/javascript' } })).fetch })).status, 200, 'the screen client modules are served');
   const refusedUpstream = recorder(() => new Response('denied', { status: 403 }));
   const refused = await proxyTerminal(request('/terminal/ws', { headers }), ENV, { fetch: refusedUpstream.fetch });
   assert.equal(refused.status, 403);

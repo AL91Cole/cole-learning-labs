@@ -16,6 +16,11 @@ export function remoteSocketUrl(base, location = globalThis.location) {
   return (secure ? 'wss:' : 'ws:') + '//' + location.host + '/' + value.replace(/^\/+|\/+$/g, '') + '/ws';
 }
 
+/** The screen socket of a desktop machine: the same service, path /desktop. */
+export function remoteDesktopUrl(base, location = globalThis.location) {
+  return remoteSocketUrl(base, location).replace(/\/ws$/, '/desktop');
+}
+
 export function remoteAssetUrl(base, path) {
   const value = typeof base === 'string' && base.trim() ? base.trim().replace(/\/+$/, '') : '/terminal';
   const origin = /^wss?:\/\//i.test(value) ? value.replace(/^ws/i, 'http') : value;
@@ -23,10 +28,10 @@ export function remoteAssetUrl(base, path) {
 }
 
 /** One remote session. Handlers are optional; state is readable at any time. */
-export function createRemoteSession({url, labId, WebSocket:Socket = globalThis.WebSocket, onOutput = () => {}, onStatus = () => {}, onReady = () => {}, onMilestones = () => {}, onError = () => {}, onClose = () => {}}) {
+export function createRemoteSession({url, labId, screen = null, WebSocket:Socket = globalThis.WebSocket, onOutput = () => {}, onStatus = () => {}, onReady = () => {}, onMilestones = () => {}, onError = () => {}, onClose = () => {}}) {
   if (typeof Socket !== 'function') throw new Error('WebSocket is not available in this browser.');
   if (typeof labId !== 'string' || !/^[A-Z]{2,5}-\d{3}$/.test(labId) || labId.length > LIMITS.lab) throw new Error('Choose a lab the terminal service hosts.');
-  const state = {phase:'connecting', labId, alias:'', sessionId:'', lab:null, milestones:[], limits:null, typed:false, verified:false, complete:false, error:''};
+  const state = {phase:'connecting', labId, alias:'', sessionId:'', lab:null, milestones:[], limits:null, desktop:null, typed:false, verified:false, complete:false, error:''};
   let ws;
   try {ws = new Socket(url);} catch {throw new Error('The terminal service could not be reached.');}
   const send = payload => {if (ws.readyState !== 1) return false; ws.send(JSON.stringify(payload)); return true;};
@@ -42,8 +47,8 @@ export function createRemoteSession({url, labId, WebSocket:Socket = globalThis.W
     try {message = JSON.parse(typeof event.data === 'string' ? event.data : '');} catch {return;}
     if (!message || typeof message.type !== 'string') return;
     switch (message.type) {
-      case 'auth:ok': state.alias = String(message.alias || '').slice(0, 64); status('starting', 'Starting your Linux machine…'); send({type:'session:start', labId, mode:'self-paced'}); break;
-      case 'session:ready': state.sessionId = String(message.sessionId || '').slice(0, 64); state.lab = message.lab && typeof message.lab === 'object' ? {id:String(message.lab.id || ''), title:String(message.lab.title || '').slice(0, 160), minutes:Number(message.lab.minutes) || 0} : null; state.limits = message.limits && typeof message.limits === 'object' ? {memory:String(message.limits.memory || ''), cpus:String(message.limits.cpus || ''), inactivityTimeoutSeconds:Number(message.limits.inactivityTimeoutSeconds) || 0} : null; applyMilestones(message.milestones); status('ready', 'Connected. This is a real Linux shell in an isolated container.'); onReady({...state}); break;
+      case 'auth:ok': state.alias = String(message.alias || '').slice(0, 64); status('starting', 'Starting your Linux machine. This takes about half a minute…'); send({type:'session:start', labId, mode:'self-paced', ...(screen && Number.isInteger(screen.width) && Number.isInteger(screen.height) ? {screen:{width:screen.width, height:screen.height}} : {})}); break;
+      case 'session:ready': state.sessionId = String(message.sessionId || '').slice(0, 64); state.lab = message.lab && typeof message.lab === 'object' ? {id:String(message.lab.id || ''), title:String(message.lab.title || '').slice(0, 160), minutes:Number(message.lab.minutes) || 0} : null; state.limits = message.limits && typeof message.limits === 'object' ? {memory:String(message.limits.memory || ''), cpus:String(message.limits.cpus || ''), inactivityTimeoutSeconds:Number(message.limits.inactivityTimeoutSeconds) || 0} : null; state.desktop = message.desktop && typeof message.desktop === 'object' && /^[a-f0-9]{32}$/.test(String(message.desktop.ticket)) && /^[A-Za-z0-9]{1,32}$/.test(String(message.desktop.password)) ? {ticket:String(message.desktop.ticket), password:String(message.desktop.password), width:Math.min(4096, Math.max(320, Number(message.desktop.width) || 1280)), height:Math.min(4096, Math.max(240, Number(message.desktop.height) || 800))} : null; applyMilestones(message.milestones); status('ready', state.desktop ? 'Connected. This is a real Linux desktop on an isolated machine.' : 'Connected. This is a real Linux shell in an isolated container.'); onReady({...state}); break;
       case 'lab:switched': applyMilestones(message.milestones); status('ready', 'Lab ready.'); break;
       case 'terminal:output': if (typeof message.data === 'string') onOutput(message.data.slice(0, LIMITS.output)); break;
       case 'milestone:status': state.verified = true; applyMilestones(message.milestones); break;

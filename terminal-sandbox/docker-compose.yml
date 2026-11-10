@@ -32,6 +32,10 @@ services:
       SANDBOX_IMAGE_REF: ${SANDBOX_IMAGE_REF:-docker.io/library/python:3.13-alpine}
       SANDBOX_SEED_DIRS: ${SANDBOX_SEED_DIRS:-/app/sandbox-seed}
       SANDBOX_SIZE: ${SANDBOX_SIZE:-micro}
+      SANDBOX_VIEW: ${SANDBOX_VIEW:-desktop}
+      DESKTOP_IMAGE_REF: ${DESKTOP_IMAGE_REF:-docker.io/dorowu/ubuntu-desktop-lxde-vnc:focal}
+      DESKTOP_SIZE: ${DESKTOP_SIZE:-small}
+      DESKTOP_RESOLUTION: ${DESKTOP_RESOLUTION:-1024x768}
     group_add:
       - ${DOCKER_SOCKET_GID:?set the host Docker socket group ID}
     volumes:

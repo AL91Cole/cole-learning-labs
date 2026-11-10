@@ -19,6 +19,13 @@ export const LAB_ENVIRONMENT_CONFIG = Object.freeze({
   environment: 'remote-terminal',
   remote: Object.freeze({
     base: '/terminal',
-    labs: Object.freeze({'NET-201': 'NET-201', 'SEC-402': 'SEC-402', 'CODE-501': 'CODE-501'})
+    // Every networking, security and coding lab. A lab is used on a real machine
+    // only if the running service also lists it; otherwise it stays simulated.
+    labs: Object.freeze(Object.fromEntries([
+      'NET-201', 'NET-202', 'NET-203', 'NET-204', 'NET-205', 'NET-206', 'NET-207', 'NET-208',
+      'NET-209', 'NET-210', 'NET-211', 'NET-212', 'NET-213', 'NET-214', 'NET-215', 'NET-216',
+      'SEC-401', 'SEC-402', 'SEC-403', 'SEC-404', 'SEC-405', 'SEC-406', 'CODE-501', 'CODE-502',
+      'CODE-503', 'CODE-504', 'CODE-505', 'CODE-506'
+    ].map(id => [id, id])))
   })
 });

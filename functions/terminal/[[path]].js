@@ -9,11 +9,12 @@
  * every request answers 503, which the site reads as "no real machines", so the
  * guided labs keep their simulated desktop.
  *
- * Only the controller's public routes are reachable: the WebSocket, the health
- * and lab listings, and the xterm.js assets. Cookies and Cloudflare headers are
+ * Only the controller's public routes are reachable: the session and screen
+ * WebSockets, the health and lab listings, and the terminal and screen client
+ * assets. Cookies and Cloudflare headers are
  * never forwarded; only the request headers the controller needs are.
  */
-const PATHS = /^\/(ws|api\/health|api\/labs|vendor\/[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*)$/;
+const PATHS = /^\/(ws|desktop|api\/health|api\/labs|vendor\/[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*)$/;
 const FORWARDED = ['accept', 'accept-encoding', 'origin', 'upgrade', 'connection', 'sec-websocket-key', 'sec-websocket-version', 'sec-websocket-protocol', 'sec-websocket-extensions', 'if-none-match'];
 const RESPONSE_HEADERS = ['content-type', 'content-length', 'cache-control', 'etag', 'last-modified', 'vary'];
 
@@ -50,8 +51,9 @@ export async function proxyTerminal(request, env, { fetch: fetchImpl = globalThi
   const headers = new Headers();
   for (const name of FORWARDED) { const value = request.headers.get(name); if (value !== null) headers.set(name, value); }
   const websocket = (request.headers.get('upgrade') || '').toLowerCase() === 'websocket';
-  if (websocket && path !== '/ws') return unavailable(400, 'upgrade_not_allowed');
-  if (path === '/ws' && !websocket) return unavailable(426, 'upgrade_required');
+  const socketPath = path === '/ws' || path === '/desktop';
+  if (websocket && !socketPath) return unavailable(400, 'upgrade_not_allowed');
+  if (socketPath && !websocket) return unavailable(426, 'upgrade_required');
   let upstream;
   try {
     upstream = await fetchImpl(origin + path, { method: request.method, headers, redirect: 'manual' });
