@@ -28,7 +28,8 @@ const jpeg =
   );
 async function fixture(t, overrides = {}, factory) {
   let clock = 100000;
-  const runtimes = [];
+  const runtimes = [],
+    failures = [];
   const fake = async () => {
     const sandbox = {
       mode: "docker-pty",
@@ -65,7 +66,7 @@ async function fixture(t, overrides = {}, factory) {
       authTimeoutMs: 1000,
       ...overrides,
     },
-    { sandboxFactory: factory || fake, now: () => clock },
+    { sandboxFactory: factory || fake, now: () => clock, log: (...parts) => failures.push(parts.join(" ")) },
   );
   await new Promise((resolve) =>
     service.server.listen(0, "127.0.0.1", resolve),
@@ -141,6 +142,7 @@ async function fixture(t, overrides = {}, factory) {
   return {
     service,
     runtimes,
+    failures,
     client,
     teacher,
     room,
@@ -610,10 +612,13 @@ test("an existing session cannot take a class slot reserved for a pending contai
 
 test("PTY failure, resize limits, message limits, and output floods fail closed", async (t) => {
   const bad = await fixture(t, {}, async () => {
-      throw Error("No Docker");
+      throw Object.assign(Error("cloud_auth_failed: HTTP 401"), { code: "cloud_auth_failed" });
     }),
     student = await bad.client();
-  assert.equal((await bad.start(student)).code, "sandbox_unavailable");
+  const refusal = await bad.start(student);
+  assert.equal(refusal.code, "sandbox_unavailable");
+  assert.ok(!JSON.stringify(refusal).includes("cloud_auth_failed"), "the learner sees only the generic message");
+  assert.deepEqual(bad.failures, ["Machine start failed for NET-201: cloud_auth_failed cloud_auth_failed: HTTP 401"], "the operator log names the lab and the reason");
   assert.equal(bad.service.sessions.size, 0);
   const f = await fixture(t, { maxOutputBytesPerSecond: 20 }),
     a = await f.client();
