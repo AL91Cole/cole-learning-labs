@@ -270,6 +270,21 @@ export function seedFromLabFiles(files) {
   return { directories: [...directories].sort(), files: out };
 }
 
+/** A lab file with this name is the lab's own progress checker; see buildSeedScript. */
+export const PROGRESS_CHECK = ".lab-check.sh";
+/** Where the checker's output is kept for the lab checks to read. */
+export const PROGRESS_FILE = "/home/learner/.lab-progress";
+const PROGRESS_WATCH = [
+  "#!/bin/sh",
+  "# Keeps a short progress note for the lab checks. It only looks at the lab folder.",
+  "while :; do",
+  "  ( cd /home/learner/lab 2>/dev/null && sh /home/learner/.lab-check.sh ) > /home/learner/.lab-progress.new 2>/dev/null",
+  "  mv -f /home/learner/.lab-progress.new /home/learner/.lab-progress 2>/dev/null",
+  "  sleep 2",
+  "done",
+  "",
+].join("\n");
+
 /**
  * The root setup script run once in a fresh machine: makes sure the learner
  * user exists, writes the seed tree under /home/learner/lab and hands it to
@@ -304,19 +319,28 @@ export function buildSeedScript(seed, { desktop = false, desktopPort = CLOUD_DEF
     lines.push(`printf '%s' '${Buffer.from(file.content).toString("base64")}' | base64 -d > ${target}`);
     lines.push(`chmod ${((file.mode ?? 0o644) & 0o777).toString(8).padStart(3, "0")} ${target}`);
   }
+  // A lab may ship its own progress checker (.lab-check.sh). It leaves the lab
+  // folder, and a small loop runs it as the learner every two seconds, so the
+  // lab checks can see work done in the file manager as well as typed commands.
+  lines.push(
+    `if [ -f /home/learner/lab/${PROGRESS_CHECK} ]; then mv -f /home/learner/lab/${PROGRESS_CHECK} /home/learner/${PROGRESS_CHECK}; printf '%s' '${Buffer.from(PROGRESS_WATCH).toString("base64")}' | base64 -d > /home/learner/.lab-watch.sh; : > /home/learner/.lab-progress; fi`,
+  );
+  const startWatch = "if [ -f /home/learner/.lab-watch.sh ]; then if [ \"$(id -u)\" = 0 ]; then su learner -c 'nohup sh /home/learner/.lab-watch.sh >/dev/null 2>&1 &' || true; else nohup sh /home/learner/.lab-watch.sh >/dev/null 2>&1 & fi; fi";
   if (desktop) {
     lines.push(
       // A readable prompt, UTF-8 output, and a short record of typed commands that the controller may read for the lab checks.
       `printf '%s\\n' '' '# Cole Learning Labs' 'export LANG=C.UTF-8' 'PS1='"'"'\\[\\e[1;32m\\]learner@lab-pc\\[\\e[0m\\]:\\[\\e[1;34m\\]\\w\\[\\e[0m\\]\\$ '"'"'' 'PROMPT_COMMAND='"'"'history -a; tail -n 200 "$HOME/.bash_history" > "$HOME/.lab-history" 2>/dev/null'"'"'' >> /home/learner/.bashrc`,
       ": > /home/learner/.lab-history",
       "chown -R learner:learner /home/learner/lab /home/learner/.bashrc /home/learner/.lab-history",
+      "for f in /home/learner/.lab-check.sh /home/learner/.lab-watch.sh /home/learner/.lab-progress; do if [ -e $f ]; then chown learner:learner $f; fi; done",
+      startWatch,
       `n=0; until bash -c 'echo > /dev/tcp/127.0.0.1/${Number(desktopPort)}' 2>/dev/null && [ -S /tmp/.X11-unix/X1 ]; do n=$((n+1)); if [ $n -gt 120 ]; then echo 'desktop did not start'; exit 1; fi; sleep 0.5; done`,
       "sleep 1",
       "su learner -c 'cd /home/learner/lab && DISPLAY=:1 nohup pcmanfm /home/learner/lab >/dev/null 2>&1 &' || true",
       "su learner -c 'cd /home/learner/lab && DISPLAY=:1 nohup lxterminal --working-directory=/home/learner/lab --geometry=96x24 >/dev/null 2>&1 &' || true",
     );
   } else {
-    lines.push("chown -R 1000:1000 /home/learner", "chmod 700 /home/learner");
+    lines.push("chown -R 1000:1000 /home/learner", "chmod 700 /home/learner", startWatch);
   }
   lines.push("echo SEED_OK");
   return lines.join("\n") + "\n";

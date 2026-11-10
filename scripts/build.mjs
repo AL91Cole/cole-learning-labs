@@ -51,7 +51,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/learning-routes.js', 'src/home-entries.js', 'src/sandbox-starters.js', 'src/coding-studio-model.js', 'src/display-menu.js', 'src/read-aloud.js', 'src/session-modes.js',
   'src/record-engines.js', 'src/classroom-session.js', 'src/foundation-catalog.js', 'src/coding-scenarios.js', 'src/expanded-scenarios.js', 'src/network-scenarios.js',
   'src/part-art.js', ...Object.values(PART_ART),
-  'src/lazy-investigation.js', 'src/lazy-foundation.js', 'src/lazy-arcade.js', 'src/lazy-quests.js', 'src/lazy-inbox.js', 'src/lazy-studios.js', 'src/lazy-sandbox.js', 'src/lazy-teaching.js', 'src/lazy-guide.js', 'src/lazy-privacy.js',
+  'src/lazy-investigation.js', 'src/lazy-foundation.js', 'src/lazy-arcade.js', 'src/lazy-quests.js', 'src/lazy-inbox.js', 'src/lazy-studios.js', 'src/lazy-sandbox.js', 'src/lazy-teaching.js', 'src/lazy-guide.js', 'src/lazy-privacy.js', 'src/lazy-linux.js', 'src/linux-catalog.js', 'src/linux-course.js',
   ...PUBLIC_METADATA_FILES
 ]);
 // Source review does not grant public delivery. The complete member application

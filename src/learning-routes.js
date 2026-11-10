@@ -15,6 +15,7 @@ export function learningRoute(hash) {
   // Starting style only. A link never selects a message, a decision or a finished shift.
   if(page==='play'&&params.get('style')==='picture')route.style='picture';
   if(page==='signin'&&path!=='signin')return {page:'unknown',id:undefined,mode:'guided',sequence:null};
+  if(page==='linux'&&path.split('/').length>2)return {page:'unknown',id:undefined,mode:'guided',sequence:null};
   if(page==='explore'){
     if(path.split('/').length>2)return {page:'unknown',id:undefined,mode:'guided',sequence:null};
     const band=[['k1','K–1'],['2-3','2–3'],['4-6','4–6']].find(([code])=>code===params.get('band'))?.[1];

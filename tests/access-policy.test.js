@@ -29,8 +29,10 @@ test('the reviewed catalogue exposes only safe metadata for 42 cases and exactly
 test('safe catalogue and policy imports never require authored scenario payloads or protected modules',async()=>{
   const catalogue=await readFile(new URL('../src/lab-catalog.js',import.meta.url),'utf8');
   assert.doesNotMatch(catalogue,/\b(?:import|require)\s*(?:\(|\{|['"])/u);
+  // The Linux basics catalogue is titles and summaries only, with no imports of its own.
+  assert.doesNotMatch(await readFile(new URL('../src/linux-catalog.js',import.meta.url),'utf8'),/\b(?:import|require)\s*(?:\(|\{|['"])/u);
   const policy=await readFile(new URL('../src/access-policy.js',import.meta.url),'utf8');
-  assert.deepEqual([...policy.matchAll(/\bfrom\s+(['"])(.*?)\1/gu)].map(match=>match[2]),['./code-quest-catalog.js?release=20261107-tech-team','./arcade-catalog.js?release=20261107-tech-team','./lab-catalog.js?release=20261107-tech-team']);
+  assert.deepEqual([...policy.matchAll(/\bfrom\s+(['"])(.*?)\1/gu)].map(match=>match[2]),['./code-quest-catalog.js?release=20261107-tech-team','./arcade-catalog.js?release=20261107-tech-team','./lab-catalog.js?release=20261107-tech-team','./linux-catalog.js?release=20261107-tech-team']);
 });
 
 test('all beginner courses and their first investigations stay public',()=>{

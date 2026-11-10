@@ -17,6 +17,7 @@ import {
   CLOUD_SIZES,
 } from "./cloud-sandboxes.js";
 import { generatedLabs } from "./generated-labs.js";
+import { linuxLabs } from "./linux-labs.js";
 
 const execFileAsync = promisify(execFile),
   ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -471,6 +472,8 @@ export const labCatalog = () => [...LAB_CATALOG.values()];
 // The real-machine version of every other networking, security and coding lab,
 // generated from the site's lab models (scripts/generate-labs.mjs).
 registerLabs(generatedLabs());
+// Beginner labs on using a Linux computer (linux-labs.js).
+registerLabs(linuxLabs());
 /** Load a private content module (absolute path or file: URL) that exports `labs`. */
 export async function loadLabContent(specifier) {
   if (typeof specifier !== "string" || !specifier.trim()) return [];
@@ -662,15 +665,21 @@ export async function verifySessionMilestones(session) {
       history = [...history, ...(await session.sandbox.history())];
     } catch {}
   }
+  // Several checks may read the same file (the progress note); read each file once per pass.
+  const read = new Map();
   for (const item of lab.milestones) {
     let completed = false;
     if (item.checkType === "history_regex")
       completed = history.some((line) => item.pattern.test(line));
     else {
       let content = null;
-      try {
-        content = await session.sandbox.readFile(item.filePath);
-      } catch {}
+      if (read.has(item.filePath)) content = read.get(item.filePath);
+      else {
+        try {
+          content = await session.sandbox.readFile(item.filePath);
+        } catch {}
+        read.set(item.filePath, content);
+      }
       completed =
         typeof content === "string" &&
         (item.checkType === "file_contains_all"

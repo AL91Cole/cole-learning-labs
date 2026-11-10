@@ -70,7 +70,7 @@ export function renderLabRemote(scenario) {
   return '<div class="lab-remote" data-lab-remote><div class="remote-chrome"><span class="remote-dot" data-remote-dot aria-hidden="true"></span><span class="remote-title">Real Linux machine · ' + esc(labId || scenario.id) + '</span><span class="remote-status" data-remote-status role="status">Not started</span><span class="remote-actions"><button type="button" class="lab-tool remote-checks-toggle" data-remote-checks-toggle aria-expanded="true" aria-controls="remote-checks">Lab checks</button><button type="button" class="lab-tool" data-remote-start>Start machine</button><button type="button" class="lab-tool" data-remote-verify disabled>Check my work</button><button type="button" class="lab-tool" data-remote-stop disabled>Stop</button></span></div><div class="remote-body"><div class="remote-terminal" data-remote-terminal tabindex="0" aria-label="Linux machine screen"><div class="remote-welcome" data-remote-welcome><h3>Your own Linux machine for this lab</h3><p>Start machine opens a real, isolated Linux machine on the lab server (' + esc(config.base) + ') with this lab’s files in the <b>lab</b> folder. Only the lab id and what you type or click are sent. The machine has no internet access and is erased when you leave.</p><p class="panel-help">It takes about half a minute to start. Click inside the screen to use the keyboard and mouse.</p></div></div><aside class="remote-milestones" id="remote-checks" aria-label="Lab checks"><h3>Lab checks</h3><ol data-remote-milestones><li class="remote-milestone-empty">The machine reports its checks once it starts.</li></ol><p class="panel-help" data-remote-limits></p></aside></div></div>';
 }
 
-export function mountLabRemote(root, {scenario, record, getState, action, onActivity = () => {}, showNotice = () => {}}) {
+export function mountLabRemote(root, {scenario, record, getState, action, onActivity = () => {}, showNotice = () => {}, checksOpen, verifyEveryMs = 15000}) {
   const controller = new AbortController(), signal = controller.signal, $ = selector => root.querySelector(selector);
   const listen = (node, event, handler) => node?.addEventListener(event, handler, {signal});
   const doc = root.ownerDocument || document, config = remoteConfig(), labId = remoteLabFor(scenario);
@@ -137,7 +137,7 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
     listen(screen, 'pointerdown', () => {if (!typed) {typed = true; onActivity({type:'remote', typed:true});}});
     // The machine cannot tell the page when a file changes, so ask for the checks regularly.
     clearInterval(verifyTimer);
-    verifyTimer = setInterval(() => {if (session && phase === 'ready' && !doc.hidden) session.verify();}, 15000);
+    verifyTimer = setInterval(() => {if (session && phase === 'ready' && !doc.hidden) session.verify();}, Math.max(4000, Number(verifyEveryMs) || 15000));
   }
   function start() {
     if (!labId) {setStatus('unavailable', 'This lab is not hosted on the terminal service.'); return;}
@@ -163,7 +163,7 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
   // On a small screen the checks panel folds away so the machine gets the whole width.
   const body = $('.remote-body'), toggle = $('[data-remote-checks-toggle]');
   const showChecks = show => {body.classList.toggle('checks-hidden', !show); toggle.setAttribute('aria-expanded', String(show)); toggle.textContent = show ? 'Hide checks' : 'Lab checks' + (milestones.length ? ' ' + milestones.filter(item => item.completed).length + '/' + milestones.length : '');};
-  showChecks(root.getBoundingClientRect().width >= 980);
+  showChecks(typeof checksOpen === 'boolean' ? checksOpen : root.getBoundingClientRect().width >= 980);
   listen(toggle, 'click', () => showChecks(body.classList.contains('checks-hidden')));
   listen($('[data-remote-start]'), 'click', start);
   listen($('[data-remote-verify]'), 'click', () => {if (session?.verify()) {verified = true; onActivity({type:'remote', verified:true}); setStatus('ready', 'Checking your work on the machine…'); setTimeout(() => {if (phase === 'ready') setStatus('ready', complete ? 'Every lab check passed on the machine.' : 'Checks updated. Finish the remaining steps, then check again.');}, 400);}});
