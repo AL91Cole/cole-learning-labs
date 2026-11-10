@@ -59,7 +59,7 @@ With the cloud backend the default view is a **graphical Linux desktop** (`SANDB
 
 Lab checks work the same in both views. On a desktop the learner types in the machine's own terminal, so `history_regex` checks read a short file of recent commands that the machine's shell keeps (`~/.lab-history`); file checks read the lab files as before.
 
-The catalog has the four hand-written labs plus a real-machine version of every other networking, security and coding lab, generated from the site's lab models by `scripts/generate-labs.mjs` into `generated-labs.js` (run the script after changing a lab on the site; a test fails when the file is stale). A generated lab carries its own files, which replace the shared seed tree for that session on both backends.
+The catalog has the four hand-written labs plus a real-machine version of every other networking, security and coding lab, generated from the site's lab models by `scripts/generate-labs.mjs` into `generated-labs.js` (run the script after changing a lab on the site; a test fails when the file is stale). A generated lab carries its own files, which replace the shared seed tree for that session on both backends. Five beginner Linux labs (`linux-labs.js`, ids `LNX-101` to `LNX-105`) teach the desktop and the command line; they ship a small progress checker (`.lab-check.sh`) that the seed script runs every two seconds so steps done in the file manager count too.
 
 ### Operating a deployed controller
 

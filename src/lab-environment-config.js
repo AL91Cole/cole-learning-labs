@@ -21,7 +21,10 @@ export const LAB_ENVIRONMENT_CONFIG = Object.freeze({
     base: '/terminal',
     // Every networking, security and coding lab. A lab is used on a real machine
     // only if the running service also lists it; otherwise it stays simulated.
+    // The Linux basics course (LNX ids) always runs on a real machine; it has
+    // no simulated version, so its page says when the service is not answering.
     labs: Object.freeze(Object.fromEntries([
+      'LNX-101', 'LNX-102', 'LNX-103', 'LNX-104', 'LNX-105',
       'NET-201', 'NET-202', 'NET-203', 'NET-204', 'NET-205', 'NET-206', 'NET-207', 'NET-208',
       'NET-209', 'NET-210', 'NET-211', 'NET-212', 'NET-213', 'NET-214', 'NET-215', 'NET-216',
       'SEC-401', 'SEC-402', 'SEC-403', 'SEC-404', 'SEC-405', 'SEC-406', 'CODE-501', 'CODE-502',

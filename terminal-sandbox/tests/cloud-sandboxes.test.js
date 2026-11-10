@@ -236,7 +236,7 @@ test("the seed script creates the learner, writes the sample files safely and th
   assert.match(script, /mkdir -p '\/home\/learner\/lab\/delivered'/);
   assert.ok(script.includes("printf '%s' '" + Buffer.from(seed.files.find((f) => f.path === "code/program.py").content).toString("base64") + "' | base64 -d > '/home/learner/lab/code/program.py'"));
   assert.match(script, /chmod 755 '\/home\/learner\/lab\/code\/check'/);
-  assert.match(script, /chown -R 1000:1000 \/home\/learner\nchmod 700 \/home\/learner\necho SEED_OK\n$/);
+  assert.match(script, /chown -R 1000:1000 \/home\/learner\nchmod 700 \/home\/learner\nif \[ -f \/home\/learner\/\.lab-watch\.sh \]; then [^\n]+\necho SEED_OK\n$/);
   assert.ok(!/[^\x20-\x7e\n]/.test(script), "the script is plain ASCII, file contents stay base64");
   assert.throws(() => buildSeedScript({ directories: [], files: [{ path: "../etc/passwd", content: Buffer.from("x") }] }), /sandbox_seed_invalid/);
   assert.throws(() => buildSeedScript({ directories: ["a'b"], files: [] }), /sandbox_seed_invalid/);

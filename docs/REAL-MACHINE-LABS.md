@@ -158,6 +158,44 @@ real-machine version.
   are planned separately; learning paths, games and the studios are not labs
   and keep their current form.
 
+## Linux basics course
+
+Five beginner labs on how to use a Linux computer, at `#linux` on the site
+(linked from the home page and the lab library). They are free, like the other
+beginner courses, and run only on a real machine: there is no simulated
+version, so the page says "not available right now" when the lab server is not
+answering.
+
+| Lab | Title | The learner practises |
+| --- | --- | --- |
+| `LNX-101` | Find Your Way Around | `pwd`, `ls`, `cd`, `cat`, the Files window |
+| `LNX-102` | Make, Copy, Move and Delete | `mkdir`, `cp`, `mv`, `touch`, `rm` (or the mouse) |
+| `LNX-103` | Read and Edit Text Files | `head`, `tail`, `wc`, a text editor, `>` and `>>` |
+| `LNX-104` | Who May Read, Write and Run | `whoami`, `ls -l`, `chmod` |
+| `LNX-105` | Search, Filter and Get Help | `grep`, pipes, `find`, `--help` |
+
+- **The page.** One step at a time in a strip above a full-width desktop, with
+  a hint and back/forward buttons. The strip follows the learner's progress.
+  It fits an 11-inch Chromebook: the reading and display buttons move into the
+  top bar so nothing covers the Linux screen.
+- **Where the content lives.** `terminal-sandbox/linux-labs.js` holds each
+  lab's files, steps and checks; the site keeps only titles and summaries
+  (`src/linux-catalog.js`), and a test keeps the two in step. Each lab folder
+  also has a `README.txt` with the same steps.
+- **Checks without a check button.** A lab may ship a `.lab-check.sh`. The
+  seed script moves it out of the lab folder and runs it as the learner every
+  two seconds; it prints one `[token]` per finished step into
+  `~/.lab-progress`, which the checks read. That is how work done with the
+  mouse in the Files window counts. Typing practice (`pwd`, `ls`, `grep`) is
+  checked from the terminal's command history.
+- **Verified live** (2026-11-10) on real Docker desktops through a browser at
+  an 11-inch Chromebook's size: all five labs finished with every step ticked
+  by the automatic checks (5/5, 5/5, 5/5, 5/5, 6/6). The progress checker was
+  also confirmed on a terminal-only machine. Text files open in the desktop's
+  text editor (Mousepad) on a double-click.
+- **To add a lab**, add it to `linux-labs.js` and `src/linux-catalog.js`, and
+  its id to `src/lab-environment-config.js`.
+
 ## Hosting the controller (set up)
 
 The site is wired for the real machines already:

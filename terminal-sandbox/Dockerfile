@@ -9,7 +9,7 @@ COPY package.json package-lock.json ./
 # node-pty is a native dependency; its reviewed install/build scripts are required.
 RUN npm ci --omit=dev && npm cache clean --force
 RUN node -e "require('node-pty')"
-COPY server.js cloud-sandboxes.js generated-labs.js ./
+COPY server.js cloud-sandboxes.js generated-labs.js linux-labs.js ./
 COPY public ./public
 # Sample lab seed written into each Docker Cloud Sandbox at start (SANDBOX_SEED_DIRS).
 COPY sandbox-seed ./sandbox-seed
