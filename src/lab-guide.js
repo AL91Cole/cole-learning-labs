@@ -15,9 +15,9 @@ import {transferCaseFor} from './scenarios.js?release=20261107-tech-team';
 import {labTools} from './lab-shell.js?release=20261107-tech-team';
 import {codingDefinition} from './coding-lab.js?release=20261107-tech-team';
 import {labPageHash} from './learning-routes.js?release=20261107-tech-team';
-import {preferredLabEnvironment} from './lab-environment.js?release=20261107-tech-team';
+import {preferredLabEnvironment, DEFAULT_LAB_ENVIRONMENT} from './lab-environment.js?release=20261107-tech-team';
 import './lab-desktop.js?release=20261107-tech-team';
-import './lab-remote.js?release=20261107-tech-team';
+import {remoteLabFor, remoteServiceState, probeRemoteService} from './lab-remote.js?release=20261107-tech-team';
 export {labFormat} from './lab-format.js?release=20261107-tech-team';
 
 export const SHELL_PROMPT = 'student@lab-pc:~/lab$';
@@ -188,7 +188,7 @@ export function renderLabGuidePage(scenario, record, {trackName = '', sceneArt =
   return '<section class="lab-shell lab-guide-shell" data-track="' + esc(scenario.track) + '"><div class="lab-topbar vm-topbar"><div class="vm-title"><h1>' + esc(scenario.title) + '</h1><span class="vm-subtitle">' + esc(scenario.id) + ' · ' + esc(trackName || (TRACKS[scenario.track]?.name ?? scenario.track)) + ' · Grades ' + esc(scenario.grade) + '</span></div><div class="lab-tools vm-tools"><button id="reading-toggle" class="lab-tool vm-tool" aria-pressed="false"><span class="vm-aa" aria-hidden="true">Aa</span>Larger text</button><button id="saving-options" class="lab-tool vm-tool">' + gear + 'Saving &amp; privacy</button><button id="report-button" class="lab-tool vm-tool">' + doc + 'My report</button><a href="#labs" class="lab-tool vm-tool vm-exit">' + exit + 'Exit lab</a></div></div>' +
     '<div class="lab-guide-layout"><aside class="lab-guide" id="lab-guide" aria-label="Lab guide" tabindex="0"><header class="lab-guide-head"><p class="eyebrow">LAB GUIDE</p><div class="guide-head-tools"><button type="button" class="guide-tool" data-guide-text aria-pressed="false" title="Larger guide text" aria-label="Larger guide text"><span aria-hidden="true">Aa</span></button><button type="button" class="guide-tool" data-guide-report title="Open my report" aria-label="Open my report">' + doc + '</button><button type="button" class="guide-tool" data-guide-collapse title="Hide the lab guide" aria-label="Hide the lab guide"><span aria-hidden="true">«</span></button></div></header><div class="guide-progress"><progress data-guide-progress value="0" max="100" aria-label="Lab guide progress">0%</progress><span data-guide-percent aria-live="polite">0%</span></div><div class="lab-guide-sections">' + section(GUIDE_SECTIONS[0], introduction) + section(GUIDE_SECTIONS[1], demonstration) + section(GUIDE_SECTIONS[2], applied) + section(GUIDE_SECTIONS[3], challenge) + '</div>' +
     '<div class="lab-reset"><button class="text-button" id="reset-ticket" aria-expanded="false" aria-controls="reset-confirm">Start this lab again</button><div id="reset-confirm" role="group" aria-labelledby="reset-question" hidden><p id="reset-question">This clears this lab’s current work and any saved copy when device saving is on. Export first.</p><button id="confirm-reset" class="lab-tool">Start over</button> <button id="cancel-reset" class="lab-tool">Keep my work</button></div></div></aside><button type="button" class="guide-expander" data-guide-expand hidden aria-label="Show the lab guide"><span aria-hidden="true">»</span><span>Lab guide</span></button>' +
-    '<div class="lab-environment" id="lab-environment" role="region" aria-label="Lab environment"><div class="environment-bar"><span class="eyebrow">LAB ENVIRONMENT</span><span class="environment-provider">' + esc(provider?.label || 'Lab environment') + '</span><span data-environment-status role="status"></span></div><div id="classroom-status"></div><div class="environment-screen"><div data-lab-environment data-environment-id="' + esc(provider?.id || '') + '">' + (provider ? provider.render(scenario, record) : '<p class="panel-help">No lab environment is available.</p>') + '</div></div><div id="action-feedback" class="action-feedback environment-feedback" role="status">' + esc(record.events.length ? (experimentEventText(record.events.at(-1), {compact:true}) || record.events.at(-1).message) : 'Follow Section 1 of the lab guide. Open Terminal on the desktop to begin; your actions are recorded in the Lab Log.') + '</div><div id="work-privacy" hidden></div></div></div></section>' +
+    '<div class="lab-environment" id="lab-environment" role="region" aria-label="Lab environment"><div class="environment-bar"><span class="eyebrow">LAB ENVIRONMENT</span><span class="environment-provider">' + esc(provider?.label || 'Lab environment') + '</span><span data-environment-status role="status"></span></div><div id="classroom-status"></div><div class="environment-screen"><div data-lab-environment data-environment-id="' + esc(provider?.id || '') + '">' + (provider ? provider.render(scenario, record) : '<p class="panel-help">No lab environment is available.</p>') + '</div></div><div id="action-feedback" class="action-feedback environment-feedback" role="status">' + esc(record.events.length ? (experimentEventText(record.events.at(-1), {compact:true}) || record.events.at(-1).message) : (provider?.id === 'remote-terminal' ? 'Follow Section 1 of the lab guide. Press Start machine to open your Linux machine; the lab checks update as you work.' : 'Follow Section 1 of the lab guide. Open Terminal on the desktop to begin; your actions are recorded in the Lab Log.')) + '</div><div id="work-privacy" hidden></div></div></div></section>' +
     '<dialog id="lab-dialog"><div id="dialog-content"></div><button id="dialog-close" class="button button-outline">Close</button></dialog>';
 }
 
@@ -198,7 +198,7 @@ function eventList(record) {
 }
 
 /** Mount the guided lab. The app supplies saving, the report dialog, notices and reset. */
-export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPreview = false, save = () => {}, openReport = () => {}, showNotice = () => {}, onComplete = () => {}, onReset = () => {}, saveStatus = () => '', onSection = () => {}, bindWorkPrivacy = () => {}, environment = null}) {
+export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPreview = false, save = () => {}, openReport = () => {}, showNotice = () => {}, onComplete = () => {}, onReset = () => {}, saveStatus = () => '', onSection = () => {}, bindWorkPrivacy = () => {}, environment = null, onEnvironmentAvailable = () => {}}) {
   const $ = selector => root.querySelector(selector), $$ = selector => [...root.querySelectorAll(selector)];
   const controller = new AbortController(), signal = controller.signal, listen = (node, event, handler, capture = false) => node?.addEventListener(event, handler, {signal, capture});
   bindWorkPrivacy(s);
@@ -206,7 +206,7 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
   const provider = environment || preferredLabEnvironment(undefined, s);
   const mode = route?.mode || 'guided';
   const remoteState = () => (typeof desktop.remoteState === 'function' ? desktop.remoteState() : null);
-  let refreshing = false, experiments = {refresh(){}, dispose(){}}, desktop = {refresh(){}, dispose(){}, hasUnsavedDraft:() => false}, doneSteps = null;
+  let refreshing = false, experiments = {refresh(){}, dispose(){}}, desktop = {refresh(){}, dispose(){}, hasUnsavedDraft:() => false}, doneSteps = null, touched = false;
   const acknowledge = id => {if (!Array.isArray(r.manual)) r.manual = []; if (r.manual.includes(id)) return false; r.manual.push(id); return true;};
   const view = () => {const open = $$('[data-guide-section]').find(node => node.open); return GUIDE_SECTIONS.find(section => section.id === open?.dataset.guideSection) || GUIDE_SECTIONS[0];};
   function logEvent(event) {
@@ -309,12 +309,18 @@ export function mountLabGuide(root, {scenario:s, record:r, route = null, ownerPr
     renderConsole:node => renderWorkspace(node, s, r.state, action),
     renderLog:node => {node.innerHTML = '<p class="lab-log-count">' + r.events.length + ' action' + (r.events.length === 1 ? '' : 's') + ' recorded in this lab · up to 100 are kept</p><ol class="lab-log-list" tabindex="0" aria-label="Saved lab steps">' + eventList(r) + '</ol>';},
     onActivity:activity => {
-      let changed = false;
+      let changed = false; touched = true;
       if (activity?.type === 'remote') {if (activity.ready) logEvent({kind:'info', message:'Real machine: Linux session started on the lab server.'}); if (activity.verified) logEvent({kind:'info', message:'Real machine: asked the server to verify the lab checks.'}); if (activity.complete === true) logEvent({kind:'success', message:'Real machine: every lab check verified on the server.'});}
       if (activity?.type === 'terminal') {changed = acknowledge('used-terminal') || changed; if (activity.tool) changed = acknowledge('used-tool') || changed; if (/^(?:sudo\s+)?(?:python3?|node)\b/.test(String(activity.command || '').trim())) changed = acknowledge('ran-program') || changed; const command = String(activity.command || '').trim(); if (command && !activity.tool) {logEvent({kind:'info', message:'Terminal: ' + command.slice(0, 160)}); changed = true;}}
       if (changed) save();
       refresh();
     }}) : desktop;
+  // The first lab of a visit can render before the real-machine health check has
+  // answered. If the service turns out to be enabled and the learner has not started
+  // working on the simulated desktop, ask the page to render this lab again so it
+  // opens on the real machine.
+  if (!environment && provider?.id === DEFAULT_LAB_ENVIRONMENT && remoteLabFor(s) !== null && remoteServiceState() === 'unknown')
+    probeRemoteService().then(state => {if (state === 'enabled' && !signal.aborted && !touched && !desktop.hasUnsavedDraft?.()) onEnvironmentAvailable();}).catch(() => {});
   const host = $('#experiment-tools'); host.innerHTML = renderExperiments(s, r);
   experiments = mountExperiments(host, {scenario:s, record:r, getState:() => r.state, getResult:() => currentTaskResult(), onSave:() => {save(); refresh();}, onTest:prediction => runHypothesisTest(prediction)});
   const initial = route?.section === 3 ? 'challenge' : route?.section === 2 ? 'applied' : (labGuide(s, labGuideFacts(s, r)).sections[0].complete ? 'demonstration' : 'introduction');
