@@ -36,7 +36,7 @@ test('the course lists five free beginner labs in order',()=>{
 
 test('the course page, a lab page and the entry card render escaped, linked markup',()=>{
   const index=renderLinuxCourse(undefined);
-  for(const lab of LINUX_COURSE){assert.ok(index.includes('href="#linux/'+lab.id+'"'));assert.ok(index.includes(lab.title.replace('&','&amp;')));}
+  for(const lab of LINUX_COURSE){assert.ok(index.includes('href="#linux/'+lab.id+'"'));assert.ok(index.includes(lab.title.replaceAll('&','&amp;')));}
   assert.match(index,/data-linux-availability role="status"/);
   const lab=renderLinuxCourse('LNX-102');
   assert.match(lab,/data-linux-lab="LNX-102"/);assert.match(lab,/<h1>LNX-102 · Make, Copy, Move and Delete<\/h1>/);
