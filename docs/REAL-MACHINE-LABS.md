@@ -124,6 +124,40 @@ Setting it up:
    "Hosting the controller" below); the site switches to it on its own once
    the health check answers `enabled`.
 
+## Desktop machines and the full lab catalog
+
+Real machines now open as a **graphical Linux desktop** in the lab's screen
+area, and every networking, security and coding lab (28 in all) has a
+real-machine version.
+
+- **What the learner sees.** A Lubuntu-style desktop (Ubuntu 20.04, LXDE) with
+  the lab folder open in the file manager and a terminal ready, a text editor
+  for the lab files, and the lab checks beside or folded above the screen.
+  The machine has no internet access and is erased when the learner leaves.
+- **How the screen travels.** Browser to `wss://<site>/terminal/desktop`
+  (the Pages gateway) to the controller to the machine's screen bridge. The
+  browser never learns the machine's address; a one-time ticket admits the
+  socket and a per-session password protects the screen.
+- **Small screens.** The desktop is created at the size of the learner's lab
+  area, so on an 11-inch Chromebook the text is shown at full size instead of
+  being scaled down, and the checks panel folds into a button.
+- **Lab content.** `terminal-sandbox/scripts/generate-labs.mjs` builds each
+  lab's machine from the simulated lab: a case brief, a `settings.conf` with
+  the same options, device readouts that follow the saved settings, and a test
+  for every requirement; coding labs get the Python starter, fixtures and a
+  check script. Commands typed in the desktop terminal count for the checks.
+- **Verified live** (2026-11-10) on real Docker machines through a browser:
+  NET-205 solved to 4 of 4 checks, CODE-502 fixed to 3 of 3, the hand-written
+  NET-201 to 4 of 4, and a run at an 11-inch Chromebook's browser size. Start
+  time was 8 to 24 seconds depending on whether Docker had the image cached.
+- **Cost.** A desktop needs the small size (about $0.14 per learner-hour,
+  twice the terminal's micro size): roughly $135 to $200 a year at the planned
+  class schedule. `SANDBOX_VIEW=terminal` returns to the cheaper shell-only
+  view.
+- **Not included yet.** Windows desktops need a different cloud provider and
+  are planned separately; learning paths, games and the studios are not labs
+  and keep their current form.
+
 ## Hosting the controller (set up)
 
 The site is wired for the real machines already:

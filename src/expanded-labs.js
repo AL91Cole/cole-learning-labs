@@ -29,6 +29,10 @@ const CONFIG = {
 };
 
 export const supportsExpandedLab = id => Object.hasOwn(CONFIG,code(id));
+/** Read-only description of a lab's device, settings and options, for tools that mirror the lab elsewhere (the real-machine lab generator). */
+export const expandedLabSpec = id => {const config=CONFIG[code(id)];return config?{device:config.device,concept:config.concept,commands:[...(config.commands??[])],fields:config.fields.map(item=>({name:item.name,label:item.label,initial:item.initial,options:item.options.map(([value,label])=>({value,label}))}))}:null;};
+/** The lab's requirement rows for a given state: [{label, ok}]. */
+export const expandedChecks = (id,state) => supportsExpandedLab(id)?checks(id,normalizeExpandedState(id,state)).map(row=>({label:row.label,ok:Boolean(row.ok)})):[];
 export const expandedStateFields = id => Object.fromEntries((CONFIG[code(id)]?.fields ?? []).map(item=>[item.name,item.options.map(([value])=>value)]));
 export function initialExpandedState(id) {
   const config=CONFIG[code(id)];

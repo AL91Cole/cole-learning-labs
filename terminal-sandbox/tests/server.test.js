@@ -684,11 +684,14 @@ test("only allowlisted static assets are served under restrictive no-store heade
     "xterm needs its runtime CSS elements without permitting inline scripts",
   );
   assert.equal(response.headers.get("cache-control"), "no-store");
-  assert.equal((await response.json()).labs.length, 4);
+  assert.equal((await response.json()).labs.length, 29, "four hand-written labs and 25 generated ones");
+  assert.equal((await fetch(base + "/vendor/novnc/core/../../../server.js")).status, 404);
+  assert.equal((await fetch(base + "/vendor/novnc/package.json")).status, 404, "only the screen client's modules are served");
   for (const [target, type] of [
     ["/vendor/xterm/xterm.js", "javascript"],
     ["/vendor/xterm/addon-fit.js", "javascript"],
     ["/vendor/xterm/xterm.css", "css"],
+    ["/vendor/novnc/core/rfb.js", "javascript"],
   ]) {
     const asset = await fetch(base + target);
     assert.equal(asset.status, 200, target);

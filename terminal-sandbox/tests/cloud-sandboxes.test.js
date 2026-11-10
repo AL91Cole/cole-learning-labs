@@ -36,6 +36,7 @@ const ENV = {
   DOCKER_PAT: "dckr_pat_test",
   SANDBOX_IMAGE_REF: "docker.io/al91cole/cll-sandbox:cloud",
   SANDBOX_SIZE: "small",
+  SANDBOX_VIEW: "terminal",
 };
 
 /** A fake of Docker's management API plus one sandbox endpoint. */

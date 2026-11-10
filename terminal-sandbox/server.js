@@ -6,13 +6,17 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { WebSocketServer } from "ws";
+import { readdirSync, statSync } from "node:fs";
+import { WebSocketServer, WebSocket as UpstreamWebSocket } from "ws";
 import {
   cloudConfiguration,
   cloudConfigurationProblems,
   spawnCloudSandbox,
+  buildSeedScript,
+  seedFromLabFiles,
   CLOUD_SIZES,
 } from "./cloud-sandboxes.js";
+import { generatedLabs } from "./generated-labs.js";
 
 const execFileAsync = promisify(execFile),
   ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -440,6 +444,16 @@ export function validateLabDefinition(lab) {
       if (item.checkType === "file_contains_all" && (!Array.isArray(item.expectedSubstrings) || !item.expectedSubstrings.length || !item.expectedSubstrings.every((value) => typeof value === "string" && value))) return lab.id + "/" + item.id + ": expectedSubstrings are required";
     }
   }
+  if (lab.files !== undefined) {
+    if (!Array.isArray(lab.files) || lab.files.length > 40) return lab.id + ": files must be a list of at most 40 entries";
+    let total = 0;
+    for (const file of lab.files) {
+      if (!file || typeof file.path !== "string" || !/^[A-Za-z0-9._][A-Za-z0-9._-]*(?:\/[A-Za-z0-9._][A-Za-z0-9._-]*)*$/.test(file.path) || file.path.split("/").some((part) => part === "." || part === "..")) return lab.id + ": every file needs a safe relative path";
+      if (typeof file.content !== "string" || ![undefined, "base64"].includes(file.encoding) || ![undefined, 0o644, 0o755].includes(file.mode)) return lab.id + "/" + file.path + ": invalid file entry";
+      total += file.content.length;
+    }
+    if (total > 96 * 1024) return lab.id + ": files must total under 96 KiB";
+  }
   return null;
 }
 /** Register lab definitions (an array, or an object keyed by id). Invalid content is refused as a whole. */
@@ -450,10 +464,13 @@ export function registerLabs(content) {
     const problem = validateLabDefinition(lab);
     if (problem) throw new Error("Lab content refused: " + problem);
   }
-  for (const lab of list) LAB_CATALOG.set(lab.id, Object.freeze({ ...lab, milestones: lab.milestones.map((m) => Object.freeze({ ...m })) }));
+  for (const lab of list) LAB_CATALOG.set(lab.id, Object.freeze({ ...lab, milestones: lab.milestones.map((m) => Object.freeze({ ...m })), ...(lab.files ? { files: Object.freeze(lab.files.map((file) => Object.freeze({ ...file }))) } : {}) }));
   return list.map((lab) => lab.id);
 }
 export const labCatalog = () => [...LAB_CATALOG.values()];
+// The real-machine version of every other networking, security and coding lab,
+// generated from the site's lab models (scripts/generate-labs.mjs).
+registerLabs(generatedLabs());
 /** Load a private content module (absolute path or file: URL) that exports `labs`. */
 export async function loadLabContent(specifier) {
   if (typeof specifier !== "string" || !specifier.trim()) return [];
@@ -566,6 +583,10 @@ export async function spawnSandboxContainer(session, cfg = CONFIG, deps = {}) {
     );
     if (!/^[a-f0-9]{12,64}$/.test(result.stdout.trim()))
       throw failure("container_start_failed");
+    // A lab that ships its own files replaces the shared tree the image seeded.
+    const ownFiles = labFor(session.labId)?.files;
+    if (ownFiles?.length)
+      await docker(["exec", "--user", "1000:1000", name, "/bin/sh", "-c", buildSeedScript(seedFromLabFiles(ownFiles), { fresh: true })], 15000);
     processPty = pty.spawn(
       "docker",
       [
@@ -633,12 +654,18 @@ export async function verifySessionMilestones(session) {
   const lab = labFor(session.labId);
   if (!lab || !session.sandbox) return [];
   const results = [];
+  // On a desktop the learner types in the machine's own terminal, so the
+  // commands come from the short history file the machine keeps for the checks.
+  let history = session.commandHistory || [];
+  if (typeof session.sandbox.history === "function" && lab.milestones.some((item) => item.checkType === "history_regex")) {
+    try {
+      history = [...history, ...(await session.sandbox.history())];
+    } catch {}
+  }
   for (const item of lab.milestones) {
     let completed = false;
     if (item.checkType === "history_regex")
-      completed = session.commandHistory.some((line) =>
-        item.pattern.test(line),
-      );
+      completed = history.some((line) => item.pattern.test(line));
     else {
       let content = null;
       try {
@@ -744,6 +771,27 @@ const FILES = new Map([
   ],
 ]);
 
+// The browser's screen client (noVNC, MPL-2.0) is served from the installed
+// package as ES modules, same-origin, so the site's script policy is unchanged.
+(function addScreenClient(dir = "node_modules/@novnc/novnc", prefix = "/vendor/novnc") {
+  const walk = (relative) => {
+    let entries = [];
+    try {
+      entries = readdirSync(path.join(ROOT, dir, relative), { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const rel = relative ? relative + "/" + entry.name : entry.name;
+      if (!/^[A-Za-z0-9._-]+$/.test(entry.name)) continue;
+      if (entry.isDirectory()) walk(rel);
+      else if (entry.isFile() && entry.name.endsWith(".js") && statSync(path.join(ROOT, dir, rel)).size < 2_000_000) FILES.set(prefix + "/" + rel, [dir + "/" + rel, "text/javascript; charset=utf-8"]);
+    }
+  };
+  walk("core");
+  walk("vendor");
+})();
+
 /** The files a lab check may read inside a learner's machine; nothing else is readable. */
 export const allowedLabFiles = () =>
   labCatalog().flatMap((lab) =>
@@ -753,9 +801,10 @@ export const allowedLabFiles = () =>
 /** Human-readable runtime name and limits for the selected backend. */
 export function runtimeDescription(cfg = CONFIG) {
   if (cfg.sandboxBackend === "cloud") {
-    const size = CLOUD_SIZES[cfg.cloud?.size] || CLOUD_SIZES.micro;
+    const desktop = cfg.cloud?.view === "desktop";
+    const size = CLOUD_SIZES[desktop ? cfg.cloud?.desktopSize : cfg.cloud?.size] || (desktop ? CLOUD_SIZES.small : CLOUD_SIZES.micro);
     return {
-      runtime: "docker-cloud-sandbox",
+      runtime: desktop ? "docker-cloud-desktop" : "docker-cloud-sandbox",
       limits: { memory: size.memoryMib + "m", cpus: String(size.cpus) },
     };
   }
@@ -776,7 +825,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       deps.sandboxFactory ||
       (cfg.sandboxBackend === "cloud"
         ? (session, c) =>
-            spawnCloudSandbox(session, c, { allowedFiles: allowedLabFiles() })
+            spawnCloudSandbox(session, c, { allowedFiles: allowedLabFiles(), labFiles: labFor(session.labId)?.files })
         : spawnSandboxContainer),
     now = deps.now || Date.now,
     logFailure = deps.log || ((...parts) => console.error(...parts));
@@ -790,6 +839,60 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     maxBufferedChunks: 128,
     closeTimeout: 1000,
   });
+  // The desktop view has a second socket per learner: the screen. It is a plain
+  // relay between the browser's screen client and the machine's screen bridge,
+  // admitted by a one-time ticket from session:ready carried in the subprotocol.
+  const desktopServer = new WebSocketServer({
+    noServer: true,
+    maxPayload: 1 << 20,
+    perMessageDeflate: false,
+    handleProtocols: (protocols) => (protocols.has("cll-desktop") ? "cll-desktop" : false),
+  });
+  const desktopLinks = new Set();
+  const openScreen =
+    deps.desktopSocketFactory ||
+    ((address) => new UpstreamWebSocket(address, ["binary"], { perMessageDeflate: false, maxPayload: 16 << 20, followRedirects: false, handshakeTimeout: 10000 }));
+  function relayDesktop(client, s) {
+    s.desktopLink?.close();
+    let upstream, closed = false, windowAt = now(), windowBytes = 0;
+    const pending = [];
+    const link = {
+      close() {
+        if (closed) return;
+        closed = true;
+        desktopLinks.delete(link);
+        if (s.desktopLink === link) s.desktopLink = null;
+        try { client.terminate(); } catch {}
+        try { upstream?.terminate(); } catch {}
+      },
+    };
+    s.desktopLink = link;
+    desktopLinks.add(link);
+    try {
+      upstream = openScreen(s.sandbox.desktop.url);
+    } catch {
+      return link.close();
+    }
+    upstream.on("open", () => { for (const data of pending.splice(0)) upstream.send(data); });
+    upstream.on("message", (data) => {
+      if (closed || client.readyState !== 1) return;
+      if (client.bufferedAmount > 8 << 20) return link.close(); // the browser is not keeping up
+      client.send(data, { binary: true });
+    });
+    upstream.on("close", () => link.close());
+    upstream.on("error", () => link.close());
+    client.on("message", (data) => {
+      if (closed || s.destroyed) return link.close();
+      if (now() - windowAt >= 1000) { windowAt = now(); windowBytes = 0; }
+      windowBytes += data.length;
+      if (windowBytes > 512 * 1024) return link.close(); // far beyond any keyboard and mouse traffic
+      s.lastActivity = now();
+      if (upstream.readyState === 1) upstream.send(data);
+      else if (pending.length < 64) pending.push(data);
+    });
+    client.on("close", () => link.close());
+    client.on("error", () => link.close());
+  }
   const server = http.createServer(async (req, res) => {
     let url;
     try {
@@ -883,6 +986,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     sessions.delete(s.id);
     revoke(s);
     leaveRoom(s);
+    s.desktopLink?.close();
     try {
       await s.sandbox?.destroy();
     } catch {
@@ -984,6 +1088,13 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       created: now(),
       destroyed: false,
       sandbox: null,
+      desktopTicket: crypto.randomBytes(16).toString("hex"),
+      // The size of the learner's lab area, used to create a desktop that fits it.
+      screen:
+        msg.screen && Number.isInteger(msg.screen.width) && Number.isInteger(msg.screen.height) && msg.screen.width >= 320 && msg.screen.width <= 4096 && msg.screen.height >= 200 && msg.screen.height <= 4096
+          ? { width: msg.screen.width, height: msg.screen.height }
+          : null,
+      desktopLink: null,
       outputAt: now(),
       outputBytes: 0,
       verifyAt: 0,
@@ -1036,6 +1147,11 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         },
         lab: publicLab(lab),
         milestones: s.milestones,
+        // Desktop view: how the browser opens this machine's screen. The ticket
+        // admits the screen socket; the password is this session's own.
+        ...(s.sandbox.desktop
+          ? { desktop: { ticket: s.desktopTicket, password: s.sandbox.desktop.password, width: s.sandbox.desktop.width, height: s.sandbox.desktop.height } }
+          : {}),
       });
     } catch (error) {
       // The learner sees only a generic message; the operator needs the reason.
@@ -1268,11 +1384,11 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     } catch {
       return reject(400);
     }
-    if (url.pathname !== "/ws" || url.search) return reject(400);
+    if ((url.pathname !== "/ws" && url.pathname !== "/desktop") || url.search) return reject(400);
     if (!cfg.enabled || stopping) return reject(503);
     const validation = validateCloudflareUpgrade(req, cfg);
     if (!validation.ok) return reject(validation.status);
-    if (connections.size >= cfg.maxConnections) return reject(503);
+    if (url.pathname === "/ws" && connections.size >= cfg.maxConnections) return reject(503);
     const address = req.socket.remoteAddress || "";
     const previous = upgradeRates.get(address);
     if (!previous || now() - previous.at >= 60000) {
@@ -1280,6 +1396,14 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       upgradeRates.set(address, { at: now(), count: 1 });
     } else if (++previous.count > cfg.maxUpgradesPerPeerMinute)
       return reject(429);
+    if (url.pathname === "/desktop") {
+      const offered = String(req.headers["sec-websocket-protocol"] || "").split(",").map((item) => item.trim());
+      const ticket = offered.find((item) => /^ticket\.[a-f0-9]{32}$/.test(item))?.slice(7);
+      const s = ticket && offered.includes("cll-desktop") ? [...sessions.values()].find((item) => !item.destroyed && item.sandbox?.desktop && crypto.timingSafeEqual(Buffer.from(item.desktopTicket), Buffer.from(ticket))) : null;
+      if (!s) return reject(403);
+      if (desktopLinks.size >= cfg.maxSessions + 8) return reject(503);
+      return desktopServer.handleUpgrade(req, socket, head, (ws) => relayDesktop(ws, s));
+    }
     wsServer.handleUpgrade(req, socket, head, (ws) => {
       const c = {
         id: crypto.randomUUID(),
@@ -1431,6 +1555,8 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       await Promise.all(
         [...sessions.values()].map((s) => destroySession(s, "server_shutdown")),
       );
+      for (const link of [...desktopLinks]) link.close();
+      desktopServer.close();
       wsServer.close();
       server.closeAllConnections();
       await new Promise((resolve) => server.close(() => resolve()));
