@@ -192,7 +192,7 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   // An access-mode change gets a new entry URL even when no source imports changed.
   content.set('index.html',Buffer.from(content.get('index.html').toString('utf8').replace(/(src\/app\.js\?release=[A-Za-z0-9_-]+)/u,'$1-'+publicLabAccess)));
   const routes = JSON.parse(content.get('_routes.json').toString('utf8'));
-  if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester', '/api/reach', '/api/telemetry', '/api/verify'], exclude: [] })) throw new Error('Only the reviewed requester, gated reach, and optional receipt endpoints may invoke API Functions; classroom collection routes must stay excluded.');
+  if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester', '/api/reach', '/api/telemetry', '/api/verify', '/terminal/*'], exclude: [] })) throw new Error('Only the reviewed requester, gated reach, optional receipt endpoints, and terminal gateway may invoke Functions; classroom collection routes must stay excluded.');
   // The main application is split by learning route: the entry module serves the
   // home page and catalog, and each route group downloads when first opened.
   const tier = await bundleTier({sourceRoot:root,member:openLabs,localOnly:openLabs,publicLabsOpen:openLabs,split:true});
