@@ -16,7 +16,7 @@ const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 // Their only script is src/site-menu.js, which lets Escape close a header menu.
 // They are published on the public site only and never join the member or owner bundles.
 export const PUBLIC_LANDING_PAGES = Object.freeze([
-  'teach.html', 'everyday-tech.html', 'district-review.html',
+  'teach.html', 'everyday-tech.html', 'district-review.html', 'support.html',
   'lessons/blank-monitor.html', 'lessons/inbox-defender.html', 'lessons/packet-post.html',
   'lessons/k-6.html', 'lessons/troubleshooting-pilot.html', 'lessons/design-a-ticket.html'
 ]);
@@ -29,6 +29,8 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
   'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
+  // The support page's QR code (buymeacoffee.com/colelearninglabs).
+  'assets/buymeacoffee-qr.webp',
   'src/assembly-model.js', 'src/assembly-tools.js', 'src/assembly-cables.js', 'src/assembly-workbench.js', 'src/assembly-builder.js', 'src/workbench-guidance.js', 'src/pc-activity.js', 'src/assembly.css',
   'src/foundation-model.js', 'src/foundation-labs.js', 'src/foundation-scene.js', 'src/foundations.css',
   'src/elementary-labs.js', 'src/elementary-labs.css',
@@ -60,12 +62,12 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
 const PUBLIC_RECEIPT_TOOLS = new Set(['compliance.html','verify.html','src/receipt-verifier.js','src/receipt-verifier.css']);
 // The installable-app shell and offline cache belong to the public root site only.
 export const PUBLIC_SHELL_FILES = Object.freeze(['manifest.webmanifest','sw.js','assets/icon-192.png','assets/icon-512.png','assets/icon-maskable-512.png','assets/apple-touch-icon.png']);
-export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)&&!PUBLIC_LANDING_PAGES.includes(filename)&&filename!=='src/landing.css'));
+export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)&&!PUBLIC_LANDING_PAGES.includes(filename)&&filename!=='src/landing.css'&&filename!=='assets/buymeacoffee-qr.webp'));
 const PREVIEW_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', ...PUBLIC_LANDING_PAGES,
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   ...PUBLIC_METADATA_FILES, ...PUBLIC_SHELL_FILES,
-  'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png', ...Object.values(PART_ART),
+  'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png', 'assets/buymeacoffee-qr.webp', ...Object.values(PART_ART),
   'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js', 'src/site-menu.js',
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);

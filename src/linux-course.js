@@ -35,8 +35,9 @@ export function mountLinuxCourse(root,{id,showNotice=()=>{},onComplete=()=>{},pr
     Promise.resolve(probe()).then(state=>{const note=$('[data-linux-availability]');if(disposed||!note)return;const ready=state==='enabled'&&LINUX_COURSE.some(item=>hosts(item.id));note.textContent=ready?'Practice computers are ready. Pick a lab to start.':'The practice computers are not available right now. You can look through the labs and come back later.';note.dataset.state=ready?'ready':'unavailable';}).catch(()=>{});
     return ()=>{disposed=true;};
   }
-  const controller=new AbortController(),strip=$('[data-linux-step]'),stage=$('[data-linux-stage]'),progress=$('[data-linux-progress]'),next=nextLinuxLab(lab.id);
-  let steps=[],shown=0,follow=true,reported=false,phase='idle',drawn=null;
+  const controller=new AbortController(),strip=$('[data-linux-step]'),stage=$('[data-linux-stage]'),progress=$('[data-linux-progress]'),nextLab=$('.linux-next');
+  // Each new machine starts at its first unfinished step; after that only ‹ and › change the step shown.
+  let steps=[],shown=-1,reported=false,phase='idle',drawn=null;
   // Refreshed every 2 s: replace the strip only when it changed, keeping hint and focus.
   const setStrip=html=>{
     if(html===drawn)return;
@@ -45,31 +46,33 @@ export function mountLinuxCourse(root,{id,showNotice=()=>{},onComplete=()=>{},pr
     if(t)(strip.querySelector('['+t+']:not([disabled])')||strip.querySelector('.linux-step-nav button:not([disabled])'))?.focus?.({preventScroll:true});
   };
   const drawStrip=()=>{
-    if(!steps.length){
+    if(shown<0){
       setStrip('<p><b>'+esc(lab.summary)+'</b> '+(phase==='ready'?'Getting the steps…':['connecting','authenticating','starting'].includes(phase)?'Your Linux computer is starting. This takes about half a minute.':'Press <b>Start machine</b> below to open your Linux computer.')+'</p>');
       progress.textContent='';return;
     }
-    const finished=steps.filter(step=>step.completed).length,all=finished===steps.length,step=steps[shown];
-    progress.textContent=finished+' of '+steps.length+' steps done';
-    setStrip((all&&follow?'<p class="linux-done"><b>Lab complete.</b> You finished every step of '+esc(lab.id)+'. '+(next?'<a href="#linux/'+esc(next.id)+'">Go to '+esc(next.id)+' · '+esc(next.title)+' →</a>':'You finished Linux basics. <a href="#labs">Choose another lab →</a>')+' Press Stop when you are done with this computer.</p>'
-      :'<p><span class="linux-step-number'+(step.completed?' is-done':'')+'">'+(step.completed?'✓ ':'')+'Step '+(shown+1)+' of '+steps.length+'</span> <b>'+esc(step.title)+'.</b> '+linuxStepText(step.description)+'</p>'+(step.hint?'<details class="linux-hint"><summary>Hint</summary><p>'+linuxStepText(step.hint)+'</p></details>':''))
-      +'<span class="linux-step-nav"><button type="button" class="lab-tool" data-linux-prev aria-label="Previous step"'+(shown<=0?' disabled':'')+'>‹</button><button type="button" class="lab-tool" data-linux-next aria-label="Next step"'+(shown>=steps.length-1?' disabled':'')+'>›</button></span>');
+    const finished=steps.filter(step=>step.completed).length,all=finished===steps.length,step=steps[shown],done=step.completed,more=done&&shown<steps.length-1;
+    progress.textContent=(all?'✓ Lab complete · ':'')+finished+' of '+steps.length+' steps done';
+    for(const node of [progress,nextLab])if(node)node.dataset.state=all?'done':'';
+    // A step shows its green check only when the machine reports every part of it done.
+    // The check takes the place of an open circle and "done" is for screen readers, so the strip keeps its width and never pushes the screen down.
+    setStrip('<p><span class="linux-step-number'+(done?' is-done':'')+'"><span class="linux-step-check" aria-hidden="true">'+(done?'✓':'○')+'</span>Step '+(shown+1)+' of '+steps.length+(done?'<span class="sr-only"> done</span>':'')+'</span> <b>'+esc(step.title)+'.</b> '+linuxStepText(step.description)+'</p>'+(step.hint?'<details class="linux-hint"><summary>Hint</summary><p>'+linuxStepText(step.hint)+'</p></details>':'')
+      +'<span class="linux-step-nav"><button type="button" class="lab-tool" data-linux-prev aria-label="Previous step"'+(shown<=0?' disabled':'')+'>‹</button><button type="button" class="lab-tool'+(more?' is-ready':'')+'" data-linux-next aria-label="Next step"'+(shown>=steps.length-1?' disabled':'')+'>›</button></span>');
   };
   const update=()=>{
     const state=handle?.remoteState?.();if(!state)return;
     phase=state.phase;
     const hintOpen=Boolean(strip.querySelector('details[open]')),before=steps[shown]?.id;
     steps=Array.isArray(state.milestones)?state.milestones:[];
-    // Follow the learner's progress unless they stepped back to re-read an earlier step.
-    if(follow||steps[shown]?.completed||shown>=steps.length){shown=currentLinuxStep(steps);follow=true;}
+    if(['connecting','authenticating','starting'].includes(phase))shown=-1;
+    else if(shown<0&&steps.length&&phase==='ready')shown=currentLinuxStep(steps);
+    shown=Math.min(shown,steps.length-1);
     drawStrip();
     if(hintOpen&&steps[shown]?.id===before)strip.querySelector('details')?.setAttribute('open','');
     if(state.complete&&!reported){reported=true;onComplete(lab.id);}
   };
   strip.addEventListener('click',event=>{
-    const button=event.target.closest?.('[data-linux-prev],[data-linux-next]');if(!button||!steps.length)return;
-    shown=Math.min(steps.length-1,Math.max(0,shown+(button.hasAttribute('data-linux-next')?1:-1)));follow=shown===currentLinuxStep(steps)&&!steps.every(step=>step.completed);drawStrip();
-    strip.querySelector(button.hasAttribute('data-linux-next')?'[data-linux-next]:not([disabled])':'[data-linux-prev]:not([disabled])')?.focus?.({preventScroll:true});
+    const button=event.target.closest?.('[data-linux-prev],[data-linux-next]');if(!button||shown<0)return;
+    shown=Math.min(steps.length-1,Math.max(0,shown+(button.hasAttribute('data-linux-next')?1:-1)));drawStrip();
   },{signal:controller.signal});
   const unavailable=()=>{
     strip.innerHTML='<p><b>The practice computers are not available right now.</b> This lab needs a real Linux computer from the lab server. Try again in a few minutes, or ask your teacher.</p>';

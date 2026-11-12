@@ -47,7 +47,11 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // capstone reasons, pair roles and debrief add about 19 KB of source. Teacher, family
   // and district content lives in plain pages outside this graph; compiled caps
   // stay unchanged.
-  assert.ok(bytes<1_850_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // The Linux step banner's completion state, desktop sizing for short high-density
+  // screens, the machine's reach in its status line, the online-labs privacy
+  // paragraph and the optional support link add about 4 KB of source; the
+  // compiled caps stay unchanged.
+  assert.ok(bytes<1_854_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{

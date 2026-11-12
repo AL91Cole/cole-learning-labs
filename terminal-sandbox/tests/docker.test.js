@@ -73,6 +73,9 @@ test(
         null,
         "Only authored milestone files can be read by the controller.",
       );
+      // The shell keeps its own history, which the checks read as typed (Tab completions included).
+      const history = await sandbox.history();
+      assert.ok(history.some((line) => line.includes("COMPLETED_%s")), "the shell's history file records the commands");
     } finally {
       await sandbox.destroy();
     }

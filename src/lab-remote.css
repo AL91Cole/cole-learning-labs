@@ -63,13 +63,17 @@ body:has(.linux-lab) .access-panel{left:auto;right:0;bottom:auto;top:52px}
 .linux-step p{margin:0;flex:1;min-width:0}
 .linux-step code,.linux-unavailable code,.linux-skills code{font-family:"Ubuntu Mono","DejaVu Sans Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.95em;background:#dfe9e6;color:#0c2f3a;border-radius:4px;padding:1px 6px;white-space:nowrap}
 .linux-step-number{display:inline-block;margin-right:4px;padding:1px 8px;border-radius:999px;background:#153847;color:#fff;font-size:.76rem;font-weight:700;white-space:nowrap}
-.linux-step-number.is-done{background:#1d8a6a}
+.linux-step-number.is-done{background:#157a5c}
+.linux-step-check{display:inline-block;width:1.1em;margin-right:3px;text-align:center}
 .linux-hint{flex:none;max-width:38%;font-size:.86rem}
 .linux-hint summary{cursor:pointer;font-weight:700;color:#1b5f8a;white-space:nowrap}
 .linux-hint p{margin:4px 0 0}
 .linux-step-nav{display:flex;gap:4px;flex:none}
 .linux-step-nav .lab-tool{min-width:34px;min-height:32px;border-radius:6px;border:1px solid #9db3ad;background:#fff;color:#102a36;font-size:1.05rem;font-weight:700;cursor:pointer}
 .linux-step-nav .lab-tool:disabled{opacity:.4;cursor:default}
+.linux-step-nav .lab-tool.is-ready{background:#157a5c;border-color:#157a5c;color:#fff}
+.linux-progress[data-state="done"]{color:#8ff0c8;font-weight:700}
+.linux-bar .linux-next[data-state="done"]{padding:4px 12px;border-radius:999px;background:#157a5c;color:#fff}
 .linux-done a{font-weight:700;color:#0f5c4a}
 .linux-stage{flex:1;min-height:0;display:flex}
 .linux-stage>.lab-remote{flex:1}
@@ -82,6 +86,17 @@ body:has(.linux-lab) .access-panel{left:auto;right:0;bottom:auto;top:52px}
 .linux-availability[data-state="unavailable"]{color:#8a4b00;font-weight:700}
 @media (max-width:700px){.linux-step{flex-wrap:wrap}.linux-hint{max-width:100%}}
 @media (max-height:800px){.linux-bar h1{font-size:.95rem}.linux-step{padding:5px 12px;font-size:.9rem;line-height:1.4}}
+/* The lab page already names the machine, so its bar keeps to one row; with a mouse the
+   step strip and bar are compact (touch screens keep the larger sizes), giving the screen the height. */
+.linux-stage .remote-title{display:none}
+@container (min-width:861px){.linux-stage .remote-chrome{flex-wrap:nowrap}.linux-stage .remote-status{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+@media (pointer:fine){
+  .linux-step{align-items:center;padding-block:3px}
+  .linux-step .linux-hint summary,.linux-step-nav .lab-tool{min-height:32px}
+  .linux-step-nav .lab-tool{padding-block:2px}
+  .linux-stage .remote-chrome{padding-block:3px}
+  .linux-stage .remote-chrome .lab-tool{min-height:30px;padding-block:2px}
+}
 /* Desktop machine controls: text terminal, clipboard, keys and full screen. */
 .remote-desktop-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .remote-desktop-tools[hidden]{display:none}

@@ -1,13 +1,19 @@
 # Learner desktop machine: Ubuntu 24.04 LTS with an XFCE desktop (the desktop of Xubuntu and
 # Linux Mint XFCE), the everyday
-# command-line tools of an ordinary Linux computer (manual pages included), and
-# a VNC screen the controller relays to the learner's browser.
+# command-line tools of an ordinary Linux computer (manual pages included), a
+# web browser (Firefox ESR), and a VNC screen the controller relays to the
+# learner's browser.
 #
 # It is a drop-in replacement for the earlier desktop image and keeps its start
 # contract, so the controller needs no other change than DESKTOP_IMAGE_REF:
 #   /startup.sh reads USER, PASSWORD, VNC_PASSWORD and RESOLUTION, creates the
 #   learner account (never an administrator), and serves the screen as raw VNC
 #   on 127.0.0.1:5900 and as a WebSocket on port 6081.
+# It also reads three optional settings for the web browser (see startup.sh):
+#   LAB_NETWORK (offline, sites or filtered) and LAB_SITES (host names) decide
+#   what the browser's start page tells the learner about the network, and
+#   DNS_SERVERS (IPv4 addresses) replaces the name servers, for example with a
+#   family-safe filter. Without them the start page says the lab is offline.
 #
 # Build (CI publishes it, see .github/workflows/desktop-image.yml):
 #   docker build -t cole-learning-labs/desktop:noble terminal-sandbox/desktop
@@ -60,11 +66,45 @@ RUN --mount=type=secret,id=apt_ca,required=false,mode=0444 \
     apt-get clean; rm -rf /var/lib/apt/lists/* /var/cache/apt/*.bin /var/log/apt /var/log/dpkg.log; \
     mkdir -p /etc/vnc
 
+# The web browser: Firefox ESR, the release managed school computers use, as a
+# normal package from Mozilla's own repository (Ubuntu's "firefox" package only
+# installs the snap, and snaps do not run in containers). The repository key is
+# part of this source tree and must be Mozilla's published key before apt uses
+# it; the pin makes Mozilla's packages win over Ubuntu's. The school settings
+# are enterprise policies in /etc/firefox/policies/policies.json: no telemetry,
+# studies, sign-in, first-run or what's-new pages; the lab start page; safe
+# search; no add-ons; and nothing that could get around the machine's name
+# servers (DNS over HTTPS, Firefox's built-in VPN and the proxy setting are
+# locked off). Its locked preferences keep Firefox small and stable in a
+# container without a graphics card: software rendering and few processes
+# (web pages share them instead of one process per site, see
+# /usr/lib/firefox-esr/defaults/pref/cll-lab.js, which policies cannot set).
+COPY rootfs/etc/apt/ /etc/apt/
+RUN --mount=type=secret,id=apt_ca,required=false,mode=0444 \
+    set -eux; \
+    gnupghome=$(mktemp -d); \
+    fingerprint=$(GNUPGHOME="$gnupghome" gpg --batch --show-keys --with-colons /etc/apt/keyrings/packages.mozilla.org.asc \
+      | awk -F: '$1 == "pub" { pub = 1; next } pub && $1 == "fpr" { print $10; pub = 0 }'); \
+    rm -rf "$gnupghome"; \
+    if [ "$fingerprint" != 35BAA0B33E9EB396F59CA838C0BA5CE6DC6315A3 ]; then echo "Unexpected Mozilla repository key: '$fingerprint'" >&2; exit 1; fi; \
+    if [ -n "$APT_PROXY" ]; then \
+      printf 'Acquire::https::Proxy "%s";\nAcquire::http::Proxy "%s";\n' "$APT_PROXY" "$APT_PROXY" > /etc/apt/apt.conf.d/00build-proxy; \
+      if [ -f /run/secrets/apt_ca ]; then printf 'Acquire::https::CaInfo "/run/secrets/apt_ca";\n' >> /etc/apt/apt.conf.d/00build-proxy; fi; \
+      sed -i 's#http://#https://#g' /etc/apt/sources.list.d/ubuntu.sources; \
+    fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends firefox-esr; \
+    rm -f /etc/apt/apt.conf.d/00build-proxy; \
+    sed -i 's#https://#http://#g' /etc/apt/sources.list.d/ubuntu.sources; \
+    apt-get clean; rm -rf /var/lib/apt/lists/* /var/cache/apt/*.bin /var/log/apt /var/log/dpkg.log
+
 # Desktop settings, the start scripts and the learner's default files. Copied
 # after the packages so they replace the packages' defaults.
 COPY rootfs/ /
 RUN set -eux; \
-    chmod 755 /startup.sh /usr/local/bin/cll-session /usr/local/bin/cll-vnc-relay /usr/local/bin/cll-open-lab; \
+    chmod 755 /startup.sh /usr/local/bin/cll-session /usr/local/bin/cll-vnc-relay /usr/local/bin/cll-open-lab /usr/local/bin/cll-terminal-size /usr/local/bin/cll-keep-windows; \
+    python3 -m json.tool /etc/firefox/policies/policies.json >/dev/null; \
+    test -x /usr/lib/firefox-esr/firefox-bin; test -f /usr/lib/firefox-esr/defaults/pref/cll-lab.js; \
     sh /usr/local/share/cll/configure-desktop.sh; rm -rf /usr/local/share/cll/configure-desktop.sh
 
 # Desktop image contract with the controller: 6081 is the screen WebSocket.

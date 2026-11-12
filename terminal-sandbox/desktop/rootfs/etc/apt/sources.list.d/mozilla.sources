@@ -1,0 +1,8 @@
+# Mozilla's own package repository, for Firefox ESR as a normal .deb (Ubuntu's
+# "firefox" package only installs the snap, and snaps do not run in containers).
+# The key's fingerprint is checked when the image is built (see the Dockerfile).
+Types: deb
+URIs: https://packages.mozilla.org/apt
+Suites: mozilla
+Components: main
+Signed-By: /etc/apt/keyrings/packages.mozilla.org.asc

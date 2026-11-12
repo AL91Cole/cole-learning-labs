@@ -326,6 +326,8 @@ test("a learner session creates a sandbox, attaches a PTY, relays input and outp
 
   assert.equal(await sandbox.readFile("/home/learner/lab/code/results.txt"), "ALL_FIXTURES_PASS\n");
   assert.equal(await sandbox.readFile("/etc/passwd"), null, "only files named by lab checks are readable");
+  docker.files.set("/home/learner/.sh_history", "ls\ncd school/lab/storage/\n\n");
+  assert.deepEqual(await sandbox.history(), ["ls", "cd school/lab/storage/"], "the terminal shell's own history, as run (Tab completions included)");
   docker.files.set("/home/learner/lab/code/results.txt", "x".repeat(20000));
   assert.equal(await sandbox.readFile("/home/learner/lab/code/results.txt"), null, "oversized files are refused");
 

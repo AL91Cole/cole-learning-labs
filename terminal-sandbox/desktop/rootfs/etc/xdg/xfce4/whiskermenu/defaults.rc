@@ -1,4 +1,4 @@
-favorites=xfce4-terminal-emulator.desktop,xfce4-file-manager.desktop,org.xfce.mousepad.desktop,xfce4-taskmanager.desktop,galculator.desktop
+favorites=xfce4-terminal-emulator.desktop,xfce4-file-manager.desktop,firefox-esr.desktop,org.xfce.mousepad.desktop,xfce4-taskmanager.desktop,galculator.desktop
 button-title=Menu
 show-button-title=true
 show-button-icon=true

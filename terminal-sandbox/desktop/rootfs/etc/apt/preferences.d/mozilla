@@ -1,0 +1,5 @@
+# Packages from Mozilla's repository always win over Ubuntu's, so the snap
+# placeholder package for Firefox is never chosen.
+Package: *
+Pin: origin packages.mozilla.org
+Pin-Priority: 1000

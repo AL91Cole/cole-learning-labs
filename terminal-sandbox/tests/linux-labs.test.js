@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, chmodSync 
 import os from "node:os";
 import path from "node:path";
 import { linuxLabs } from "../linux-labs.js";
-import { labFor, validateLabDefinition, allowedLabFiles } from "../server.js";
+import { labFor, validateLabDefinition, allowedLabFiles, verifySessionMilestones, typedInOrder, historyCommands } from "../server.js";
 import { buildSeedScript, seedFromLabFiles, PROGRESS_CHECK, PROGRESS_FILE } from "../cloud-sandboxes.js";
 
 const labs = linuxLabs();
@@ -25,15 +25,20 @@ function materialize(lab) {
   return { home, root, sh, progress, done: () => rmSync(home, { recursive: true, force: true }) };
 }
 const tokens = (lab) => lab.milestones.filter((step) => step.checkType === "file_contains").map((step) => step.expectedSubstring);
-const typedSteps = (lab) => lab.milestones.filter((step) => step.checkType === "history_regex");
+/** The steps a lab's machine reports for this command history and progress note. */
+async function checks(labId, history, progress = "") {
+  const result = await verifySessionMilestones({ labId, commandHistory: [], sandbox: { history: async () => history, readFile: async () => progress } });
+  return Object.fromEntries(result.map((item) => [item.id, item.completed]));
+}
 
-// The commands the steps teach, in order. `types` are checked against the typed-command steps.
+// The commands the steps teach, typed in order (`history`), and the changes the
+// learner makes to the files (`run`, which the progress checker sees).
 const SOLUTIONS = {
-  "LNX-101": { types: ["pwd", "ls", "cat school/office/schedule.txt", "cd school/lab/storage"], run: ['printf "code word: blue-heron-27\\n" > answer.txt'] },
-  "LNX-102": { types: [], run: ["mkdir project", "cp inbox/plan.txt project/", "mv inbox/notes-old.txt project/notes.txt", "touch project/todo.txt", "rm inbox/junk.tmp inbox/draft-copy.tmp"] },
-  "LNX-103": { types: ["head log/visitors.txt", "wc -l log/visitors.txt"], run: ["sed -i 's/^Welcom /Welcome /; s/^Room: 12/Room: 21/' sign/welcome.txt", 'echo "Closed Friday" > sign/notice.txt', 'echo "Bring your badge" >> sign/notice.txt'] },
-  "LNX-104": { types: ["whoami", "ls -l tools"], run: ["chmod +x tools/make-report.sh", "./tools/make-report.sh", "chmod 600 private/diary.txt"] },
-  "LNX-105": { types: ["grep ERROR logs/print.log", "grep ERROR logs/print.log | wc -l", 'find . -name "*.cfg"', "grep --help | head"], run: ["printf 'errors: 9\\nprinter: lib-print-2\\ntoner file: supplies.txt\\n' > answer.txt"] },
+  "LNX-101": { history: ["pwd", "ls", "cat school/office/schedule.txt", "cd school/lab/storage", "ls", "cat key-card.txt"], run: ['printf "code word: blue-heron-27\\n" > answer.txt'] },
+  "LNX-102": { history: [], run: ["mkdir project", "cp inbox/plan.txt project/", "mv inbox/notes-old.txt project/notes.txt", "touch project/todo.txt", "rm inbox/junk.tmp inbox/draft-copy.tmp"] },
+  "LNX-103": { history: ["head log/visitors.txt", "tail -n 3 log/visitors.txt", "wc -l log/visitors.txt"], run: ["sed -i 's/^Welcom /Welcome /; s/^Room: 12/Room: 21/' sign/welcome.txt", 'echo "Closed Friday" > sign/notice.txt', 'echo "Bring your badge" >> sign/notice.txt'] },
+  "LNX-104": { history: ["whoami", "ls -l tools", "chmod +x tools/make-report.sh", "ls -l tools", "./tools/make-report.sh", "cat tools/report.txt", "chmod 600 private/diary.txt", "ls -l private"], run: ["chmod +x tools/make-report.sh", "./tools/make-report.sh", "chmod 600 private/diary.txt"] },
+  "LNX-105": { history: ["grep ERROR logs/print.log", "grep ERROR logs/print.log | wc -l", "grep -r toner docs", 'find . -name "*.cfg"', "grep --help | head"], run: ["printf 'errors: 9\\nprinter: lib-print-2\\ntoner file: supplies.txt\\n' > answer.txt"] },
 };
 
 test("five Linux basics labs are registered, valid and small", () => {
@@ -59,20 +64,17 @@ test("five Linux basics labs are registered, valid and small", () => {
   assert.ok(allowedLabFiles().includes(PROGRESS_FILE), "the checks may read the progress note");
 });
 
-test("each lab starts with no finished step and finishes with the commands it teaches", () => {
+test("each lab starts with no finished step and finishes with the commands it teaches", async () => {
   for (const lab of labs) {
     const box = materialize(lab), solution = SOLUTIONS[lab.id];
     try {
       assert.equal(box.progress().trim(), "", lab.id + " starts with nothing done");
+      assert.ok(Object.values(await checks(lab.id, [], "")).every((completed) => !completed), lab.id + " shows no step done");
       for (const command of solution.run) box.sh(command);
       const after = box.progress();
       for (const token of tokens(lab)) assert.ok(after.includes(token), `${lab.id} awards ${token}:\n${after}`);
-      const steps = typedSteps(lab);
-      assert.equal(steps.length, solution.types.length, lab.id);
-      steps.forEach((step, index) => {
-        assert.ok(step.pattern.test(solution.types[index]), `${lab.id}/${step.id} accepts: ${solution.types[index]}`);
-        assert.ok(step.description.includes("`" + solution.types[index] + "`"), `${lab.id}/${step.id} teaches: ${solution.types[index]}`);
-      });
+      assert.deepEqual(await checks(lab.id, solution.history, after), Object.fromEntries(lab.milestones.map((step) => [step.id, true])), lab.id + " is complete with the taught commands");
+      for (const command of solution.history) assert.ok(lab.milestones.some((step) => step.description.includes("`" + command + "`")), `${lab.id} teaches: ${command}`);
       // Where the solution is exactly the taught commands, every one appears in a step.
       if (["LNX-102", "LNX-104"].includes(lab.id))
         for (const command of solution.run) assert.ok(lab.milestones.some((step) => step.description.includes("`" + command + "`")), `${lab.id} teaches: ${command}`);
@@ -85,8 +87,7 @@ test("each lab starts with no finished step and finishes with the commands it te
 test("typed-command steps do not pass on unrelated commands", () => {
   const step = (lab, id) => byId[lab].milestones.find((item) => item.id === id).pattern;
   assert.ok(!step("LNX-101", "where-am-i").test("echo pwd"));
-  assert.ok(!step("LNX-101", "change-folder").test("cd"));
-  assert.ok(!step("LNX-101", "read-file").test("cat"));
+  assert.ok(!step("LNX-101", "read-file").test("cat") && !step("LNX-101", "read-file").test("cat README.txt") && step("LNX-101", "read-file").test("less ./school/office/schedule.txt"));
   assert.ok(step("LNX-104", "long-list").test("ls -la") && step("LNX-104", "long-list").test("ls tools -l") && !step("LNX-104", "long-list").test("ls tools"));
   assert.ok(step("LNX-105", "pipe-count").test("grep -c ERROR logs/print.log") && !step("LNX-105", "pipe-count").test("grep ERROR logs/print.log"));
   assert.ok(step("LNX-105", "ask-help").test("man grep") && !step("LNX-105", "ask-help").test("grep help logs/print.log"));
@@ -151,13 +152,13 @@ test("the checks read the progress note once per pass and combine it with typed 
     labId: "LNX-104",
     commandHistory: [],
     sandbox: {
-      history: async () => ["whoami", "ls -l tools"],
+      history: async () => ["whoami", "ls -l tools", "chmod +x tools/make-report.sh", "ls -l tools", "./tools/make-report.sh"],
       readFile: async (file) => { reads.push(file); return "[script-runs]\n[report-made]\n"; },
     },
   };
   const result = await verifySessionMilestones(session);
   assert.deepEqual(reads, [PROGRESS_FILE]);
-  assert.deepEqual(result.map((item) => [item.id, item.completed]), [["who-am-i", true], ["long-list", true], ["script-runs", true], ["report-made", true], ["diary-private", false]]);
+  assert.deepEqual(result.map((item) => [item.id, item.completed]), [["who-am-i", true], ["long-list", true], ["script-runs", true], ["report-made", false], ["diary-private", false]], "the report is made but not read yet");
 });
 
 test("the site's course catalog matches the labs the server hosts", async () => {
@@ -167,4 +168,68 @@ test("the site's course catalog matches the labs the server hosts", async () => 
     const lab = byId[item.id], taught = lab.milestones.map((step) => step.description + " " + step.hint).join(" ");
     for (const skill of item.skills) assert.ok(taught.includes(skill), `${item.id} teaches ${skill}`);
   }
+});
+
+test("a step shows as done only when every part of it is done", async () => {
+  const start = ["pwd", "ls", "cat school/office/schedule.txt"];
+  assert.equal((await checks("LNX-101", [...start, "cd school/lab/storage"]))["change-folder"], false, "moving into the folder is only the first part");
+  assert.equal((await checks("LNX-101", [...start, "cd school/lab/storage", "ls"]))["change-folder"], false, "listing it is the second");
+  assert.equal((await checks("LNX-101", [...start, "cd school/lab/storage", "ls", "cat key-card.txt"]))["change-folder"], true);
+  assert.equal((await checks("LNX-101", [...start, "cd school", "cd lab", "cd storage", "cat key-card.txt", "ls -l"]))["change-folder"], true, "one folder at a time, and the last two parts in either order");
+  assert.equal((await checks("LNX-101", ["ls", "cat school/lab/storage/key-card.txt", "cd school/lab/storage"]))["change-folder"], false, "reading the card before moving in does not count as this step");
+  assert.equal((await checks("LNX-101", ["cat README.txt"]))["read-file"], false, "reading another file is not reading the schedule");
+  assert.equal((await checks("LNX-103", ["head log/visitors.txt"])).peek, false, "head without tail");
+  assert.equal((await checks("LNX-103", ["tail -n 3 log/visitors.txt", "head log/visitors.txt"])).peek, true, "both, in either order");
+  assert.equal((await checks("LNX-103", ["head README.txt", "tail README.txt"])).peek, false, "another file");
+  const made = "[script-runs]\n[report-made]\n[diary-private]\n";
+  let result = await checks("LNX-104", ["ls -l tools", "chmod +x tools/make-report.sh"], made);
+  assert.equal(result["script-runs"], false, "the x was added but not looked at with ls -l again");
+  result = await checks("LNX-104", ["ls -l tools", "chmod +x tools/make-report.sh", "ls -l tools"], made);
+  assert.equal(result["script-runs"], true);
+  assert.equal((await checks("LNX-104", ["cat tools/report.txt", "chmod +x tools/make-report.sh", "ls -l tools/make-report.sh", "./tools/make-report.sh"], made))["report-made"], false, "the report was read before the script wrote it");
+  assert.equal((await checks("LNX-104", ["cd tools && ./make-report.sh", "cat report.txt"], made))["report-made"], true);
+  assert.equal((await checks("LNX-104", ["sh tools/make-report.sh", "less tools/report.txt"], made))["report-made"], true);
+  assert.equal((await checks("LNX-104", ["chmod 600 private/diary.txt"], made))["diary-private"], false);
+  assert.equal((await checks("LNX-104", ["chmod go-rwx private/diary.txt", "ls -la private"], made))["diary-private"], true);
+  assert.equal((await checks("LNX-104", ["chmod 600 private/diary.txt", "ls -l private"], "[script-runs]\n"))["diary-private"], false, "typed parts never replace the file check");
+  assert.equal((await checks("LNX-105", ["grep toner docs/*"], "[toner-answer]\n"))["toner-answer"], false, "the search must be recursive");
+  assert.equal((await checks("LNX-105", ["grep -ri TONER docs"], "[toner-answer]\n"))["toner-answer"], true);
+  assert.equal((await checks("LNX-105", ["grep -r toner docs"], ""))["toner-answer"], false, "and the answer must be saved");
+});
+
+test("ordered command stages: earliest matches, any order inside a stage, and strict validation", () => {
+  assert.equal(typedInOrder(["a", "b", "c"], [/a/, [/c/, /b/]]), true);
+  assert.equal(typedInOrder(["b", "a", "c"], [/a/, [/b/, /c/]]), false);
+  assert.equal(typedInOrder(["a", "b", "a", "c", "b"], [/a/, [/b/, /c/]]), true, "the first a starts the next stage");
+  assert.equal(typedInOrder([], [/a/]), false);
+  const lab = (typed, pattern) => ({ ...byId["LNX-101"], milestones: [{ id: "m1", title: "T", description: "D", hint: "H", checkType: "history_regex", ...(pattern ? { pattern } : {}), ...(typed === undefined ? {} : { typed }) }] });
+  assert.equal(validateLabDefinition(lab([/a/, [/b/, /c/]])), null);
+  assert.equal(validateLabDefinition(lab(undefined, /a/)), null);
+  for (const bad of [[], [/a/g], [[]], [[/a/, /b/, /c/, /d/, /e/]], Array(7).fill(/a/), ["ls"], [/a/y], "ls"]) assert.match(validateLabDefinition(lab(bad)), /typed must be/, String(bad));
+  assert.match(validateLabDefinition(lab(undefined)), /pattern must be a RegExp/);
+  for (const item of labs.flatMap((one) => one.milestones)) if (item.typed) assert.ok(item.typed.flat().every((pattern) => !pattern.global && !pattern.sticky), item.id);
+});
+
+test("commands joined on one line count, each history record keeps its own order, and long lines are cut", async () => {
+  assert.deepEqual(historyCommands(["cd school/lab/storage && ls; cat key-card.txt", "grep ERROR logs/print.log | wc -l", "true || echo 'a; b && c'", "  "]), ["cd school/lab/storage", "ls", "cat key-card.txt", "grep ERROR logs/print.log | wc -l", "true", "echo 'a; b && c'"]);
+  assert.equal((await checks("LNX-101", ["pwd", "ls", "cat school/office/schedule.txt", "cd school/lab/storage && ls && cat key-card.txt"]))["change-folder"], true);
+  const made = "[script-runs]\n[report-made]\n[diary-private]\n";
+  assert.equal((await checks("LNX-104", ["chmod +x tools/make-report.sh && ls -l tools"], made))["script-runs"], true);
+  assert.equal((await checks("LNX-104", ["./tools/make-report.sh; cat tools/report.txt"], made))["report-made"], true);
+  assert.equal((await checks("LNX-103", ["head log/visitors.txt; tail -n 3 log/visitors.txt"])).peek, true);
+  // The Text terminal's keystrokes and the machine's own history hold the same commands; their order is never mixed.
+  const both = async (labId, typed, progress) => Object.fromEntries((await verifySessionMilestones({ labId, commandHistory: typed, sandbox: { history: async () => typed, readFile: async () => progress } })).map((item) => [item.id, item.completed]));
+  assert.equal((await both("LNX-104", ["ls -l tools", "chmod +x tools/make-report.sh"], made))["script-runs"], false, "ls -l before chmod, recorded twice, is still not chmod then ls -l");
+  assert.equal((await both("LNX-101", ["ls", "cat school/lab/storage/key-card.txt", "cd school/lab/storage"], ""))["change-folder"], false);
+  assert.equal((await both("LNX-104", ["chmod +x tools/make-report.sh", "ls -l tools"], made))["script-runs"], true);
+  // A very long line is cut before matching and does not stall the check.
+  const started = Date.now();
+  await checks("LNX-104", [";".repeat(65000), "x".repeat(200000) + " make-report.sh"], made);
+  assert.ok(Date.now() - started < 500, "a huge history line is checked quickly");
+});
+
+test("a single pattern with the g or y flag is refused, as it would make a step flicker", () => {
+  const lab = { ...byId["LNX-101"], milestones: [{ id: "m1", title: "T", description: "D", hint: "H", checkType: "history_regex", pattern: /pwd/g }] };
+  assert.match(validateLabDefinition(lab), /must not use the g or y flag/);
+  assert.match(validateLabDefinition({ ...lab, milestones: [{ ...lab.milestones[0], pattern: /pwd/y }] }), /must not use the g or y flag/);
 });
