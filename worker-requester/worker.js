@@ -1,5 +1,6 @@
 /** Optional topic-only fictional conversation with shared early budget admission. */
 import {requesterTextIsPrivate} from '../src/interview.js';
+import {isFreeLab} from '../src/access-policy.js';
 import {reserveRequesterBudget,requesterBudgetReservationCurrent} from './budget.js';
 
 import {PRIVATE_REQUESTER_URL,RequesterError,failRequester,readRequesterTopic} from './contract.js';
@@ -88,6 +89,10 @@ export async function handleRequesterRequest(request,env,{limiter=rateLimiter,ti
     if(env?.REQUESTER_ENABLED!=='true'||env?.REQUESTER_BILLING_REVIEWED!=='true')fail(503,'requester_not_enabled');
     if(request.signal.aborted)fail(499,'request_cancelled');
     const body=request.method==='POST'?await readRequesterTopic(request):null;
+    // The public requester has no member identity or authorization contract.
+    // Enforce its public catalog at the backend too, before storage or AI, so
+    // another service binding cannot turn it into a member-content endpoint.
+    if(body&&!isFreeLab(body.payload.scenarioId))fail(403,'reply_unavailable');
     if(typeof env?.AI?.run!=='function'||typeof env?.REQUESTER_BUDGET?.prepare!=='function')fail(503,'requester_not_configured');
     if(request.method==='GET')return response({enabled:true,provider:'cloudflare-workers-ai',requiresConsent:true},200);
     if(request.signal.aborted)fail(499,'request_cancelled');

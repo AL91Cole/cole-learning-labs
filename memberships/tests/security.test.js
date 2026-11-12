@@ -106,6 +106,29 @@ test('protected resources require both ownership-authenticated session and fresh
   const response=await h.run(request(),{resources});assert.equal(response.status,200);assert.equal(await response.text(),'Fictional reviewed resource');assert.equal(reads,1);
   assert.equal((await h.run(h.make('/api/member/resources/unknown'),{resources})).status,404);assert.equal(reads,1);
 });
+test('resource delivery rechecks session expiry after entitlement verification and resource loading',async t=>{
+  const h=fixture(t);let reads=0,cancelled=false;
+  const resources=new Map([['review-sample',async()=>{reads++;return new Response('PRIVATE_REVIEWED_RESOURCE');}]]);
+  const response=await h.run(h.make('/api/member/resources/review-sample'),{resources,
+    billing:{...h.billing,async verifyPremium(){h.session.session.expiresAt=new Date(Date.now()-1);return true;}}});
+  assert.equal(response.status,401);assert.equal(reads,0);
+  h.session.session.expiresAt=new Date(Date.now()+3600000);
+  const loadingResources=new Map([['review-sample',async()=>{
+    h.session.session.expiresAt=new Date(Date.now()-1);
+    return new Response(new ReadableStream({cancel(){cancelled=true;}}));
+  }]]);
+  const loaded=await h.run(h.make('/api/member/resources/review-sample'),{resources:loadingResources});
+  assert.equal(loaded.status,401);assert.equal(cancelled,true);
+  assert.doesNotMatch(await loaded.text(),/PRIVATE_REVIEWED_RESOURCE/u);
+});
+test('resource delivery cancels private bodies when the request is aborted during loading',async t=>{
+  const h=fixture(t),controller=new AbortController();let cancelled=false;
+  const resources=new Map([['review-sample',async()=>{
+    controller.abort();return new Response(new ReadableStream({cancel(){cancelled=true;}}));
+  }]]);
+  const response=await h.run(h.make('/api/member/resources/review-sample',{signal:controller.signal}),{resources});
+  assert.equal(response.status,499);assert.equal(cancelled,true);
+});
 test('unset production catalog cannot start checkout even with injected authentication and enabled runtime',async t=>{
   const h=fixture(t),token=await csrfToken(h.env,h.session);
   const response=await handleMembershipRequest(h.make('/api/member/checkout',{method:'POST',body:{plan:'teacher-annual',adult:true,renewalConsent:true,termsVersion:'2026-10-31-review'},headers:{'X-Membership-CSRF':token}}),{...h.env,get STRIPE_SECRET_KEY(){assert.fail('Unset price inspected Stripe credentials.');}},{reviewApproved:true,auth:h.auth});

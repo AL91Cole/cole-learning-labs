@@ -618,7 +618,7 @@ test("PTY failure, resize limits, message limits, and output floods fail closed"
   const refusal = await bad.start(student);
   assert.equal(refusal.code, "sandbox_unavailable");
   assert.ok(!JSON.stringify(refusal).includes("cloud_auth_failed"), "the learner sees only the generic message");
-  assert.deepEqual(bad.failures, ["Machine start failed for NET-201: cloud_auth_failed cloud_auth_failed: HTTP 401"], "the operator log names the lab and the reason");
+  assert.deepEqual(bad.failures, ["Machine start failed for NET-201: cloud_auth_failed"], "the operator log names the lab and the reason");
   assert.equal(bad.service.sessions.size, 0);
   const f = await fixture(t, { maxOutputBytesPerSecond: 20 }),
     a = await f.client();
@@ -659,6 +659,96 @@ test("heartbeats and snapshots do not defeat inactivity cleanup, and absolute ag
   f.advance(1001);
   await f.service.reap();
   assert.equal(f.service.sessions.size, 0);
+});
+
+test("failed deletion blocks new machines until cleanup succeeds and erases session buffers", async (t) => {
+  let deletingFails = true, deletions = 0;
+  const runtime = {
+    onData() {}, onExit() {}, write() {}, resize() {}, readFile: async () => null,
+    destroy: async () => { deletions++; if (deletingFails) throw Error("provider response with private content"); },
+  };
+  const f = await fixture(t, {}, async () => runtime);
+  const student = await f.client();
+  await f.start(student);
+  const session = [...f.service.sessions.values()][0];
+  session.commandHistory = ["private student text"];
+  session.line = "private incomplete input";
+  student.ws.close();
+  await delay(30);
+  assert.equal(f.service.sessions.size, 0);
+  assert.deepEqual(session.commandHistory, []);
+  assert.equal(session.line, "");
+  assert.deepEqual(f.failures, ["sandbox_cleanup_failed"], "only a fixed cleanup alert enters logs");
+  const healthUrl = "http://127.0.0.1:" + f.service.server.address().port + "/api/health";
+  const blocked = await fetch(healthUrl);
+  assert.equal(blocked.status, 503);
+  assert.equal((await blocked.json()).status, "cleanup_blocked");
+  const waiting = await f.client();
+  assert.equal((await f.start(waiting)).code, "sandbox_unavailable");
+  assert.equal(deletions, 1);
+  deletingFails = false;
+  await f.service.reap();
+  assert.equal(deletions, 2);
+  assert.equal((await fetch(healthUrl)).status, 200);
+  assert.equal((await f.start(waiting)).type, "session:ready");
+});
+
+test("a machine awaiting provider deletion keeps allocation blocked before any failure", async (t) => {
+  let finishDelete, deletionStarted;
+  const started = new Promise((resolve) => { deletionStarted = resolve; });
+  const runtime = {
+    onData() {}, onExit() {}, write() {}, resize() {}, readFile: async () => null,
+    destroy: () => { deletionStarted(); return new Promise((resolve) => { finishDelete = resolve; }); },
+  };
+  const f = await fixture(t, {}, async () => runtime);
+  const student = await f.client();
+  await f.start(student);
+  student.ws.close();
+  await started;
+  const waiting = await f.client();
+  assert.equal((await f.start(waiting)).code, "sandbox_unavailable");
+  finishDelete();
+  await delay(20);
+  // A second successful start proves the deletion, rather than disconnect, freed capacity.
+  runtime.destroy = async () => {};
+  assert.equal((await f.start(waiting)).type, "session:ready");
+});
+
+test("startup errors cannot put provider text, unknown error codes or credentials into logs", async (t) => {
+  const f = await fixture(t, {}, async () => {
+    throw Object.assign(Error("Authorization: Bearer secret; student-name=Private"), { code: "secret-student-name" });
+  });
+  assert.equal((await f.start(await f.client())).code, "sandbox_unavailable");
+  assert.deepEqual(f.failures, ["Machine start failed for NET-201: operation_failed"]);
+});
+
+test("slow orphan deletion never delays revocation and erasure of another expired session", async (t) => {
+  let finishSlow, signalSlow, signalFast;
+  const slowStarted = new Promise((resolve) => { signalSlow = resolve; });
+  const fastStarted = new Promise((resolve) => { signalFast = resolve; });
+  const slowDelete = new Promise((resolve) => { finishSlow = resolve; });
+  let starts = 0;
+  const f = await fixture(t, { inactivityTimeoutMs: 1000 }, async () => {
+    const slow = starts++ === 0;
+    return {
+      onData() {}, onExit() {}, write() {}, resize() {}, readFile: async () => null,
+      destroy: () => { if (slow) { signalSlow(); return slowDelete; } signalFast(); return Promise.resolve(); },
+    };
+  });
+  const first = await f.client(), second = await f.client();
+  await f.start(first);
+  await f.start(second);
+  const expiring = [...f.service.sessions.values()][1];
+  expiring.commandHistory = ["private test text"];
+  first.ws.close();
+  await slowStarted;
+  f.advance(1001);
+  const reaping = f.service.reap();
+  await fastStarted;
+  assert.equal(f.service.sessions.size, 0, "all expired sessions lose access before slow deletion completes");
+  assert.deepEqual(expiring.commandHistory, []);
+  finishSlow();
+  await reaping;
 });
 
 test("only allowlisted static assets are served under restrictive no-store headers", async (t) => {

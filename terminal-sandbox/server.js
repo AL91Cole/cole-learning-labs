@@ -557,7 +557,9 @@ export async function spawnSandboxContainer(session, cfg = CONFIG, deps = {}) {
   const name = "cll-sandbox-" + crypto.randomBytes(16).toString("hex");
   let processPty,
     created = false,
-    destroyed = false;
+    destroyed = false,
+    deletionComplete = false,
+    deleting = null;
   const docker = (args, timeout = 5000, maxBuffer = 65536) =>
     run("docker", args, {
       timeout,
@@ -566,14 +568,25 @@ export async function spawnSandboxContainer(session, cfg = CONFIG, deps = {}) {
       encoding: "utf8",
     });
   const destroy = async () => {
-    if (destroyed) return;
+    if (deletionComplete) return;
+    if (deleting) return deleting;
     destroyed = true;
     try {
       processPty?.kill();
     } catch {}
     if (created) {
-      await docker(["rm", "-f", name]).catch(() => {});
+      deleting = docker(["rm", "-f", name]);
+      try {
+        await deleting;
+      } catch (error) {
+        const absent = ["Error response from daemon: No such container: ", "Error: No such container: "]
+          .some((prefix) => error?.stderr?.trim() === prefix + name);
+        if (!absent) throw failure("sandbox_cleanup_failed");
+      } finally {
+        deleting = null;
+      }
     }
+    deletionComplete = true;
   };
   try {
     const info = await docker(["info", "--format", "{{.OSType}}"]);
@@ -648,8 +661,9 @@ export async function spawnSandboxContainer(session, cfg = CONFIG, deps = {}) {
       destroy,
     };
   } catch {
-    await destroy();
-    throw failure("docker_pty_unavailable");
+    const error = failure("docker_pty_unavailable");
+    try { await destroy(); } catch { error.cleanup = destroy; }
+    throw error;
   }
 }
 
@@ -828,7 +842,8 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     sessions = new Map(),
     classrooms = new Map(),
     connections = new Set(),
-    upgradeRates = new Map();
+    upgradeRates = new Map(),
+    pendingCleanup = new Set();
   const runtime = runtimeDescription(cfg);
   const sandboxFactory =
       deps.sandboxFactory ||
@@ -840,6 +855,20 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     logFailure = deps.log || ((...parts) => console.error(...parts));
   let stopping = false,
     pendingStarts = 0;
+  async function cleanMachine(cleanup) {
+    // Reserve its allocation until deletion is confirmed, including while the
+    // provider request is in flight rather than only after a failed attempt.
+    pendingCleanup.add(cleanup);
+    try {
+      await cleanup();
+      pendingCleanup.delete(cleanup);
+    } catch {
+      pendingCleanup.add(cleanup);
+      // Keep student content, provider response bodies, credentials, and machine
+      // addresses out of logs. A fixed event code is sufficient for alerting.
+      logFailure("sandbox_cleanup_failed");
+    }
+  }
   const wsServer = new WebSocketServer({
     noServer: true,
     maxPayload: cfg.maxMessageBytes,
@@ -850,7 +879,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
   });
   // The desktop view has a second socket per learner: the screen. It is a plain
   // relay between the browser's screen client and the machine's screen bridge,
-  // admitted by a one-time ticket from session:ready carried in the subprotocol.
+  // admitted by a session-scoped capability from session:ready in the subprotocol.
   const desktopServer = new WebSocketServer({
     noServer: true,
     maxPayload: 1 << 20,
@@ -862,6 +891,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     deps.desktopSocketFactory ||
     ((address) => new UpstreamWebSocket(address, ["binary"], { perMessageDeflate: false, maxPayload: 16 << 20, followRedirects: false, handshakeTimeout: 10000 }));
   function relayDesktop(client, s) {
+    if (s.destroyed || s.paused) { client.terminate(); return; }
     s.desktopLink?.close();
     let upstream, closed = false, windowAt = now(), windowBytes = 0;
     const pending = [];
@@ -882,9 +912,13 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     } catch {
       return link.close();
     }
-    upstream.on("open", () => { for (const data of pending.splice(0)) upstream.send(data); });
+    upstream.on("open", () => {
+      if (closed || s.destroyed || s.paused) return link.close();
+      for (const data of pending.splice(0)) upstream.send(data);
+    });
     upstream.on("message", (data) => {
       if (closed || client.readyState !== 1) return;
+      if (s.destroyed || s.paused) return link.close();
       if (client.bufferedAmount > 8 << 20) return link.close(); // the browser is not keeping up
       client.send(data, { binary: true });
     });
@@ -895,6 +929,9 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       if (now() - windowAt >= 1000) { windowAt = now(); windowBytes = 0; }
       windowBytes += data.length;
       if (windowBytes > 512 * 1024) return link.close(); // far beyond any keyboard and mouse traffic
+      // RFB frames can combine protocol and input data. Close paused streams
+      // instead of dropping opaque frames and corrupting the protocol state.
+      if (s.paused) return link.close();
       s.lastActivity = now();
       if (upstream.readyState === 1) upstream.send(data);
       else if (pending.length < 64) pending.push(data);
@@ -913,8 +950,8 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       return json(res, 405, { error: "method_not_allowed" });
     if (url.search) return json(res, 400, { error: "query_not_allowed" });
     if (url.pathname === "/api/health")
-      return json(res, 200, {
-        status: cfg.enabled ? "enabled" : "disabled",
+      return json(res, pendingCleanup.size ? 503 : 200, {
+        status: pendingCleanup.size ? "cleanup_blocked" : cfg.enabled ? "enabled" : "disabled",
         runtime: runtime.runtime,
         productionApproved: false,
       });
@@ -996,9 +1033,11 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     revoke(s);
     leaveRoom(s);
     s.desktopLink?.close();
+    s.commandHistory = [];
+    s.line = "";
+    s.milestones = [];
     try {
-      await s.sandbox?.destroy();
-    } catch {
+      if (s.sandbox) await cleanMachine(s.sandbox.destroy);
     } finally {
       if (s.owner.session === s) s.owner.session = null;
       send(s.owner, { type: "session:terminated", reason });
@@ -1058,6 +1097,9 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
   async function start(c, msg) {
     if (c.role !== "student" || c.starting || c.session)
       throw failure("session_already_started");
+    // An undeleted machine can still contain learner work. Stop new allocation
+    // until bounded cleanup retries succeed, preventing an unbounded orphan set.
+    if (pendingCleanup.size) throw failure("sandbox_unavailable");
     const lab = labFor(msg.labId);
     if (!lab) throw failure("unknown_lab");
     const code = msg.mode === "instructor-led" ? msg.classroomCode : "";
@@ -1163,18 +1205,24 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
           : {}),
       });
     } catch (error) {
-      // The learner sees only a generic message; the operator needs the reason.
-      // Adapter errors carry a code and an HTTP status or short provider message,
-      // never a credential.
+      // Provider errors can echo request content or credentials. Log only known
+      // fixed codes, never the provider message or arbitrary exception text.
+      const safeCodes = new Set([
+        "capacity_reached", "cloud_auth_failed", "cloud_credential_failed",
+        "cloud_endpoint_unsupported", "cloud_not_configured", "cloud_sandbox_lookup_failed",
+        "container_start_failed", "desktop_unavailable", "docker_pty_unavailable",
+        "invalid_container_configuration", "sandbox_seed_failed", "sandbox_seed_invalid",
+        "sandbox_seed_too_large", "classroom_unavailable", "pty_unavailable",
+      ]);
       logFailure(
         "Machine start failed for " + lab.id + ":",
-        String(error?.code || "unknown"),
-        String(error?.message || "").slice(0, 300),
+        safeCodes.has(error?.code) ? error.code : "operation_failed",
       );
       sessions.delete(s.id);
       if (c.session === s) c.session = null;
       s.destroyed = true;
-      if (s.sandbox) await s.sandbox.destroy().catch(() => {});
+      if (s.sandbox) await cleanMachine(s.sandbox.destroy);
+      else if (typeof error?.cleanup === "function") await cleanMachine(error.cleanup);
       throw failure("sandbox_unavailable");
     } finally {
       pendingStarts--;
@@ -1285,6 +1333,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         for (const s of targets) {
           if (msg.action === "pause" || msg.action === "resume") {
             s.paused = msg.action === "pause";
+            if (s.paused) s.desktopLink?.close();
             send(s.owner, { type: "teacher:pause-state", paused: s.paused });
           }
           if (msg.action === "request-snapshots" && s.consent)
@@ -1409,7 +1458,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       const offered = String(req.headers["sec-websocket-protocol"] || "").split(",").map((item) => item.trim());
       const ticket = offered.find((item) => /^ticket\.[a-f0-9]{32}$/.test(item))?.slice(7);
       const s = ticket && offered.includes("cll-desktop") ? [...sessions.values()].find((item) => !item.destroyed && item.sandbox?.desktop && crypto.timingSafeEqual(Buffer.from(item.desktopTicket), Buffer.from(ticket))) : null;
-      if (!s) return reject(403);
+      if (!s || s.paused) return reject(403);
       if (desktopLinks.size >= cfg.maxSessions + 8) return reject(503);
       return desktopServer.handleUpgrade(req, socket, head, (ws) => relayDesktop(ws, s));
     }
@@ -1513,12 +1562,15 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     });
   });
   async function reap() {
-    for (const s of [...sessions.values()])
-      if (
+    // Revoke every expired session before waiting on provider deletion. A slow
+    // orphan cleanup must not extend another learner's access or data lifetime.
+    const retries = [...pendingCleanup];
+    const expiring = [...sessions.values()]
+      .filter((s) =>
         now() - s.lastActivity >= cfg.inactivityTimeoutMs ||
         now() - s.created >= cfg.maxLifetimeMs
       )
-        await destroySession(s, "session_expired");
+      .map((s) => destroySession(s, "session_expired"));
     for (const c of connections)
       if (
         now() - c.created >= cfg.maxLifetimeMs ||
@@ -1526,6 +1578,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
           now() - c.lastActivity >= cfg.inactivityTimeoutMs)
       )
         c.ws.close(1000, "Session expired");
+    await Promise.allSettled([...expiring, ...retries.map(cleanMachine)]);
   }
   const reaper = setInterval(() => {
       void reap().catch(() => {});
@@ -1565,6 +1618,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         [...sessions.values()].map((s) => destroySession(s, "server_shutdown")),
       );
       for (const link of [...desktopLinks]) link.close();
+      for (const cleanup of [...pendingCleanup]) await cleanMachine(cleanup);
       desktopServer.close();
       wsServer.close();
       server.closeAllConnections();

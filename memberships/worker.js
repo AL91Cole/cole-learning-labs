@@ -140,9 +140,19 @@ export async function handleMembershipRequest(request,env,{
       if(!/^[a-z][a-z0-9-]{0,63}$/u.test(resource)||!resources.has(resource))deny(404);
       if(!owner&&await billing.verifyPremium({env,member:session.user})!==true)deny(403);
       if(request.signal.aborted)deny(499);
+      requireSession(session);
       const load=resources.get(resource),response=await load();
-      if(!(response instanceof Response)||response.status!==200)deny(503);
-      return secureResponse(response);
+      try{
+        // Provider verification and resource loading can outlive a session or
+        // the request. Recheck before handing private bytes to the browser.
+        if(request.signal.aborted)deny(499);
+        requireSession(session);
+        if(!(response instanceof Response)||response.status!==200)deny(503);
+        return secureResponse(response);
+      }catch(error){
+        if(response instanceof Response)void response.body?.cancel().catch(()=>{});
+        throw error;
+      }
     }
     // This owner exception grants content access only. It cannot create a
     // customer, start a subscription, or open a payment-management session.

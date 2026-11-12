@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import worker,{handleRequesterRequest,createRequesterRateLimiter} from '../worker-requester/worker.js';
 import {SCENARIOS} from '../src/scenarios.js';
+import {isFreeLab} from '../src/access-policy.js';
 import {requesterPersona} from '../src/requester-persona.js';
 import {REQUESTER_TOPICS,requesterTopicInstruction} from '../src/requester-topics.js';
 
@@ -130,10 +131,10 @@ test('body length is bounded by actual UTF-8 bytes even without a trustworthy Co
   assert.equal(invalidUtf8.response.status,400);assert.equal(h.calls.length,0);
 });
 
-test('each fictional lab supplies only its authored persona and grade, never case or learner data',async()=>{
+test('each public fictional lab supplies only its authored persona and grade, never case or learner data',async()=>{
   const h=fixture();
   assert.equal(SCENARIOS.length,42);
-  for(const scenario of SCENARIOS){
+  for(const scenario of SCENARIOS.filter(scenario=>isFreeLab(scenario.id))){
     const before=structuredClone(scenario),result=await h.request({body:{scenarioId:scenario.id,topic:'breakfast'},
       dependencies:{limiter:createRequesterRateLimiter()}});
     assert.equal(result.response.status,200,scenario.id);
@@ -165,17 +166,16 @@ test('every accepted topic maps to a source-authored instruction and cannot sele
   }
 });
 
-test('trusted grade bands change explanations without accepting a caller grade or language override',async()=>{
+test('the public catalog uses its authored grade band without accepting a caller grade override',async()=>{
   const h=fixture(),prompts=[];
-  for(const id of ['INC-101','INC-103','INC-105']){
+  for(const id of ['INC-101','NET-201']){
     const r=await h.request({body:{scenarioId:id,topic:'definition-0'}});assert.equal(r.response.status,200);
     prompts.push(h.calls.at(-1)[1].messages[0].content);
   }
   assert.match(prompts[0],/grades 7–8.*plain-English.*explain necessary technical terms/);
   assert.match(prompts[1],/grades 9–10.*explain a useful technical term/);
-  assert.match(prompts[2],/grades 11–12.*precise technical terms.*meaning and limits/);
   const bad=await h.request({body:{scenarioId:'INC-101',topic:'breakfast',grade:'11–12'}});
-  assert.equal(bad.response.status,400);assert.equal(h.calls.length,3);
+  assert.equal(bad.response.status,400);assert.equal(h.calls.length,2);
 });
 
 test('model responses remain bounded plain JSON data and reject obvious private or executable output',async()=>{
@@ -244,8 +244,8 @@ test('the production Worker wrapper applies the private contract and ignores exe
   assert.equal(h.calls.length,0);
 });
 
-test('all 6762 trusted lab-topic combinations stay inside the prompt byte ceiling',async()=>{
-  for(const scenario of SCENARIOS){
+test('all accepted public lab-topic combinations stay inside the prompt byte ceiling',async()=>{
+  for(const scenario of SCENARIOS.filter(scenario=>isFreeLab(scenario.id))){
     const h=fixture();
     for(const topic of REQUESTER_TOPICS){
       const r=await h.request({body:{scenarioId:scenario.id,topic:topic.id},dependencies:{limiter:createRequesterRateLimiter()}});

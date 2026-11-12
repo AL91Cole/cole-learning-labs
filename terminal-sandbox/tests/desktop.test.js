@@ -14,6 +14,7 @@ const response = (status, body, headers = {}) => ({
   headers: { get: (name) => headers[name.toLowerCase()] ?? null },
   json: async () => body,
   text: async () => (typeof body === "string" ? body : JSON.stringify(body ?? {})),
+  body: new Response(typeof body === "string" ? body : JSON.stringify(body ?? {})).body,
   arrayBuffer: async () => Buffer.from(typeof body === "string" ? body : JSON.stringify(body ?? {})),
 });
 
@@ -126,7 +127,7 @@ test("a desktop session creates the machine, seeds the lab, publishes the screen
   assert.equal(del.headers["If-Match"], '"v2"', "the version is refreshed after publishing the port");
 });
 
-async function relayFixture(t) {
+async function relayFixture(t, { deferOpen = false } = {}) {
   const upstreams = [];
   const sandboxes = [];
   const service = createSandboxOrchestrator(
@@ -141,7 +142,7 @@ async function relayFixture(t) {
         const upstream = new EventEmitter();
         Object.assign(upstream, { address, sent: [], readyState: 0, send(data) { upstream.sent.push(Buffer.from(data)); }, terminate() { upstream.readyState = 3; upstream.terminated = true; } });
         upstreams.push(upstream);
-        setImmediate(() => { upstream.readyState = 1; upstream.emit("open"); });
+        if (!deferOpen) setImmediate(() => { upstream.readyState = 1; upstream.emit("open"); });
         return upstream;
       },
     },
@@ -149,7 +150,7 @@ async function relayFixture(t) {
   await new Promise((resolve) => service.server.listen(0, "127.0.0.1", resolve));
   const base = "ws://127.0.0.1:" + service.server.address().port;
   t.after(() => service.close());
-  async function learner() {
+  async function learner(classroomCode = "") {
     const ws = new WebSocket(base + "/ws", { headers: { Origin: ORIGIN } });
     const messages = [];
     ws.on("message", (raw) => messages.push(JSON.parse(raw)));
@@ -157,8 +158,27 @@ async function relayFixture(t) {
     const next = async (type) => { for (let i = 0; i < 300; i++) { const found = messages.find((m) => m.type === type); if (found) return found; await delay(5); } throw new Error("missing " + type + ": " + JSON.stringify(messages)); };
     ws.send(JSON.stringify({ type: "auth", role: "student" }));
     await next("auth:ok");
-    ws.send(JSON.stringify({ type: "session:start", labId: "NET-205", mode: "self-paced" }));
+    ws.send(JSON.stringify({ type: "session:start", labId: "NET-205", mode: classroomCode ? "instructor-led" : "self-paced", classroomCode }));
     return { ws, ready: await next("session:ready"), next };
+  }
+  async function teacher() {
+    const ws = new WebSocket(base + "/ws", { headers: { Origin: ORIGIN } });
+    const messages = [];
+    ws.on("message", (raw) => messages.push(JSON.parse(raw)));
+    await new Promise((resolve, reject) => { ws.once("open", resolve); ws.once("error", reject); });
+    const next = async (type, action) => {
+      for (let i = 0; i < 300; i++) {
+        const found = messages.find((m) => m.type === type && (!action || m.action === action));
+        if (found) return found;
+        await delay(5);
+      }
+      throw new Error("missing teacher message " + type);
+    };
+    const send = (msg) => ws.send(JSON.stringify(msg));
+    send({ type: "auth", role: "teacher", teacherKey: "k".repeat(48) });
+    await next("auth:ok");
+    send({ type: "classroom:create" });
+    return { ws, send, next, code: (await next("classroom:created")).classroomCode };
   }
   const screen = (protocols) => new Promise((resolve) => {
     const ws = new WebSocket(base + "/desktop", protocols, { headers: { Origin: ORIGIN } });
@@ -166,7 +186,7 @@ async function relayFixture(t) {
     ws.once("unexpected-response", (request, res) => resolve({ ws, status: res.statusCode }));
     ws.once("error", () => {});
   });
-  return { service, upstreams, sandboxes, learner, screen };
+  return { service, upstreams, sandboxes, learner, teacher, screen };
 }
 
 test("the screen socket needs the session's ticket and relays frames both ways without exposing the machine's address", async (t) => {
@@ -229,4 +249,47 @@ test("the host-container backend replaces the shared lab folder with a generated
   const shared = await spawnSandboxContainer({ labId: "NET-201" }, configuration({}), { exec: run, pty });
   assert.ok(!calls.some((args) => args[0] === "exec" && args.includes("/bin/sh")), "a lab without its own files keeps the image's shared seed");
   await shared.destroy();
+});
+
+test("teacher pause closes the desktop stream and refuses reconnection until resume", async (t) => {
+  const f = await relayFixture(t);
+  const teacher = await f.teacher();
+  const student = await f.learner(teacher.code);
+  const screen = await f.screen(["cll-desktop", "ticket." + student.ready.desktop.ticket]);
+  await delay(20);
+  screen.ws.send(Buffer.from("allowed before pause"));
+  await delay(20);
+  assert.equal(f.upstreams[0].sent.length, 1);
+  teacher.send({ type: "classroom:control", classroomCode: teacher.code, action: "pause" });
+  await teacher.next("classroom:control-ack", "pause");
+  await delay(20);
+  assert.equal(screen.ws.readyState, WebSocket.CLOSED);
+  assert.equal(f.upstreams[0].terminated, true, "pause closes the protocol stream rather than discarding opaque RFB frames");
+  assert.equal((await f.screen(["cll-desktop", "ticket." + student.ready.desktop.ticket])).status, 403, "a client ignoring the paused UI cannot reopen the desktop");
+  assert.equal(f.upstreams.length, 1, "paused reconnects never reach the machine");
+  teacher.send({ type: "classroom:control", classroomCode: teacher.code, action: "resume" });
+  await teacher.next("classroom:control-ack", "resume");
+  const resumed = await f.screen(["cll-desktop", "ticket." + student.ready.desktop.ticket]);
+  assert.equal(resumed.status, 101);
+  await delay(20);
+  resumed.ws.send(Buffer.from("allowed after resume"));
+  await delay(20);
+  assert.deepEqual(f.upstreams[0].sent.map((data) => data.toString()), ["allowed before pause"]);
+  assert.deepEqual(f.upstreams[1].sent.map((data) => data.toString()), ["allowed after resume"]);
+});
+
+test("pause during upstream negotiation closes the pending desktop without replaying queued frames", async (t) => {
+  const f = await relayFixture(t, { deferOpen: true });
+  const teacher = await f.teacher();
+  const student = await f.learner(teacher.code);
+  const screen = await f.screen(["cll-desktop", "ticket." + student.ready.desktop.ticket]);
+  screen.ws.send(Buffer.from("queued protocol and input"));
+  await delay(20);
+  teacher.send({ type: "classroom:control", classroomCode: teacher.code, action: "pause" });
+  await teacher.next("classroom:control-ack", "pause");
+  f.upstreams[0].emit("open");
+  await delay(20);
+  assert.equal(f.upstreams[0].terminated, true);
+  assert.deepEqual(f.upstreams[0].sent, [], "a late upstream-open event cannot replay frames after pause");
+  assert.equal(screen.ws.readyState, WebSocket.CLOSED);
 });

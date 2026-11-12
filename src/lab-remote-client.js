@@ -2,8 +2,9 @@
 // service's existing WebSocket protocol: authenticate as a student, start a
 // self-paced session for one lab, relay keystrokes and output, resize, and ask
 // the service to verify its milestones. The module has no DOM dependency so it
-// can be tested with a fake WebSocket. Only the lab id, keystrokes and sizes
-// are sent; no name, email or device detail.
+// can be tested with a fake WebSocket. Session messages, the lab id, keyboard
+// input and display sizes are sent. Typed input can include personal data;
+// connection metadata is handled by the delivery and compute providers.
 const LIMITS = Object.freeze({input:4096, output:65536, lab:32});
 
 export function remoteSocketUrl(base, location = globalThis.location) {
