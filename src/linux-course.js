@@ -36,17 +36,24 @@ export function mountLinuxCourse(root,{id,showNotice=()=>{},onComplete=()=>{},pr
     return ()=>{disposed=true;};
   }
   const controller=new AbortController(),strip=$('[data-linux-step]'),stage=$('[data-linux-stage]'),progress=$('[data-linux-progress]'),next=nextLinuxLab(lab.id);
-  let steps=[],shown=0,follow=true,reported=false,phase='idle';
+  let steps=[],shown=0,follow=true,reported=false,phase='idle',drawn=null;
+  // Refreshed every 2 s: replace the strip only when it changed, keeping hint and focus.
+  const setStrip=html=>{
+    if(html===drawn)return;
+    const a=(root.ownerDocument||globalThis.document)?.activeElement,t=a&&strip.contains?.(a)?['data-linux-next','data-linux-prev'].find(n=>a.hasAttribute?.(n)):0;
+    drawn=html;strip.innerHTML=html;
+    if(t)(strip.querySelector('['+t+']:not([disabled])')||strip.querySelector('.linux-step-nav button:not([disabled])'))?.focus?.({preventScroll:true});
+  };
   const drawStrip=()=>{
     if(!steps.length){
-      strip.innerHTML='<p><b>'+esc(lab.summary)+'</b> '+(phase==='ready'?'Getting the steps…':['connecting','authenticating','starting'].includes(phase)?'Your Linux computer is starting. This takes about half a minute.':'Press <b>Start machine</b> below to open your Linux computer.')+'</p>';
+      setStrip('<p><b>'+esc(lab.summary)+'</b> '+(phase==='ready'?'Getting the steps…':['connecting','authenticating','starting'].includes(phase)?'Your Linux computer is starting. This takes about half a minute.':'Press <b>Start machine</b> below to open your Linux computer.')+'</p>');
       progress.textContent='';return;
     }
     const finished=steps.filter(step=>step.completed).length,all=finished===steps.length,step=steps[shown];
     progress.textContent=finished+' of '+steps.length+' steps done';
-    strip.innerHTML=(all&&follow?'<p class="linux-done"><b>Lab complete.</b> You finished every step of '+esc(lab.id)+'. '+(next?'<a href="#linux/'+esc(next.id)+'">Go to '+esc(next.id)+' · '+esc(next.title)+' →</a>':'You finished Linux basics. <a href="#labs">Choose another lab →</a>')+' Press Stop when you are done with this computer.</p>'
+    setStrip((all&&follow?'<p class="linux-done"><b>Lab complete.</b> You finished every step of '+esc(lab.id)+'. '+(next?'<a href="#linux/'+esc(next.id)+'">Go to '+esc(next.id)+' · '+esc(next.title)+' →</a>':'You finished Linux basics. <a href="#labs">Choose another lab →</a>')+' Press Stop when you are done with this computer.</p>'
       :'<p><span class="linux-step-number'+(step.completed?' is-done':'')+'">'+(step.completed?'✓ ':'')+'Step '+(shown+1)+' of '+steps.length+'</span> <b>'+esc(step.title)+'.</b> '+linuxStepText(step.description)+'</p>'+(step.hint?'<details class="linux-hint"><summary>Hint</summary><p>'+linuxStepText(step.hint)+'</p></details>':''))
-      +'<span class="linux-step-nav"><button type="button" class="lab-tool" data-linux-prev aria-label="Previous step"'+(shown<=0?' disabled':'')+'>‹</button><button type="button" class="lab-tool" data-linux-next aria-label="Next step"'+(shown>=steps.length-1?' disabled':'')+'>›</button></span>';
+      +'<span class="linux-step-nav"><button type="button" class="lab-tool" data-linux-prev aria-label="Previous step"'+(shown<=0?' disabled':'')+'>‹</button><button type="button" class="lab-tool" data-linux-next aria-label="Next step"'+(shown>=steps.length-1?' disabled':'')+'>›</button></span>');
   };
   const update=()=>{
     const state=handle?.remoteState?.();if(!state)return;

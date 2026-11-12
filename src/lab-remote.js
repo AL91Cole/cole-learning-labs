@@ -127,9 +127,17 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
   let rfb = null, desktopInfo = null, verifyTimer = null, pendingOutput = '', view = 'none', textMode = false, shellState = 'none', machineClipboard = '', modifierChord = false;
   const setStatus = (next, message) => {phase = next; statusNode.textContent = message; dot.dataset.phase = next; $('[data-remote-start]').disabled = ['connecting', 'authenticating', 'starting', 'ready'].includes(next); $('[data-remote-verify]').disabled = next !== 'ready'; $('[data-remote-stop]').disabled = !['connecting', 'authenticating', 'starting', 'ready'].includes(next); onActivity({type:'remote', phase:next});};
   const markTyped = () => {if (!typed) {typed = true; onActivity({type:'remote', typed:true});}};
+  // Redraw only when a check changed, keeping open hints and focus (checks arrive every few seconds).
+  let drawnMilestones = '';
   const renderMilestones = () => {
     const list = $('[data-remote-milestones]');
-    list.innerHTML = milestones.length ? milestones.map((item, index) => '<li class="' + (item.completed ? 'is-done' : '') + '"><span aria-hidden="true">' + (item.completed ? '✓' : index + 1) + '</span><div><b>' + esc(item.title) + '</b>' + (item.hint ? '<details><summary>Hint</summary><p>' + esc(item.hint) + '</p></details>' : '') + '</div></li>').join('') : '<li class="remote-milestone-empty">The machine reports its checks once it starts.</li>';
+    const signature = JSON.stringify(milestones);
+    if (signature === drawnMilestones) return;
+    drawnMilestones = signature;
+    const open = new Set([...list.querySelectorAll('details[open]')].map(d => d.closest('li').dataset.milestone));
+    const focused = list.contains(doc.activeElement) ? doc.activeElement.closest?.('li')?.dataset.milestone : undefined;
+    list.innerHTML = milestones.length ? milestones.map((item, index) => '<li data-milestone="' + esc(item.id) + '" class="' + (item.completed ? 'is-done' : '') + '"><span aria-hidden="true">' + (item.completed ? '✓' : index + 1) + '</span><div><b>' + esc(item.title) + '</b>' + (item.hint ? '<details' + (open.has(item.id) ? ' open' : '') + '><summary>Hint</summary><p>' + esc(item.hint) + '</p></details>' : '') + '</div></li>').join('') : '<li class="remote-milestone-empty">The machine reports its checks once it starts.</li>';
+    if (focused) [...list.children].find(li => li.dataset.milestone === focused)?.querySelector('summary')?.focus({preventScroll:true});
   };
   function write(data) {
     if (term) {term.write(data); return;}
@@ -217,9 +225,7 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
   // Ctrl+V on the screen: bring this computer's clipboard over first, then let the
   // machine paste it, as if the two shared one clipboard. Without permission to
   // read the clipboard the key still reaches the machine, which pastes its own.
-  // The modifiers the learner is holding on the screen right now. Reading the
-  // clipboard takes a moment, and the paste must still arrive as Ctrl+V even
-  // when the keys were already released by then.
+  // Modifiers held now: the paste must arrive as Ctrl+V even if released while the clipboard is read.
   const held = {ctrl:false, shift:false};
   const trackModifiers = event => {held.ctrl = Boolean(event.ctrlKey); held.shift = Boolean(event.shiftKey);};
   function interceptPaste(event) {
@@ -240,8 +246,7 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
     };
     clipboard.readText().then(text => {if (typeof text === 'string' && text && text !== machineClipboard) sendToMachineClipboard(text); setTimeout(deliver, 40);}, () => deliver());
   }
-  // Ctrl+Alt+Shift together moves the keyboard out of the machine's screen
-  // (the screen otherwise keeps every key, Tab included).
+  // Ctrl+Alt+Shift moves the keyboard out of the screen, which otherwise keeps every key.
   function watchFocusChord(event) {
     if (event.type === 'keydown') {modifierChord = event.ctrlKey && event.altKey && event.shiftKey && ['Control', 'Alt', 'Shift'].includes(event.key) ? true : (modifierChord && ['Control', 'Alt', 'Shift'].includes(event.key));}
     else if (modifierChord && !event.ctrlKey && !event.altKey && !event.shiftKey) {modifierChord = false; setTimeout(() => {try {doc.activeElement?.blur?.();} catch {} ($('[data-remote-view]') || $('[data-remote-stop]'))?.focus?.({preventScroll:true}); statusNode.textContent = 'The keyboard left the machine’s screen. Click the screen or press Tab back to it to continue.';}, 0);}
