@@ -4,6 +4,8 @@ import {renderCodeQuestEntry} from '../src/code-quests.js';
 import {ARCADE_CATALOG} from '../src/arcade-catalog.js';
 import {renderArcadeEntry} from '../src/arcade.js';
 import {renderInboxDefenderEntry} from '../src/inbox-defender.js';
+import {renderLinuxEntry} from '../src/home-entries.js';
+import {LINUX_COURSE} from '../src/linux-catalog.js';
 import {SANDBOX_STARTERS} from '../src/coding-sandbox.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -33,7 +35,7 @@ function extract(start,end) {
 }
 function pages() {
   // Preserve the full investigation UI checks in its protected member context.
-  const context=vm.createContext({sceneArtHTML:()=>'',partArtHTML:()=>'',renderStartingPoints,CODE_QUESTS,renderCodeQuestEntry,ARCADE_CATALOG,renderArcadeEntry,renderInboxDefenderEntry,MEMBER_CONTENT:true,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryMinutes:'all',libraryQuery:'',
+  const context=vm.createContext({sceneArtHTML:()=>'',partArtHTML:()=>'',renderStartingPoints,CODE_QUESTS,renderCodeQuestEntry,ARCADE_CATALOG,renderArcadeEntry,renderInboxDefenderEntry,renderLinuxEntry,LINUX_COURSE,MEMBER_CONTENT:true,routeAccess,CATALOG,ELEMENTARY_LABS,SANDBOX_STARTERS,SCENARIOS,FOUNDATION_LABS,tracks,esc,countComplete:()=>0,store:{labs:{}},libraryTrack:'all',libraryGrade:'all',libraryMinutes:'all',libraryQuery:'',
     currentLab:null,labView:null,workStorage:{},recordFor:normalizeLabRecord,inquiryProgress,labLanguage,requesterPersona,
     workStatus:()=> 'Private session',eventList:()=>'',eventMessage:()=>'',interviewList:()=>'',evidenceList:()=>'',
     renderVirtualLabHubMarkup(){assert.fail('Choosing a lab must not create a 3D classroom hub.');}});

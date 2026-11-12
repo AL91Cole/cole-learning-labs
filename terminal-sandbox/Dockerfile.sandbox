@@ -1,19 +1,10 @@
 FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
 RUN apk add --no-cache coreutils grep sed gawk iproute2 iputils bind-tools jq tree nano less procps python3 \
     && addgroup -g 1000 learner && adduser -D -u 1000 -G learner -h /home/learner -s /bin/sh learner
-RUN mkdir -p /opt/cll-seed/lab/backups /opt/cll-seed/lab/delivered && \
-    printf 'WORKSTATION CONFIGURATION SHEET (VLAN 8)\nAssigned IPv4: 10.24.8.25/24\nDefault Gateway: 10.24.8.1\nSchool DNS Resolver: 10.24.8.53\nTarget Portal: learn.school.test\n' > /opt/cll-seed/lab/network-sheet.txt && \
-    printf '# Fictional resolver exercise; the container has no network\nnameserver 192.168.1.53\nsearch school.test\n' > /opt/cll-seed/lab/resolv.conf && \
-    printf '2026-10-18T08:11:02Z INFO sshd: accepted fictional teacher account from 10.24.8.14\n2026-10-18T08:14:19Z WARN telnetd: FAILED from 198.51.100.24 port 23\n2026-10-18T08:14:22Z WARN telnetd: FAILED from 198.51.100.24 port 23\n2026-10-18T08:14:25Z ALERT telnetd: session from 198.51.100.24 port 23\n2026-10-18T08:15:00Z INFO httpd: fictional classroom portal port 443\n' > /opt/cll-seed/lab/auth-sim.log && \
-    printf 'PORT_23=OPEN\nPORT_443=OPEN\n' > /opt/cll-seed/lab/firewall.conf && \
-    printf '# Fictional contained sources\n' > /opt/cll-seed/lab/blocklist.conf && \
-    printf 'COLE LEARNING LABS - LESSON PLAN v2 (VERIFIED)\nPathway: Hardware & ServiceDesk\nTopic: Safe Power & ESD Procedure\n' > /opt/cll-seed/lab/backups/lesson-plan-v2.txt && \
-    printf 'CORRUPTED_DRAFT_DO_NOT_USE\n' > /opt/cll-seed/lab/backups/lesson-plan-v1.bak && \
-    mkdir -p /opt/cll-seed/lab/code && \
-    printf 'import sys\n\n# CODE-501: each kit costs 3 credits. Print the total for the quantity given.\nquantity = int(sys.argv[1]) if len(sys.argv) > 1 else 2\ntotal = quantity + 3\nprint(total)\n' > /opt/cll-seed/lab/code/program.py && \
-    printf 'Input variable: quantity (first command-line argument)\nquantity = 2  ->  expected: 6\nquantity = 5  ->  expected: 15\nquantity = 0  ->  expected: 0\n' > /opt/cll-seed/lab/code/fixtures.txt && \
-    printf '#!/bin/sh\n# Runs program.py against every fixture and records the result.\ncd "$(dirname "$0")"\npass=0; total=0; : > results.txt\nfor pair in 2:6 5:15 0:0; do\n  q=${pair%%:*}; want=${pair#*:}; total=$((total+1))\n  got=$(python3 program.py "$q" 2>&1 | tail -n 1)\n  if [ "$got" = "$want" ]; then echo "PASS quantity=$q -> $got" | tee -a results.txt; pass=$((pass+1)); else echo "FAIL quantity=$q -> got: $got expected: $want" | tee -a results.txt; fi\ndone\nif [ "$pass" = "$total" ]; then echo ALL_FIXTURES_PASS | tee -a results.txt; else echo "$pass of $total fixtures pass" | tee -a results.txt; fi\n' > /opt/cll-seed/lab/code/check && chmod 755 /opt/cll-seed/lab/code/check && \
-    chown -R learner:learner /opt/cll-seed
+# Seed files shared with the cloud backend (terminal-sandbox/sandbox-seed): the
+# same tree the controller writes into a Docker Cloud Sandbox at start.
+COPY --chown=1000:1000 sandbox-seed/ /opt/cll-seed/lab/
+RUN chmod 755 /opt/cll-seed/lab/code/check && chown -R learner:learner /opt/cll-seed
 RUN printf '#!/bin/sh\nset -eu\ncp -r /opt/cll-seed/lab /home/learner/lab\nexec "$@"\n' > /usr/local/bin/cll-entrypoint \
     && chmod 755 /usr/local/bin/cll-entrypoint
 USER 1000:1000

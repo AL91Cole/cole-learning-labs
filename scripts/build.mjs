@@ -51,7 +51,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/learning-routes.js', 'src/home-entries.js', 'src/sandbox-starters.js', 'src/coding-studio-model.js', 'src/display-menu.js', 'src/read-aloud.js', 'src/session-modes.js',
   'src/record-engines.js', 'src/classroom-session.js', 'src/foundation-catalog.js', 'src/coding-scenarios.js', 'src/expanded-scenarios.js', 'src/network-scenarios.js',
   'src/part-art.js', ...Object.values(PART_ART),
-  'src/lazy-investigation.js', 'src/lazy-foundation.js', 'src/lazy-arcade.js', 'src/lazy-quests.js', 'src/lazy-inbox.js', 'src/lazy-studios.js', 'src/lazy-sandbox.js', 'src/lazy-teaching.js', 'src/lazy-guide.js', 'src/lazy-privacy.js',
+  'src/lazy-investigation.js', 'src/lazy-foundation.js', 'src/lazy-arcade.js', 'src/lazy-quests.js', 'src/lazy-inbox.js', 'src/lazy-studios.js', 'src/lazy-sandbox.js', 'src/lazy-teaching.js', 'src/lazy-guide.js', 'src/lazy-privacy.js', 'src/lazy-linux.js', 'src/linux-catalog.js', 'src/linux-course.js',
   ...PUBLIC_METADATA_FILES
 ]);
 // Source review does not grant public delivery. The complete member application
@@ -192,7 +192,7 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   // An access-mode change gets a new entry URL even when no source imports changed.
   content.set('index.html',Buffer.from(content.get('index.html').toString('utf8').replace(/(src\/app\.js\?release=[A-Za-z0-9_-]+)/u,'$1-'+publicLabAccess)));
   const routes = JSON.parse(content.get('_routes.json').toString('utf8'));
-  if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester', '/api/reach', '/api/telemetry', '/api/verify'], exclude: [] })) throw new Error('Only the reviewed requester, gated reach, and optional receipt endpoints may invoke API Functions; classroom collection routes must stay excluded.');
+  if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester', '/api/reach', '/api/telemetry', '/api/verify', '/terminal/*'], exclude: [] })) throw new Error('Only the reviewed requester, gated reach, optional receipt endpoints, and terminal gateway may invoke Functions; classroom collection routes must stay excluded.');
   // The main application is split by learning route: the entry module serves the
   // home page and catalog, and each route group downloads when first opened.
   const tier = await bundleTier({sourceRoot:root,member:openLabs,localOnly:openLabs,publicLabsOpen:openLabs,split:true});

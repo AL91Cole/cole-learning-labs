@@ -32,3 +32,53 @@
 .remote-milestone-empty{color:#aab4c0}
 .remote-milestones .panel-help{margin:10px 0 0;font-size:.78rem;color:#8a97a3}
 @media (max-width:980px){.remote-body{grid-template-columns:1fr;grid-template-rows:minmax(320px,1fr) auto}.remote-milestones{border-left:0;border-top:1px solid #2a313b}}
+/* Desktop machines: the streamed screen fills the area and scales to fit. */
+.remote-terminal.is-desktop{padding:0;background:#101418;position:relative}
+.remote-screen{flex:1;min-height:0;width:100%;height:100%}
+.remote-screen>div{width:100%;height:100%}
+.remote-screen-note{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;padding:10px 14px;border-radius:8px;background:#1f2430;color:#eaf6f3;font-size:.9rem;text-align:center;max-width:80%}
+.remote-screen-note[hidden]{display:none}
+.remote-screen-note .lab-tool{margin-left:8px;min-height:30px;background:#2f7fd6;border:1px solid #2f7fd6;color:#fff;border-radius:6px}
+/* Small screens (an 11-inch Chromebook): fold the checks away and give the machine every pixel. */
+.remote-body.checks-hidden{grid-template-columns:minmax(0,1fr)}
+.remote-body.checks-hidden .remote-milestones{display:none}
+.remote-actions .remote-checks-toggle{background:#2a313b;border-color:#3a4350}
+@media (max-height:800px){
+  .remote-chrome{padding:3px 10px;gap:8px}
+  .remote-actions .lab-tool{min-height:28px}
+  .lab-environment:has(.remote-terminal.is-desktop) .environment-feedback{display:none}
+}
+/* Linux basics course: one step at a time above a full-width real desktop. */
+.linux-lab{display:flex;flex-direction:column;height:100dvh;min-height:540px;background:#0e1116;color:#eaf6f3}
+.linux-bar{display:flex;align-items:center;gap:14px;min-height:50px;padding:3px 132px 3px 14px;background:#153847;flex-wrap:wrap}
+/* The reading and display buttons sit in the bar here, so they never cover the Linux screen (its menu is bottom-left). */
+body:has(.linux-lab) .access-tools{left:auto;right:10px;bottom:auto;top:3px;align-items:flex-start}
+body:has(.linux-lab) .access-button{min-height:44px;min-width:44px;padding:0 10px}
+body:has(.linux-lab) .access-panel{left:auto;right:0;bottom:auto;top:52px}
+.linux-bar h1{margin:0;font-size:1.02rem;line-height:1.3;font-weight:700;color:#fff;flex:1;min-width:200px}
+.linux-bar a{color:#bfeee5;font-size:.84rem;font-weight:700;text-decoration:none;white-space:nowrap}
+.linux-bar a:hover,.linux-bar a:focus-visible{text-decoration:underline}
+.linux-progress{font-size:.8rem;color:#cfe3ea;white-space:nowrap}
+.linux-step{display:flex;align-items:flex-start;gap:12px;padding:8px 14px;background:#f4f7f6;color:#102a36;border-bottom:1px solid #2a313b;font-size:.95rem;line-height:1.5}
+.linux-step p{margin:0;flex:1;min-width:0}
+.linux-step code,.linux-unavailable code,.linux-skills code{font-family:"Ubuntu Mono","DejaVu Sans Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.95em;background:#dfe9e6;color:#0c2f3a;border-radius:4px;padding:1px 6px;white-space:nowrap}
+.linux-step-number{display:inline-block;margin-right:4px;padding:1px 8px;border-radius:999px;background:#153847;color:#fff;font-size:.76rem;font-weight:700;white-space:nowrap}
+.linux-step-number.is-done{background:#1d8a6a}
+.linux-hint{flex:none;max-width:38%;font-size:.86rem}
+.linux-hint summary{cursor:pointer;font-weight:700;color:#1b5f8a;white-space:nowrap}
+.linux-hint p{margin:4px 0 0}
+.linux-step-nav{display:flex;gap:4px;flex:none}
+.linux-step-nav .lab-tool{min-width:34px;min-height:32px;border-radius:6px;border:1px solid #9db3ad;background:#fff;color:#102a36;font-size:1.05rem;font-weight:700;cursor:pointer}
+.linux-step-nav .lab-tool:disabled{opacity:.4;cursor:default}
+.linux-done a{font-weight:700;color:#0f5c4a}
+.linux-stage{flex:1;min-height:0;display:flex}
+.linux-stage>.lab-remote{flex:1}
+.linux-unavailable{margin:auto;max-width:560px;padding:24px;color:#eaf6f3}
+.linux-unavailable h2{margin:0 0 8px;font-size:1.3rem;color:#fff}
+.linux-unavailable p{margin:0 0 12px;line-height:1.6}
+.linux-unavailable .text-link{color:#bfeee5;margin-left:12px}
+.linux-skills{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.linux-availability[data-state="ready"]{color:#0f5c4a;font-weight:700}
+.linux-availability[data-state="unavailable"]{color:#8a4b00;font-weight:700}
+@media (max-width:700px){.linux-step{flex-wrap:wrap}.linux-hint{max-width:100%}}
+@media (max-height:800px){.linux-bar h1{font-size:.95rem}.linux-step{padding:5px 12px;font-size:.9rem;line-height:1.4}}

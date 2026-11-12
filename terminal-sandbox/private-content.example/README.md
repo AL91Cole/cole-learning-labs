@@ -13,7 +13,10 @@ labs/index.js                 exports `labs`: paid lab definitions (see template
 sandbox/Dockerfile            adds private seed files on top of the public sandbox image
 sandbox/seed/<lab>/…          files copied into /home/learner/lab/<folder> for each learner
 deploy/.env.production        real settings; never commit a populated copy
-deploy/docker-compose.override.yml   mounts labs/ and sets LAB_CONTENT_MODULE
+deploy/docker-compose.cloud.yml   production stack for a small VPS: controller + Cloudflare Tunnel (recommended)
+deploy/VPS-SETUP.md               step-by-step server, tunnel and Docker account setup
+deploy/docker-compose.override.yml   alternative: controller beside the public compose file (host containers)
+deploy/docker-compose.cloud.override.yml   alternative: same, with learner machines as Docker Cloud Sandboxes
 deploy/cloudflared-config.yml  tunnel or proxy configuration with your hostnames
 ```
 
@@ -26,6 +29,15 @@ deploy/cloudflared-config.yml  tunnel or proxy configuration with your hostnames
    (the compose override does this for you).
 3. In the public site's `src/lab-environment-config.js`, list each paid lab id
    under `remote.labs` and set `environment: 'remote-terminal'`.
+4. To run learner machines as Docker Cloud Sandboxes instead of containers on
+   your own host, set `SANDBOX_BACKEND=cloud`, `DOCKER_ID`, `DOCKER_PAT` (a
+   token with "Allow Cloud Sandboxes access", stored only in the deployment's
+   secrets) and `SANDBOX_SEED_DIRS=/app/sandbox-seed:/content/sandbox/seed` so
+   the controller writes both the public sample seed and this repository's
+   `sandbox/seed/` tree into each machine. No image has to be built or pushed:
+   the default public `python:3.13-alpine` image is seeded at start. Use
+   `deploy/docker-compose.cloud.override.yml`; the controller then needs no
+   Docker socket.
 
 ## Rules the controller enforces
 

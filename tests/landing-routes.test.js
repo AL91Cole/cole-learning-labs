@@ -46,7 +46,7 @@ test('existing hash routes, classroom links and redirects are unchanged by the n
   for (const hash of ['#teach', '#lessons', '#lessons/blank-monitor', '#everyday', '#district-review']) assert.equal(routeAccess(learningRoute(hash)), 'unknown', hash + ' is a page address, not an app route');
   const redirects = (await read('_redirects')).split(/\r?\n/u).filter(line => line && !line.startsWith('#'));
   assert.equal(redirects.some(rule => /teach(?!er)|lessons|everyday|district/u.test(rule)), false, 'Landing pages need no redirect rule.');
-  assert.deepEqual(JSON.parse(await read('_routes.json')).include, ['/api/requester', '/api/reach', '/api/telemetry', '/api/verify']);
+  assert.deepEqual(JSON.parse(await read('_routes.json')).include, ['/api/requester', '/api/reach', '/api/telemetry', '/api/verify', '/terminal/*']);
 });
 
 test('student view hides the adult landing pages and keeps the pages a learner needs', () => {
