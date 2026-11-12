@@ -81,8 +81,10 @@ export function trimTrailingSlashes(value) {
   return String(value).slice(0, end);
 }
 
-const failure = (code, detail) =>
-  Object.assign(new Error(detail ? code + ": " + detail : code), { code });
+const failure = (code, detail, reason) =>
+  Object.assign(new Error(detail ? code + ": " + detail : code), { code, ...(reason ? { reason } : {}) });
+/** A provider error code safe to log: one word such as "invalidArgument". */
+const safeProviderCode = (value) => (typeof value === "string" && /^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(value) ? value : "");
 const IMAGE_REF = /^[a-z0-9][a-z0-9._/@:-]{1,300}$/;
 const SECRET = /^[A-Za-z0-9]{8,32}$/;
 export const randomSecret = (length) => crypto.randomBytes(24).toString("base64").replace(/[^A-Za-z0-9]/g, "").padEnd(length, "x").slice(0, length);
@@ -206,14 +208,42 @@ function tokenSourceFor(cloud, deps) {
   return source;
 }
 
-async function readError(response) {
+async function readErrorDetail(response) {
   const text = await response.text().catch(() => "");
   try {
     const body = JSON.parse(text);
-    return body?.message || body?.code || text.slice(0, 200);
+    return { message: String(body?.message || body?.code || text.slice(0, 200)), code: safeProviderCode(body?.code) };
   } catch {
-    return text.slice(0, 200);
+    return { message: text.slice(0, 200), code: "" };
   }
+}
+/**
+ * A failure for an unsuccessful provider response. The message keeps the
+ * provider's text for debugging; `reason` holds only the HTTP status and the
+ * provider's one-word error code, which the controller may log.
+ */
+async function responseFailure(code, response) {
+  const detail = await readErrorDetail(response);
+  return failure(code, "HTTP " + response.status + " " + detail.message, "HTTP " + response.status + (detail.code ? " " + detail.code : ""));
+}
+
+/**
+ * Registries Docker Cloud Sandboxes accepted for imageRef when last checked
+ * (2026-11-12): creating a sandbox from any other registry is refused with
+ * "image registry not allowed". Publish learner images to Docker Hub.
+ */
+export const CLOUD_ALLOWED_REGISTRIES = Object.freeze(["docker.io", "registry-1.docker.io", "index.docker.io", "dhi.io"]);
+/** The registry host of an image reference ("docker.io" when none is named). */
+export function imageRegistry(ref) {
+  const value = String(ref || "");
+  const first = value.split("/")[0];
+  return value.includes("/") && (first.includes(".") || first.includes(":") || first === "localhost") ? first.toLowerCase() : "docker.io";
+}
+/** Settings that will make every cloud start fail because Docker refuses the image's registry. */
+export function cloudRegistryWarnings(cloud) {
+  const [name, ref] = cloud?.view === "desktop" ? ["DESKTOP_IMAGE_REF", cloud.desktopImageRef] : ["SANDBOX_IMAGE_REF", cloud?.imageRef];
+  const registry = imageRegistry(ref);
+  return CLOUD_ALLOWED_REGISTRIES.includes(registry) ? [] : [name + " is on " + registry + ", but Docker Cloud Sandboxes accept only " + CLOUD_ALLOWED_REGISTRIES.join(", ") + " (as of 2026-11-12): every machine start will fail. Publish the image to Docker Hub."];
 }
 
 /** Bound streamed file reads even when a learner omits or falsifies Content-Length. */
@@ -615,7 +645,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
         label: "learner-shell-" + crypto.randomBytes(4).toString("hex"),
       },
     });
-    if (!createdProcess.ok) throw failure("docker_pty_unavailable", "HTTP " + createdProcess.status + " " + (await readError(createdProcess)));
+    if (!createdProcess.ok) throw await responseFailure("docker_pty_unavailable", createdProcess);
     const proc = await createdProcess.json();
     const processName = processResourceName(proc);
     if (!/^processes\/[^/]+$/.test(processName)) throw failure("docker_pty_unavailable", "no process name");
@@ -680,10 +710,10 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
   try {
     // 1. Create the sandbox and wait until it runs and has an endpoint.
     const created = await api("POST", "/sandboxes", { body: buildCloudSandboxRequest(session, cloud, { desktop, labels: cfg.reviewInstanceId ? { "io.colelearninglabs.review": cfg.reviewInstanceId } : {} }), timeout: 30000 });
-    if (created.status === 429 || created.status === 403) throw failure("capacity_reached", await readError(created));
-    if (!created.ok) throw failure("container_start_failed", "HTTP " + created.status + " " + (await readError(created)));
+    if (created.status === 429 || created.status === 403) throw await responseFailure("capacity_reached", created);
+    if (!created.ok) throw await responseFailure("container_start_failed", created);
     let sandbox = await created.json();
-    if (typeof sandbox.name !== "string" || !sandbox.name) throw failure("container_start_failed", "no sandbox name");
+    if (typeof sandbox.name !== "string" || !sandbox.name) throw failure("container_start_failed", "no sandbox name", "no sandbox name");
     sandboxName = sandbox.name.replace(/^sandboxes\//, "");
     rememberEtag(sandbox, created);
     const deadline = now() + startTimeoutMs;
@@ -692,8 +722,8 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
       endpoint = sandbox.core?.endpoint || null;
       if (status === "running" && endpoint?.uri) break;
       if (status === "failed" || status === "stopped" || status === "stopping" || status === "deleting")
-        throw failure("container_start_failed", "sandbox " + status + (sandbox.failure?.message ? ": " + sandbox.failure.message : ""));
-      if (now() >= deadline) throw failure("container_start_failed", "timed out waiting for the sandbox");
+        throw failure("container_start_failed", "sandbox " + status + (sandbox.failure?.message ? ": " + sandbox.failure.message : ""), "sandbox " + status);
+      if (now() >= deadline) throw failure("container_start_failed", "timed out waiting for the sandbox", "timed out waiting for the sandbox");
       await sleep(pollIntervalMs, deps.sleep);
       sandbox = await fetchSandbox();
     }
@@ -709,7 +739,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
       body: { cmd: ["/bin/sh", "-c", script], session: "setup", label: "cll-setup-" + crypto.randomBytes(4).toString("hex") },
       timeout: 30000,
     });
-    if (!setup.ok) throw failure("sandbox_seed_failed", "HTTP " + setup.status + " " + (await readError(setup)));
+    if (!setup.ok) throw await responseFailure("sandbox_seed_failed", setup);
     const setupName = processResourceName(await setup.json());
     if (!/^processes\/[^/]+$/.test(setupName)) throw failure("sandbox_seed_failed", "no process name");
     const setupDeadline = now() + (desktop ? CLOUD_DEFAULTS.desktopSetupTimeoutMs : CLOUD_DEFAULTS.setupTimeoutMs);
@@ -718,10 +748,10 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
       if (!lookup.ok) throw failure("sandbox_seed_failed", "HTTP " + lookup.status);
       const report = await lookup.json();
       if (report.state === "exited") {
-        if (report.exitCode !== 0) throw failure("sandbox_seed_failed", "exit code " + report.exitCode);
+        if (report.exitCode !== 0) throw failure("sandbox_seed_failed", "exit code " + report.exitCode, Number.isInteger(report.exitCode) ? "exit code " + report.exitCode : "nonzero exit");
         break;
       }
-      if (now() >= setupDeadline) throw failure("sandbox_seed_failed", "timed out");
+      if (now() >= setupDeadline) throw failure("sandbox_seed_failed", "timed out", "timed out");
       await sleep(Math.min(pollIntervalMs, 500), deps.sleep);
     }
 
@@ -740,7 +770,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
     // controller relays the screen and the per-session password protects it.
     if (desktop) {
       const published = await api("POST", "/sandboxes/" + encodeURIComponent(sandboxName) + "/ports", { body: { port: { number: CLOUD_DEFAULTS.desktopPort, protocol: "tcp" } } });
-      if (!published.ok) throw failure("desktop_unavailable", "HTTP " + published.status + " " + (await readError(published)));
+      if (!published.ok) throw await responseFailure("desktop_unavailable", published);
       const port = await published.json();
       let screen;
       try {

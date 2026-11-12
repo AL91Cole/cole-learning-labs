@@ -255,23 +255,43 @@ resizing with the window, the learner's time zone, and deletion on Stop. The
 new seed script was also run against the old desktop image, which still opens
 the lab folder and terminal.
 
+**Docker Cloud starts images from Docker Hub only.** Creating a sandbox from
+any other registry is refused (checked 2026-11-12):
+`image registry not allowed: ghcr.io (allowed registries: docker.io,
+registry-1.docker.io, index.docker.io, dhi.io)`. The controller warns at start-up
+when `DESKTOP_IMAGE_REF` (or `SANDBOX_IMAGE_REF` in the terminal view) names
+another registry, and a refused start is logged with its HTTP status and
+Docker's error code, for example
+`Machine start failed for LNX-101: container_start_failed (HTTP 400 invalidArgument)`.
+
 **Switching production to the new image** (not done by this change):
 
-1. Merge; the Desktop image workflow publishes
-   `ghcr.io/al91cole/cole-learning-labs-desktop:noble-<commit>`.
-2. In GitHub, Packages, `cole-learning-labs-desktop`, Package settings: change
-   the visibility to **Public** (GitHub creates packages private, and Docker
-   Cloud Sandboxes cannot pull a private package without credentials). Under
-   **Manage Actions access**, make sure `cole-learning-labs` has the Write role.
-   The workflow builds one image manifest that carries the
-   `org.opencontainers.image.source` label, which connects the package to the
-   repository; a package created without that connection (as the first publish
-   attempt did, from an unlabelled build attestation) refuses the workflow's
-   pushes with `denied` until the repository is added there or the package is
-   deleted and recreated by the workflow.
-3. On the controller, set `DESKTOP_IMAGE_REF` to that versioned tag in
+1. One-time: at hub.docker.com, Account settings, Personal access tokens,
+   create a token with **Read & Write** access (for example "cole-learning-labs
+   desktop image"). In the GitHub repository, Settings, Secrets and variables,
+   Actions, add it as the repository secret `DOCKERHUB_TOKEN`. The account
+   defaults to `al91cole`; set the repository variable `DOCKERHUB_USERNAME` for
+   another one.
+2. Run the Desktop image workflow on `main` (Actions, Desktop image, Run
+   workflow, or merge a change to `terminal-sandbox/desktop/`). It publishes
+   `docker.io/al91cole/cole-learning-labs-desktop:noble-<commit>` and names it
+   in the run summary, plus a copy in the GitHub Container Registry that Docker
+   Cloud cannot start.
+3. On Docker Hub, make sure the new `cole-learning-labs-desktop` repository is
+   **Public** (a push creates it with the account's default visibility).
+4. On the controller, set `DESKTOP_IMAGE_REF` to the Docker Hub tag in
    `deploy/.env.production` (the private repository's compose file passes it
-   through) and run `cll-update`. Start one lab to confirm, then a class.
+   through; the server's copy of that file needs the same
+   `DESKTOP_IMAGE_REF: ${DESKTOP_IMAGE_REF:-...}` line) and run `cll-update`.
+   Start one lab to confirm, then a class. To go back, delete the line and run
+   `cll-update` again.
+
+The GitHub Container Registry copy needs its package connected to this
+repository: the workflow builds one image manifest carrying the
+`org.opencontainers.image.source` label for that. A package created without
+the connection (the first publish attempt did, from an unlabelled build
+attestation) refuses the workflow's pushes with `denied` until the repository
+is added under its Manage Actions access or the package is deleted.
 
 Until then production keeps the earlier image, and everything in the browser
 (clipboard, keys, full screen, text terminal, time zone, paced typing) already
