@@ -3,7 +3,7 @@
 // desktop machine, the learner's time zone, and the desktop image's start contract.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
+import { EventEmitter, once } from "node:events";
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -69,7 +69,9 @@ test("the screen of a host-container desktop travels through docker exec, never 
   screen.on("message", (data) => events.push(String(data)));
   screen.on("close", () => events.push("close"));
   screen.send(Buffer.from("too early"));
-  await delay(5);
+  // Wait for the event itself: a timer can fire before the relay's spawn event
+  // on a busy machine, which made this check racy.
+  await once(screen, "open");
   assert.equal(screen.readyState, 1);
   spawned[0].child.stdout.emit("data", Buffer.from("RFB 003.008\n"));
   screen.send(Buffer.from("input"));
@@ -289,12 +291,14 @@ test("the desktop image keeps the start contract and the learner is never an adm
   const startup = readFileSync(new URL("rootfs/startup.sh", dir), "utf8");
   const session = readFileSync(new URL("rootfs/usr/local/bin/cll-session", dir), "utf8");
   assert.match(dockerfile, /^FROM ubuntu:24\.04@sha256:[a-f0-9]{64}$/m, "a maintained LTS base pinned by digest");
+  // Compare whole words of the Dockerfile; no pattern is built from these names.
+  const words = new Set(dockerfile.split(/[\s;\\]+/));
   for (const tool of ["man-db", "manpages", "bash-completion", "less", "nano", "vim", "git", "tree", "htop", "iputils-ping", "dnsutils", "python3", "gcc", "make", "xfce4-session", "thunar", "xfce4-terminal", "mousepad", "tigervnc-standalone-server", "websockify"])
-    assert.match(dockerfile, new RegExp("[ \\\\n]" + tool.replace(/[+]/g, "\\+") + "[ ;\\\\\\n]"), tool);
+    assert.ok(words.has(tool), tool + " is installed");
   assert.match(dockerfile, /rm -f \/etc\/dpkg\/dpkg\.cfg\.d\/excludes/, "manual pages are kept");
   assert.match(dockerfile, /userdel -r ubuntu/, "the base image's uid 1000 account is removed so the learner gets uid 1000");
   assert.match(dockerfile, /rm -f \/etc\/apt\/apt\.conf\.d\/00build-proxy/, "build proxy settings never stay in the image");
-  for (const name of ["USER", "PASSWORD", "VNC_PASSWORD", "RESOLUTION", "TZ"]) assert.match(startup, new RegExp("\\$\\{" + name + ":"), name);
+  for (const name of ["USER", "PASSWORD", "VNC_PASSWORD", "RESOLUTION", "TZ"]) assert.ok(startup.includes("${" + name + ":"), name + " is read by the start script");
   assert.match(startup, /for group in sudo adm; do gpasswd -d/, "no administrator groups");
   assert.ok(!/usermod -aG|--groups/.test(startup));
   assert.match(startup, /unset PASSWORD VNC_PASSWORD/);
