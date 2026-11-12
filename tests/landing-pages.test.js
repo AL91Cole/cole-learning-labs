@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync, statSync} from 'node:fs';
 import {PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES, MEMBER_FILES} from '../scripts/build.mjs';
 import {learningRoute} from '../src/learning-routes.js';
 import {routeAccess} from '../src/access-policy.js';
@@ -26,7 +26,7 @@ const VERIFIED_STANDARDS = new Map([
   ['4-6.CY.5', 'Explain suspicious activity of applications and devices.'],
   ['9-12.CY.5', 'Recommend multiple actions to take prior and in response to various types of digital security breaches.']
 ]);
-const EXTERNAL_HOSTS = new Set(['www.nysed.gov', 'www.cloudflare.com', 'github.com', 'docs.goguardian.com', 'support.google.com']);
+const EXTERNAL_HOSTS = new Set(['www.nysed.gov', 'www.cloudflare.com', 'github.com', 'docs.goguardian.com', 'support.google.com', 'www.buymeacoffee.com']);
 const SITE_PAGES = new Set(['/', '/school-it', '/compliance', '/verify', '/ai-use-notice', '/secure-reports', '/student-workbook', '/practice-quizzes', ...PUBLIC_LANDING_PAGES.map(cleanPath)]);
 
 function activityExists(route) {
@@ -43,7 +43,7 @@ function checkHash(hash, context) {
 }
 
 test('every landing page is a reviewed, published, public-only file', () => {
-  assert.equal(PUBLIC_LANDING_PAGES.length, 9);
+  assert.equal(PUBLIC_LANDING_PAGES.length, 10);
   for (const file of PUBLIC_LANDING_PAGES) {
     assert.ok(PUBLIC_SOURCE_FILES.includes(file), file);
     assert.ok(PUBLIC_FILES.includes(file), file + ' is published');
@@ -209,4 +209,24 @@ test('Everyday Tech reuses existing activities and leaves school grade labels in
   assert.match(html, /href="\/#(?:learn\/ai|lab\/AI-302|practice\/AI-302|explore\/EX-AI-2)"/u, 'an AI fact-checking activity is linked');
   assert.match(words, /famil/iu); assert.match(words, /adult/iu);
   assert.match(words, /grade label|grade band|school grade/iu, 'the page explains that activities keep their school grade label');
+});
+
+test('the optional support page is for adults, goes only to Buy Me a Coffee and is hidden in student mode', async () => {
+  const {studentLinkAction} = await import('../src/session-modes.js');
+  const html = pages.get('support.html'), words = text(html);
+  const outside = [...html.matchAll(/<a\b[^>]*\bhref="(https:\/\/[^"]+)"/gu)].map(match => match[1]).filter(href => !['github.com', 'www.colelearninglabs.com'].includes(new URL(href).hostname));
+  assert.deepEqual(outside, ['https://www.buymeacoffee.com/colelearninglabs'], 'the only payment link is the owner\'s own page');
+  assert.match(html, /<img class="support-qr" src="\/assets\/buymeacoffee-qr\.webp" alt="QR code that opens buymeacoffee\.com\/colelearninglabs" width="240" height="240">/u);
+  assert.ok(PUBLIC_FILES.includes('assets/buymeacoffee-qr.webp') && !MEMBER_FILES.includes('assets/buymeacoffee-qr.webp'), 'the code is published on the public site only');
+  assert.ok(statSync(new URL('../assets/buymeacoffee-qr.webp', import.meta.url)).size < 60000, 'the code stays a small image');
+  for (const phrase of [/optional/iu, /unlocks nothing/iu, /separate service/iu, /privacy policy/iu, /sends it nothing/iu, /Leave out student names and school details/u, /you do not need to do anything here/iu, /student mode/iu, /never required/iu]) assert.match(words, phrase);
+  assert.doesNotMatch(words, /ask (?:a|your) (?:parent|guardian|family)|Schools never need to pay/iu, 'students are never asked to get an adult to pay, and no permanent promise is made about future access');
+  assert.doesNotMatch(words, /donate now|limited time|urgent|premium|members get/iu, 'no pressure or paid-access language');
+  for (const href of ['/support', '/support.html', 'https://www.buymeacoffee.com/colelearninglabs']) assert.notEqual(studentLinkAction(href, origin + '/?mode=student'), 'keep', href + ' is not offered in student mode');
+  assert.match(read('index.html'), /<p><a class="footer-support" href="\/support">Support the free labs<\/a><\/p><\/div>\s*<nav class="footer-links"/u, 'the home footer links the page, beside the site name');
+  assert.match(read('src/session-modes.js'), /const STANDALONE_CONTROL = '[^']*\.footer-support'/u, 'student mode removes the footer link instead of leaving dead text');
+  const css = read('src/landing.css');
+  assert.match(css, /\.support-qr\{[^}]*padding:24px;[^}]*box-sizing:border-box;forced-color-adjust:none\}/u, 'the code keeps a white quiet zone in forced colors and never overflows a narrow card');
+  assert.match(read('src/app.js'), /\{name:'Support the labs',type:'Optional · for adults',[^}]*url:'\/support'\}/u, 'the contact page links the page, not the payment site');
+  assert.match(read('src/privacy.js'), /<h2>Optional support<\/h2>/u);
 });

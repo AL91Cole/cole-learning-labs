@@ -13,7 +13,7 @@ const STUDENT_HIDDEN_PAGES = new Set(['projects', 'about', 'connect', 'educators
 // Same-site pages a learner may still need: the AI-use notice, the data-practices page
 // linked beside optional sharing choices, and the local report tool.
 const STUDENT_SITE_PAGES = new Set(['/ai-use-notice', '/ai-use-notice.html', '/compliance', '/compliance.html', '/secure-reports', '/secure-reports.html']);
-const STANDALONE_CONTROL = '.button,.text-link,.lab-tool,.pathway-card,#site-nav a,.footer-links a';
+const STANDALONE_CONTROL = '.button,.text-link,.lab-tool,.pathway-card,#site-nav a,.footer-links a,.footer-support';
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'input', 'scroll'];
 
 /** Read the modes from `location.search`. A mistyped shared-device value still protects. */

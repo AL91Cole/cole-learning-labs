@@ -55,8 +55,9 @@ async function fixture(t,app="export {checkFixture} from './coding-lab.js';"){
 test('public artifact contains reviewed starter cases but excludes paid authored scenarios and feature templates',async()=>{
   const result=await compile(false),javascript=decode(result.javascript);
   assert.ok(result.javascript instanceof Uint8Array);assert.equal(result.metadata.length,42);
-  // Raised from 1,100,000 when the free Linux basics course page joined the public application (about 9 KB).
-  assert.ok(result.javascript.length<1_120_000,'The compiled public application must stay within its reviewed size budget.');
+  // Raised from 1,100,000 when the free Linux basics course page joined the public application (about 9 KB),
+  // then to 1,121,000 for the optional support link on the contact and privacy pages (under 1 KB).
+  assert.ok(result.javascript.length<1_121_000,'The compiled public application must stay within its reviewed size budget.');
   assert.deepEqual(result.metadata.filter(row=>row.access==='free').map(row=>row.id),FREE_LAB_IDS);
   for(const row of result.metadata)assert.deepEqual(Object.keys(row).sort(),['access','grade','id','minutes','title','track']);
   assert.ok(javascript.includes('The monitor has power and its input is set to HDMI.'));

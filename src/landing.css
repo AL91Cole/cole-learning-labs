@@ -31,6 +31,11 @@
 .standard-code{display:inline-block;padding:2px 8px;border:1px solid #9bc9c5;border-radius:6px;background:#eef8f6;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:700;color:#0d3a3f;white-space:nowrap}
 .print-only{display:none}
 @media(max-width:600px){.lesson-steps>li{padding-left:56px}.lesson-card{padding:18px}.lesson-share{padding:16px}}
+/* Support page: the QR code keeps a white quiet zone (about three modules) so phone cameras can read it in any theme, forced colors included. */
+.support-card{display:flex;flex-wrap:wrap;align-items:center;gap:24px;margin:12px 0 28px;padding:22px;border:1px solid #cfdcde;border-top:5px solid #007f78;border-radius:12px;background:#fff;line-height:1.6;break-inside:avoid}
+.support-card>div{flex:1 1 240px}
+.support-qr{display:block;width:288px;max-width:100%;height:auto;padding:24px;border-radius:10px;background:#fff;box-sizing:border-box;forced-color-adjust:none}
+.support-note{margin:0;font-size:.9rem;color:#516777;overflow-wrap:anywhere}
 @media print{
   .skip-link,.site-header nav,.site-footer,.no-print,.button-row{display:none!important}
   .print-only{display:block}
