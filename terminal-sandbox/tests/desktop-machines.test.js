@@ -11,7 +11,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import WebSocket from "ws";
 import { configuration, createSandboxOrchestrator, runtimeDescription, labFor, buildDockerDesktopRunArgs, openContainerScreen, spawnDesktopContainer, DESKTOP_LIMITS } from "../server.js";
-import { cloudConfiguration, buildCloudSandboxRequest, buildSeedScript, seedFromLabFiles, spawnCloudSandbox, validTimeZone } from "../cloud-sandboxes.js";
+import { cloudConfiguration, buildCloudSandboxRequest, buildSeedScript, seedFromLabFiles, spawnCloudSandbox, validTimeZone, imageRegistry, cloudRegistryWarnings, CLOUD_ALLOWED_REGISTRIES } from "../cloud-sandboxes.js";
 
 const ORIGIN = "http://127.0.0.1:8080";
 const NAME = "cll-sandbox-" + "a".repeat(32);
@@ -301,6 +301,11 @@ test("the desktop image keeps the start contract and the learner is never an adm
   const builds = workflow.split("\n").filter((line) => /docker build /.test(line));
   assert.equal(builds.length, 2, "the workflow builds the image once to test it and once to publish it");
   assert.ok(builds.every((line) => line.includes("--provenance=false --sbom=false")), "both builds make one labelled image manifest: an unlabelled attestation manifest would create the package unconnected and the push would be refused");
+  const publish = workflow.slice(workflow.indexOf("  publish:"));
+  assert.ok(workflow.split("\n").filter((line) => line.includes("secrets.")).every((line) => /^\s+[A-Z_]+: \$\{\{ secrets\.[A-Z_]+ \}\}$/.test(line)), "secrets reach the script only as environment variables, never inside its text");
+  assert.ok(publish.includes(`printf '%s' "$DOCKERHUB_TOKEN" | docker login -u "$hub_user" --password-stdin`), "the Docker Hub token is passed on standard input");
+  assert.ok(publish.includes('hub="docker.io/$hub_user/cole-learning-labs-desktop"'), "Docker Cloud Sandboxes start images from Docker Hub");
+  assert.ok(publish.indexOf('docker push "$hub:$version"') > 0 && publish.indexOf('docker push "$hub:$version"') < publish.indexOf('push "$image:$version"'), "the Docker Hub copy is pushed before the ghcr.io copy");
   assert.match(dockerfile, /userdel -r ubuntu/, "the base image's uid 1000 account is removed so the learner gets uid 1000");
   assert.match(dockerfile, /rm -f \/etc\/apt\/apt\.conf\.d\/00build-proxy/, "build proxy settings never stay in the image");
   for (const name of ["USER", "PASSWORD", "VNC_PASSWORD", "RESOLUTION", "TZ"]) assert.ok(startup.includes("${" + name + ":"), name + " is read by the start script");
@@ -311,4 +316,53 @@ test("the desktop image keeps the start contract and the learner is never an adm
   assert.match(session, /websockify --heartbeat 30 6081 127\.0\.0\.1:5900/, "the cloud screen bridge stays on port 6081");
   assert.match(session, /-AcceptSetDesktopSize/, "the browser can resize the desktop");
   assert.match(session, /runuser -u "\$user" -- \/usr\/bin\/Xvnc/, "the screen server runs as the learner, not root");
+});
+
+test("Docker Cloud starts only Docker Hub images, and the controller warns about any other registry", () => {
+  assert.deepEqual([...CLOUD_ALLOWED_REGISTRIES], ["docker.io", "registry-1.docker.io", "index.docker.io", "dhi.io"]);
+  for (const [ref, registry] of [["ghcr.io/al91cole/cole-learning-labs-desktop:noble-1", "ghcr.io"], ["docker.io/al91cole/cole-learning-labs-desktop:noble-1", "docker.io"], ["al91cole/cole-learning-labs-desktop:noble-1", "docker.io"], ["ubuntu:24.04", "docker.io"], ["dhi.io/python:3", "dhi.io"], ["localhost:5000/lab", "localhost:5000"], ["Quay.IO/x/y:1", "quay.io"]])
+    assert.equal(imageRegistry(ref), registry, ref);
+  const base = { SANDBOX_BACKEND: "cloud", DOCKER_ID: "id", DOCKER_PAT: "pat" };
+  assert.deepEqual(cloudRegistryWarnings(cloudConfiguration(base)), [], "the default desktop image is on Docker Hub");
+  assert.deepEqual(cloudRegistryWarnings(cloudConfiguration({ ...base, DESKTOP_IMAGE_REF: "docker.io/al91cole/cole-learning-labs-desktop:noble-1" })), []);
+  const [warning] = cloudRegistryWarnings(cloudConfiguration({ ...base, DESKTOP_IMAGE_REF: "ghcr.io/al91cole/cole-learning-labs-desktop:noble-1" }));
+  assert.match(warning, /^DESKTOP_IMAGE_REF is on ghcr\.io, but Docker Cloud Sandboxes accept only docker\.io/);
+  assert.match(cloudRegistryWarnings(cloudConfiguration({ ...base, SANDBOX_VIEW: "terminal", SANDBOX_IMAGE_REF: "quay.io/x/y:1", DESKTOP_IMAGE_REF: "ghcr.io/a/b:1" }))[0], /^SANDBOX_IMAGE_REF is on quay\.io/, "the terminal view checks the image it uses");
+});
+
+test("a refused start is logged with its HTTP status and Docker's error code, never Docker's message", async (t) => {
+  const refusal = { code: "invalidArgument", message: "invalid inline parameters: image registry not allowed: ghcr.io (allowed registries: docker.io)" };
+  const fetch = async (url, init = {}) => {
+    if (url.endsWith("/v2/auth/token")) return new Response(JSON.stringify({ access_token: "h." + Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url") + ".s" }));
+    if ((init.method || "GET") === "POST" && url.endsWith("/sandboxes")) return new Response(JSON.stringify(refusal), { status: 400 });
+    return new Response("{}", { status: 404 });
+  };
+  const cfg = configuration({ SANDBOX_BACKEND: "cloud", DOCKER_ID: "id", DOCKER_PAT: "pat", DESKTOP_IMAGE_REF: "ghcr.io/al91cole/cole-learning-labs-desktop:noble-1" });
+  const error = await spawnCloudSandbox({ id: "s", labId: "LNX-101" }, cfg, { fetch, sleep: async () => {}, pollIntervalMs: 0 }).catch((e) => e);
+  assert.equal(error.code, "container_start_failed");
+  assert.equal(error.reason, "HTTP 400 invalidArgument");
+  assert.match(error.message, /image registry not allowed/, "the full message stays available to whoever debugs the error");
+
+  const logged = [];
+  const failures = [error, Object.assign(new Error("x"), { code: "container_start_failed", reason: "HTTP 400 x; Authorization=secret" }), Object.assign(new Error("y"), { code: "made_up", reason: "HTTP 500" })];
+  const service = createSandboxOrchestrator({ enabled: true, allowInsecureLocalhost: true, allowedOrigins: new Set([ORIGIN]), authTimeoutMs: 1000 }, { sandboxFactory: async () => { throw failures.shift(); }, log: (...parts) => logged.push(parts.join(" ")) });
+  await new Promise((resolve) => service.server.listen(0, "127.0.0.1", resolve));
+  t.after(() => service.close());
+  for (let i = 0; i < 3; i++) {
+    const ws = new WebSocket("ws://127.0.0.1:" + service.server.address().port + "/ws", { headers: { Origin: ORIGIN } });
+    const messages = [];
+    ws.on("message", (raw) => messages.push(JSON.parse(raw)));
+    await new Promise((resolve) => ws.once("open", resolve));
+    ws.send(JSON.stringify({ type: "auth", role: "student" }));
+    for (let j = 0; j < 200 && !messages.some((m) => m.type === "auth:ok"); j++) await delay(5);
+    ws.send(JSON.stringify({ type: "session:start", labId: "LNX-101", mode: "self-paced" }));
+    for (let j = 0; j < 200 && !messages.some((m) => m.type === "error"); j++) await delay(5);
+    assert.equal(messages.find((m) => m.type === "error")?.code, "sandbox_unavailable", "learners only ever see that the machine is unavailable");
+    ws.close();
+  }
+  assert.deepEqual(logged, [
+    "Machine start failed for LNX-101: container_start_failed (HTTP 400 invalidArgument)",
+    "Machine start failed for LNX-101: container_start_failed",
+    "Machine start failed for LNX-101: operation_failed",
+  ], "a reason that is not plain words is dropped, and an unknown code hides everything");
 });

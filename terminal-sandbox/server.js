@@ -12,6 +12,7 @@ import { WebSocketServer, WebSocket as UpstreamWebSocket } from "ws";
 import {
   cloudConfiguration,
   cloudConfigurationProblems,
+  cloudRegistryWarnings,
   spawnCloudSandbox,
   buildSeedScript,
   seedFromLabFiles,
@@ -1436,9 +1437,12 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         "invalid_container_configuration", "sandbox_seed_failed", "sandbox_seed_invalid",
         "sandbox_seed_too_large", "classroom_unavailable", "pty_unavailable", "linux_docker_required",
       ]);
+      // A known failure may add a short reason made of fixed words, the HTTP
+      // status and the provider's one-word error code, e.g. "(HTTP 400 invalidArgument)".
+      const reason = typeof error?.reason === "string" && /^[A-Za-z0-9 ._-]{1,60}$/.test(error.reason) ? " (" + error.reason + ")" : "";
       logFailure(
         "Machine start failed for " + lab.id + ":",
-        safeCodes.has(error?.code) ? error.code : "operation_failed",
+        safeCodes.has(error?.code) ? error.code + reason : "operation_failed",
       );
       sessions.delete(s.id);
       if (c.session === s) c.session = null;
@@ -1884,6 +1888,7 @@ if (
       );
       process.exit(1);
     }
+    for (const warning of cloudRegistryWarnings(CONFIG.cloud)) console.warn("Warning: " + warning);
   }
   const service = createSandboxOrchestrator();
   service.server.listen(CONFIG.port, CONFIG.host, () => {

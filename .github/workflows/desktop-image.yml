@@ -1,8 +1,12 @@
 name: Desktop image
 
 # Builds and smoke-tests the learner desktop image (terminal-sandbox/desktop)
-# whenever it changes, and publishes it to the GitHub Container Registry from
-# main so Docker Cloud Sandboxes can start it (DESKTOP_IMAGE_REF).
+# whenever it changes, and publishes it from main. Docker Cloud Sandboxes start
+# images from Docker Hub only (docker.io, dhi.io), so the copy for
+# DESKTOP_IMAGE_REF is pushed to Docker Hub when the repository has a
+# DOCKERHUB_TOKEN secret (a Docker Hub access token with Read & Write; the
+# account is the DOCKERHUB_USERNAME variable, al91cole by default). A copy is
+# also kept in the GitHub Container Registry.
 on:
   push:
     branches: [main]
@@ -53,9 +57,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Build, check and push to ghcr.io
+      - name: Build, check and push to Docker Hub and ghcr.io
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || 'al91cole' }}
         run: |
           set -eu
           owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
@@ -69,6 +75,29 @@ jobs:
             --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "$image:$version" terminal-sandbox/desktop
           sh terminal-sandbox/desktop/smoke-test.sh "$image:$version"
+          # Docker Hub first: it is the copy Docker Cloud Sandboxes can start.
+          if [ -n "$DOCKERHUB_TOKEN" ]; then
+            hub_user=$(printf '%s' "$DOCKERHUB_USERNAME" | tr '[:upper:]' '[:lower:]')
+            case "$hub_user" in ''|*[!a-z0-9]*) echo "DOCKERHUB_USERNAME must be a Docker Hub user name (letters and digits)"; exit 1 ;; esac
+            hub="docker.io/$hub_user/cole-learning-labs-desktop"
+            printf '%s' "$DOCKERHUB_TOKEN" | docker login -u "$hub_user" --password-stdin
+            docker tag "$image:$version" "$hub:$version"
+            docker tag "$image:$version" "$hub:noble"
+            docker push "$hub:$version"
+            docker push "$hub:noble"
+            docker logout
+            {
+              echo "### For Docker Cloud Sandboxes"
+              echo "Published \`$hub:$version\` (also tagged \`noble\`). On the controller set:"
+              echo ""
+              echo "    DESKTOP_IMAGE_REF=$hub:$version"
+              echo ""
+              echo "The first push creates the Docker Hub repository with the account's default visibility: make sure it is Public."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=Docker Hub copy not published::Add a DOCKERHUB_TOKEN repository secret (Docker Hub access token, Read & Write). Docker Cloud Sandboxes start images from Docker Hub only."
+            echo "### Docker Hub copy not published: add the DOCKERHUB_TOKEN repository secret. Docker Cloud Sandboxes refuse images from ghcr.io." >> "$GITHUB_STEP_SUMMARY"
+          fi
           printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker tag "$image:$version" "$image:noble"
           push() {
@@ -84,4 +113,4 @@ jobs:
           push "$image:$version"
           push "$image:noble"
           docker logout ghcr.io
-          echo "Published $image:$version (also tagged noble). Use the versioned tag in DESKTOP_IMAGE_REF." >> "$GITHUB_STEP_SUMMARY"
+          echo "Also published $image:$version (also tagged noble) to the GitHub Container Registry. Docker Cloud Sandboxes cannot start this copy; use the Docker Hub one." >> "$GITHUB_STEP_SUMMARY"
