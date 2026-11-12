@@ -16,7 +16,8 @@ it costs, and what is still to do before charging.
   text terminal if xterm cannot load. `src/lab-remote-client.js` speaks the
   service's WebSocket protocol (`auth` → `session:start` → `terminal:*`,
   `milestone:verify`, `milestone:status`). Session messages, lab IDs, keyboard
-  and pointer input, display sizes and verify requests leave the browser.
+  and pointer input, display sizes, the time zone, clipboard text and verify
+  requests leave the browser.
   The machine processes files and commands remotely; checks read selected
   lab files and recent command history. `src/lab-environment-config.js`
   chooses the environment and lists which labs the service hosts; labs that
@@ -200,6 +201,74 @@ answering.
   text editor (Mousepad) on a double-click.
 - **To add a lab**, add it to `linux-labs.js` and `src/linux-catalog.js`, and
   its id to `src/lab-environment-config.js`.
+
+## A Live VM that works like a real computer (2026-11-12)
+
+The desktop machine is now meant to be used the way a learner would use a Linux
+computer in front of them, not only for the lab steps.
+
+- **A maintained, realistic desktop.** `terminal-sandbox/desktop/` builds Ubuntu
+  24.04 LTS with XFCE (Xubuntu's desktop), replacing the unmaintained Ubuntu
+  20.04 LXDE image the security review asked to retire. Menu in the bottom-left
+  corner and a taskbar along the bottom (the Linux basics instructions still
+  read correctly), file manager, terminal, text editor, task manager,
+  screenshots and the everyday command-line tools with their manual pages
+  (`man`, tab completion, `nano`, `vim`, `git`, `htop`, `ping`, `python3`,
+  `gcc` and more). The learner is never an administrator; `sudo` behaves as on a
+  school computer. It is smaller than the image it replaces (about 390 MB
+  compressed against 507 MB) and keeps the same start contract.
+- **Copy and paste between the computer and the machine.** Ctrl+V on the
+  machine's screen brings the learner's clipboard over first; anything copied
+  on the machine lands on the learner's clipboard. A Clipboard panel does the
+  same by hand and can type text into windows that do not accept a paste.
+- **Keys the browser keeps.** A Keys menu sends Windows/Super, Ctrl+Alt+Delete,
+  Alt+Tab, Alt+F4, Ctrl+W, Print Screen and others. Full screen hides the page
+  and, in Chromium browsers, locks the keyboard so those shortcuts reach the
+  machine directly.
+- **A screen that fits.** The desktop resizes with the learner's window instead
+  of being scaled (down to 800x480; phones and small panes keep that size and
+  scale it). The clock shows the learner's own time zone.
+- **Accessibility.** A Text terminal button opens a login shell on the same
+  machine in an xterm.js terminal with screen-reader support; its commands
+  count for the checks. Ctrl+Alt+Shift moves the keyboard out of the screen,
+  which otherwise keeps every key (Tab included), so keyboard users are never
+  trapped. The Keys menu works with the arrow keys and Escape.
+- **Robust typing.** The browser combines fast typing, held keys and long
+  pastes and paces them under the controller's limits. Before, more than 60
+  key messages in a second closed the connection and deleted the machine, and
+  pastes over 4 KiB were cut off.
+- **Local testing of the whole thing.** `SANDBOX_BACKEND=docker` with
+  `SANDBOX_VIEW=desktop` runs the same desktops on the controller's own Docker
+  host with no network at all (the screen travels through `docker exec`), which
+  is how this change was tested end to end.
+
+Verified on 2026-11-12 with the site build, the controller and the new image on
+one Docker host, driven through Chromium: a machine was ready in about 4
+seconds with the image cached; all five Linux basics labs finished with every
+check ticked (typing on the desktop and in the text terminal); paste from the
+computer into the terminal (instant and held Ctrl+Shift+V) and into the text
+editor (Ctrl+V), copy from the machine to the computer, Type it, the Keys menu
+(Ctrl+Alt+T opened a terminal), full screen in and out, the focus shortcut, a
+guided lab beside its guide at 1366x768 and 1280x800 with the controls on one
+row, a phone (390 px) and a tablet (768 px) without sideways scrolling, desktop
+resizing with the window, the learner's time zone, and deletion on Stop. The
+new seed script was also run against the old desktop image, which still opens
+the lab folder and terminal.
+
+**Switching production to the new image** (not done by this change):
+
+1. Merge; the Desktop image workflow publishes
+   `ghcr.io/al91cole/cole-learning-labs-desktop:noble-<commit>`.
+2. In GitHub, Packages, `cole-learning-labs-desktop`, Package settings: change
+   the visibility to **Public** (GitHub creates packages private, and Docker
+   Cloud Sandboxes cannot pull a private package without credentials).
+3. On the controller, set `DESKTOP_IMAGE_REF` to that versioned tag in
+   `deploy/.env.production` (the private repository's compose file passes it
+   through) and run `cll-update`. Start one lab to confirm, then a class.
+
+Until then production keeps the earlier image, and everything in the browser
+(clipboard, keys, full screen, text terminal, time zone, paced typing) already
+works with it; only resizing the desktop needs the new image.
 
 ## Hosting the controller (set up)
 

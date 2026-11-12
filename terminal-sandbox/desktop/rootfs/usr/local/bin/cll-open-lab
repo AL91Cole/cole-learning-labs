@@ -1,0 +1,8 @@
+#!/bin/sh
+# Opens a folder (the lab folder by default) in the file manager and a terminal
+# there, the two windows a lab starts with. The terminal opens last, on top.
+dir=${1:-$HOME/lab}
+[ -d "$dir" ] || dir=$HOME
+thunar "$dir" >/dev/null 2>&1 &
+sleep 1
+xfce4-terminal --working-directory="$dir" >/dev/null 2>&1 &

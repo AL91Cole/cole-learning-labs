@@ -1,0 +1,25 @@
+[Default Applications]
+inode/directory=thunar.desktop
+text/plain=org.xfce.mousepad.desktop
+text/x-python=org.xfce.mousepad.desktop
+text/x-python3=org.xfce.mousepad.desktop
+text/x-csrc=org.xfce.mousepad.desktop
+text/x-chdr=org.xfce.mousepad.desktop
+text/x-log=org.xfce.mousepad.desktop
+text/markdown=org.xfce.mousepad.desktop
+text/csv=org.xfce.mousepad.desktop
+text/html=org.xfce.mousepad.desktop
+text/x-shellscript=org.xfce.mousepad.desktop
+application/x-shellscript=org.xfce.mousepad.desktop
+application/json=org.xfce.mousepad.desktop
+application/xml=org.xfce.mousepad.desktop
+application/x-yaml=org.xfce.mousepad.desktop
+application/x-desktop=org.xfce.mousepad.desktop
+image/png=org.xfce.ristretto.desktop
+image/jpeg=org.xfce.ristretto.desktop
+image/gif=org.xfce.ristretto.desktop
+image/svg+xml=org.xfce.ristretto.desktop
+application/zip=xarchiver.desktop
+application/x-tar=xarchiver.desktop
+application/gzip=xarchiver.desktop
+application/x-compressed-tar=xarchiver.desktop

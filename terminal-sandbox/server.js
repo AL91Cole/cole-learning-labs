@@ -1,7 +1,8 @@
 /** Separate, disabled-by-default Docker terminal service. No host-shell or simulated fallback. */
 import http from "node:http";
 import crypto from "node:crypto";
-import { execFile } from "node:child_process";
+import { execFile, spawn as spawnProcess } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +15,10 @@ import {
   spawnCloudSandbox,
   buildSeedScript,
   seedFromLabFiles,
+  seedScriptFor,
+  desktopResolutionFor,
+  validTimeZone,
+  randomSecret,
   CLOUD_SIZES,
 } from "./cloud-sandboxes.js";
 import { generatedLabs } from "./generated-labs.js";
@@ -36,6 +41,10 @@ export function configuration(env = process.env) {
     port: integer(env.PORT, 8080, 1, 65535),
     teacherKey: env.TEACHER_ACCESS_KEY || "",
     sandboxImage: env.SANDBOX_IMAGE || "cole-learning-labs/sandbox:alpine",
+    // Host-container backend only: SANDBOX_VIEW=desktop starts a graphical
+    // desktop from DESKTOP_IMAGE (built from desktop/Dockerfile) instead of a shell.
+    dockerView: env.SANDBOX_VIEW === "desktop" ? "desktop" : "terminal",
+    desktopImage: env.DESKTOP_IMAGE || "cole-learning-labs/desktop:noble",
     // "docker": containers on this host. "cloud": one Docker Cloud Sandbox per learner.
     sandboxBackend: env.SANDBOX_BACKEND === "cloud" ? "cloud" : "docker",
     cloud: cloudConfiguration(env),
@@ -667,6 +676,212 @@ export async function spawnSandboxContainer(session, cfg = CONFIG, deps = {}) {
   }
 }
 
+/** Resources of one desktop machine on the host-container backend. */
+export const DESKTOP_LIMITS = Object.freeze({ memory: "2048m", cpus: "1.5", pids: 512 });
+
+/**
+ * `docker run` arguments for a desktop machine. Its start script creates the
+ * learner account and starts the desktop as that learner, so the container
+ * starts as root with only the capabilities those steps need; no-new-privileges
+ * stops the learner from ever regaining them (sudo cannot raise privileges).
+ * Like the shell machines it has no network at all: the controller reaches the
+ * screen through `docker exec` (see spawnDesktopContainer).
+ */
+export function buildDockerDesktopRunArgs(name, image, cfg, desktop) {
+  if (
+    !/^cll-sandbox-[a-f0-9]{32}$/.test(name) ||
+    !/^[a-z0-9][a-z0-9._/@:-]{1,200}$/.test(image || "") ||
+    !/^[A-Za-z0-9]{8,32}$/.test(desktop?.vncPassword || "") ||
+    !/^[A-Za-z0-9]{8,32}$/.test(desktop?.userPassword || "") ||
+    !/^\d{3,4}x\d{3,4}$/.test(desktop?.resolution || "") ||
+    (desktop.timeZone && validTimeZone(desktop.timeZone) !== desktop.timeZone) ||
+    (cfg.reviewInstanceId !== undefined && !/^[a-f0-9]{32}$/.test(String(cfg.reviewInstanceId)))
+  )
+    throw failure("invalid_container_configuration");
+  return [
+    "run", "-d", "--rm", "--pull=never",
+    "--name", name,
+    "--hostname", "lab-pc",
+    "--label", "io.colelearninglabs.terminal=1",
+    ...(cfg.reviewInstanceId ? ["--label", `io.colelearninglabs.review=${cfg.reviewInstanceId}`] : []),
+    "--memory=" + DESKTOP_LIMITS.memory, "--memory-swap=" + DESKTOP_LIMITS.memory,
+    "--cpus=" + DESKTOP_LIMITS.cpus,
+    "--pids-limit=" + DESKTOP_LIMITS.pids,
+    "--network", "none",
+    "--cap-drop=ALL",
+    ...["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETUID", "SETGID", "KILL", "AUDIT_WRITE"].flatMap((cap) => ["--cap-add", cap]),
+    "--security-opt", "no-new-privileges:true",
+    "--ulimit", "nofile=4096:4096",
+    "--log-driver", "none",
+    "--shm-size", "256m",
+    "--tmpfs", "/tmp:rw,nosuid,nodev,size=256m,mode=1777",
+    "--env", "USER=learner",
+    "--env", "PASSWORD=" + desktop.userPassword,
+    "--env", "VNC_PASSWORD=" + desktop.vncPassword,
+    "--env", "RESOLUTION=" + desktop.resolution,
+    ...(desktop.timeZone ? ["--env", "TZ=" + desktop.timeZone] : []),
+    image,
+    "/usr/bin/timeout", "--signal=KILL", String(Math.ceil(cfg.maxLifetimeMs / 1000)), "/startup.sh",
+  ];
+}
+
+/**
+ * The screen of a host-container desktop as a WebSocket-like object: the
+ * machine's own relay (cll-vnc-relay) runs under `docker exec -i` and carries
+ * the raw VNC stream on its standard input and output.
+ */
+export function openContainerScreen(name, { spawn = spawnProcess } = {}) {
+  const screen = new EventEmitter();
+  screen.readyState = 0;
+  let child;
+  try {
+    child = spawn("docker", ["exec", "-i", "--user", "65534:65534", name, "/usr/local/bin/cll-vnc-relay"], { stdio: ["pipe", "pipe", "ignore"], windowsHide: true });
+  } catch {
+    setImmediate(() => { screen.readyState = 3; screen.emit("close"); });
+    return Object.assign(screen, { send() {}, terminate() {}, close() {} });
+  }
+  const finish = () => {
+    if (screen.readyState === 3) return;
+    screen.readyState = 3;
+    screen.emit("close");
+  };
+  child.on("spawn", () => {
+    if (screen.readyState !== 0) return;
+    screen.readyState = 1;
+    screen.emit("open");
+  });
+  child.stdout.on("data", (data) => {
+    if (screen.readyState === 1) screen.emit("message", data);
+  });
+  child.on("error", () => finish());
+  child.on("exit", () => finish());
+  child.stdin.on("error", () => {});
+  screen.send = (data) => {
+    if (screen.readyState === 1) child.stdin.write(data);
+  };
+  screen.terminate = () => {
+    try { child.kill("SIGKILL"); } catch {}
+    finish();
+  };
+  screen.close = screen.terminate;
+  return screen;
+}
+
+/**
+ * A graphical desktop machine on this host (SANDBOX_BACKEND=docker,
+ * SANDBOX_VIEW=desktop). Same contract as the cloud desktop: the lab files are
+ * seeded as root, the screen is reached through the controller only, terminal
+ * commands are read back for the checks, and openShell gives the text terminal.
+ */
+export async function spawnDesktopContainer(session, cfg = CONFIG, deps = {}) {
+  const run = deps.exec || execFileAsync;
+  let pty = deps.pty;
+  const name = "cll-sandbox-" + crypto.randomBytes(16).toString("hex");
+  const desktop = {
+    vncPassword: randomSecret(8),
+    userPassword: randomSecret(16),
+    resolution: desktopResolutionFor(session.screen, cfg.cloud?.desktopResolution),
+    timeZone: validTimeZone(session.timeZone),
+  };
+  let created = false, destroyed = false, deletionComplete = false, deleting = null, shell = null;
+  const dataListeners = [], exitListeners = [];
+  const docker = (args, timeout = 5000, maxBuffer = 65536) =>
+    run("docker", args, { timeout, maxBuffer, windowsHide: true, encoding: "utf8" });
+  const destroy = async () => {
+    if (deletionComplete) return;
+    if (deleting) return deleting;
+    destroyed = true;
+    try { shell?.kill(); } catch {}
+    shell = null;
+    if (created) {
+      deleting = docker(["rm", "-f", name], 15000);
+      try {
+        await deleting;
+      } catch (error) {
+        const absent = ["Error response from daemon: No such container: ", "Error: No such container: "]
+          .some((prefix) => error?.stderr?.trim() === prefix + name);
+        if (!absent) throw failure("sandbox_cleanup_failed");
+      } finally {
+        deleting = null;
+      }
+    }
+    deletionComplete = true;
+  };
+  const allowedFiles = new Set(allowedLabFiles());
+  const readMachineFile = async (file, limit = 16384) => {
+    if (destroyed) return null;
+    try {
+      return (await docker(["exec", "--user", "1000:1000", name, "/usr/bin/head", "-c", String(limit), "--", file], 3000, limit + 1024)).stdout;
+    } catch {
+      return null;
+    }
+  };
+  try {
+    const info = await docker(["info", "--format", "{{.OSType}}"]);
+    if (info.stdout.trim() !== "linux") throw failure("linux_docker_required");
+    await docker(["image", "inspect", cfg.desktopImage]);
+    created = true;
+    const result = await docker(buildDockerDesktopRunArgs(name, cfg.desktopImage, cfg, desktop), 20000);
+    if (!/^[a-f0-9]{12,64}$/.test(result.stdout.trim())) throw failure("container_start_failed");
+    const script = await seedScriptFor(cfg.cloud || { seedDirs: [] }, { labFiles: labFor(session.labId)?.files }, { desktop: true });
+    await docker(["exec", "--user", "0:0", name, "/bin/sh", "-c", script], 90000, 262144);
+    const [width, height] = desktop.resolution.split("x").map(Number);
+    return {
+      mode: "docker-desktop",
+      containerId: result.stdout.trim().slice(0, 12),
+      desktop: { connect: () => (deps.openScreen || openContainerScreen)(name), password: desktop.vncPassword, width, height },
+      onData: (fn) => dataListeners.push(fn),
+      onExit: (fn) => exitListeners.push(fn),
+      write: (data) => {
+        if (!destroyed && shell) shell.write(data);
+      },
+      resize: (cols, rows) => {
+        if (!destroyed && shell) shell.resize(cols, rows);
+      },
+      openShell: async (onClosed = () => {}) => {
+        if (destroyed) throw failure("shell_unavailable");
+        if (shell) return;
+        if (!pty) {
+          try {
+            const imported = await import("node-pty");
+            pty = imported.default || imported;
+          } catch {
+            throw failure("shell_unavailable");
+          }
+        }
+        const opened = pty.spawn(
+          "docker",
+          ["exec", "-it", "--user", "1000:1000", "--workdir", "/home/learner/lab",
+            "--env", "HOME=/home/learner", "--env", "USER=learner", "--env", "LOGNAME=learner", "--env", "SHELL=/bin/bash",
+            "--env", "LANG=C.UTF-8", "--env", "DISPLAY=:1", "--env", "TERM=xterm-256color",
+            name, "/bin/bash", "-l"],
+          { name: "xterm-256color", cols: 80, rows: 24, cwd: ROOT, env: { PATH: process.env.PATH || "/usr/bin:/bin", HOME: "/tmp", TERM: "xterm-256color" } },
+        );
+        shell = opened;
+        opened.onData((data) => {
+          if (shell !== opened) return;
+          for (const fn of dataListeners) { try { fn(data); } catch {} }
+        });
+        opened.onExit(({ exitCode } = {}) => {
+          if (shell === opened) shell = null;
+          onClosed(exitCode ?? 0);
+        });
+      },
+      /** Recent commands typed in a desktop terminal, newest last. */
+      history: async () => {
+        const text = await readMachineFile("/home/learner/.lab-history", 65536);
+        return text ? text.split("\n").map((line) => line.trim()).filter(Boolean).slice(-200) : [];
+      },
+      readFile: async (file) => (allowedFiles.has(file) ? readMachineFile(file) : null),
+      destroy,
+    };
+  } catch {
+    const error = failure("desktop_unavailable");
+    try { await destroy(); } catch { error.cleanup = destroy; }
+    throw error;
+  }
+}
+
 export async function verifySessionMilestones(session) {
   const lab = labFor(session.labId);
   if (!lab || !session.sandbox) return [];
@@ -831,6 +1046,8 @@ export function runtimeDescription(cfg = CONFIG) {
       limits: { memory: size.memoryMib + "m", cpus: String(size.cpus) },
     };
   }
+  if (cfg.dockerView === "desktop")
+    return { runtime: "docker-desktop", limits: { memory: DESKTOP_LIMITS.memory, cpus: DESKTOP_LIMITS.cpus } };
   return {
     runtime: "docker-pty",
     limits: { memory: cfg.memoryLimit, cpus: cfg.cpuLimit },
@@ -850,7 +1067,9 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       (cfg.sandboxBackend === "cloud"
         ? (session, c) =>
             spawnCloudSandbox(session, c, { allowedFiles: allowedLabFiles(), labFiles: labFor(session.labId)?.files })
-        : spawnSandboxContainer),
+        : cfg.dockerView === "desktop"
+          ? spawnDesktopContainer
+          : spawnSandboxContainer),
     now = deps.now || Date.now,
     logFailure = deps.log || ((...parts) => console.error(...parts));
   let stopping = false,
@@ -908,7 +1127,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     s.desktopLink = link;
     desktopLinks.add(link);
     try {
-      upstream = openScreen(s.sandbox.desktop.url);
+      upstream = typeof s.sandbox.desktop.connect === "function" ? s.sandbox.desktop.connect() : openScreen(s.sandbox.desktop.url);
     } catch {
       return link.close();
     }
@@ -1146,6 +1365,9 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
           ? { width: msg.screen.width, height: msg.screen.height }
           : null,
       desktopLink: null,
+      // The learner's time zone, so the machine's clock shows local time.
+      timeZone: validTimeZone(msg.timeZone),
+      shellOpen: false,
       outputAt: now(),
       outputBytes: 0,
       verifyAt: 0,
@@ -1212,7 +1434,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         "cloud_endpoint_unsupported", "cloud_not_configured", "cloud_sandbox_lookup_failed",
         "container_start_failed", "desktop_unavailable", "docker_pty_unavailable",
         "invalid_container_configuration", "sandbox_seed_failed", "sandbox_seed_invalid",
-        "sandbox_seed_too_large", "classroom_unavailable", "pty_unavailable",
+        "sandbox_seed_too_large", "classroom_unavailable", "pty_unavailable", "linux_docker_required",
       ]);
       logFailure(
         "Machine start failed for " + lab.id + ":",
@@ -1394,6 +1616,24 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       )
         throw failure("invalid_dimensions");
       s.sandbox.resize(msg.cols, msg.rows);
+    } else if (msg.type === "terminal:open") {
+      // Desktop machines: open the text terminal, a login shell on the same
+      // machine for screen readers and keyboard-only use.
+      if (typeof s.sandbox.openShell !== "function") throw failure("shell_unavailable");
+      if (!s.shellOpen) {
+        try {
+          await s.sandbox.openShell((code) => {
+            s.shellOpen = false;
+            if (!s.destroyed) send(c, { type: "terminal:closed", exitCode: Number.isInteger(code) ? code : 0 });
+          });
+        } catch {
+          throw failure("shell_unavailable");
+        }
+        if (s.destroyed) return;
+        s.shellOpen = true;
+      }
+      s.lastActivity = now();
+      send(c, { type: "terminal:opened" });
     } else if (msg.type === "milestone:verify") {
       s.lastActivity = now();
       await verify(s);
@@ -1550,6 +1790,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
                 "invalid_snapshot",
                 "snapshot_rate_limit",
                 "student_action_denied",
+                "shell_unavailable",
               ].includes(e.code)
                 ? e.code
                 : "operation_failed",

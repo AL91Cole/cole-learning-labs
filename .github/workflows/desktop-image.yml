@@ -1,0 +1,72 @@
+name: Desktop image
+
+# Builds and smoke-tests the learner desktop image (terminal-sandbox/desktop)
+# whenever it changes, and publishes it to the GitHub Container Registry from
+# main so Docker Cloud Sandboxes can start it (DESKTOP_IMAGE_REF).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terminal-sandbox/desktop/**'
+      - '.github/workflows/desktop-image.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terminal-sandbox/desktop/**'
+      - '.github/workflows/desktop-image.yml'
+  workflow_dispatch:
+
+# Unspecified permissions are disabled. Only the publish job can write packages.
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-image-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and smoke-test the desktop image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source without saved credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the desktop image
+        run: docker build -t cole-learning-labs/desktop:noble terminal-sandbox/desktop
+      - name: Start it like a learner machine and check it
+        run: sh terminal-sandbox/desktop/smoke-test.sh cole-learning-labs/desktop:noble
+
+  publish:
+    name: Publish the desktop image
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out source without saved credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build, check and push to ghcr.io
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/$owner/cole-learning-labs-desktop"
+          version="noble-$(printf '%s' "$GITHUB_SHA" | cut -c1-12)"
+          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "$image:$version" terminal-sandbox/desktop
+          sh terminal-sandbox/desktop/smoke-test.sh "$image:$version"
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag "$image:$version" "$image:noble"
+          docker push "$image:$version"
+          docker push "$image:noble"
+          docker logout ghcr.io
+          echo "Published $image:$version (also tagged noble). Use the versioned tag in DESKTOP_IMAGE_REF." >> "$GITHUB_STEP_SUMMARY"
