@@ -17,6 +17,12 @@
 # kept in the image.
 FROM ubuntu:24.04@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5
 
+# The package this image is published as belongs to this repository. The label
+# connects them, which is what lets the repository's workflow push new versions.
+LABEL org.opencontainers.image.source="https://github.com/AL91Cole/cole-learning-labs" \
+      org.opencontainers.image.title="Cole Learning Labs desktop" \
+      org.opencontainers.image.description="Ubuntu 24.04 XFCE learner desktop for Cole Learning Labs real-machine labs"
+
 ARG APT_PROXY=""
 ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 TZ=Etc/UTC
 

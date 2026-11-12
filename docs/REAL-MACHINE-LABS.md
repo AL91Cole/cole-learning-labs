@@ -261,7 +261,14 @@ the lab folder and terminal.
    `ghcr.io/al91cole/cole-learning-labs-desktop:noble-<commit>`.
 2. In GitHub, Packages, `cole-learning-labs-desktop`, Package settings: change
    the visibility to **Public** (GitHub creates packages private, and Docker
-   Cloud Sandboxes cannot pull a private package without credentials).
+   Cloud Sandboxes cannot pull a private package without credentials). Under
+   **Manage Actions access**, make sure `cole-learning-labs` has the Write role.
+   The workflow builds one image manifest that carries the
+   `org.opencontainers.image.source` label, which connects the package to the
+   repository; a package created without that connection (as the first publish
+   attempt did, from an unlabelled build attestation) refuses the workflow's
+   pushes with `denied` until the repository is added there or the package is
+   deleted and recreated by the workflow.
 3. On the controller, set `DESKTOP_IMAGE_REF` to that versioned tag in
    `deploy/.env.production` (the private repository's compose file passes it
    through) and run `cll-update`. Start one lab to confirm, then a class.

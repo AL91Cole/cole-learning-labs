@@ -296,6 +296,11 @@ test("the desktop image keeps the start contract and the learner is never an adm
   for (const tool of ["man-db", "manpages", "bash-completion", "less", "nano", "vim", "git", "tree", "htop", "iputils-ping", "dnsutils", "python3", "gcc", "make", "xfce4-session", "thunar", "xfce4-terminal", "mousepad", "tigervnc-standalone-server", "websockify"])
     assert.ok(words.has(tool), tool + " is installed");
   assert.match(dockerfile, /rm -f \/etc\/dpkg\/dpkg\.cfg\.d\/excludes/, "manual pages are kept");
+  assert.ok(dockerfile.includes('LABEL org.opencontainers.image.source="https://github.com/AL91Cole/cole-learning-labs"'), "the image names its repository, which connects the published package to it");
+  const workflow = readFileSync(new URL("../../.github/workflows/desktop-image.yml", import.meta.url), "utf8");
+  const builds = workflow.split("\n").filter((line) => /docker build /.test(line));
+  assert.equal(builds.length, 2, "the workflow builds the image once to test it and once to publish it");
+  assert.ok(builds.every((line) => line.includes("--provenance=false --sbom=false")), "both builds make one labelled image manifest: an unlabelled attestation manifest would create the package unconnected and the push would be refused");
   assert.match(dockerfile, /userdel -r ubuntu/, "the base image's uid 1000 account is removed so the learner gets uid 1000");
   assert.match(dockerfile, /rm -f \/etc\/apt\/apt\.conf\.d\/00build-proxy/, "build proxy settings never stay in the image");
   for (const name of ["USER", "PASSWORD", "VNC_PASSWORD", "RESOLUTION", "TZ"]) assert.ok(startup.includes("${" + name + ":"), name + " is read by the start script");

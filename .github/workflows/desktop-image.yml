@@ -35,7 +35,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build the desktop image
-        run: docker build -t cole-learning-labs/desktop:noble terminal-sandbox/desktop
+        run: docker build --provenance=false --sbom=false -t cole-learning-labs/desktop:noble terminal-sandbox/desktop
       - name: Start it like a learner machine and check it
         run: sh terminal-sandbox/desktop/smoke-test.sh cole-learning-labs/desktop:noble
 
@@ -61,12 +61,27 @@ jobs:
           owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           image="ghcr.io/$owner/cole-learning-labs-desktop"
           version="noble-$(printf '%s' "$GITHUB_SHA" | cut -c1-12)"
-          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+          # One image manifest, carrying the source label. Build attestations
+          # would be pushed as a second, unlabelled manifest; arriving first, it
+          # creates the package without connecting it to this repository, and
+          # the registry then refuses this workflow's push of the image itself.
+          docker build --provenance=false --sbom=false \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "$image:$version" terminal-sandbox/desktop
           sh terminal-sandbox/desktop/smoke-test.sh "$image:$version"
           printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker tag "$image:$version" "$image:noble"
-          docker push "$image:$version"
-          docker push "$image:noble"
+          push() {
+            docker push "$1" && return 0
+            {
+              echo "### The registry refused $1"
+              echo "If the push was denied, the package exists but is not connected to this repository."
+              echo "On GitHub open Packages, cole-learning-labs-desktop, Package settings: under Manage Actions access"
+              echo "add $GITHUB_REPOSITORY with the Write role (or delete the package so this workflow recreates it), then re-run."
+            } >> "$GITHUB_STEP_SUMMARY"
+            return 1
+          }
+          push "$image:$version"
+          push "$image:noble"
           docker logout ghcr.io
           echo "Published $image:$version (also tagged noble). Use the versioned tag in DESKTOP_IMAGE_REF." >> "$GITHUB_STEP_SUMMARY"
