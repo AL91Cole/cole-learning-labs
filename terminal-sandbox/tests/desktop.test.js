@@ -42,7 +42,8 @@ test("the desktop view is the default and uses the desktop image at the small si
 test("the desktop is created at the size of the learner's lab area, within safe bounds", () => {
   assert.equal(desktopResolutionFor({ width: 956, height: 470 }), "952x480", "an 11-inch Chromebook lab area");
   assert.equal(desktopResolutionFor({ width: 1310, height: 612 }), "1304x608");
-  assert.equal(desktopResolutionFor({ width: 3000, height: 2000 }), "1600x1000", "large monitors are capped");
+  assert.equal(desktopResolutionFor({ width: 3000, height: 2000 }), "1920x1200", "large monitors are capped");
+  assert.equal(desktopResolutionFor({ width: 1707, height: 640 }), "1704x640", "a short lab area on a 125% display asks for a taller desktop, scaled to fit");
   assert.equal(desktopResolutionFor({ width: 500, height: 300 }), "800x480", "tiny areas get a usable minimum and are scaled to fit");
   assert.equal(desktopResolutionFor(null), "1024x768");
   assert.equal(desktopResolutionFor({ width: "wide", height: 400 }), "1024x768");

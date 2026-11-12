@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Terminal size for this screen
+Comment=Makes new terminal windows fit above the taskbar of a short screen
+Exec=sh -c 'xfconf-query -c xfce4-terminal -p /misc-default-geometry -n -t string -s "$(/usr/local/bin/cll-terminal-size)"'
+NoDisplay=true
+OnlyShowIn=XFCE;
+X-XFCE-Autostart-Override=true

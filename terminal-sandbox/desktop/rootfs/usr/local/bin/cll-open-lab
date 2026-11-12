@@ -1,8 +1,17 @@
 #!/bin/sh
 # Opens a folder (the lab folder by default) in the file manager and a terminal
 # there, the two windows a lab starts with. The terminal opens last, on top.
+# Both fit above the taskbar of the screen they open on: a short browser window
+# gives a short desktop, and a taller window would hide its last lines behind
+# the taskbar.
 dir=${1:-$HOME/lab}
 [ -d "$dir" ] || dir=$HOME
+height=$(xrandr 2>/dev/null | sed -n 's/.* current [0-9]* x \([0-9]*\),.*/\1/p' | head -n 1)
+case "$height" in ''|*[!0-9]*) height=800 ;; esac
 thunar "$dir" >/dev/null 2>&1 &
+# The file manager opens 760x480 with about 41 pixels of title and borders.
+if [ "$height" -lt 590 ]; then
+  ( timeout 10 xdotool search --sync --onlyvisible --class Thunar windowsize %@ 760 $(( height - 110 )) >/dev/null 2>&1 & )
+fi
 sleep 1
-xfce4-terminal --working-directory="$dir" >/dev/null 2>&1 &
+xfce4-terminal --working-directory="$dir" --geometry="$(/usr/local/bin/cll-terminal-size)" >/dev/null 2>&1 &

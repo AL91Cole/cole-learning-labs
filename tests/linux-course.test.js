@@ -48,32 +48,49 @@ test('the course page, a lab page and the entry card render escaped, linked mark
   assert.equal(currentLinuxStep(steps(true,false,false)),1);assert.equal(currentLinuxStep(steps(true,true)),1);assert.equal(currentLinuxStep([]),0);
 });
 
-test('a lab page mounts the real machine, follows the steps and reports completion once',async()=>{
+test('a lab page mounts the real machine, stays on the learner\'s step, checks it when done and reports completion once',async()=>{
   const {node,root}=page(),calls=[];let state={phase:'idle',milestones:[],complete:false},context=null,disposed=0,finished=[];
   const cleanup=mountLinuxCourse(root,{id:'LNX-101',probe:async()=>'enabled',hosts:id=>id==='LNX-101',render:lab=>{calls.push('render '+lab.id);return '<div data-lab-remote></div>';},
     mount:(stage,options)=>{context=options;calls.push('mount');return {remoteState:()=>state,dispose:()=>{disposed++;}};},onComplete:id=>finished.push(id)});
   await flush();
-  const strip=node('[data-linux-step]'),progress=node('[data-linux-progress]');
+  const strip=node('[data-linux-step]'),progress=node('[data-linux-progress]'),nextLab=node('.linux-next');
   assert.deepEqual(calls,['render LNX-101','mount']);
   assert.equal(node('[data-linux-stage]').innerHTML,'<div data-lab-remote></div>');
   assert.equal(context.scenario.id,'LNX-101');assert.equal(context.checksOpen,false);assert.equal(context.verifyEveryMs,6000);
   assert.match(strip.innerHTML,/Press <b>Start machine<\/b>/);
   state={phase:'starting',milestones:[],complete:false};context.onActivity();assert.match(strip.innerHTML,/starting\. This takes about half a minute/);
   state={phase:'ready',milestones:steps(false,false,false),complete:false};context.onActivity();
-  assert.match(strip.innerHTML,/Step 1 of 3<\/span> <b>Step title 0\.<\/b> Type <code>cmd0<\/code> now/);assert.match(strip.innerHTML,/<summary>Hint<\/summary><p>Hint 0<\/p>/);
+  assert.match(strip.innerHTML,/<span class="linux-step-number">Step 1 of 3<\/span> <b>Step title 0\.<\/b> Type <code>cmd0<\/code> now/);assert.match(strip.innerHTML,/<summary>Hint<\/summary><p>Hint 0<\/p>/);
+  assert.match(strip.innerHTML,/data-linux-next aria-label="Next step">›<\/button>/);
   assert.equal(progress.textContent,'0 of 3 steps done');
+  // A finished step is never switched away from: it gets its green check and the › button offers the next step.
   state={phase:'ready',milestones:steps(true,false,false),complete:false};context.onActivity();
-  assert.match(strip.innerHTML,/Step 2 of 3/);assert.equal(progress.textContent,'1 of 3 steps done');
-  // Stepping back to re-read keeps that step on screen while later checks arrive.
+  assert.match(strip.innerHTML,/<span class="linux-step-number is-done">✓ Step 1 of 3 done<\/span> <b>Step title 0\./);
+  assert.match(strip.innerHTML,/class="lab-tool is-ready" data-linux-next aria-label="Next step">Next step ›<\/button>/);
+  assert.equal(progress.textContent,'1 of 3 steps done');
   const click=attribute=>strip.listeners.click({target:{closest:()=>({hasAttribute:name=>name===attribute})}});
-  click('data-linux-prev');assert.match(strip.innerHTML,/is-done">✓ Step 1 of 3/);
+  click('data-linux-next');assert.match(strip.innerHTML,/<span class="linux-step-number">Step 2 of 3<\/span>/);
+  click('data-linux-prev');assert.match(strip.innerHTML,/is-done">✓ Step 1 of 3 done/);
   click('data-linux-prev');assert.match(strip.innerHTML,/Step 1 of 3/,'never before the first step');
-  click('data-linux-next');click('data-linux-next');assert.match(strip.innerHTML,/Step 3 of 3/);
-  state={phase:'ready',milestones:steps(true,true,false),complete:false};context.onActivity();assert.match(strip.innerHTML,/Step 3 of 3/);
-  state={phase:'ready',milestones:steps(true,true,true),complete:true};context.onActivity();context.onActivity();
-  assert.match(strip.innerHTML,/Lab complete\./);assert.match(strip.innerHTML,/href="#linux\/LNX-102">Go to LNX-102 · Make, Copy, Move and Delete/);
+  click('data-linux-next');click('data-linux-next');click('data-linux-next');assert.match(strip.innerHTML,/Step 3 of 3/,'never past the last step');
+  state={phase:'ready',milestones:steps(true,true,false),complete:false};context.onActivity();assert.match(strip.innerHTML,/<span class="linux-step-number">Step 3 of 3<\/span>/);
+  click('data-linux-prev');state={phase:'ready',milestones:steps(true,true,true),complete:true};context.onActivity();context.onActivity();
+  assert.match(strip.innerHTML,/✓ Step 2 of 3 done/,'finishing the lab does not move the strip either');assert.doesNotMatch(strip.innerHTML,/Lab complete/);
+  assert.equal(progress.textContent,'✓ Lab complete · 3 of 3 steps done');assert.equal(progress.dataset.state,'done');assert.equal(nextLab.dataset.state,'done');
   assert.deepEqual(finished,['LNX-101']);
+  // A new machine starts again at its first unfinished step.
+  state={phase:'connecting',milestones:steps(true,true,true),complete:true};context.onActivity();assert.match(strip.innerHTML,/is starting/);assert.equal(progress.textContent,'');
+  state={phase:'ready',milestones:steps(false,false,false),complete:false};context.onActivity();assert.match(strip.innerHTML,/<span class="linux-step-number">Step 1 of 3<\/span>/);
+  assert.equal(progress.dataset.state,'');
   cleanup();assert.equal(disposed,1);
+});
+
+test('a machine that already has work done opens at its first unfinished step',async()=>{
+  const {node,root}=page();let context=null;const state={phase:'ready',milestones:steps(true,true,false,false),complete:false};
+  const cleanup=mountLinuxCourse(root,{id:'LNX-102',probe:async()=>'enabled',hosts:()=>true,render:()=>'',mount:(stage,options)=>{context=options;return {remoteState:()=>state,dispose(){}};}});
+  await flush();context.onActivity();
+  assert.match(node('[data-linux-step]').innerHTML,/<span class="linux-step-number">Step 3 of 4<\/span>/);
+  cleanup();
 });
 
 test('without the lab server the page says so, starts nothing and can try again',async()=>{
@@ -108,6 +125,9 @@ test('the route is wired into the app, the build list and the styles',()=>{
   for(const file of ['src/lazy-linux.js','src/linux-catalog.js','src/linux-course.js'])assert.ok(PUBLIC_SOURCE_FILES.includes(file),file);
   assert.match(css,/\.linux-lab\{[^}]*height:100dvh/);
   assert.match(css,/body:has\(\.linux-lab\) \.access-tools\{[^}]*top:3px/,'the floating buttons stay off the Linux screen');
+  assert.match(css,/\.linux-stage \.remote-title\{display:none\}/,'the page names the lab, so the machine bar keeps to one row');
+  assert.match(css,/@media \(pointer:fine\)\{[^@]*\.linux-step-nav \.lab-tool\{min-height:32px\}/,'compact controls only for a mouse; touch keeps 44 px targets');
+  assert.match(css,/\.linux-step-number\.is-done\{background:#157a5c\}/,'white on the check green meets 4.5:1');
 });
 
 test('a refresh that changes nothing leaves the step strip alone, so an open hint and the keyboard focus stay put',async()=>{
@@ -120,7 +140,7 @@ test('a refresh that changes nothing leaves the step strip alone, so an open hin
   for(let i=0;i<5;i++){state={...state,milestones:steps(false,false,false)};context.onActivity();}
   assert.equal(writes,first,'the same steps arriving again (every few seconds) do not replace the strip');
   state={phase:'ready',milestones:steps(true,false,false),complete:false};context.onActivity();
-  assert.equal(writes,first+1,'a finished step redraws it once');assert.match(html,/Step 2 of 3/);
+  assert.equal(writes,first+1,'a finished step redraws it once, with its check');assert.match(html,/✓ Step 1 of 3 done/);
   cleanup();
 });
 

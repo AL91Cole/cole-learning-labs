@@ -323,7 +323,7 @@ export function desktopResolutionFor(screen, fallback = CLOUD_DEFAULTS.desktopRe
   const width = Number(screen?.width), height = Number(screen?.height);
   if (!Number.isFinite(width) || !Number.isFinite(height) || width < 320 || height < 200) return fallback;
   const fit = (value, min, max) => Math.min(max, Math.max(min, Math.floor(value / 8) * 8));
-  return fit(width, 800, 1600) + "x" + fit(height, 480, 1000);
+  return fit(width, 800, 1920) + "x" + fit(height, 480, 1200);
 }
 
 /** Turns a lab definition's `files` list into a seed: {directories, files}. */
@@ -369,8 +369,61 @@ const PROGRESS_WATCH = [
  * terminal commands for the lab checks, waits for the screen bridge, and opens
  * the lab folder and a terminal on the desktop.
  */
-export function buildSeedScript(seed, { desktop = false, desktopPort = CLOUD_DEFAULTS.desktopPort, fresh = false } = {}) {
+// ---- Online labs (LAB_INTERNET in server.js) ------------------------------
+// A machine is offline unless its session carries a network: "sites" reaches
+// only the lab's listed sites; "filtered" reaches the web through a family-safe
+// DNS filter. Anything malformed is treated as offline.
+const HOST_NAME = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
+const IPV4 = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+export const validSiteName = (name) => typeof name === "string" && name.length <= 253 && HOST_NAME.test(name);
+export const validIpv4 = (value) => typeof value === "string" && IPV4.test(value);
+/** Family Filter of CleanBrowsing: blocks adult, proxy and VPN sites and turns on SafeSearch. */
+export const DEFAULT_FILTER_DNS = Object.freeze(["185.228.168.168", "185.228.169.168"]);
+/**
+ * Public DNS services that do not filter, denied in "filtered" mode so a lookup
+ * cannot go around the filter (the machine's own resolver and Firefox's settings
+ * already point at the filter; this closes the obvious ways past it).
+ */
+export const UNFILTERED_DNS = Object.freeze([
+  "8.8.8.8/32", "8.8.4.4/32", "1.1.1.1/32", "1.0.0.1/32", "9.9.9.9/32", "149.112.112.112/32",
+  "208.67.222.222/32", "208.67.220.220/32", "94.140.14.14/32", "94.140.15.15/32", "76.76.2.0/32",
+  "76.76.10.0/32", "64.6.64.6/32", "64.6.65.6/32", "4.2.2.1/32", "4.2.2.2/32", "8.26.56.26/32",
+  "8.20.247.20/32", "77.88.8.8/32", "185.222.222.222/32",
+  "dns.google", "cloudflare-dns.com", "mozilla.cloudflare-dns.com", "chrome.cloudflare-dns.com",
+  "one.one.one.one", "dns.quad9.net", "doh.opendns.com", "dns.adguard-dns.com", "dns.nextdns.io", "doh.dns.sb",
+]);
+/** The network a session asked for, validated; anything else is offline. */
+export function validNetwork(network) {
+  const sites = Array.isArray(network?.sites) ? network.sites.filter(validSiteName).slice(0, 12) : [];
+  const dns = Array.isArray(network?.dns) ? network.dns.filter(validIpv4).slice(0, 4) : [];
+  if (network?.mode === "sites" && sites.length) return { mode: "sites", sites };
+  if (network?.mode === "filtered" && dns.length) return { mode: "filtered", sites, dns };
+  return { mode: "offline", sites: [] };
+}
+/** Docker Cloud network policies for a session's network. */
+export function networkPoliciesFor(network) {
+  const net = validNetwork(network);
+  // Docker composes inline policies with the account's default "allow **"
+  // layer; only an explicit deny of every network blocks egress (verified
+  // live: a bare denyAll left HTTP and DNS open, denyNetworks ["**"] blocked
+  // HTTP, DNS and direct IP connections). A named site is narrower than "**".
+  if (net.mode === "sites") return [{ mode: "denyAll", denyNetworks: ["**"], allowNetworks: [...net.sites] }];
+  if (net.mode === "filtered") return [{ mode: "allowAll", denyNetworks: UNFILTERED_DNS.filter((entry) => !net.dns.includes(entry.replace(/\/32$/, ""))) }];
+  return [{ mode: "denyAll", denyNetworks: ["**"] }];
+}
+/** Settings the desktop image's start script reads for its browser start page and DNS (see desktop/rootfs/startup.sh); none when offline, its default. */
+export function desktopNetworkEnv(network) {
+  const net = validNetwork(network);
+  if (net.mode === "offline") return "";
+  return " LAB_NETWORK=" + net.mode + (net.sites.length ? " LAB_SITES=" + net.sites.join(",") : "") + (net.mode === "filtered" ? " DNS_SERVERS=" + net.dns.join(",") : "");
+}
+
+export function buildSeedScript(seed, { desktop = false, desktopPort = CLOUD_DEFAULTS.desktopPort, fresh = false, network = null } = {}) {
   const lines = ["set -e"];
+  // Filtered browsing: every lookup goes to the filter. The machine is not
+  // started at all if its resolver cannot be set (it would be unfiltered).
+  const net = validNetwork(network);
+  if (net.mode === "filtered") lines.push("printf 'nameserver %s\\n' " + net.dns.join(" ") + " > /etc/resolv.conf", "grep -qx 'nameserver " + net.dns[0] + "' /etc/resolv.conf");
   // `fresh` replaces a lab folder the image already filled (the host-container image seeds the shared tree itself).
   if (fresh) lines.push("rm -rf /home/learner/lab");
   if (desktop) {
@@ -429,14 +482,14 @@ export async function seedScriptFor(cloud, deps, options = {}) {
   if (deps.seedScript !== undefined) return deps.seedScript;
   // A lab that ships its own files gets only those; other labs get the shared seed tree.
   if (Array.isArray(deps.labFiles) && deps.labFiles.length) return buildSeedScript(seedFromLabFiles(deps.labFiles), options);
-  const key = options.desktop ? "desktop" : "terminal";
+  const key = (options.desktop ? "desktop" : "terminal") + " " + JSON.stringify(validNetwork(options.network));
   if (!seedScripts.has(cloud)) seedScripts.set(cloud, {});
   const cache = seedScripts.get(cloud);
   if (!cache[key]) cache[key] = loadSeedFiles(cloud.seedDirs).then((seed) => buildSeedScript(seed, options));
   return cache[key];
 }
 
-/** Builds the sandbox request: a lab machine with no network, labelled for clean-up. */
+/** Builds the sandbox request: a lab machine (offline unless its lab is online), labelled for clean-up. */
 export function buildCloudSandboxRequest(session, cloud, extra = {}) {
   const desktop = extra.desktop || null;
   const imageRef = desktop ? cloud.desktopImageRef : cloud.imageRef;
@@ -449,17 +502,14 @@ export function buildCloudSandboxRequest(session, cloud, extra = {}) {
   // per-session screen password, and the screen size.
   const zone = desktop ? validTimeZone(desktop.timeZone) : "";
   const start = desktop
-    ? ["/bin/bash", "-c", `export USER=learner PASSWORD=${desktop.userPassword} VNC_PASSWORD=${desktop.vncPassword} RESOLUTION=${resolution}${zone ? " TZ=" + zone : ""}; exec /startup.sh`]
+    ? ["/bin/bash", "-c", `export USER=learner PASSWORD=${desktop.userPassword} VNC_PASSWORD=${desktop.vncPassword} RESOLUTION=${resolution}${zone ? " TZ=" + zone : ""}${desktopNetworkEnv(extra.network)}; exec /startup.sh`]
     : [...(cloud.startCommand || DEFAULT_START_COMMAND)];
   return {
     displayNamePrefix: "cll-",
     imageRef,
     resources: { cpus: size.cpus, memoryMib: size.memoryMib },
-    // Docker composes inline policies with the account's default "allow **"
-    // layer; only an explicit deny of every network blocks egress (verified
-    // live: a bare denyAll left HTTP and DNS open, denyNetworks ["**"] blocked
-    // HTTP, DNS and direct IP connections).
-    networkPolicies: [{ mode: "denyAll", denyNetworks: ["**"] }],
+    // No network unless the session's lab is online (networkPoliciesFor).
+    networkPolicies: networkPoliciesFor(extra.network),
     startupExecution: { rawImage: { start: { argv: start } } },
     environment: { TERM: "xterm-256color", HOME: "/home/learner", USER: "learner" },
     labels: {
@@ -709,7 +759,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
 
   try {
     // 1. Create the sandbox and wait until it runs and has an endpoint.
-    const created = await api("POST", "/sandboxes", { body: buildCloudSandboxRequest(session, cloud, { desktop, labels: cfg.reviewInstanceId ? { "io.colelearninglabs.review": cfg.reviewInstanceId } : {} }), timeout: 30000 });
+    const created = await api("POST", "/sandboxes", { body: buildCloudSandboxRequest(session, cloud, { desktop, network: session.network, labels: cfg.reviewInstanceId ? { "io.colelearninglabs.review": cfg.reviewInstanceId } : {} }), timeout: 30000 });
     if (created.status === 429 || created.status === 403) throw await responseFailure("capacity_reached", created);
     if (!created.ok) throw await responseFailure("container_start_failed", created);
     let sandbox = await created.json();
@@ -734,7 +784,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
     }
 
     // 2. Seed the machine as root: learner user, lab files, home ownership.
-    const script = await seedScriptFor(cloud, deps, { desktop: Boolean(desktop), desktopPort: CLOUD_DEFAULTS.desktopPort });
+    const script = await seedScriptFor(cloud, deps, { desktop: Boolean(desktop), desktopPort: CLOUD_DEFAULTS.desktopPort, network: session.network });
     const setup = await endpointRequest("POST", "/v1/processes", {
       body: { cmd: ["/bin/sh", "-c", script], session: "setup", label: "cll-setup-" + crypto.randomBytes(4).toString("hex") },
       timeout: 30000,

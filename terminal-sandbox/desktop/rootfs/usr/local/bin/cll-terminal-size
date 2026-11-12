@@ -1,0 +1,14 @@
+#!/bin/sh
+# Prints the terminal size (COLUMNSxROWS) that fits above the taskbar of the
+# current screen, for example 96x26 on a large screen and 96x18 on a short one.
+size=$(xrandr 2>/dev/null | sed -n 's/.* current \([0-9]*\) x \([0-9]*\),.*/\1 \2/p' | head -n 1)
+width=${size% *}; height=${size#* }
+case "$width" in ''|*[!0-9]*) width=1280 ;; esac
+case "$height" in ''|*[!0-9]*) height=800 ;; esac
+# The window manager centres a new window on the screen, so a window fits above
+# the 33-pixel taskbar when it is at most the screen height less 66 pixels.
+# A terminal row is 21 pixels (Ubuntu Mono 13); its title, menu and borders take
+# about 74 more with a little room to spare. 26 rows and 96 columns are the usual size.
+rows=$(( (height - 140) / 21 )); [ "$rows" -gt 26 ] && rows=26; [ "$rows" -lt 10 ] && rows=10
+cols=$(( (width - 140) / 10 )); [ "$cols" -gt 96 ] && cols=96; [ "$cols" -lt 60 ] && cols=60
+echo "${cols}x${rows}"

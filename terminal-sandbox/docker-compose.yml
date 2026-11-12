@@ -38,6 +38,10 @@ services:
       DESKTOP_IMAGE: ${DESKTOP_IMAGE:-cole-learning-labs/desktop:noble}
       DESKTOP_SIZE: ${DESKTOP_SIZE:-small}
       DESKTOP_RESOLUTION: ${DESKTOP_RESOLUTION:-1024x768}
+      # Online labs for networking and security labs: off (default), sites or filtered.
+      # Test Docker Cloud first: node scripts/check-online-labs.mjs (see docs/REAL-MACHINE-LABS.md).
+      LAB_INTERNET: ${LAB_INTERNET:-off}
+      LAB_FILTER_DNS: ${LAB_FILTER_DNS:-}
     group_add:
       - ${DOCKER_SOCKET_GID:?set the host Docker socket group ID}
     volumes:

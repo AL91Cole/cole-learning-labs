@@ -1,0 +1,104 @@
+{
+  "policies": {
+    "DisableAppUpdate": true,
+    "DisableTelemetry": true,
+    "DisableFirefoxStudies": true,
+    "DisablePocket": true,
+    "DisableAccounts": true,
+    "DisableProfileImport": true,
+    "DisableFormHistory": true,
+    "DontCheckDefaultBrowser": true,
+    "SkipTermsOfUse": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+    "NoDefaultBookmarks": true,
+    "DisplayBookmarksToolbar": "never",
+    "Homepage": {
+      "URL": "file:///usr/local/share/cll/browser/start.html",
+      "StartPage": "homepage"
+    },
+    "ShowHomeButton": true,
+    "DNSOverHTTPS": {
+      "Enabled": false,
+      "Locked": true
+    },
+    "IPProtectionAvailable": false,
+    "Proxy": {
+      "Mode": "system",
+      "Locked": true
+    },
+    "NetworkPrediction": false,
+    "CaptivePortal": false,
+    "PasswordManagerEnabled": false,
+    "OfferToSaveLogins": false,
+    "AutofillAddressEnabled": false,
+    "AutofillCreditCardEnabled": false,
+    "UserMessaging": {
+      "WhatsNew": false,
+      "ExtensionRecommendations": false,
+      "FeatureRecommendations": false,
+      "UrlbarInterventions": false,
+      "SkipOnboarding": true,
+      "MoreFromMozilla": false,
+      "FirefoxLabs": false,
+      "Locked": true
+    },
+    "FirefoxHome": {
+      "Search": true,
+      "TopSites": false,
+      "SponsoredTopSites": false,
+      "Highlights": false,
+      "Pocket": false,
+      "Stories": false,
+      "SponsoredPocket": false,
+      "SponsoredStories": false,
+      "Snippets": false,
+      "Weather": false,
+      "Locked": true
+    },
+    "FirefoxSuggest": {
+      "WebSuggestions": false,
+      "SponsoredSuggestions": false,
+      "OnlineEnabled": false,
+      "Locked": true
+    },
+    "SearchSuggestEnabled": false,
+    "GenerativeAI": {
+      "Enabled": false,
+      "Locked": true
+    },
+    "ExtensionSettings": {
+      "*": {
+        "installation_mode": "blocked",
+        "blocked_install_message": "Add-ons are turned off on lab computers."
+      }
+    },
+    "SearchEngines": {
+      "Add": [
+        {
+          "Name": "DuckDuckGo (Safe Search)",
+          "Description": "DuckDuckGo with strict safe search",
+          "URLTemplate": "https://duckduckgo.com/?q={searchTerms}&kp=1",
+          "Method": "GET"
+        }
+      ],
+      "Default": "DuckDuckGo (Safe Search)",
+      "DefaultPrivate": "DuckDuckGo (Safe Search)",
+      "Remove": ["DuckDuckGo", "eBay", "Perplexity", "Reddit"],
+      "PreventInstalls": true
+    },
+    "HardwareAcceleration": false,
+    "Preferences": {
+      "gfx.webrender.software": { "Value": true, "Status": "locked" },
+      "media.hardware-video-decoding.enabled": { "Value": false, "Status": "locked" },
+      "dom.ipc.processCount": { "Value": 2, "Status": "locked" },
+      "dom.ipc.processCount.webIsolated": { "Value": 1, "Status": "locked" },
+      "dom.ipc.processPrelaunch.enabled": { "Value": false, "Status": "locked" },
+      "browser.tabs.unloadOnLowMemory": { "Value": true, "Status": "locked" },
+      "browser.sessionstore.resume_from_crash": { "Value": false, "Status": "locked" },
+      "browser.startup.couldRestoreSession.count": { "Value": 2, "Status": "locked" },
+      "browser.tabs.crashReporting.sendReport": { "Value": false, "Status": "locked" },
+      "network.connectivity-service.enabled": { "Value": false, "Status": "locked" }
+    }
+  }
+}

@@ -137,7 +137,8 @@ real-machine version.
 - **What the learner sees.** A Lubuntu-style desktop (Ubuntu 20.04, LXDE) with
   the lab folder open in the file manager and a terminal ready, a text editor
   for the lab files, and the lab checks beside or folded above the screen.
-  The machine is configured without internet access. Stop, disconnect and
+  The machine has no internet access unless online labs are turned on (see
+  "Online labs" below). Stop, disconnect and
   timeout request deletion; failed cleanup is retried and blocks new starts.
   Provider logs/recovery copies and orphan cleanup after controller restart
   need separate verification.
@@ -297,6 +298,93 @@ is added under its Manage Actions access or the package is deleted.
 Until then production keeps the earlier image, and everything in the browser
 (clipboard, keys, full screen, text terminal, time zone, paced typing) already
 works with it; only resizing the desktop needs the new image.
+
+## Lab steps, screen height, a web browser and online labs (2026-11-12)
+
+- **The step banner stays where the learner put it.** The Linux basics step
+  strip opens at the first unfinished step and from then on moves only with its
+  ‹ and › buttons. A finished step gets a green check ("✓ Step 4 of 5 done")
+  and the › button turns into "Next step ›"; a finished lab shows "✓ Lab
+  complete" in the header and highlights Next lab, without replacing the step
+  on screen. A new machine starts again at its first unfinished step.
+- **A step is done only when every part of it is.** Steps that ask for several
+  commands list them as ordered stages (`typed` on a milestone, checked by
+  `typedInOrder` in `server.js`): for example "cd into storage, then ls and read
+  key-card.txt" stays unchecked after the `cd` alone, and "chmod, then ls -l"
+  needs both, in that order. Any check type can add stages, so a file check and
+  the commands that go with it must both be true. Lab content (including private
+  content) can use the same field; the server validates it (1-6 stages of 1-4
+  patterns, no `g`/`y` flags).
+- **More height for the machine.** The page's own bars above the screen went
+  from 155-176 px to 126 px: the machine bar keeps to one row on the lab page
+  (the page already names the lab) and, with a mouse, the step strip and machine
+  buttons are compact (touch screens keep 44 px targets). A short lab area on a
+  high-density or zoomed display (a 1080p laptop at 125%) now gets a desktop up
+  to 640 px tall, using the display's extra pixels, scaled to fit, so ordinary
+  windows fit above the taskbar; the largest desktop is now 1920x1200.
+- **A web browser.** The desktop image has Firefox ESR from Mozilla's own APT
+  repository (Ubuntu 24.04's `firefox` package is a snap, which cannot run in a
+  container), managed by enterprise policies: no telemetry, studies, sponsored
+  content or extension installs; DNS over HTTPS locked off so lookups use the
+  machine's resolver; safe-search DuckDuckGo as the search engine; and a start
+  page, written at start from the machine's network settings, that explains
+  which sites this machine can reach. HTML files open in it, and it can show
+  pages a learner serves on the machine (`python3 -m http.server`).
+
+### Online labs
+
+Every machine is offline by default. `LAB_INTERNET` on the controller turns
+online labs on for the **networking and security labs** (all `NET-` and `SEC-`
+labs); the Linux basics course and the coding labs always stay offline.
+
+| `LAB_INTERNET` | Networking and security lab machines can reach |
+|---|---|
+| `off` (default) | nothing |
+| `sites` | only the sites the lab lists: `example.com`, the name reserved for teaching (RFC 2606) |
+| `filtered` | the listed sites, and the rest of the web through a family-safe DNS filter |
+
+- **What learners do online.** Each online lab adds two steps to its checks,
+  only on an online machine (offline, they never appear, so no lab becomes
+  impossible). Networking: a DNS lookup (`nslookup example.com`) and a web
+  request (`curl -I https://example.com`). Security: reading a real certificate
+  (`curl -vI https://example.com`) and a real anti-spoofing record
+  (`dig +short TXT example.com`). They can also browse in Firefox.
+- **How it is enforced.** The controller sends Docker Cloud a network policy for
+  each machine: `sites` is "deny everything (`**`), allow example.com";
+  `filtered` is "allow, except well-known unfiltered DNS services and DNS over
+  HTTPS endpoints", and the machine's resolver is set to the filter
+  (`LAB_FILTER_DNS`, default CleanBrowsing Family Filter `185.228.168.168` and
+  `185.228.169.168`, which blocks adult, proxy and VPN sites and turns on
+  SafeSearch). A filtered machine whose resolver cannot be set does not start.
+  Only cloud desktops go online; host-container machines (`SANDBOX_BACKEND=docker`)
+  and terminal-only machines stay offline, and the controller warns at start-up
+  when `LAB_INTERNET` is set for them.
+- **Limits to tell schools.** DNS filtering is not a complete web filter: it
+  does not see pages, and a determined learner could still reach a site by its
+  IP address. The traffic leaves from Docker Cloud, not the school network, so
+  the school's own web filter and logs do not see it. The filter service
+  receives the names the machine looks up (not who the learner is). Review
+  online labs with district IT before turning `filtered` on; `sites` keeps the
+  machine to the one teaching site.
+
+**Turning it on** (not done by this change; production stays `off`):
+
+1. Deploy this version of the controller and the desktop image (Firefox comes
+   with the new image).
+2. On the server, test Docker Cloud's enforcement first, with the controller's
+   own settings. Each check starts one small machine for about a minute and
+   deletes it:
+
+       docker exec $(docker ps -qf name=orchestrator) node scripts/check-online-labs.mjs
+
+   It tests `offline`, `sites` and `filtered` and prints PASS or FAIL for what
+   each must reach and block (example.com, another site, DNS straight to
+   public resolvers, DNS over HTTPS). Docker Cloud's policy for named sites has
+   not been verified live yet, so this step is required.
+3. If every check passes, set `LAB_INTERNET=sites` (or `filtered`) in
+   `deploy/.env.production` (the private repository's compose file passes it
+   through) and run `cll-update`. Open a networking lab and confirm the two
+   online steps appear and tick. To go back, set `LAB_INTERNET=off`.
 
 ## Hosting the controller (set up)
 

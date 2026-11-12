@@ -227,6 +227,15 @@ test('a desktop machine gets full screen, keys, clipboard and a text terminal, h
   assert.match(source, /screenReaderMode:screenReader/, 'the text terminal turns on xterm screen reader support');
   assert.match(source, /rfb\.resizeSession = fitsDesktop\(\)/, 'the desktop follows the size of the lab area');
   assert.match(source, /area\.width >= 800 && area\.height >= 480/, 'but never shrinks below a usable desktop; smaller areas scale it instead');
+  // A short lab area on a 125% display (a 1080p laptop) asks for a desktop up to 640 px tall, scaled to fit.
+  const scaleSource = source.match(/const desktopScale = (area => [^;]+);/)[1];
+  const desktopScale = new Function('doc', 'return ' + scaleSource);
+  assert.equal(desktopScale({defaultView:{devicePixelRatio:1.25}})({width:1534, height:575}), 640 / 575);
+  assert.equal(desktopScale({defaultView:{devicePixelRatio:1.25}})({width:1534, height:400}), 1.25, 'never more than the display has pixels for');
+  assert.equal(desktopScale({defaultView:{devicePixelRatio:1}})({width:1366, height:531}), 1, 'a 100% display keeps full-size text');
+  assert.equal(desktopScale({defaultView:{devicePixelRatio:2}})({width:1440, height:700}), 1, 'tall enough areas follow the area exactly');
+  assert.match(source, /area\.height >= 480 && desktopScale\(area\) === 1/, 'a scaled desktop keeps its size instead of following the area');
+  assert.match(source, /screen:\{width:Math\.round\(area\.width \* scale\), height:Math\.round\(area\.height \* scale\)\}/);
   assert.doesNotMatch(source, /rfb\??\.focus\(\)/, 'focusing the screen never scrolls the page');
 });
 

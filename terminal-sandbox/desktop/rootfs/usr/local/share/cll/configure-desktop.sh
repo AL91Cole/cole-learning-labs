@@ -8,7 +8,8 @@ shortcuts=/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml
 sed -i 's#value="xfce4-popup-applicationsmenu"#value="xfce4-popup-whiskermenu"#' "$shortcuts"
 sed -i 's#\(<property name="&lt;Alt&gt;F1"[^>]*/>\)#\1\n      <property name="Super_L" type="string" value="xfce4-popup-whiskermenu"/>#' "$shortcuts"
 grep -q 'name="Super_L"' "$shortcuts"
-# No web browser or mail program (no internet); no screen locker, which would
+# Firefox has its own menu entry, so XFCE's generic "Web Browser" entry would
+# only show it twice; there is no mail program; no screen locker, which would
 # ask for a password nobody knows; no colour-profile daemon.
 rm -f /usr/share/applications/xfce4-web-browser.desktop /usr/share/applications/xfce4-mail-reader.desktop \
   /usr/share/applications/xfce4-color-settings.desktop /usr/share/applications/org.xfce.mousepad-settings.desktop \
@@ -16,7 +17,7 @@ rm -f /usr/share/applications/xfce4-web-browser.desktop /usr/share/applications/
 # A friendly helper in every new terminal.
 cat >> /etc/skel/.bashrc <<'BASHRC'
 
-# Lab computer: no internet, nothing here is private. Type `help-lab` for tips.
+# Lab computer: usually no internet, nothing here is private. Type `help-lab` for tips.
 help-lab() {
   printf '%s\n' \
     'Lab computer tips' \
@@ -26,7 +27,8 @@ help-lab() {
     '  Up / Down         earlier commands; history lists them' \
     '  Ctrl+C            stops the running command' \
     '  Ctrl+Shift+C/V    copy and paste in the terminal' \
-    '  This computer has no internet access and is erased when the lab ends.'
+    '  Most labs have no internet access; your lab page says if this one does.' \
+    '  This computer is erased when the lab ends.'
 }
 BASHRC
 mandb -q || true

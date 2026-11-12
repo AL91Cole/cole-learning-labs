@@ -1,4 +1,5 @@
-# Preferred applications on a lab computer (there is no web browser or mail
-# program: the machine has no internet).
+# Preferred applications on a lab computer: Firefox opens web links (there is
+# no mail program).
+WebBrowser=firefox-esr
 TerminalEmulator=xfce4-terminal
 FileManager=thunar

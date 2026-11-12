@@ -8,7 +8,10 @@ text/x-chdr=org.xfce.mousepad.desktop
 text/x-log=org.xfce.mousepad.desktop
 text/markdown=org.xfce.mousepad.desktop
 text/csv=org.xfce.mousepad.desktop
-text/html=org.xfce.mousepad.desktop
+text/html=firefox-esr.desktop
+application/xhtml+xml=firefox-esr.desktop
+x-scheme-handler/http=firefox-esr.desktop
+x-scheme-handler/https=firefox-esr.desktop
 text/x-shellscript=org.xfce.mousepad.desktop
 application/x-shellscript=org.xfce.mousepad.desktop
 application/json=org.xfce.mousepad.desktop
@@ -23,3 +26,7 @@ application/zip=xarchiver.desktop
 application/x-tar=xarchiver.desktop
 application/gzip=xarchiver.desktop
 application/x-compressed-tar=xarchiver.desktop
+
+[Added Associations]
+text/html=firefox-esr.desktop;org.xfce.mousepad.desktop;
+application/xhtml+xml=firefox-esr.desktop;org.xfce.mousepad.desktop;
