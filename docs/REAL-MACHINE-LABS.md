@@ -109,8 +109,9 @@ Setting it up:
    and store it in the deployment's secret store, never in a file or URL.
 2. Set `SANDBOX_BACKEND=cloud`, `DOCKER_ID` and `DOCKER_PAT`; the controller
    refuses to start with either missing. Optional: `SANDBOX_SIZE`,
-   `SANDBOX_IMAGE_REF` (any public image with a POSIX shell, `adduser` or
-   `useradd`, and the tools the labs need), `SANDBOX_SEED_DIRS`
+   `SANDBOX_IMAGE_REF` (any public Docker Hub image with a POSIX shell,
+   `adduser` or `useradd`, and the tools the labs need; Docker Cloud refuses
+   images from other registries), `SANDBOX_SEED_DIRS`
    (colon-separated; add the private repository's seed for paid labs) and
    `SANDBOX_START_COMMAND` (JSON array) for an image that needs its entrypoint.
    The controller needs no Docker socket in this mode; the private repository's
