@@ -99,7 +99,9 @@ test('the school review summary states scoped facts and claims no approval',()=>
   assert.match(summary,/No student account for public labs/u);assert.match(summary,/approved adults only/u);
   assert.match(summary,/503 refusal before it reads configuration/u);
   assert.match(summary,/only a fictional lab ID and an authored topic code are sent/u);
-  assert.match(summary,/The public labs perform no live scanning/u);
+  assert.match(summary,/Browser simulations run locally/u);
+  assert.match(summary,/Start machine executes commands on a hosted Linux machine and transmits its input and files/u);
+  assert.doesNotMatch(summary,/Typed work stays on the device|no terminal execution/u);
   assert.match(summary,/challenges\.cloudflare\.com/u);
   assert.doesNotMatch(summary,/100%|guarantee|green.?light|certified|compliant|zero.?PII/iu);
   for(const id of ['purpose','data-practices','hostnames','classroom-links'])assert.match(schoolIt,new RegExp(`<h2 id="${id}">`,'u'),id);

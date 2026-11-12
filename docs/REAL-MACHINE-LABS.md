@@ -15,8 +15,10 @@ it costs, and what is still to do before charging.
   the lab's checks; loads xterm.js from the service; and falls back to a plain
   text terminal if xterm cannot load. `src/lab-remote-client.js` speaks the
   service's WebSocket protocol (`auth` → `session:start` → `terminal:*`,
-  `milestone:verify`, `milestone:status`). Only the lab id, keystrokes,
-  terminal sizes and verify requests are sent. `src/lab-environment-config.js`
+  `milestone:verify`, `milestone:status`). Session messages, lab IDs, keyboard
+  and pointer input, display sizes and verify requests leave the browser.
+  The machine processes files and commands remotely; checks read selected
+  lab files and recent command history. `src/lab-environment-config.js`
   chooses the environment and lists which labs the service hosts; labs that
   are not listed fall back to the simulated desktop.
 - **Guide integration.** In a real-machine lab, Section 1's steps are the
@@ -133,10 +135,13 @@ real-machine version.
 - **What the learner sees.** A Lubuntu-style desktop (Ubuntu 20.04, LXDE) with
   the lab folder open in the file manager and a terminal ready, a text editor
   for the lab files, and the lab checks beside or folded above the screen.
-  The machine has no internet access and is erased when the learner leaves.
+  The machine is configured without internet access. Stop, disconnect and
+  timeout request deletion; failed cleanup is retried and blocks new starts.
+  Provider logs/recovery copies and orphan cleanup after controller restart
+  need separate verification.
 - **How the screen travels.** Browser to `wss://<site>/terminal/desktop`
   (the Pages gateway) to the controller to the machine's screen bridge. The
-  browser never learns the machine's address; a one-time ticket admits the
+  browser never learns the machine's address; a session-scoped ticket admits the
   socket and a per-session password protects the screen.
 - **Small screens.** The desktop is created at the size of the learner's lab
   area, so on an 11-inch Chromebook the text is shown at full size instead of

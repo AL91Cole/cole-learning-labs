@@ -92,6 +92,12 @@ test('a desktop machine is announced with a ticket and password, and its screen 
   assert.equal(bad.state().desktop, null, 'a malformed desktop announcement is treated as a terminal session');
   const html = renderLabRemote(byId('NET-205'));
   assert.match(html, /aria-label="Linux machine screen"/); assert.match(html, /no internet access/);
+  assert.match(html, /Cloudflare.*DigitalOcean.*Docker-hosted machine/u);
+  assert.match(html, /files and command history are processed remotely/u);
+  assert.match(html, /Use fictional details only/u);
+  assert.match(html, /href="\/#privacy"/u);
+  assert.match(html, /requests deletion on Stop, disconnect or timeout/u);
+  assert.doesNotMatch(html, /erased when you leave|Only the lab id/u);
 });
 
 test('service URLs stay same-origin by default and accept a separate origin when configured', () => {

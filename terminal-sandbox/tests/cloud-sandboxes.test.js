@@ -13,6 +13,7 @@ import {
   processResourceName,
   buildSeedScript,
   loadSeedFiles,
+  readBoundedFileResponse,
 } from "../cloud-sandboxes.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +27,7 @@ const response = (status, body, headers = {}) => ({
   headers: { get: (name) => headers[name.toLowerCase()] ?? null },
   json: async () => body,
   text: async () => (typeof body === "string" ? body : JSON.stringify(body ?? {})),
+  body: new Response(typeof body === "string" ? body : JSON.stringify(body ?? {})).body,
   arrayBuffer: async () =>
     Buffer.from(typeof body === "string" ? body : JSON.stringify(body ?? {})),
 });
@@ -40,7 +42,7 @@ const ENV = {
 };
 
 /** A fake of Docker's management API plus one sandbox endpoint. */
-function fakeDocker({ pollsBeforeRunning = 1, failCreate = null, deleteStatuses = [200], setupExitCode = 0, setupPolls = 2 } = {}) {
+function fakeDocker({ pollsBeforeRunning = 1, failCreate = null, deleteStatuses = [200], setupExitCode = 0, setupPolls = 2, endpointUri = "https://sbx-123.endpoint.example/api" } = {}) {
   const calls = [];
   const sockets = [];
   const processes = [];
@@ -58,7 +60,7 @@ function fakeDocker({ pollsBeforeRunning = 1, failCreate = null, deleteStatuses 
       endpoint:
         status === "running"
           ? {
-              uri: "https://sbx-123.endpoint.example/api",
+              uri: endpointUri,
               capabilities: ["createProcess", "interact", "readFile", "writeFile"],
             }
           : undefined,
@@ -192,6 +194,10 @@ test("cloud configuration reads the backend, account, image and size from the en
   assert.equal(cfg.cloud.size, "small");
   assert.equal(cfg.cloud.apiBase, "https://connect.docker.com/sandboxes/v1");
   assert.deepEqual(cloudConfigurationProblems(cfg.cloud), []);
+  for (const value of ["http://unsafe.example", "https://user:secret@unsafe.example", "https://unsafe.example/?token=secret", "https://unsafe.example/#fragment"]) {
+    assert.ok(cloudConfigurationProblems({ ...cfg.cloud, exchangeUrl: value }).some((x) => x.startsWith("DOCKER_TOKEN_EXCHANGE_URL")));
+    assert.ok(cloudConfigurationProblems({ ...cfg.cloud, apiBase: value }).some((x) => x.startsWith("SANDBOX_API_BASE")));
+  }
   assert.equal(cfg.cloud.shellUser, "1000:1000");
   assert.ok(cfg.cloud.seedDirs[0].endsWith("sandbox-seed"), "the public sample seed is the default");
   assert.deepEqual(cloudConfiguration({ ...ENV, SANDBOX_SEED_DIRS: "/a/seed:/b/seed" }).seedDirs, ["/a/seed", "/b/seed"]);
@@ -347,6 +353,88 @@ test("a stale version on delete is refreshed and retried, and a terminal error f
   const deletes = docker.calls.filter((c) => c.method === "DELETE");
   assert.equal(deletes.length, 2);
   assert.equal(deletes[1].headers["If-Match"], '"v2"');
+});
+
+test("failed cloud deletion remains retryable and closes learner access immediately", async () => {
+  const docker = fakeDocker({ deleteStatuses: [503, 503, 503, 200] });
+  const sandbox = await spawnCloudSandbox({ id: "retry-cleanup", labId: "NET-201" }, cfgFor(), deps(docker));
+  await assert.rejects(sandbox.destroy(), { code: "sandbox_cleanup_failed" });
+  assert.equal(docker.sockets[0].readyState, 3);
+  assert.equal(await sandbox.readFile("/home/learner/lab/code/results.txt"), null);
+  await sandbox.destroy();
+  await sandbox.destroy();
+  assert.equal(docker.calls.filter((c) => c.method === "DELETE").length, 4, "a later cleanup attempt succeeds and repeated success is idempotent");
+});
+
+test("a machine already absent at the version refresh is confirmed deleted", async () => {
+  const docker = fakeDocker({ deleteStatuses: [412] });
+  let gone = false;
+  const wrapped = async (url, init) => {
+    if (gone && init?.method === "GET" && url.endsWith("/sandboxes/sbx-123")) return response(404, {});
+    const result = await docker.fetch(url, init);
+    if (init?.method === "DELETE") gone = true;
+    return result;
+  };
+  const sandbox = await spawnCloudSandbox({ id: "already-absent", labId: "NET-201" }, cfgFor(), deps(docker, { fetch: wrapped }));
+  await sandbox.destroy();
+  await sandbox.destroy();
+  assert.equal(docker.calls.filter((c) => c.method === "DELETE").length, 1);
+});
+
+test("asynchronous deletion keeps its cleanup handle until absence is confirmed", async () => {
+  const docker = fakeDocker({ deleteStatuses: [202] });
+  let accepted = false, gone = false;
+  const wrapped = async (url, init) => {
+    if (accepted && init?.method === "GET" && url.endsWith("/sandboxes/sbx-123"))
+      return gone ? response(404, {}) : response(200, { core: { status: "deleting" } });
+    const result = await docker.fetch(url, init);
+    if (init?.method === "DELETE") accepted = true;
+    return result;
+  };
+  const sandbox = await spawnCloudSandbox({ id: "async-delete", labId: "NET-201" }, cfgFor(), deps(docker, { fetch: wrapped }));
+  await assert.rejects(sandbox.destroy(), { code: "sandbox_cleanup_failed" });
+  assert.equal(docker.calls.filter((c) => c.method === "DELETE").length, 1);
+  gone = true;
+  await sandbox.destroy();
+  await sandbox.destroy();
+  assert.equal(docker.calls.filter((c) => c.method === "DELETE").length, 1, "later retries confirm deletion without creating duplicate delete operations");
+});
+
+test("failed startup retains a retry handle when its machine cannot be deleted", async () => {
+  const docker = fakeDocker({ setupExitCode: 1, deleteStatuses: [403, 403, 200] });
+  let failed;
+  try {
+    await spawnCloudSandbox({ id: "failed-start", labId: "NET-201" }, cfgFor(), deps(docker));
+  } catch (error) { failed = error; }
+  assert.equal(failed.code, "sandbox_seed_failed");
+  assert.equal(typeof failed.cleanup, "function");
+  await assert.rejects(failed.cleanup(), { code: "sandbox_cleanup_failed" });
+  await failed.cleanup();
+  assert.equal(docker.calls.filter((c) => c.method === "DELETE").length, 3);
+});
+
+test("an insecure provider endpoint is refused before issuing or sending scoped credentials", async () => {
+  const docker = fakeDocker({ endpointUri: "http://sbx-123.endpoint.example/api" });
+  await assert.rejects(spawnCloudSandbox({ id: "insecure-endpoint", labId: "NET-201" }, cfgFor(), deps(docker)), { code: "cloud_endpoint_unsupported" });
+  assert.equal(docker.credentials, 0);
+  assert.equal(docker.calls.filter((c) => c.method === "DELETE").length, 1);
+});
+
+test("chunked and misleading file responses are capped while streaming and canceled at overflow", async () => {
+  for (const headers of [{}, { "content-length": "1" }]) {
+    let canceled = false;
+    let reads = 0;
+    const stream = new ReadableStream({
+      pull(controller) { reads++; controller.enqueue(new Uint8Array(8192)); },
+      cancel() { canceled = true; },
+    });
+    const result = await readBoundedFileResponse(new Response(stream, { headers }), 16384);
+    assert.equal(result, null);
+    assert.equal(canceled, true);
+    assert.ok(reads <= 4, "reading stops at the cap instead of buffering the entire file");
+  }
+  assert.equal(await readBoundedFileResponse(new Response("small lab result"), 16384), "small lab result");
+  assert.equal(await readBoundedFileResponse(new Response("x", { headers: { "content-length": "99999" } }), 16384), null);
 });
 
 test("a seed script that fails stops the start and deletes the sandbox", async () => {

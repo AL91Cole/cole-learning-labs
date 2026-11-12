@@ -86,6 +86,12 @@ const failure = (code, detail) =>
 const IMAGE_REF = /^[a-z0-9][a-z0-9._/@:-]{1,300}$/;
 const SECRET = /^[A-Za-z0-9]{8,32}$/;
 const randomSecret = (length) => crypto.randomBytes(24).toString("base64").replace(/[^A-Za-z0-9]/g, "").padEnd(length, "x").slice(0, length);
+const secureServiceUrl = (value) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash;
+  } catch { return false; }
+};
 
 /** Read the cloud backend's settings from the environment. */
 export function cloudConfiguration(env = process.env) {
@@ -121,6 +127,8 @@ export function cloudConfigurationProblems(cloud) {
   const problems = [];
   if (!cloud.dockerId) problems.push("DOCKER_ID is not set");
   if (!cloud.dockerPat) problems.push("DOCKER_PAT is not set");
+  if (!secureServiceUrl(cloud.apiBase)) problems.push("SANDBOX_API_BASE must be an HTTPS URL without credentials, query or fragment");
+  if (!secureServiceUrl(cloud.exchangeUrl)) problems.push("DOCKER_TOKEN_EXCHANGE_URL must be an HTTPS URL without credentials, query or fragment");
   if (!cloud.imageRef || !IMAGE_REF.test(cloud.imageRef)) problems.push("SANDBOX_IMAGE_REF is not a valid image reference");
   if (!/^[a-z_][a-z0-9_-]{0,31}(:[a-z0-9_-]{1,32})?$|^\d{1,6}(:\d{1,6})?$/i.test(cloud.shellUser || "")) problems.push("SANDBOX_SHELL_USER must be a user name or uid, optionally with a group");
   if (!cloud.startCommand) problems.push("SANDBOX_START_COMMAND must be a JSON array of non-empty strings");
@@ -196,6 +204,32 @@ async function readError(response) {
     return body?.message || body?.code || text.slice(0, 200);
   } catch {
     return text.slice(0, 200);
+  }
+}
+
+/** Bound streamed file reads even when a learner omits or falsifies Content-Length. */
+export async function readBoundedFileResponse(response, limit) {
+  const reader = response.body?.getReader();
+  if (!reader) return null;
+  let finished = false;
+  try {
+    const advertised = Number(response.headers.get("content-length"));
+    if (Number.isFinite(advertised) && advertised > limit) return null;
+    const chunks = [];
+    let size = 0;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) {
+        finished = true;
+        return Buffer.concat(chunks, size).toString("utf8");
+      }
+      size += value.byteLength;
+      if (size > limit) return null;
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    if (!finished) await reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
 }
 
@@ -428,6 +462,9 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
     endpoint = null,
     socket = null,
     destroyed = false,
+    deletionComplete = false,
+    deletionAccepted = false,
+    deleting = null,
     exited = false;
   const dataListeners = [],
     exitListeners = [];
@@ -456,7 +493,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
 
   async function fetchSandbox() {
     const response = await api("GET", "/sandboxes/" + encodeURIComponent(sandboxName));
-    if (!response.ok) throw failure("cloud_sandbox_lookup_failed", "HTTP " + response.status);
+    if (!response.ok) throw Object.assign(failure("cloud_sandbox_lookup_failed", "HTTP " + response.status), { status: response.status });
     const sandbox = await response.json();
     rememberEtag(sandbox, response);
     return sandbox;
@@ -500,30 +537,51 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
   };
 
   const destroy = async () => {
-    if (destroyed) return;
+    if (deletionComplete) return;
+    if (deleting) return deleting;
     destroyed = true;
     try {
       socket?.terminate?.();
       socket?.close?.();
     } catch {}
     socket = null;
-    if (!sandboxName) return;
-    // The API needs the version it should delete; refresh it once if ours is stale.
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        if (!etag) await fetchSandbox();
-        const response = await api("DELETE", "/sandboxes/" + encodeURIComponent(sandboxName), { headers: etag ? { "If-Match": etag } : {} });
-        if (response.ok || response.status === 404) return;
-        if (response.status === 412 || response.status === 428 || response.status === 409) {
-          etag = "";
-          continue;
+    scoped.token = "";
+    if (!sandboxName) { deletionComplete = true; return; }
+    deleting = (async () => {
+      // A stale version, throttling, or transport failure gets a bounded retry.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (deletionAccepted) {
+            const lookup = await api("GET", "/sandboxes/" + encodeURIComponent(sandboxName));
+            if (lookup.status === 404) { deletionComplete = true; return; }
+            // A 202 DELETE only schedules removal. Keep its allocation reserved
+            // until a later lookup confirms the resource no longer exists.
+            if (!lookup.ok && lookup.status !== 429 && lookup.status < 500) break;
+            if (attempt < 2) await sleep(500, deps.sleep);
+            continue;
+          }
+          if (!etag) await fetchSandbox();
+          const response = await api("DELETE", "/sandboxes/" + encodeURIComponent(sandboxName), { headers: etag ? { "If-Match": etag } : {} });
+          if ([200, 204, 404].includes(response.status)) { deletionComplete = true; return; }
+          if (response.status === 202) {
+            deletionAccepted = true;
+            if (attempt < 2) await sleep(500, deps.sleep);
+            continue;
+          }
+          if (response.status === 412 || response.status === 428 || response.status === 409) {
+            etag = "";
+            continue;
+          }
+          if (response.status !== 429 && response.status < 500) break;
+        } catch (error) {
+          if (error?.status === 404) { deletionComplete = true; return; }
+          // Never include provider messages or tokens in cleanup diagnostics.
         }
-        return;
-      } catch {
-        if (attempt === 2) return;
-        await sleep(500, deps.sleep);
+        if (attempt < 2) await sleep(500, deps.sleep);
       }
-    }
+      throw failure("sandbox_cleanup_failed");
+    })();
+    try { await deleting; } finally { deleting = null; }
   };
 
   try {
@@ -546,6 +604,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
       await sleep(pollIntervalMs, deps.sleep);
       sandbox = await fetchSandbox();
     }
+    if (!secureServiceUrl(endpoint.uri)) throw failure("cloud_endpoint_unsupported", "endpoint must use HTTPS");
     if (Array.isArray(endpoint.capabilities)) {
       for (const needed of desktop ? ["createProcess", "readFile"] : ["createProcess", "interact", "readFile"])
         if (!endpoint.capabilities.includes(needed)) throw failure("cloud_endpoint_unsupported", needed);
@@ -577,10 +636,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
       try {
         const response = await endpointRequest("GET", "/v1/files/content?path=" + encodeURIComponent(file), { timeout: 5000, accept: "application/octet-stream" });
         if (!response.ok) return null;
-        const length = Number(response.headers.get("content-length"));
-        if (Number.isFinite(length) && length > limit) return null;
-        const bytes = Buffer.from(await response.arrayBuffer());
-        return bytes.length > limit ? null : bytes.toString("utf8");
+        return await readBoundedFileResponse(response, limit);
       } catch {
         return null;
       }
@@ -698,7 +754,12 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
       destroy,
     };
   } catch (error) {
-    await destroy();
-    throw error?.code ? error : failure("container_start_failed", error?.message);
+    const reported = error?.code ? error : failure("container_start_failed", error?.message);
+    try { await destroy(); } catch {
+      // The controller retains only this cleanup handle and retries it; startup
+      // failures must not lose the only reference to an undeleted machine.
+      reported.cleanup = destroy;
+    }
+    throw reported;
   }
 }

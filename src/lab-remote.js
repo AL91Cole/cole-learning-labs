@@ -2,8 +2,8 @@
 // the optional terminal service (terminal-sandbox/). It registers as the
 // 'remote-terminal' provider. The guide's Section 1 steps come from the
 // service's own lab milestones, which the service verifies by reading files in
-// the learner's container. Nothing is sent but the lab id, keystrokes, terminal
-// sizes and verify requests. If the service's xterm.js cannot load, a plain
+// the learner's container. Remote input, display traffic, session messages and
+// work-check requests leave the browser; see the pre-start privacy notice. If the service's xterm.js cannot load, a plain
 // text terminal takes its place so the lab still works.
 import {registerLabEnvironment} from './lab-environment.js?release=20261107-tech-team';
 import {LAB_ENVIRONMENT_CONFIG} from './lab-environment-config.js?release=20261107-tech-team';
@@ -67,7 +67,7 @@ function loadXterm(base, doc) {
 
 export function renderLabRemote(scenario) {
   const labId = remoteLabFor(scenario), config = remoteConfig();
-  return '<div class="lab-remote" data-lab-remote><div class="remote-chrome"><span class="remote-dot" data-remote-dot aria-hidden="true"></span><span class="remote-title">Real Linux machine · ' + esc(labId || scenario.id) + '</span><span class="remote-status" data-remote-status role="status">Not started</span><span class="remote-actions"><button type="button" class="lab-tool remote-checks-toggle" data-remote-checks-toggle aria-expanded="true" aria-controls="remote-checks">Lab checks</button><button type="button" class="lab-tool" data-remote-start>Start machine</button><button type="button" class="lab-tool" data-remote-verify disabled>Check my work</button><button type="button" class="lab-tool" data-remote-stop disabled>Stop</button></span></div><div class="remote-body"><div class="remote-terminal" data-remote-terminal tabindex="0" aria-label="Linux machine screen"><div class="remote-welcome" data-remote-welcome><h3>Your own Linux machine for this lab</h3><p>Start machine opens a real, isolated Linux machine on the lab server (' + esc(config.base) + ') with this lab’s files in the <b>lab</b> folder. Only the lab id and what you type or click are sent. The machine has no internet access and is erased when you leave.</p><p class="panel-help">It takes about half a minute to start. Click inside the screen to use the keyboard and mouse.</p></div></div><aside class="remote-milestones" id="remote-checks" aria-label="Lab checks"><h3>Lab checks</h3><ol data-remote-milestones><li class="remote-milestone-empty">The machine reports its checks once it starts.</li></ol><p class="panel-help" data-remote-limits></p></aside></div></div>';
+  return '<div class="lab-remote" data-lab-remote><div class="remote-chrome"><span class="remote-dot" data-remote-dot aria-hidden="true"></span><span class="remote-title">Real Linux machine · ' + esc(labId || scenario.id) + '</span><span class="remote-status" data-remote-status role="status">Not started</span><span class="remote-actions"><button type="button" class="lab-tool remote-checks-toggle" data-remote-checks-toggle aria-expanded="true" aria-controls="remote-checks">Lab checks</button><button type="button" class="lab-tool" data-remote-start>Start machine</button><button type="button" class="lab-tool" data-remote-verify disabled>Check my work</button><button type="button" class="lab-tool" data-remote-stop disabled>Stop</button></span></div><div class="remote-body"><div class="remote-terminal" data-remote-terminal tabindex="0" aria-label="Linux machine screen"><div class="remote-welcome" data-remote-welcome><h3>Your own Linux machine for this lab</h3><p>Start machine opens a real, isolated Linux machine on the lab server (' + esc(config.base) + ') with this lab’s files in the <b>lab</b> folder. Cloudflare relays the connection to a DigitalOcean controller and a Docker-hosted machine. Your keyboard and mouse input, screen size, files and command history are processed remotely. Use fictional details only; never enter student records, passwords or private keys. The machine is configured with no internet access. The service requests deletion on Stop, disconnect or timeout; provider cleanup and retention can differ. Read the <a href="/#privacy">privacy information</a> before starting.</p><p class="panel-help">It takes about half a minute to start. Click inside the screen to use the keyboard and mouse.</p></div></div><aside class="remote-milestones" id="remote-checks" aria-label="Lab checks"><h3>Lab checks</h3><ol data-remote-milestones><li class="remote-milestone-empty">The machine reports its checks once it starts.</li></ol><p class="panel-help" data-remote-limits></p></aside></div></div>';
 }
 
 export function mountLabRemote(root, {scenario, record, getState, action, onActivity = () => {}, showNotice = () => {}, checksOpen, verifyEveryMs = 15000}) {
@@ -188,5 +188,5 @@ registerLabEnvironment({
 });
 
 // In a browser, ask the service early so the first lab page already knows; a
-// same-origin GET of the health route sends nothing about the learner.
+// same-origin GET has no work attached; delivery still exposes request metadata.
 if (globalThis.document && typeof globalThis.fetch === 'function' && /^https?:$/.test(globalThis.location?.protocol || '')) probeRemoteService().catch(() => {});
