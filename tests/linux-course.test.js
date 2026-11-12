@@ -109,3 +109,25 @@ test('the route is wired into the app, the build list and the styles',()=>{
   assert.match(css,/\.linux-lab\{[^}]*height:100dvh/);
   assert.match(css,/body:has\(\.linux-lab\) \.access-tools\{[^}]*top:3px/,'the floating buttons stay off the Linux screen');
 });
+
+test('a refresh that changes nothing leaves the step strip alone, so an open hint and the keyboard focus stay put',async()=>{
+  const {node,root}=page();let state={phase:'ready',milestones:steps(false,false,false),complete:false},context=null;
+  const strip=node('[data-linux-step]');let html='',writes=0;
+  Object.defineProperty(strip,'innerHTML',{get:()=>html,set:value=>{html=value;writes++;}});
+  const cleanup=mountLinuxCourse(root,{id:'LNX-101',probe:async()=>'enabled',hosts:()=>true,render:()=>'<div data-lab-remote></div>',mount:(stage,options)=>{context=options;return {remoteState:()=>state,dispose(){}};}});
+  await flush();
+  context.onActivity();const first=writes;assert.match(html,/Step 1 of 3/);
+  for(let i=0;i<5;i++){state={...state,milestones:steps(false,false,false)};context.onActivity();}
+  assert.equal(writes,first,'the same steps arriving again (every few seconds) do not replace the strip');
+  state={phase:'ready',milestones:steps(true,false,false),complete:false};context.onActivity();
+  assert.equal(writes,first+1,'a finished step redraws it once');assert.match(html,/Step 2 of 3/);
+  cleanup();
+});
+
+test('the lab checks list redraws only when a check changes and keeps open hints and focus',()=>{
+  const source=readFileSync(new URL('../src/lab-remote.js',import.meta.url),'utf8');
+  assert.match(source,/if \(signature === drawnMilestones\) return;/,'unchanged checks are not redrawn');
+  assert.match(source,/'<details' \+ \(open\.has\(item\.id\) \? ' open' : ''\)/,'a hint that was open stays open when the list does change');
+  assert.match(source,/querySelector\('summary'\)\?\.focus\(\{preventScroll:true\}\)/,'the keyboard focus returns to the same hint');
+  assert.match(source,/'<li data-milestone="' \+ esc\(item\.id\)/,'each check is identified by its id');
+});
