@@ -1,0 +1,36 @@
+#!/bin/bash
+# Keeps the learner's desktop running: the screen server, the screen WebSocket
+# and the desktop session. Each is restarted if it stops, so logging out or a
+# crashed panel brings the desktop back like a fresh sign-in instead of leaving
+# a black screen.
+set -u
+user=$CLL_USER
+home=$(getent passwd "$user" | cut -d: -f6)
+uid=$(id -u "$user")
+
+keep() {
+  ( while :; do "$@"; sleep 1; done ) &
+}
+
+# Raw VNC on 127.0.0.1:5900 only. Xvnc accepts screen-size requests from the
+# viewer, so the desktop follows the size of the learner's browser window.
+keep runuser -u "$user" -- /usr/bin/Xvnc :1 \
+  -geometry "$CLL_GEOMETRY" -depth 24 -rfbport 5900 -localhost -nolisten tcp \
+  -SecurityTypes VncAuth -PasswordFile /etc/vnc/passwd -AlwaysShared \
+  -AcceptSetDesktopSize -SendCutText -AcceptCutText -MaxCutText 262144 \
+  -desktop lab-pc -dpi 96
+
+for _ in $(seq 1 100); do [ -S /tmp/.X11-unix/X1 ] && break; sleep 0.1; done
+
+# The WebSocket form of the same screen, for the cloud backend's port relay.
+keep runuser -u nobody -- /usr/bin/websockify --heartbeat 30 6081 127.0.0.1:5900
+
+# The desktop session itself, signed in as the learner.
+keep runuser -u "$user" -- env -i -C "$home" \
+  HOME="$home" USER="$user" LOGNAME="$user" SHELL=/bin/bash \
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 TZ="$CLL_TZ" DISPLAY=:1 \
+  XDG_RUNTIME_DIR="/run/user/$uid" XDG_SESSION_TYPE=x11 XDG_CURRENT_DESKTOP=XFCE DESKTOP_SESSION=xfce XDG_CONFIG_DIRS=/etc/xdg XDG_DATA_DIRS=/usr/local/share:/usr/share \
+  /usr/bin/dbus-launch --exit-with-session /usr/bin/xfce4-session
+
+wait

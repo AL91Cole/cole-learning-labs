@@ -82,3 +82,48 @@ body:has(.linux-lab) .access-panel{left:auto;right:0;bottom:auto;top:52px}
 .linux-availability[data-state="unavailable"]{color:#8a4b00;font-weight:700}
 @media (max-width:700px){.linux-step{flex-wrap:wrap}.linux-hint{max-width:100%}}
 @media (max-height:800px){.linux-bar h1{font-size:.95rem}.linux-step{padding:5px 12px;font-size:.9rem;line-height:1.4}}
+/* Desktop machine controls: text terminal, clipboard, keys and full screen. */
+.remote-desktop-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.remote-desktop-tools[hidden]{display:none}
+.remote-desktop-tools .lab-tool{min-height:32px;font-size:.8rem;background:#2a313b;border:1px solid #3a4350;color:#eaf6f3;border-radius:6px;cursor:pointer}
+.remote-desktop-tools .lab-tool[aria-pressed="true"],.remote-desktop-tools .lab-tool[aria-expanded="true"]{background:#1d8a6a;border-color:#1d8a6a;color:#fff}
+.remote-desktop-tools .lab-tool:focus-visible,.remote-keys-menu button:focus-visible,.remote-clipboard .lab-tool:focus-visible{outline:3px solid #f3ce85;outline-offset:1px}
+.remote-keys{position:relative}
+.remote-keys-menu{position:absolute;z-index:30;top:calc(100% + 4px);right:0;display:grid;min-width:230px;padding:4px;border-radius:8px;background:#1f2430;border:1px solid #3a4350;box-shadow:0 8px 24px #0008}
+.remote-keys-menu[hidden]{display:none}
+.remote-keys-menu button{all:unset;box-sizing:border-box;display:block;width:100%;padding:8px 10px;border-radius:6px;color:#eaf6f3;font-size:.84rem;cursor:pointer}
+.remote-keys-menu button:hover,.remote-keys-menu button:focus{background:#2f7fd6;color:#fff}
+.remote-clipboard{display:grid;gap:6px;padding:8px 12px;background:#14181f;border-bottom:1px solid #2a313b;font-size:.84rem}
+.remote-clipboard[hidden]{display:none}
+.remote-clipboard label{display:grid;gap:2px;font-weight:700;color:#eaf6f3}
+.remote-clipboard label .panel-help{font-weight:400;color:#aab4c0}
+.remote-clipboard textarea{width:100%;box-sizing:border-box;min-height:56px;resize:vertical;border-radius:6px;border:1px solid #3a4350;background:#0e1116;color:#eaf6f3;font-family:"Ubuntu Mono","DejaVu Sans Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;padding:6px 8px}
+.remote-clipboard-actions{display:flex;flex-wrap:wrap;gap:6px}
+.remote-clipboard .lab-tool{min-height:32px;font-size:.8rem;background:#2f7fd6;border:1px solid #2f7fd6;color:#fff;border-radius:6px;cursor:pointer}
+.remote-clipboard [data-remote-clipboard-note]{color:#9ec5f2}
+.remote-text{flex:1;min-height:0;width:100%;height:100%;background:#300a24;padding:6px;box-sizing:border-box;display:flex;flex-direction:column}
+.remote-text[hidden],.remote-screen[hidden]{display:none}
+.remote-text .xterm{height:100%}
+.remote-text-note{margin:auto;color:#eeeeec;font-size:.92rem}
+.remote-text-note .lab-tool{margin-left:8px;min-height:30px;background:#2f7fd6;border:1px solid #2f7fd6;color:#fff;border-radius:6px}
+/* Full screen: the machine and its bar fill the display. */
+.lab-remote:fullscreen{width:100vw;height:100vh}
+.lab-remote:fullscreen .remote-body{grid-template-columns:minmax(0,1fr)}
+.lab-remote:fullscreen .remote-milestones{display:none}
+.lab-remote:fullscreen .remote-chrome{padding:2px 10px}
+/* In a narrower pane (the guided lab beside its guide on an 11-inch Chromebook)
+   the controls keep to one row: the pane already names the machine, so the title
+   gives way and the status line shortens (screen readers still hear all of it). */
+.lab-remote{container-type:inline-size}
+@container (max-width:1180px){
+  .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-title{display:none}
+  .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-chrome{gap:6px;flex-wrap:nowrap}
+  .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-status{flex:1 1 60px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-chrome .lab-tool{padding-inline:8px;white-space:nowrap}
+}
+@container (max-width:860px){
+  .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-chrome{flex-wrap:wrap}
+  .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-actions{flex-wrap:wrap}
+  .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-chrome .lab-tool{white-space:normal}
+  .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-status{flex-basis:100%;order:5;white-space:normal}
+}

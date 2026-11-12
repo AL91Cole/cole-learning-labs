@@ -85,13 +85,22 @@ const failure = (code, detail) =>
   Object.assign(new Error(detail ? code + ": " + detail : code), { code });
 const IMAGE_REF = /^[a-z0-9][a-z0-9._/@:-]{1,300}$/;
 const SECRET = /^[A-Za-z0-9]{8,32}$/;
-const randomSecret = (length) => crypto.randomBytes(24).toString("base64").replace(/[^A-Za-z0-9]/g, "").padEnd(length, "x").slice(0, length);
+export const randomSecret = (length) => crypto.randomBytes(24).toString("base64").replace(/[^A-Za-z0-9]/g, "").padEnd(length, "x").slice(0, length);
 const secureServiceUrl = (value) => {
   try {
     const url = new URL(value);
     return url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash;
   } catch { return false; }
 };
+
+/**
+ * A time zone name the learner's browser reported (for example
+ * "America/New_York"), or "" when it is missing or not a plain zone name. The
+ * machine's start script also checks that the zone exists before using it.
+ */
+export function validTimeZone(value) {
+  return typeof value === "string" && value.length <= 64 && /^[A-Za-z_]+(?:\/[A-Za-z0-9_+-]+){0,2}$/.test(value) ? value : "";
+}
 
 /** Read the cloud backend's settings from the environment. */
 export function cloudConfiguration(env = process.env) {
@@ -363,15 +372,19 @@ export function buildSeedScript(seed, { desktop = false, desktopPort = CLOUD_DEF
   if (desktop) {
     lines.push(
       // A readable prompt, UTF-8 output, and a short record of typed commands that the controller may read for the lab checks.
-      `printf '%s\\n' '' '# Cole Learning Labs' 'export LANG=C.UTF-8' 'PS1='"'"'\\[\\e[1;32m\\]learner@lab-pc\\[\\e[0m\\]:\\[\\e[1;34m\\]\\w\\[\\e[0m\\]\\$ '"'"'' 'PROMPT_COMMAND='"'"'history -a; tail -n 200 "$HOME/.bash_history" > "$HOME/.lab-history" 2>/dev/null'"'"'' >> /home/learner/.bashrc`,
+      `printf '%s\\n' '' '# Cole Learning Labs' 'export LANG=C.UTF-8' 'PS1='"'"'\\[\\e]0;learner@lab-pc: \\w\\a\\]\\[\\e[1;32m\\]learner@lab-pc\\[\\e[0m\\]:\\[\\e[1;34m\\]\\w\\[\\e[0m\\]\\$ '"'"'' 'PROMPT_COMMAND='"'"'history -a; tail -n 200 "$HOME/.bash_history" > "$HOME/.lab-history" 2>/dev/null'"'"'' >> /home/learner/.bashrc`,
       ": > /home/learner/.lab-history",
       "chown -R learner:learner /home/learner/lab /home/learner/.bashrc /home/learner/.lab-history",
       "for f in /home/learner/.lab-check.sh /home/learner/.lab-watch.sh /home/learner/.lab-progress; do if [ -e $f ]; then chown learner:learner $f; fi; done",
       startWatch,
       `n=0; until bash -c 'echo > /dev/tcp/127.0.0.1/${Number(desktopPort)}' 2>/dev/null && [ -S /tmp/.X11-unix/X1 ]; do n=$((n+1)); if [ $n -gt 120 ]; then echo 'desktop did not start'; exit 1; fi; sleep 0.5; done`,
       "sleep 1",
+      // The project's desktop image opens the lab folder and a terminal with its
+      // own helper (cll-open-lab); the earlier LXDE image gets the same two windows.
+      "if [ -x /usr/local/bin/cll-open-lab ]; then su learner -c 'cd /home/learner/lab && DISPLAY=:1 nohup /usr/local/bin/cll-open-lab /home/learner/lab >/dev/null 2>&1 &' || true; else",
       "su learner -c 'cd /home/learner/lab && DISPLAY=:1 nohup pcmanfm /home/learner/lab >/dev/null 2>&1 &' || true",
       "su learner -c 'cd /home/learner/lab && DISPLAY=:1 nohup lxterminal --working-directory=/home/learner/lab --geometry=96x24 >/dev/null 2>&1 &' || true",
+      "fi",
     );
   } else {
     lines.push("chown -R 1000:1000 /home/learner", "chmod 700 /home/learner", startWatch);
@@ -381,7 +394,8 @@ export function buildSeedScript(seed, { desktop = false, desktopPort = CLOUD_DEF
 }
 
 const seedScripts = new WeakMap();
-async function seedScriptFor(cloud, deps, options = {}) {
+/** The setup script for one session: the lab's own files, or the shared seed tree. */
+export async function seedScriptFor(cloud, deps, options = {}) {
   if (deps.seedScript !== undefined) return deps.seedScript;
   // A lab that ships its own files gets only those; other labs get the shared seed tree.
   if (Array.isArray(deps.labFiles) && deps.labFiles.length) return buildSeedScript(seedFromLabFiles(deps.labFiles), options);
@@ -403,8 +417,9 @@ export function buildCloudSandboxRequest(session, cloud, extra = {}) {
   // The desktop image reads its settings from the environment of its own start
   // script: the learner account, a random account password nobody is told, a
   // per-session screen password, and the screen size.
+  const zone = desktop ? validTimeZone(desktop.timeZone) : "";
   const start = desktop
-    ? ["/bin/bash", "-c", `export USER=learner PASSWORD=${desktop.userPassword} VNC_PASSWORD=${desktop.vncPassword} RESOLUTION=${resolution}; exec /startup.sh`]
+    ? ["/bin/bash", "-c", `export USER=learner PASSWORD=${desktop.userPassword} VNC_PASSWORD=${desktop.vncPassword} RESOLUTION=${resolution}${zone ? " TZ=" + zone : ""}; exec /startup.sh`]
     : [...(cloud.startCommand || DEFAULT_START_COMMAND)];
   return {
     displayNamePrefix: "cll-",
@@ -456,7 +471,7 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
     allowedFiles = new Set((deps.allowedFiles || []).filter((x) => typeof x === "string")),
     startTimeoutMs = cloud.startTimeoutMs || CLOUD_DEFAULTS.startTimeoutMs,
     pollIntervalMs = deps.pollIntervalMs ?? CLOUD_DEFAULTS.pollIntervalMs,
-    desktop = cloud.view === "desktop" ? { vncPassword: randomSecret(8), userPassword: randomSecret(16), resolution: desktopResolutionFor(session.screen, cloud.desktopResolution) } : null;
+    desktop = cloud.view === "desktop" ? { vncPassword: randomSecret(8), userPassword: randomSecret(16), resolution: desktopResolutionFor(session.screen, cloud.desktopResolution), timeZone: validTimeZone(session.timeZone) } : null;
   let sandboxName = "",
     etag = "",
     endpoint = null,
@@ -584,6 +599,84 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
     try { await deleting; } finally { deleting = null; }
   };
 
+  /**
+   * Starts a process with a PTY and attaches to it over the endpoint's
+   * WebSocket; its output goes to the data listeners. Returns the socket.
+   */
+  async function startShell({ cmd, env, workingDir, user, onClosed }) {
+    const createdProcess = await endpointRequest("POST", "/v1/processes", {
+      body: {
+        cmd,
+        env,
+        workingDir,
+        user,
+        pty: { initialSize: { rows: 24, cols: 80 } },
+        session: "learner-shell",
+        label: "learner-shell-" + crypto.randomBytes(4).toString("hex"),
+      },
+    });
+    if (!createdProcess.ok) throw failure("docker_pty_unavailable", "HTTP " + createdProcess.status + " " + (await readError(createdProcess)));
+    const proc = await createdProcess.json();
+    const processName = processResourceName(proc);
+    if (!/^processes\/[^/]+$/.test(processName)) throw failure("docker_pty_unavailable", "no process name");
+
+    // Attach to the shell over the endpoint's WebSocket.
+    const token = await scopedToken(["sandboxesExec", "sandboxesFilesRead"]);
+    const wsUrl = endpointUrl("/v1/" + processName + "/interact").replace(/^http/, "ws");
+    const shell = new WebSocketImpl(wsUrl, ["sandboxes.v1"], {
+      headers: { Authorization: "Bearer " + token },
+      followRedirects: false,
+      maxPayload: 1 << 20,
+    });
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(failure("docker_pty_unavailable", "attach timed out")), CLOUD_DEFAULTS.requestTimeoutMs);
+      shell.once("open", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      shell.once("error", (error) => {
+        clearTimeout(timer);
+        reject(failure("docker_pty_unavailable", error?.message));
+      });
+    });
+    shell.send(JSON.stringify({ attach: { name: processName, resumeFrom: "0" } }));
+    let closed = false;
+    const close = (code) => {
+      if (closed) return;
+      closed = true;
+      onClosed(code);
+    };
+    shell.on("message", (raw, isBinary) => {
+      if (isBinary || destroyed) return;
+      let frame;
+      try {
+        frame = JSON.parse(String(raw));
+      } catch {
+        return;
+      }
+      if (frame.chunk && typeof frame.chunk.data === "string") {
+        const text = Buffer.from(frame.chunk.data, "base64").toString("utf8");
+        for (const fn of dataListeners) {
+          try {
+            fn(text);
+          } catch {}
+        }
+      } else if (frame.exited) close(Number.isInteger(frame.exited.exitCode) ? frame.exited.exitCode : 0);
+      else if (frame.code && !frame.chunk && !frame.heartbeat) close(1); // terminal error frame
+    });
+    shell.on("close", () => close(0));
+    shell.on("error", () => close(1));
+    return shell;
+  }
+  const sendToShell = (target, data) => {
+    if (destroyed || !target || target.readyState !== 1) return;
+    target.send(JSON.stringify({ stdin: Buffer.from(String(data), "utf8").toString("base64") }));
+  };
+  const resizeShell = (target, cols, rows) => {
+    if (destroyed || !target || target.readyState !== 1) return;
+    target.send(JSON.stringify({ resize: { rows, cols } }));
+  };
+
   try {
     // 1. Create the sandbox and wait until it runs and has an endpoint.
     const created = await api("POST", "/sandboxes", { body: buildCloudSandboxRequest(session, cloud, { desktop, labels: cfg.reviewInstanceId ? { "io.colelearninglabs.review": cfg.reviewInstanceId } : {} }), timeout: 30000 });
@@ -663,10 +756,32 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
         name: sandboxName,
         containerId: sandboxName.slice(0, 12),
         desktop: { url: "wss://" + screen.host + "/", password: desktop.vncPassword, width, height },
-        onData: () => {},
+        onData: (fn) => dataListeners.push(fn),
         onExit: (fn) => exitListeners.push(fn),
-        write: () => {},
-        resize: () => {},
+        // The text terminal: a second way into the same machine, a login shell
+        // in the lab folder that screen readers and plain keyboards can use.
+        write: (data) => sendToShell(socket, data),
+        resize: (cols, rows) => resizeShell(socket, cols, rows),
+        openShell: async (onClosed = () => {}) => {
+          if (destroyed) throw failure("shell_unavailable");
+          if (socket && socket.readyState === 1) return;
+          if (Array.isArray(endpoint.capabilities) && !endpoint.capabilities.includes("interact")) throw failure("shell_unavailable", "interact");
+          const shell = await startShell({
+            cmd: ["/bin/bash", "-l"],
+            env: { TERM: "xterm-256color", HOME: "/home/learner", USER: "learner", LOGNAME: "learner", SHELL: "/bin/bash", LANG: "C.UTF-8", DISPLAY: ":1" },
+            workingDir: "/home/learner/lab",
+            user: "learner",
+            onClosed: (code) => {
+              if (socket === shell) socket = null;
+              onClosed(code);
+            },
+          });
+          if (destroyed) {
+            try { shell.terminate?.(); } catch {}
+            throw failure("shell_unavailable");
+          }
+          socket = shell;
+        },
         /** Recent commands typed in a desktop terminal, newest last. */
         history: async () => {
           if (destroyed) return [];
@@ -679,62 +794,13 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
     }
 
     // 3. Start the learner's shell with a PTY, as the learner.
-    const createdProcess = await endpointRequest("POST", "/v1/processes", {
-      body: {
-        cmd: ["/bin/sh", "-i"],
-        env: { TERM: "xterm-256color", HOME: "/home/learner", USER: "learner", HISTFILE: "/home/learner/.sh_history" },
-        workingDir: "/home/learner",
-        user: cloud.shellUser,
-        pty: { initialSize: { rows: 24, cols: 80 } },
-        session: "learner-shell",
-        label: "learner-shell-" + crypto.randomBytes(4).toString("hex"),
-      },
+    socket = await startShell({
+      cmd: ["/bin/sh", "-i"],
+      env: { TERM: "xterm-256color", HOME: "/home/learner", USER: "learner", HISTFILE: "/home/learner/.sh_history" },
+      workingDir: "/home/learner",
+      user: cloud.shellUser,
+      onClosed: (code) => emitExit(code),
     });
-    if (!createdProcess.ok) throw failure("docker_pty_unavailable", "HTTP " + createdProcess.status + " " + (await readError(createdProcess)));
-    const proc = await createdProcess.json();
-    const processName = processResourceName(proc);
-    if (!/^processes\/[^/]+$/.test(processName)) throw failure("docker_pty_unavailable", "no process name");
-
-    // 4. Attach to the shell over the endpoint's WebSocket.
-    const token = await scopedToken(["sandboxesExec", "sandboxesFilesRead"]);
-    const wsUrl = endpointUrl("/v1/" + processName + "/interact").replace(/^http/, "ws");
-    socket = new WebSocketImpl(wsUrl, ["sandboxes.v1"], {
-      headers: { Authorization: "Bearer " + token },
-      followRedirects: false,
-      maxPayload: 1 << 20,
-    });
-    await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(failure("docker_pty_unavailable", "attach timed out")), CLOUD_DEFAULTS.requestTimeoutMs);
-      socket.once("open", () => {
-        clearTimeout(timer);
-        resolve();
-      });
-      socket.once("error", (error) => {
-        clearTimeout(timer);
-        reject(failure("docker_pty_unavailable", error?.message));
-      });
-    });
-    socket.send(JSON.stringify({ attach: { name: processName, resumeFrom: "0" } }));
-    socket.on("message", (raw, isBinary) => {
-      if (isBinary || destroyed) return;
-      let frame;
-      try {
-        frame = JSON.parse(String(raw));
-      } catch {
-        return;
-      }
-      if (frame.chunk && typeof frame.chunk.data === "string") {
-        const text = Buffer.from(frame.chunk.data, "base64").toString("utf8");
-        for (const fn of dataListeners) {
-          try {
-            fn(text);
-          } catch {}
-        }
-      } else if (frame.exited) emitExit(Number.isInteger(frame.exited.exitCode) ? frame.exited.exitCode : 0);
-      else if (frame.code && !frame.chunk && !frame.heartbeat) emitExit(1); // terminal error frame
-    });
-    socket.on("close", () => emitExit(0));
-    socket.on("error", () => emitExit(1));
 
     return {
       mode: "docker-cloud-sandbox",
@@ -742,14 +808,8 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
       containerId: sandboxName.slice(0, 12),
       onData: (fn) => dataListeners.push(fn),
       onExit: (fn) => exitListeners.push(fn),
-      write: (data) => {
-        if (destroyed || !socket || socket.readyState !== 1) return;
-        socket.send(JSON.stringify({ stdin: Buffer.from(String(data), "utf8").toString("base64") }));
-      },
-      resize: (cols, rows) => {
-        if (destroyed || !socket || socket.readyState !== 1) return;
-        socket.send(JSON.stringify({ resize: { rows, cols } }));
-      },
+      write: (data) => sendToShell(socket, data),
+      resize: (cols, rows) => resizeShell(socket, cols, rows),
       readFile: async (file) => (destroyed || !allowedFiles.has(file) ? null : readLabFile(file)),
       destroy,
     };

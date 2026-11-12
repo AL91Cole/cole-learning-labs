@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRemoteSession, remoteSocketUrl, remoteDesktopUrl, remoteAssetUrl} from '../src/lab-remote-client.js';
+import {createRemoteSession, remoteSocketUrl, remoteDesktopUrl, remoteAssetUrl, browserTimeZone} from '../src/lab-remote-client.js';
 import {preferredLabEnvironment, listLabEnvironments, DEFAULT_LAB_ENVIRONMENT} from '../src/lab-environment.js?release=20261107-tech-team';
 import {LAB_ENVIRONMENT_CONFIG} from '../src/lab-environment-config.js';
-import {remoteLabFor, renderLabRemote, probeRemoteService, remoteServiceState, setRemoteServiceState, remoteServiceAvailable, remoteServiceHosts, setRemoteHostedLabs} from '../src/lab-remote.js?release=20261107-tech-team';
+import {REMOTE_KEY_COMBOS, sendKeyCombo, keyForCharacter, isPasteShortcut, remoteLabFor, renderLabRemote, probeRemoteService, remoteServiceState, setRemoteServiceState, remoteServiceAvailable, remoteServiceHosts, setRemoteHostedLabs} from '../src/lab-remote.js?release=20261107-tech-team';
 import {labGuide, labGuideFacts, renderLabGuidePage} from '../src/lab-guide.js?release=20261107-tech-team';
 import {readFileSync} from 'node:fs';
 import {normalizeLabRecord, workbenchProgress} from '../src/records.js';
@@ -94,6 +94,7 @@ test('a desktop machine is announced with a ticket and password, and its screen 
   assert.match(html, /aria-label="Linux machine screen"/); assert.match(html, /no internet access/);
   assert.match(html, /Cloudflare.*DigitalOcean.*Docker-hosted machine/u);
   assert.match(html, /files and command history are processed remotely/u);
+  assert.match(html, /text you copy or paste, time zone/u, 'the notice names the clipboard and time zone, which also leave the browser');
   assert.match(html, /Use fictional details only/u);
   assert.match(html, /href="\/#privacy"/u);
   assert.match(html, /requests deletion on Stop, disconnect or timeout/u);
@@ -114,7 +115,7 @@ test('service URLs stay same-origin by default and accept a separate origin when
 test('the client speaks the terminal service protocol and reports milestones without sending anything but lab, keys and sizes', () => {
   FakeSocket.instances.length = 0;
   const events = [];
-  const session = createRemoteSession({url:'wss://labs.example.test/terminal/ws', labId:'CODE-501', WebSocket:FakeSocket, onStatus:(phase, message) => events.push(['status', phase]), onOutput:data => events.push(['output', data]), onReady:state => events.push(['ready', state.lab?.id]), onMilestones:(list, complete) => events.push(['milestones', list.map(item => item.completed), complete]), onError:(message, code) => events.push(['error', code])});
+  const session = createRemoteSession({url:'wss://labs.example.test/terminal/ws', labId:'CODE-501', timeZone:'', WebSocket:FakeSocket, onStatus:(phase, message) => events.push(['status', phase]), onOutput:data => events.push(['output', data]), onReady:state => events.push(['ready', state.lab?.id]), onMilestones:(list, complete) => events.push(['milestones', list.map(item => item.completed), complete]), onError:(message, code) => events.push(['error', code])});
   const socket = FakeSocket.instances[0];
   assert.equal(session.input('ls\r'), false, 'nothing is sent before the socket opens');
   socket.open();
@@ -178,4 +179,81 @@ test('a lab rendered before the health check answers switches to the real machin
   const guide = readFileSync(new URL('../src/lab-guide.js', import.meta.url), 'utf8'), app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
   assert.match(guide, /provider\?\.id === DEFAULT_LAB_ENVIRONMENT && remoteLabFor\(s\) !== null && remoteServiceState\(\) === 'unknown'\)\n\s+probeRemoteService\(\)\.then\(state => \{if \(state === 'enabled' && !signal\.aborted && !touched && !desktop\.hasUnsavedDraft\?\.\(\)\) onEnvironmentAvailable\(\);\}\)/, 'the guide asks for a re-render only when the learner has not started on the simulated desktop');
   assert.match(app, /onEnvironmentAvailable:\(\)=>\{if\(currentLab===s\)renderRoute\(false\);\}/, 'the app re-renders the lab that is still open');
+});
+
+test('the client sends the browser time zone and opens the text terminal of a desktop machine', () => {
+  assert.equal(browserTimeZone({DateTimeFormat:() => ({resolvedOptions:() => ({timeZone:'America/Chicago'})})}), 'America/Chicago');
+  assert.equal(browserTimeZone({DateTimeFormat:() => ({resolvedOptions:() => ({timeZone:'bad zone; rm'})})}), '', 'an odd value is not sent');
+  assert.equal(browserTimeZone({DateTimeFormat:() => {throw new Error('no Intl');}}), '');
+  FakeSocket.instances.length = 0;
+  const shells = [];
+  const session = createRemoteSession({url:'wss://labs.example.test/terminal/ws', labId:'LNX-101', timeZone:'Europe/Berlin', WebSocket:FakeSocket, onShell:state => shells.push(state)});
+  const socket = FakeSocket.instances[0];
+  socket.open(); socket.receive({type:'auth:ok'});
+  assert.deepEqual(socket.sent[1], {type:'session:start', labId:'LNX-101', mode:'self-paced', timeZone:'Europe/Berlin'});
+  socket.receive({type:'session:ready', milestones:[], desktop:{ticket:'b'.repeat(32), password:'Abcd1234', width:1280, height:800}});
+  assert.ok(session.openShell());
+  assert.deepEqual(socket.sent.at(-1), {type:'terminal:open'});
+  socket.receive({type:'terminal:opened'}); socket.receive({type:'terminal:closed', exitCode:0});
+  assert.deepEqual(shells, ['open', 'closed']);
+  assert.equal(session.state().shell, 'closed');
+});
+
+test('keys the browser keeps for itself are sent to the machine as complete key combinations', () => {
+  const sent = [];
+  const rfb = {sendKey:(keysym, code, down) => sent.push([keysym.toString(16), code, down])};
+  const combo = REMOTE_KEY_COMBOS.find(([label]) => label === 'Ctrl+Alt+Delete')[1];
+  assert.ok(sendKeyCombo(rfb, combo));
+  assert.deepEqual(sent, [['ffe3', 'ControlLeft', true], ['ffe9', 'AltLeft', true], ['ffff', 'Delete', true], ['ffff', 'Delete', false], ['ffe9', 'AltLeft', false], ['ffe3', 'ControlLeft', false]], 'pressed in order, released in reverse');
+  assert.equal(sendKeyCombo(null, combo), false);
+  assert.ok(REMOTE_KEY_COMBOS.some(([label]) => /Windows key/.test(label)) && REMOTE_KEY_COMBOS.some(([label]) => /Alt\+Tab/.test(label)) && REMOTE_KEY_COMBOS.some(([label]) => /Ctrl\+W/.test(label)));
+  assert.deepEqual(keyForCharacter('a'), [0x61, '']); assert.deepEqual(keyForCharacter('\n'), [0xff0d, 'Enter']); assert.deepEqual(keyForCharacter('é'), [0xe9, '']);
+  assert.deepEqual(keyForCharacter('€'), [0x010020ac, ''], 'other characters use Unicode keysyms');
+  assert.equal(keyForCharacter('\u0007'), null, 'control characters are not typed');
+  assert.ok(isPasteShortcut({ctrlKey:true, code:'KeyV', key:'v'})); assert.ok(isPasteShortcut({ctrlKey:true, shiftKey:true, code:'KeyV', key:'V'})); assert.ok(isPasteShortcut({shiftKey:true, code:'Insert', key:'Insert'}));
+  assert.equal(isPasteShortcut({ctrlKey:true, altKey:true, code:'KeyV', key:'v'}), false); assert.equal(isPasteShortcut({ctrlKey:true, code:'KeyC', key:'c'}), false); assert.equal(isPasteShortcut({code:'KeyV', key:'v'}), false);
+});
+
+test('a desktop machine gets full screen, keys, clipboard and a text terminal, hidden until the desktop connects', () => {
+  const html = renderLabRemote(byId('NET-205'));
+  assert.match(html, /data-remote-desktop-tools role="toolbar" aria-label="Machine controls" hidden/);
+  for (const marker of ['data-remote-fullscreen', 'data-remote-keys-toggle', 'data-remote-clipboard-toggle', 'data-remote-view="text"', 'data-remote-clipboard-send', 'data-remote-clipboard-type', 'data-remote-clipboard-copy']) assert.ok(html.includes(marker), marker);
+  assert.equal((html.match(/data-remote-key="/g) || []).length, REMOTE_KEY_COMBOS.length);
+  assert.match(html, /aria-haspopup="menu" aria-expanded="false">Keys/);
+  assert.match(html, /role="menu" aria-label="Send keys to the machine" hidden/);
+  assert.match(html, /press Ctrl\+Alt\+Shift together to move the keyboard back out/, 'keyboard users are told how to leave the screen');
+  assert.match(html, /screen-reader-friendly shell/);
+  const source = readFileSync(new URL('../src/lab-remote.js', import.meta.url), 'utf8');
+  assert.match(source, /screenReaderMode:screenReader/, 'the text terminal turns on xterm screen reader support');
+  assert.match(source, /rfb\.resizeSession = fitsDesktop\(\)/, 'the desktop follows the size of the lab area');
+  assert.match(source, /area\.width >= 800 && area\.height >= 480/, 'but never shrinks below a usable desktop; smaller areas scale it instead');
+  assert.doesNotMatch(source, /rfb\??\.focus\(\)/, 'focusing the screen never scrolls the page');
+});
+
+test('fast typing and long pastes are combined and paced below the service limits that would end the session', t => {
+  t.mock.timers.enable({apis:['setTimeout']});
+  FakeSocket.instances.length = 0;
+  const session = createRemoteSession({url:'wss://labs.example.test/terminal/ws', labId:'LNX-103', timeZone:'', WebSocket:FakeSocket});
+  const socket = FakeSocket.instances[0];
+  socket.open(); socket.receive({type:'auth:ok'}); socket.receive({type:'session:ready', milestones:[]});
+  const inputs = () => socket.sent.filter(item => item.type === 'terminal:input');
+  for (const character of 'sed -i s/Welcom/Welcome/ sign/welcome.txt\r') assert.ok(session.input(character));
+  assert.equal(inputs().length, 1, 'the first key goes at once');
+  t.mock.timers.tick(20);
+  assert.equal(inputs().length, 2, 'the keys typed meanwhile follow in one message');
+  assert.equal(inputs().map(item => item.data).join(''), 'sed -i s/Welcom/Welcome/ sign/welcome.txt\r', 'nothing is lost or reordered');
+  socket.sent.length = 0;
+  t.mock.timers.tick(100);
+  const paste = 'é'.repeat(3000) + 'x'.repeat(9000);
+  session.input(paste);
+  let elapsed = 0;
+  while (inputs().map(item => item.data).join('').length < paste.length && elapsed < 10000) {t.mock.timers.tick(10); elapsed += 10;}
+  const chunks = inputs();
+  assert.equal(chunks.map(item => item.data).join(''), paste, 'a long paste arrives whole instead of being cut at 4 KiB');
+  assert.ok(chunks.every(item => new TextEncoder().encode(item.data).length <= 4096), 'each message stays within the service input size');
+  const bytes = chunks.reduce((sum, item) => sum + new TextEncoder().encode(item.data).length, 0);
+  assert.ok(bytes / Math.max(elapsed, 1) * 1000 <= 32768, 'the byte rate stays under the service limit');
+  assert.ok(chunks.length / Math.max(elapsed, 1) * 1000 <= 60, 'the message rate stays under the service limit');
+  socket.close();
+  assert.equal(session.input('late'), false, 'nothing is queued after the connection closes');
 });

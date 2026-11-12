@@ -1,0 +1,4 @@
+# Preferred applications on a lab computer (there is no web browser or mail
+# program: the machine has no internet).
+TerminalEmulator=xfce4-terminal
+FileManager=thunar

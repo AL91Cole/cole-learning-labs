@@ -79,7 +79,7 @@ test('open-public delivery includes every reviewed lab without raw modules, owne
   assert.ok(app.startup.includes('Game on. Build a fix as you play.'),'The home page entry card ships with the start-up modules.');
   for(const marker of ['<h1>Coding studio','<h1>Network studio','<h1>Teaching toolkit','PC repair studio','CLL-EXPERIMENT/1'])assert.equal(app.startup.includes(marker),false,marker+': downloads with its route, not with the home page.');
   assert.doesNotMatch(app.all,/Owner preview navigation\./);
-  assert.ok(Buffer.byteLength(app.all)<1_400_000,'The full open application keeps a separate reviewed size budget.');
+  assert.ok(Buffer.byteLength(app.all)<1_450_000,'The full open application keeps a separate reviewed size budget.');
   assert.ok(Buffer.byteLength(app.startup)<Buffer.byteLength(app.all)*0.35,'Start-up bytes stay a small share of the whole application.');
   assert.ok(built.generated.length>=10&&built.generated.every(filename=>app.files.includes('/'+filename)),'Every generated route chunk is reachable from the entry module.');
   assert.equal((await request(server,'/src/chunks/chunk-NOTBUILT0.js')).status,404,'Only chunks named by this build are served.');

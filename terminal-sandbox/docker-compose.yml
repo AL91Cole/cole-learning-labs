@@ -34,6 +34,8 @@ services:
       SANDBOX_SIZE: ${SANDBOX_SIZE:-micro}
       SANDBOX_VIEW: ${SANDBOX_VIEW:-desktop}
       DESKTOP_IMAGE_REF: ${DESKTOP_IMAGE_REF:-docker.io/dorowu/ubuntu-desktop-lxde-vnc:focal}
+      # Host-container desktops (SANDBOX_BACKEND=docker, SANDBOX_VIEW=desktop): build from desktop/Dockerfile.
+      DESKTOP_IMAGE: ${DESKTOP_IMAGE:-cole-learning-labs/desktop:noble}
       DESKTOP_SIZE: ${DESKTOP_SIZE:-small}
       DESKTOP_RESOLUTION: ${DESKTOP_RESOLUTION:-1024x768}
     group_add:
