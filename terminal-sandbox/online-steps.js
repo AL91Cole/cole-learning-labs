@@ -17,14 +17,14 @@ export const NETWORK_ONLINE_STEPS = Object.freeze([
   typed(
     "online-dns",
     "Look up a real name",
-    "This machine can reach a few real websites. Type `nslookup example.com` to ask DNS for the address of a real website.",
+    "This machine can reach example.com, a real website. Type `nslookup example.com` to ask DNS for its address.",
     "DNS turns a name into the numbers computers use to find each other. `dig example.com` shows the same answer with more detail.",
     /^\s*(nslookup|dig|host)\b.*\bexample\.com\b/i,
   ),
   typed(
     "online-web",
     "Ask a real web server",
-    "Type `curl -I https://example.com`. The first line is the server's answer: 200 means OK. You can also open https://example.com in Firefox.",
+    "Type `curl -I https://example.com`. The first line is the server's answer: 200 means OK. Then open https://example.com in Firefox to see the page itself.",
     "-I asks for the headers only, not the whole page. A 404 would mean the page was not found; no answer at all points to the network or DNS.",
     /^\s*(curl|wget)\b.*\bexample\.com\b/i,
   ),

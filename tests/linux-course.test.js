@@ -60,27 +60,27 @@ test('a lab page mounts the real machine, stays on the learner\'s step, checks i
   assert.match(strip.innerHTML,/Press <b>Start machine<\/b>/);
   state={phase:'starting',milestones:[],complete:false};context.onActivity();assert.match(strip.innerHTML,/starting\. This takes about half a minute/);
   state={phase:'ready',milestones:steps(false,false,false),complete:false};context.onActivity();
-  assert.match(strip.innerHTML,/<span class="linux-step-number">Step 1 of 3<\/span> <b>Step title 0\.<\/b> Type <code>cmd0<\/code> now/);assert.match(strip.innerHTML,/<summary>Hint<\/summary><p>Hint 0<\/p>/);
-  assert.match(strip.innerHTML,/data-linux-next aria-label="Next step">›<\/button>/);
+  assert.match(strip.innerHTML,/<span class="linux-step-number"><span class="linux-step-check" aria-hidden="true">○<\/span>Step 1 of 3<\/span> <b>Step title 0\.<\/b> Type <code>cmd0<\/code> now/);assert.match(strip.innerHTML,/<summary>Hint<\/summary><p>Hint 0<\/p>/);
+  assert.match(strip.innerHTML,/class="lab-tool" data-linux-next aria-label="Next step">›<\/button>/);
   assert.equal(progress.textContent,'0 of 3 steps done');
   // A finished step is never switched away from: it gets its green check and the › button offers the next step.
   state={phase:'ready',milestones:steps(true,false,false),complete:false};context.onActivity();
-  assert.match(strip.innerHTML,/<span class="linux-step-number is-done">✓ Step 1 of 3 done<\/span> <b>Step title 0\./);
-  assert.match(strip.innerHTML,/class="lab-tool is-ready" data-linux-next aria-label="Next step">Next step ›<\/button>/);
+  assert.match(strip.innerHTML,/<span class="linux-step-number is-done"><span class="linux-step-check" aria-hidden="true">✓<\/span>Step 1 of 3<span class="sr-only"> done<\/span><\/span> <b>Step title 0\./);
+  assert.match(strip.innerHTML,/class="lab-tool is-ready" data-linux-next aria-label="Next step">›<\/button>/,'the same button, now green: the strip keeps its width');
   assert.equal(progress.textContent,'1 of 3 steps done');
   const click=attribute=>strip.listeners.click({target:{closest:()=>({hasAttribute:name=>name===attribute})}});
-  click('data-linux-next');assert.match(strip.innerHTML,/<span class="linux-step-number">Step 2 of 3<\/span>/);
-  click('data-linux-prev');assert.match(strip.innerHTML,/is-done">✓ Step 1 of 3 done/);
+  click('data-linux-next');assert.match(strip.innerHTML,/<span class="linux-step-number"><span class="linux-step-check" aria-hidden="true">○<\/span>Step 2 of 3<\/span>/);
+  click('data-linux-prev');assert.match(strip.innerHTML,/is-done"><span class="linux-step-check" aria-hidden="true">✓<\/span>Step 1 of 3/);
   click('data-linux-prev');assert.match(strip.innerHTML,/Step 1 of 3/,'never before the first step');
   click('data-linux-next');click('data-linux-next');click('data-linux-next');assert.match(strip.innerHTML,/Step 3 of 3/,'never past the last step');
-  state={phase:'ready',milestones:steps(true,true,false),complete:false};context.onActivity();assert.match(strip.innerHTML,/<span class="linux-step-number">Step 3 of 3<\/span>/);
+  state={phase:'ready',milestones:steps(true,true,false),complete:false};context.onActivity();assert.match(strip.innerHTML,/<span class="linux-step-number"><span class="linux-step-check" aria-hidden="true">○<\/span>Step 3 of 3<\/span>/);
   click('data-linux-prev');state={phase:'ready',milestones:steps(true,true,true),complete:true};context.onActivity();context.onActivity();
-  assert.match(strip.innerHTML,/✓ Step 2 of 3 done/,'finishing the lab does not move the strip either');assert.doesNotMatch(strip.innerHTML,/Lab complete/);
+  assert.match(strip.innerHTML,/✓<\/span>Step 2 of 3<span class="sr-only"> done/,'finishing the lab does not move the strip either');assert.doesNotMatch(strip.innerHTML,/Lab complete/);
   assert.equal(progress.textContent,'✓ Lab complete · 3 of 3 steps done');assert.equal(progress.dataset.state,'done');assert.equal(nextLab.dataset.state,'done');
   assert.deepEqual(finished,['LNX-101']);
   // A new machine starts again at its first unfinished step.
   state={phase:'connecting',milestones:steps(true,true,true),complete:true};context.onActivity();assert.match(strip.innerHTML,/is starting/);assert.equal(progress.textContent,'');
-  state={phase:'ready',milestones:steps(false,false,false),complete:false};context.onActivity();assert.match(strip.innerHTML,/<span class="linux-step-number">Step 1 of 3<\/span>/);
+  state={phase:'ready',milestones:steps(false,false,false),complete:false};context.onActivity();assert.match(strip.innerHTML,/○<\/span>Step 1 of 3<\/span>/);
   assert.equal(progress.dataset.state,'');
   cleanup();assert.equal(disposed,1);
 });
@@ -89,7 +89,7 @@ test('a machine that already has work done opens at its first unfinished step',a
   const {node,root}=page();let context=null;const state={phase:'ready',milestones:steps(true,true,false,false),complete:false};
   const cleanup=mountLinuxCourse(root,{id:'LNX-102',probe:async()=>'enabled',hosts:()=>true,render:()=>'',mount:(stage,options)=>{context=options;return {remoteState:()=>state,dispose(){}};}});
   await flush();context.onActivity();
-  assert.match(node('[data-linux-step]').innerHTML,/<span class="linux-step-number">Step 3 of 4<\/span>/);
+  assert.match(node('[data-linux-step]').innerHTML,/<span class="linux-step-number"><span class="linux-step-check" aria-hidden="true">○<\/span>Step 3 of 4<\/span>/);
   cleanup();
 });
 
@@ -126,7 +126,8 @@ test('the route is wired into the app, the build list and the styles',()=>{
   assert.match(css,/\.linux-lab\{[^}]*height:100dvh/);
   assert.match(css,/body:has\(\.linux-lab\) \.access-tools\{[^}]*top:3px/,'the floating buttons stay off the Linux screen');
   assert.match(css,/\.linux-stage \.remote-title\{display:none\}/,'the page names the lab, so the machine bar keeps to one row');
-  assert.match(css,/@media \(pointer:fine\)\{[^@]*\.linux-step-nav \.lab-tool\{min-height:32px\}/,'compact controls only for a mouse; touch keeps 44 px targets');
+  assert.match(css,/@media \(pointer:fine\)\{[^@]*\.linux-step-nav \.lab-tool\{min-height:32px\}/,'compact controls only for a mouse; touch screens keep the larger sizes');
+  assert.match(css,/\.linux-step-check\{display:inline-block;width:1\.1em;/,'the check and the open circle take the same width');
   assert.match(css,/\.linux-step-number\.is-done\{background:#157a5c\}/,'white on the check green meets 4.5:1');
 });
 
@@ -140,7 +141,7 @@ test('a refresh that changes nothing leaves the step strip alone, so an open hin
   for(let i=0;i<5;i++){state={...state,milestones:steps(false,false,false)};context.onActivity();}
   assert.equal(writes,first,'the same steps arriving again (every few seconds) do not replace the strip');
   state={phase:'ready',milestones:steps(true,false,false),complete:false};context.onActivity();
-  assert.equal(writes,first+1,'a finished step redraws it once, with its check');assert.match(html,/✓ Step 1 of 3 done/);
+  assert.equal(writes,first+1,'a finished step redraws it once, with its check');assert.match(html,/✓<\/span>Step 1 of 3<span class="sr-only"> done/);
   cleanup();
 });
 

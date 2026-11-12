@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, chmodSync 
 import os from "node:os";
 import path from "node:path";
 import { linuxLabs } from "../linux-labs.js";
-import { labFor, validateLabDefinition, allowedLabFiles, verifySessionMilestones, typedInOrder } from "../server.js";
+import { labFor, validateLabDefinition, allowedLabFiles, verifySessionMilestones, typedInOrder, historyCommands } from "../server.js";
 import { buildSeedScript, seedFromLabFiles, PROGRESS_CHECK, PROGRESS_FILE } from "../cloud-sandboxes.js";
 
 const labs = linuxLabs();
@@ -208,4 +208,28 @@ test("ordered command stages: earliest matches, any order inside a stage, and st
   for (const bad of [[], [/a/g], [[]], [[/a/, /b/, /c/, /d/, /e/]], Array(7).fill(/a/), ["ls"], [/a/y], "ls"]) assert.match(validateLabDefinition(lab(bad)), /typed must be/, String(bad));
   assert.match(validateLabDefinition(lab(undefined)), /pattern must be a RegExp/);
   for (const item of labs.flatMap((one) => one.milestones)) if (item.typed) assert.ok(item.typed.flat().every((pattern) => !pattern.global && !pattern.sticky), item.id);
+});
+
+test("commands joined on one line count, each history record keeps its own order, and long lines are cut", async () => {
+  assert.deepEqual(historyCommands(["cd school/lab/storage && ls; cat key-card.txt", "grep ERROR logs/print.log | wc -l", "true || echo 'a; b && c'", "  "]), ["cd school/lab/storage", "ls", "cat key-card.txt", "grep ERROR logs/print.log | wc -l", "true", "echo 'a; b && c'"]);
+  assert.equal((await checks("LNX-101", ["pwd", "ls", "cat school/office/schedule.txt", "cd school/lab/storage && ls && cat key-card.txt"]))["change-folder"], true);
+  const made = "[script-runs]\n[report-made]\n[diary-private]\n";
+  assert.equal((await checks("LNX-104", ["chmod +x tools/make-report.sh && ls -l tools"], made))["script-runs"], true);
+  assert.equal((await checks("LNX-104", ["./tools/make-report.sh; cat tools/report.txt"], made))["report-made"], true);
+  assert.equal((await checks("LNX-103", ["head log/visitors.txt; tail -n 3 log/visitors.txt"])).peek, true);
+  // The Text terminal's keystrokes and the machine's own history hold the same commands; their order is never mixed.
+  const both = async (labId, typed, progress) => Object.fromEntries((await verifySessionMilestones({ labId, commandHistory: typed, sandbox: { history: async () => typed, readFile: async () => progress } })).map((item) => [item.id, item.completed]));
+  assert.equal((await both("LNX-104", ["ls -l tools", "chmod +x tools/make-report.sh"], made))["script-runs"], false, "ls -l before chmod, recorded twice, is still not chmod then ls -l");
+  assert.equal((await both("LNX-101", ["ls", "cat school/lab/storage/key-card.txt", "cd school/lab/storage"], ""))["change-folder"], false);
+  assert.equal((await both("LNX-104", ["chmod +x tools/make-report.sh", "ls -l tools"], made))["script-runs"], true);
+  // A very long line is cut before matching and does not stall the check.
+  const started = Date.now();
+  await checks("LNX-104", [";".repeat(65000), "x".repeat(200000) + " make-report.sh"], made);
+  assert.ok(Date.now() - started < 500, "a huge history line is checked quickly");
+});
+
+test("a single pattern with the g or y flag is refused, as it would make a step flicker", () => {
+  const lab = { ...byId["LNX-101"], milestones: [{ id: "m1", title: "T", description: "D", hint: "H", checkType: "history_regex", pattern: /pwd/g }] };
+  assert.match(validateLabDefinition(lab), /must not use the g or y flag/);
+  assert.match(validateLabDefinition({ ...lab, milestones: [{ ...lab.milestones[0], pattern: /pwd/y }] }), /must not use the g or y flag/);
 });

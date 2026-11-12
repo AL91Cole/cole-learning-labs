@@ -48,8 +48,8 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // and district content lives in plain pages outside this graph; compiled caps
   // stay unchanged.
   // The Linux step banner's completion state, desktop sizing for short high-density
-  // screens and the online-labs privacy paragraph add about 1 KB of source; the
-  // compiled caps stay unchanged.
+  // screens, the machine's reach in its status line and the online-labs privacy
+  // paragraph add about 3 KB of source; the compiled caps stay unchanged.
   assert.ok(bytes<1_853_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 

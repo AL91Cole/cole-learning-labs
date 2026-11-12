@@ -28,7 +28,7 @@ import {
 } from "./cloud-sandboxes.js";
 import { generatedLabs } from "./generated-labs.js";
 import { linuxLabs } from "./linux-labs.js";
-import { withOnlineSteps } from "./online-steps.js";
+import { withOnlineSteps, ONLINE_SITES } from "./online-steps.js";
 
 const execFileAsync = promisify(execFile),
   ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -445,6 +445,7 @@ const failure = (code) => Object.assign(new Error(code), { code });
 const frozenLab = (lab) => Object.freeze({ ...lab, milestones: lab.milestones.map((m) => Object.freeze({ ...m })), ...(lab.files ? { files: Object.freeze(lab.files.map((file) => Object.freeze({ ...file }))) } : {}), ...(lab.online ? { online: Object.freeze({ sites: Object.freeze([...lab.online.sites]), milestones: Object.freeze(lab.online.milestones.map((m) => Object.freeze({ ...m }))) }) } : {}) });
 const LAB_CATALOG = new Map(Object.entries(SELF_PACED_LABS).map(([id, lab]) => [id, frozenLab(withOnlineSteps(lab))]));
 const LAB_ID = /^[A-Z]{2,5}-\d{3}$/;
+const ONLINE_LAB_ID = /^(NET|SEC)-\d{3}$/;
 const CHECK_TYPES = new Set(["history_regex", "file_contains", "file_contains_all"]);
 // A step with several parts lists them as `typed` stages: each stage is a
 // command pattern (or a list of them, in any order), and each stage's commands
@@ -455,6 +456,33 @@ const stagePatterns = (stage) => (Array.isArray(stage) ? stage : [stage]);
 const validTypedStages = (stages) =>
   Array.isArray(stages) && stages.length >= 1 && stages.length <= 6 &&
   stages.every((stage) => { const list = stagePatterns(stage); return list.length >= 1 && list.length <= 4 && list.every((pattern) => pattern instanceof RegExp && !pattern.global && !pattern.sticky); });
+// History lines longer than this are cut before matching, so one huge line
+// cannot make a pattern backtrack for seconds on every check.
+const MAX_HISTORY_LINE = 512;
+/**
+ * The commands of history lines, oldest first: a line such as
+ * "cd storage && ls; cat key-card.txt" counts as its three commands. Lines
+ * split on &&, || and ; outside quotes; pipes stay, since "grep | wc" is one step.
+ */
+export function historyCommands(lines) {
+  const out = [];
+  for (const raw of lines || []) {
+    const line = String(raw).slice(0, MAX_HISTORY_LINE);
+    let quote = "", start = 0;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (quote) { if (ch === quote) quote = ""; continue; }
+      if (ch === "'" || ch === '"') quote = ch;
+      else if (ch === ";" || ((ch === "&" || ch === "|") && line[i + 1] === ch)) {
+        out.push(line.slice(start, i).trim());
+        if (ch !== ";") i++;
+        start = i + 1;
+      }
+    }
+    out.push(line.slice(start).trim());
+  }
+  return out.filter(Boolean);
+}
 /** True when the typed commands (oldest first) contain every stage, in order. */
 export function typedInOrder(history, stages) {
   let from = 0;
@@ -481,7 +509,10 @@ export function validateLabDefinition(lab) {
   const ids = new Set();
   if (lab.online !== undefined) {
     const online = lab.online;
-    if (!online || typeof online !== "object" || !Array.isArray(online.sites) || !online.sites.length || online.sites.length > 12 || !online.sites.every(validSiteName)) return lab.id + ": online.sites must be 1-12 lowercase host names";
+    // Only networking and security labs go online, and only to reviewed sites
+    // (online-steps.js), which is what the privacy pages tell schools.
+    if (!ONLINE_LAB_ID.test(lab.id)) return lab.id + ": only networking and security labs (NET-, SEC-) may be online";
+    if (!online || typeof online !== "object" || !Array.isArray(online.sites) || !online.sites.length || online.sites.length > 12 || !online.sites.every((site) => validSiteName(site) && ONLINE_SITES.includes(site))) return lab.id + ": online.sites must be 1-12 of the reviewed sites in online-steps.js";
     if (!Array.isArray(online.milestones) || online.milestones.length > 4) return lab.id + ": online.milestones must list at most 4 steps";
   }
   for (const item of [...lab.milestones, ...(lab.online?.milestones || [])]) {
@@ -492,6 +523,8 @@ export function validateLabDefinition(lab) {
     if (item.typed !== undefined && !validTypedStages(item.typed)) return lab.id + "/" + item.id + ": typed must be 1-6 stages of 1-4 RegExps without the g or y flag";
     if (item.checkType === "history_regex") {
       if (!(item.pattern instanceof RegExp) && !(item.pattern === undefined && item.typed)) return lab.id + "/" + item.id + ": pattern must be a RegExp";
+      // A g or y flag makes test() remember where it stopped, so a step would flicker between done and not done.
+      if (item.pattern && (item.pattern.global || item.pattern.sticky)) return lab.id + "/" + item.id + ": pattern must not use the g or y flag";
     } else {
       if (typeof item.filePath !== "string" || !item.filePath.startsWith("/home/learner/") || item.filePath.includes("..")) return lab.id + "/" + item.id + ": filePath must be inside /home/learner";
       if (item.checkType === "file_contains" && (typeof item.expectedSubstring !== "string" || !item.expectedSubstring)) return lab.id + "/" + item.id + ": expectedSubstring is required";
@@ -538,12 +571,15 @@ export const labFor = (id) =>
   typeof id === "string" && LAB_CATALOG.has(id) ? LAB_CATALOG.get(id) : null;
 /** The network a session's machine gets: offline unless online labs are on, the lab lists sites, and the machine is a cloud desktop. */
 export function sessionNetwork(lab, cfg = CONFIG) {
-  if (cfg.labInternet === "off" || !lab?.online || cfg.sandboxBackend !== "cloud" || cfg.cloud?.view !== "desktop") return { mode: "offline", sites: [] };
-  return validNetwork({ mode: cfg.labInternet, sites: lab.online.sites, dns: cfg.filterDns });
+  if (cfg.labInternet === "off" || !lab?.online || !ONLINE_LAB_ID.test(lab.id) || cfg.sandboxBackend !== "cloud" || cfg.cloud?.view !== "desktop") return { mode: "offline", sites: [] };
+  return validNetwork({ mode: cfg.labInternet, sites: lab.online.sites.filter((site) => ONLINE_SITES.includes(site)), dns: cfg.filterDns });
 }
 /** A session's steps: the lab's own, plus its online steps when the machine is online. */
 export const sessionMilestones = (lab, session) =>
   lab.online && session?.network && session.network.mode !== "offline" ? [...lab.milestones, ...lab.online.milestones] : lab.milestones;
+/** The online-labs mode this controller actually gives machines: off unless it can. */
+export const onlineLabMode = (cfg = CONFIG) =>
+  cfg.labInternet === "off" || cfg.sandboxBackend !== "cloud" || cfg.cloud?.view !== "desktop" || (cfg.labInternet === "filtered" && !cfg.filterDns.length) ? "off" : cfg.labInternet;
 /** Startup warnings about online labs that this configuration cannot provide. */
 export function onlineLabWarnings(cfg = CONFIG) {
   if (cfg.labInternet === "off") return [];
@@ -696,11 +732,7 @@ export async function spawnSandboxContainer(session, cfg = CONFIG, deps = {}) {
         },
       },
     );
-    const allowedFiles = new Set(
-      labCatalog().flatMap((lab) =>
-        lab.milestones.map((m) => m.filePath).filter(Boolean),
-      ),
-    );
+    const allowedFiles = new Set(allowedLabFiles());
     return {
       mode: "docker-pty",
       containerId: result.stdout.trim().slice(0, 12),
@@ -724,6 +756,17 @@ export async function spawnSandboxContainer(session, cfg = CONFIG, deps = {}) {
           ).stdout;
         } catch {
           return null;
+        }
+      },
+      // The shell's own history (HISTFILE, saved after every command), which
+      // has the commands as run, Tab completions included.
+      history: async () => {
+        if (destroyed) return [];
+        try {
+          const text = (await docker(["exec", "--user", "1000:1000", name, "/usr/bin/tail", "-n", "200", "/home/learner/.sh_history"], 1500, 65536)).stdout;
+          return String(text || "").split("\n").map((line) => line.trim()).filter(Boolean);
+        } catch {
+          return [];
         }
       },
       destroy,
@@ -945,15 +988,18 @@ export async function verifySessionMilestones(session) {
   const lab = labFor(session.labId);
   if (!lab || !session.sandbox) return [];
   const results = [];
-  // On a desktop the learner types in the machine's own terminal, so the
-  // commands come from the short history file the machine keeps for the checks.
-  let history = session.commandHistory || [];
+  // Two records of typed commands: the keystrokes relayed by the terminal view
+  // (and a desktop's Text terminal), and on a desktop the short history file the
+  // machine's own shell keeps for the checks. The same command can be in both,
+  // so ordered stages are checked within each record, never across the two.
   const steps = sessionMilestones(lab, session);
+  const records = [historyCommands(session.commandHistory || [])];
   if (typeof session.sandbox.history === "function" && steps.some((item) => item.checkType === "history_regex" || item.typed)) {
     try {
-      history = [...history, ...(await session.sandbox.history())];
+      records.push(historyCommands(await session.sandbox.history()));
     } catch {}
   }
+  const history = records.flat();
   // Several checks may read the same file (the progress note); read each file once per pass.
   const read = new Map();
   for (const item of steps) {
@@ -975,7 +1021,7 @@ export async function verifySessionMilestones(session) {
           ? item.expectedSubstrings.every((value) => content.includes(value))
           : content.includes(item.expectedSubstring));
     }
-    if (completed && item.typed) completed = typedInOrder(history, item.typed);
+    if (completed && item.typed) completed = records.some((record) => typedInOrder(record, item.typed));
     results.push({
       id: item.id,
       title: item.title,
@@ -1036,11 +1082,19 @@ function json(res, status, value) {
   });
   res.end(JSON.stringify(value));
 }
+const machineReach = (network) => network.sites.join(", ") + (network.mode === "filtered" ? " and other websites through a family-safe filter." : " and no other site.");
 /** A lab's instructions for one session: an online machine says what it can reach. */
 export function sessionMarkdown(lab, network) {
   if (!network || network.mode === "offline" || !network.sites?.length) return lab.markdown;
-  const reach = "A real Linux machine that can reach " + network.sites.join(", ") + (network.mode === "filtered" ? " and other websites through a family-safe filter." : " and no other site.");
+  const reach = "A real Linux machine that can reach " + machineReach(network);
   return lab.markdown.includes("A real Linux machine with no network.") ? lab.markdown.replace("A real Linux machine with no network.", reach) : lab.markdown + "\n\n## Online\n\n" + reach + "\n";
+}
+/** A lab's files for one session: on an online machine its README says what the machine can reach. */
+export function sessionLabFiles(lab, network) {
+  if (!lab?.files || !network || network.mode === "offline" || !network.sites?.length) return lab?.files;
+  return lab.files.map((file) => (file.path === "README.txt" && !file.encoding
+    ? { ...file, content: file.content.replace(/with no network\.?/, "that can reach " + machineReach(network)) + (/with no network/.test(file.content) ? "" : "\nThis machine can reach " + machineReach(network) + "\n") }
+    : file));
 }
 const publicLab = (lab, network) => ({
   id: lab.id,
@@ -1100,7 +1154,7 @@ const FILES = new Map([
 /** The files a lab check may read inside a learner's machine; nothing else is readable. */
 export const allowedLabFiles = () =>
   labCatalog().flatMap((lab) =>
-    lab.milestones.map((m) => m.filePath).filter(Boolean),
+    [...lab.milestones, ...(lab.online?.milestones || [])].map((m) => m.filePath).filter(Boolean),
   );
 
 /** Human-readable runtime name and limits for the selected backend. */
@@ -1133,7 +1187,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       deps.sandboxFactory ||
       (cfg.sandboxBackend === "cloud"
         ? (session, c) =>
-            spawnCloudSandbox(session, c, { allowedFiles: allowedLabFiles(), labFiles: labFor(session.labId)?.files })
+            spawnCloudSandbox(session, c, { allowedFiles: allowedLabFiles(), labFiles: sessionLabFiles(labFor(session.labId), session.network) })
         : cfg.dockerView === "desktop"
           ? spawnDesktopContainer
           : spawnSandboxContainer),
@@ -1240,6 +1294,8 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         status: pendingCleanup.size ? "cleanup_blocked" : cfg.enabled ? "enabled" : "disabled",
         runtime: runtime.runtime,
         productionApproved: false,
+        // Whether networking and security labs go online here (off, sites or filtered), so school IT can check.
+        onlineLabs: onlineLabMode(cfg),
       });
     if (url.pathname === "/api/labs")
       return json(res, 200, {
@@ -1488,6 +1544,8 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
           inactivityTimeoutSeconds: cfg.inactivityTimeoutMs / 1000,
         },
         lab: publicLab(lab, s.network),
+        // What this machine can reach, so the lab pane can say so.
+        network: { mode: s.network.mode, sites: [...s.network.sites] },
         milestones: s.milestones,
         // Desktop view: how the browser opens this machine's screen. The ticket
         // admits the screen socket; the password is this session's own.

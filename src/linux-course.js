@@ -54,8 +54,9 @@ export function mountLinuxCourse(root,{id,showNotice=()=>{},onComplete=()=>{},pr
     progress.textContent=(all?'✓ Lab complete · ':'')+finished+' of '+steps.length+' steps done';
     for(const node of [progress,nextLab])if(node)node.dataset.state=all?'done':'';
     // A step shows its green check only when the machine reports every part of it done.
-    setStrip('<p><span class="linux-step-number'+(done?' is-done':'')+'">'+(done?'✓ ':'')+'Step '+(shown+1)+' of '+steps.length+(done?' done':'')+'</span> <b>'+esc(step.title)+'.</b> '+linuxStepText(step.description)+'</p>'+(step.hint?'<details class="linux-hint"><summary>Hint</summary><p>'+linuxStepText(step.hint)+'</p></details>':'')
-      +'<span class="linux-step-nav"><button type="button" class="lab-tool" data-linux-prev aria-label="Previous step"'+(shown<=0?' disabled':'')+'>‹</button><button type="button" class="lab-tool'+(more?' is-ready':'')+'" data-linux-next aria-label="Next step"'+(shown>=steps.length-1?' disabled':'')+'>'+(more?'Next step ›':'›')+'</button></span>');
+    // The check takes the place of an open circle and "done" is for screen readers, so the strip keeps its width and never pushes the screen down.
+    setStrip('<p><span class="linux-step-number'+(done?' is-done':'')+'"><span class="linux-step-check" aria-hidden="true">'+(done?'✓':'○')+'</span>Step '+(shown+1)+' of '+steps.length+(done?'<span class="sr-only"> done</span>':'')+'</span> <b>'+esc(step.title)+'.</b> '+linuxStepText(step.description)+'</p>'+(step.hint?'<details class="linux-hint"><summary>Hint</summary><p>'+linuxStepText(step.hint)+'</p></details>':'')
+      +'<span class="linux-step-nav"><button type="button" class="lab-tool" data-linux-prev aria-label="Previous step"'+(shown<=0?' disabled':'')+'>‹</button><button type="button" class="lab-tool'+(more?' is-ready':'')+'" data-linux-next aria-label="Next step"'+(shown>=steps.length-1?' disabled':'')+'>›</button></span>');
   };
   const update=()=>{
     const state=handle?.remoteState?.();if(!state)return;

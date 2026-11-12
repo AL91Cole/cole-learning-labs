@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { configuration, labFor, labCatalog, sessionNetwork, sessionMilestones, sessionMarkdown, onlineLabWarnings, verifySessionMilestones, validateLabDefinition } from "../server.js";
+import { configuration, labFor, labCatalog, sessionNetwork, sessionMilestones, sessionMarkdown, sessionLabFiles, onlineLabMode, onlineLabWarnings, verifySessionMilestones, validateLabDefinition } from "../server.js";
 import { buildCloudSandboxRequest, buildSeedScript, networkPoliciesFor, validNetwork, desktopNetworkEnv, UNFILTERED_DNS, DEFAULT_FILTER_DNS, validSiteName } from "../cloud-sandboxes.js";
 import { withOnlineSteps, ONLINE_SITES, NETWORK_ONLINE_STEPS, SECURITY_ONLINE_STEPS } from "../online-steps.js";
 
@@ -24,6 +24,8 @@ test("online labs are off unless the deployment turns them on, and only cloud de
   assert.deepEqual(sessionNetwork(net, cloudDesktop("sites")), { mode: "sites", sites: ["example.com"] });
   assert.deepEqual(sessionNetwork(sec, cloudDesktop("filtered")), { mode: "filtered", sites: ["example.com"], dns: [...DEFAULT_FILTER_DNS] });
   assert.deepEqual(sessionNetwork(sec, cloudDesktop("filtered", { LAB_FILTER_DNS: "not-an-ip" })), { mode: "offline", sites: [] }, "no filter, no web");
+  assert.deepEqual(sessionNetwork({ ...linux, online: { sites: ["example.com"], milestones: [] } }, cloudDesktop("sites")), { mode: "offline", sites: [] }, "a Linux basics lab never goes online, whatever its content says");
+  assert.deepEqual(sessionNetwork({ ...net, online: { sites: ["example.com", "reddit.com"], milestones: [] } }, cloudDesktop("sites")), { mode: "sites", sites: ["example.com"] }, "only reviewed sites are ever reached");
   assert.deepEqual(onlineLabWarnings(cloudDesktop("off")), []);
   assert.deepEqual(onlineLabWarnings(cloudDesktop("filtered")), []);
   assert.match(onlineLabWarnings(configuration({ LAB_INTERNET: "sites" }))[0], /needs SANDBOX_BACKEND=cloud with the desktop view; every machine stays offline/);
@@ -79,10 +81,15 @@ test("the machine's network policy: none, only the lab's sites, or the web throu
   assert.deepEqual(networkPoliciesFor({ mode: "sites", sites: ["example.com", "*.evil.test", "EXAMPLE.ORG", "a b"] }), [{ mode: "denyAll", denyNetworks: ["**"], allowNetworks: ["example.com"] }], "only plain lowercase host names");
   assert.deepEqual(networkPoliciesFor({ mode: "filtered", sites: ["example.com"], dns: [] }), [{ mode: "denyAll", denyNetworks: ["**"] }], "no filter, no web");
   const filtered = networkPoliciesFor({ mode: "filtered", sites: ["example.com"], dns: ["185.228.168.168"] });
-  assert.equal(filtered.length, 1);assert.equal(filtered[0].mode, "allowAll");
-  assert.ok(filtered[0].denyNetworks.includes("8.8.8.8/32") && filtered[0].denyNetworks.includes("dns.google") && filtered[0].denyNetworks.includes("mozilla.cloudflare-dns.com"));
-  assert.ok(!networkPoliciesFor({ mode: "filtered", dns: ["1.1.1.1"] })[0].denyNetworks.includes("1.1.1.1/32"), "the chosen filter itself is never denied");
-  for (const entry of UNFILTERED_DNS) assert.ok(/^\d{1,3}(\.\d{1,3}){3}\/32$/.test(entry) || validSiteName(entry), entry);
+  // An inline policy's mode can only be "denyAll" (the Sandboxes API schema); the account's default layer allows the rest.
+  assert.equal(filtered.length, 1);assert.equal(filtered[0].mode, "denyAll");assert.deepEqual(Object.keys(filtered[0]), ["mode", "denyNetworks"]);
+  const denied = new Set(filtered[0].denyNetworks);
+  for (const entry of ["8.8.8.8/32", "9.9.9.10/32", "185.228.168.9/32", "2001:4860:4860::8888/128", "dns.google", "mozilla.cloudflare-dns.com"]) assert.ok(denied.has(entry), entry + " is denied");
+  assert.ok(!new Set(networkPoliciesFor({ mode: "filtered", dns: ["1.1.1.1"] })[0].denyNetworks).has("1.1.1.1/32"), "the chosen filter itself is never denied");
+  for (const policy of [networkPoliciesFor({}), networkPoliciesFor({ mode: "sites", sites: ["example.com"] }), filtered]) assert.ok(policy.every((item) => item.mode === "denyAll" && Object.keys(item).every((key) => ["mode", "allowNetworks", "denyNetworks"].includes(key))), "every policy matches the API's NetworkPolicy schema");
+  for (const entry of UNFILTERED_DNS) assert.ok(/^\d{1,3}(\.\d{1,3}){3}\/32$/.test(entry) || /^[0-9a-f:]+\/128$/.test(entry) || validSiteName(entry), entry);
+  assert.equal(new Set(UNFILTERED_DNS).size, UNFILTERED_DNS.length, "no entry twice");
+  assert.ok(!validSiteName("169.254.169.254") && !validSiteName("10.0.0.1") && validSiteName("example.com"), "an address is never a site name");
   for (const server of DEFAULT_FILTER_DNS) assert.ok(!UNFILTERED_DNS.includes(server + "/32"));
   assert.deepEqual(validNetwork({ mode: "filtered", sites: ["example.com"], dns: ["185.228.168.168", "1.2.3.4;reboot", "10.0.0.1", "8.8.8.8", "9.9.9.9"] }), { mode: "filtered", sites: ["example.com"], dns: ["185.228.168.168", "10.0.0.1", "8.8.8.8", "9.9.9.9"] }, "at most four plain addresses");
 });
@@ -118,14 +125,18 @@ test("filtered machines point every lookup at the filter, or do not start at all
 });
 
 test("lab content can declare its own online part, and malformed ones are refused", () => {
-  const base = { ...labFor("LNX-101"), id: "NET-777" };
+  const base = { ...labFor("LNX-101"), id: "NET-777", online: undefined };
   const step = { id: "online-x", title: "T", description: "D", hint: "H", checkType: "history_regex", pattern: /x/ };
-  assert.equal(validateLabDefinition({ ...base, online: { sites: ["example.org"], milestones: [step] } }), null);
-  assert.match(validateLabDefinition({ ...base, online: { sites: [], milestones: [] } }), /online\.sites must be 1-12 lowercase host names/);
+  assert.equal(validateLabDefinition({ ...base, online: { sites: ["example.com"], milestones: [step] } }), null);
+  assert.match(validateLabDefinition({ ...base, online: { sites: [], milestones: [] } }), /online\.sites must be 1-12 of the reviewed sites/);
   assert.match(validateLabDefinition({ ...base, online: { sites: ["*.example.org"], milestones: [] } }), /online\.sites/);
-  assert.match(validateLabDefinition({ ...base, online: { sites: ["example.org"], milestones: [step, step, step, step, step] } }), /at most 4 steps/);
-  assert.match(validateLabDefinition({ ...base, online: { sites: ["example.org"], milestones: [{ ...step, id: base.milestones[0].id }] } }), /unique lowercase id/);
-  assert.match(validateLabDefinition({ ...base, online: { sites: ["example.org"], milestones: [{ ...step, pattern: "x" }] } }), /pattern must be a RegExp/);
+  assert.match(validateLabDefinition({ ...base, online: { sites: ["reddit.com"], milestones: [] } }), /reviewed sites in online-steps\.js/, "private content cannot add its own sites");
+  assert.match(validateLabDefinition({ ...base, online: { sites: ["169.254.169.254"], milestones: [] } }), /online\.sites/);
+  assert.match(validateLabDefinition({ ...base, id: "LNX-777", online: { sites: ["example.com"], milestones: [] } }), /only networking and security labs/);
+  assert.match(validateLabDefinition({ ...base, id: "CODE-777", online: { sites: ["example.com"], milestones: [] } }), /only networking and security labs/);
+  assert.match(validateLabDefinition({ ...base, online: { sites: ["example.com"], milestones: [step, step, step, step, step] } }), /at most 4 steps/);
+  assert.match(validateLabDefinition({ ...base, online: { sites: ["example.com"], milestones: [{ ...step, id: base.milestones[0].id }] } }), /unique lowercase id/);
+  assert.match(validateLabDefinition({ ...base, online: { sites: ["example.com"], milestones: [{ ...step, pattern: "x" }] } }), /pattern must be a RegExp/);
 });
 
 test("the controller image ships every module the server imports, and the online labs check", () => {
@@ -147,7 +158,11 @@ test("the online labs check runs the controller's own request and tests what eac
   const source = readFileSync(new URL("../scripts/check-online-labs.mjs", import.meta.url), "utf8");
   assert.match(source, /import \{ configuration, labFor, sessionNetwork \} from "\.\.\/server\.js";/);
   assert.match(source, /spawnCloudSandbox\(\{ id: "online-check-" \+ mode, labId: "NET-202", network/, "the same spawn path, so the same policy and DNS setup");
+  assert.match(source, /\{ path: "probe\.py", content: PROBE \}/, "the test ships as a file, not a long typed line the shell would cut");
+  assert.match(source, /sandbox\.write\("python3 ~\/lab\/probe\.py\\n"\)/);
   assert.match(source, /await sandbox\.destroy\(\);/, "the test machine is always deleted");
+  assert.match(source, /typeof error\?\.cleanup === "function"/, "including one that failed half-way");
+  assert.match(source, /process\.on\(signal/, "and on Ctrl-C");
   const probe = source.match(/const PROBE = String\.raw`([\s\S]*?)`;/)[1];
   execFileSync("python3", ["-c", "import ast,sys; ast.parse(sys.stdin.read())"], { input: probe });
   const keys = [...probe.matchAll(/^\s+"([^"]+)":/gm)].map((match) => match[1]);
@@ -162,4 +177,39 @@ test("an online machine's instructions say what it can reach", () => {
   assert.match(sessionMarkdown(lab, { mode: "filtered", sites: ["example.com"], dns: ["185.228.168.168"] }), /can reach example\.com and other websites through a family-safe filter\./);
   assert.doesNotMatch(sessionMarkdown(lab, { mode: "filtered", sites: ["example.com"] }), /with no network/);
   assert.match(sessionMarkdown({ markdown: "# X" }, { mode: "sites", sites: ["example.com"] }), /^# X\n\n## Online\n\nA real Linux machine that can reach example\.com/);
+});
+
+test("online steps that check a file can read it", async () => {
+  const { allowedLabFiles, registerLabs } = await import("../server.js");
+  const step = { id: "online-file", title: "T", description: "D", hint: "H", checkType: "file_contains", filePath: "/home/learner/lab/online-answer.txt", expectedSubstring: "200" };
+  registerLabs([{ ...labFor("NET-202"), id: "NET-778", online: { sites: ["example.com"], milestones: [step] } }]);
+  assert.ok(allowedLabFiles().includes("/home/learner/lab/online-answer.txt"));
+});
+
+test("the screen viewer still has the resize hooks the scaled desktop relies on", () => {
+  // src/lab-remote.js asks noVNC for a scaled desktop size by wrapping these two methods.
+  const rfb = readFileSync(new URL("../node_modules/@novnc/novnc/core/rfb.js", import.meta.url), "utf8");
+  assert.match(rfb, /\n {4}_requestRemoteResize\(\) \{/);
+  assert.match(rfb, /\n {4}_screenSize\(\) \{/);
+  const body = rfb.slice(rfb.indexOf("\n    _requestRemoteResize() {"), rfb.indexOf("\n    _screenSize() {"));
+  assert.match(body, /const size = this\._screenSize\(\);/, "the resize request reads the size through _screenSize");
+  assert.match(body, /setTimeout\(this\._requestRemoteResize\.bind\(this\)/, "and retries through the same (wrapped) method");
+});
+
+test("school IT can see the online-labs setting, and an online machine's README says what it reaches", () => {
+  assert.equal(onlineLabMode(configuration({})), "off");
+  assert.equal(onlineLabMode(configuration({ LAB_INTERNET: "sites", SANDBOX_VIEW: "desktop" })), "off", "host-container machines never go online");
+  assert.equal(onlineLabMode(cloudDesktop("sites")), "sites");
+  assert.equal(onlineLabMode(cloudDesktop("filtered")), "filtered");
+  assert.equal(onlineLabMode(cloudDesktop("filtered", { LAB_FILTER_DNS: "nope" })), "off");
+  const server = readFileSync(new URL("../server.js", import.meta.url), "utf8");
+  assert.match(server, /onlineLabs: onlineLabMode\(cfg\),/, "the health endpoint reports it");
+  assert.match(server, /network: \{ mode: s\.network\.mode, sites: \[\.\.\.s\.network\.sites\] \},/, "session:ready tells the browser, never the DNS addresses");
+  const lab = labFor("NET-202"), readme = (files) => files.find((file) => file.path === "README.txt").content;
+  assert.match(readme(lab.files), /with no network/);
+  assert.equal(sessionLabFiles(lab, { mode: "offline", sites: [] }), lab.files);
+  const online = readme(sessionLabFiles(lab, { mode: "sites", sites: ["example.com"] }));
+  assert.doesNotMatch(online, /with no network/);assert.match(online, /that can reach example\.com and no other site\./);
+  assert.match(readme(sessionLabFiles(lab, { mode: "filtered", sites: ["example.com"] })), /and other websites through a family-safe filter\./);
+  assert.match(readme(sessionLabFiles({ files: [{ path: "README.txt", content: "Hello\n" }] }, { mode: "sites", sites: ["example.com"] })), /^Hello\n\nThis machine can reach example\.com and no other site\.\n$/);
 });

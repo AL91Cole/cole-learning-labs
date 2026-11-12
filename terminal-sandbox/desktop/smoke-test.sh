@@ -42,6 +42,16 @@ in_machine 'man -w ls >/dev/null && man -w chmod >/dev/null' || fail "manual pag
 zone=$(in_machine 'date +%Z'); case "$zone" in EST|EDT) ;; *) fail "the clock ignores TZ ($zone)" ;; esac
 in_machine 'ping -c1 -W1 1.1.1.1 >/dev/null 2>&1' && fail "the machine reached the network"
 in_machine 'xrandr | head -1' | grep -q 'current 1280 x 800' || fail "the screen is not 1280x800"
+# Lab windows fit above the taskbar: the usual terminal size on this screen, a shorter one on a short screen.
+[ "$(in_machine /usr/local/bin/cll-terminal-size)" = 96x26 ] || fail "the terminal size for a 1280x800 screen is not 96x26"
+in_machine 'xrandr --fb 1280x560 >/dev/null 2>&1; s=$(/usr/local/bin/cll-terminal-size); xrandr --fb 1280x800 >/dev/null 2>&1; echo "$s"' | grep -qx 96x20 || fail "a 560-pixel screen does not get a shorter terminal"
+in_machine 'grep -q cll-terminal-size /etc/xdg/autostart/cll-terminal-size.desktop' || fail "new terminals are not sized for the screen"
+# When the screen gets smaller, windows are moved back above the taskbar.
+n=0; until docker exec "$name" pgrep -u learner -f cll-keep-windows >/dev/null 2>&1; do n=$((n + 1)); [ "$n" -le 20 ] || fail "the window keeper did not start"; sleep 1; done
+in_machine '(xfce4-terminal --geometry=96x26 >/dev/null 2>&1 &); sleep 3; xrandr --fb 1280x560 >/dev/null 2>&1; sleep 5
+  w=$(xdotool search --onlyvisible --class xfce4-terminal | tail -1); set -- $(xwininfo -id "$w" | sed -n "s/.*Absolute upper-left Y: *//p; s/^ *Height: *//p")
+  bottom=$(($1 + $2)); area=$(xprop -root _NET_WORKAREA | sed "s/.*= *[0-9]*, *[0-9]*, *[0-9]*, *\([0-9]*\).*/\1/")
+  xrandr --fb 1280x800 >/dev/null 2>&1; pkill -x xfce4-terminal; [ "$bottom" -le "$area" ]' || fail "a window stayed under the taskbar after the screen got smaller"
 
 # The web browser: Firefox ESR, its policies (DNS over HTTPS locked off, so a
 # filtering resolver cannot be bypassed) and the start page, offline by default.

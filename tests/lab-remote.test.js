@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRemoteSession, remoteSocketUrl, remoteDesktopUrl, remoteAssetUrl, browserTimeZone} from '../src/lab-remote-client.js';
+import {createRemoteSession, remoteSocketUrl, remoteDesktopUrl, remoteAssetUrl, browserTimeZone, remoteReach} from '../src/lab-remote-client.js';
 import {preferredLabEnvironment, listLabEnvironments, DEFAULT_LAB_ENVIRONMENT} from '../src/lab-environment.js?release=20261107-tech-team';
 import {LAB_ENVIRONMENT_CONFIG} from '../src/lab-environment-config.js';
 import {REMOTE_KEY_COMBOS, sendKeyCombo, keyForCharacter, isPasteShortcut, remoteLabFor, renderLabRemote, probeRemoteService, remoteServiceState, setRemoteServiceState, remoteServiceAvailable, remoteServiceHosts, setRemoteHostedLabs} from '../src/lab-remote.js?release=20261107-tech-team';
@@ -234,7 +234,8 @@ test('a desktop machine gets full screen, keys, clipboard and a text terminal, h
   assert.equal(desktopScale({defaultView:{devicePixelRatio:1.25}})({width:1534, height:400}), 1.25, 'never more than the display has pixels for');
   assert.equal(desktopScale({defaultView:{devicePixelRatio:1}})({width:1366, height:531}), 1, 'a 100% display keeps full-size text');
   assert.equal(desktopScale({defaultView:{devicePixelRatio:2}})({width:1440, height:700}), 1, 'tall enough areas follow the area exactly');
-  assert.match(source, /area\.height >= 480 && desktopScale\(area\) === 1/, 'a scaled desktop keeps its size instead of following the area');
+  assert.match(source, /return Boolean\(area\) && area\.width >= 800 && area\.height >= 480;\}/, 'the desktop follows any area large enough for one');
+  assert.match(source, /rfb\._requestRemoteResize = function \(\) \{const real = size\.call\(this\), k = desktopScale\(\{width:real\.w, height:real\.h\}\); this\._screenSize = \(\) => \(\{w:real\.w \* k, h:real\.h \* k\}\); try \{return request\.call\(this\);\} finally \{delete this\._screenSize;\}\};/, 'a scaled desktop keeps following the window at its scaled size');
   assert.match(source, /screen:\{width:Math\.round\(area\.width \* scale\), height:Math\.round\(area\.height \* scale\)\}/);
   assert.doesNotMatch(source, /rfb\??\.focus\(\)/, 'focusing the screen never scrolls the page');
 });
@@ -265,4 +266,16 @@ test('fast typing and long pastes are combined and paced below the service limit
   assert.ok(chunks.length / Math.max(elapsed, 1) * 1000 <= 60, 'the message rate stays under the service limit');
   socket.close();
   assert.equal(session.input('late'), false, 'nothing is queued after the connection closes');
+});
+
+test('the status line says what a started machine can reach', () => {
+  assert.equal(remoteReach(undefined), ' with no internet.');
+  assert.equal(remoteReach({mode:'offline', sites:[]}), ' with no internet.');
+  assert.equal(remoteReach({mode:'sites', sites:['example.com']}), '. It can reach example.com and no other site.');
+  assert.equal(remoteReach({mode:'filtered', sites:['example.com']}), '. It can reach example.com and other websites through a family-safe filter.');
+  assert.equal(remoteReach({mode:'sites', sites:['<b>x</b>']}), ' with no internet.', 'only plain host names are shown');
+  assert.equal(remoteReach({mode:'everything', sites:['example.com']}), ' with no internet.');
+  const source = readFileSync(new URL('../src/lab-remote.js', import.meta.url), 'utf8');
+  assert.match(source, /'Connected\. This is a real Linux desktop on an isolated machine' \+ \(info\.reach \|\| ' with no internet\.'\)/);
+  assert.match(source, /The machine has no internet access unless the service turns on online labs for this lab/);
 });

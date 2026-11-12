@@ -375,22 +375,39 @@ const PROGRESS_WATCH = [
 // DNS filter. Anything malformed is treated as offline.
 const HOST_NAME = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const IPV4 = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
-export const validSiteName = (name) => typeof name === "string" && name.length <= 253 && HOST_NAME.test(name);
+// A host name, never an address: the last label must contain a letter.
+export const validSiteName = (name) => typeof name === "string" && name.length <= 253 && HOST_NAME.test(name) && /[a-z]/.test(name.slice(name.lastIndexOf(".") + 1));
 export const validIpv4 = (value) => typeof value === "string" && IPV4.test(value);
 /** Family Filter of CleanBrowsing: blocks adult, proxy and VPN sites and turns on SafeSearch. */
 export const DEFAULT_FILTER_DNS = Object.freeze(["185.228.168.168", "185.228.169.168"]);
 /**
- * Public DNS services that do not filter, denied in "filtered" mode so a lookup
- * cannot go around the filter (the machine's own resolver and Firefox's settings
- * already point at the filter; this closes the obvious ways past it).
+ * Public DNS services that do not apply the family filter (including the
+ * filter provider's other, less strict resolvers), denied in "filtered" mode so
+ * an ordinary lookup cannot go around the filter. This is not a complete web
+ * filter: a filtered machine can reach any other address, so a determined
+ * learner can still use a service not on this list or connect to an address
+ * directly. The docs and privacy pages say so.
  */
 export const UNFILTERED_DNS = Object.freeze([
-  "8.8.8.8/32", "8.8.4.4/32", "1.1.1.1/32", "1.0.0.1/32", "9.9.9.9/32", "149.112.112.112/32",
-  "208.67.222.222/32", "208.67.220.220/32", "94.140.14.14/32", "94.140.15.15/32", "76.76.2.0/32",
-  "76.76.10.0/32", "64.6.64.6/32", "64.6.65.6/32", "4.2.2.1/32", "4.2.2.2/32", "8.26.56.26/32",
-  "8.20.247.20/32", "77.88.8.8/32", "185.222.222.222/32",
-  "dns.google", "cloudflare-dns.com", "mozilla.cloudflare-dns.com", "chrome.cloudflare-dns.com",
-  "one.one.one.one", "dns.quad9.net", "doh.opendns.com", "dns.adguard-dns.com", "dns.nextdns.io", "doh.dns.sb",
+  // Google, Cloudflare (1.1.1.1 and its malware-only 1.1.1.2), Quad9 (filtered, unfiltered, ECS)
+  "8.8.8.8/32", "8.8.4.4/32", "1.1.1.1/32", "1.0.0.1/32", "1.1.1.2/32", "1.0.0.2/32",
+  "9.9.9.9/32", "149.112.112.112/32", "9.9.9.10/32", "149.112.112.10/32", "9.9.9.11/32", "149.112.112.11/32",
+  // OpenDNS, AdGuard (default and non-filtering), Control D, UltraDNS, Level3, Comodo, Yandex, DNS.SB
+  "208.67.222.222/32", "208.67.220.220/32", "94.140.14.14/32", "94.140.15.15/32", "94.140.14.140/32", "94.140.14.141/32",
+  "76.76.2.0/32", "76.76.10.0/32", "64.6.64.6/32", "64.6.65.6/32",
+  "4.2.2.1/32", "4.2.2.2/32", "4.2.2.3/32", "4.2.2.4/32", "4.2.2.5/32", "4.2.2.6/32",
+  "8.26.56.26/32", "8.20.247.20/32", "77.88.8.8/32", "77.88.8.1/32", "185.222.222.222/32", "45.11.45.11/32",
+  // CleanBrowsing's Security and Adult filters, which allow more than its Family filter
+  "185.228.168.9/32", "185.228.169.9/32", "185.228.168.10/32", "185.228.169.11/32",
+  // The same services over IPv6
+  "2001:4860:4860::8888/128", "2001:4860:4860::8844/128", "2606:4700:4700::1111/128", "2606:4700:4700::1001/128",
+  "2620:fe::fe/128", "2620:fe::9/128", "2620:fe::10/128", "2620:119:35::35/128", "2620:119:53::53/128",
+  "2a10:50c0::ad1:ff/128", "2a10:50c0::ad2:ff/128",
+  // DNS over HTTPS endpoints
+  "dns.google", "dns.google.com", "cloudflare-dns.com", "mozilla.cloudflare-dns.com", "chrome.cloudflare-dns.com",
+  "security.cloudflare-dns.com", "one.one.one.one", "dns.quad9.net", "dns9.quad9.net", "dns10.quad9.net", "dns11.quad9.net",
+  "doh.opendns.com", "dns.adguard-dns.com", "unfiltered.adguard-dns.com", "dns.nextdns.io", "doh.dns.sb", "dns.controld.com",
+  "doh.cleanbrowsing.org",
 ]);
 /** The network a session asked for, validated; anything else is offline. */
 export function validNetwork(network) {
@@ -404,11 +421,14 @@ export function validNetwork(network) {
 export function networkPoliciesFor(network) {
   const net = validNetwork(network);
   // Docker composes inline policies with the account's default "allow **"
-  // layer; only an explicit deny of every network blocks egress (verified
-  // live: a bare denyAll left HTTP and DNS open, denyNetworks ["**"] blocked
-  // HTTP, DNS and direct IP connections). A named site is narrower than "**".
+  // layer, and an inline policy's mode can only be "denyAll". Only an explicit
+  // deny of every network blocks egress (verified live: a bare denyAll left
+  // HTTP and DNS open, denyNetworks ["**"] blocked HTTP, DNS and direct IP
+  // connections). A named site is narrower than "**". Filtered mode denies only
+  // the unfiltered DNS services and leaves the rest to the default layer.
+  // scripts/check-online-labs.mjs checks both shapes live before they are used.
   if (net.mode === "sites") return [{ mode: "denyAll", denyNetworks: ["**"], allowNetworks: [...net.sites] }];
-  if (net.mode === "filtered") return [{ mode: "allowAll", denyNetworks: UNFILTERED_DNS.filter((entry) => !net.dns.includes(entry.replace(/\/32$/, ""))) }];
+  if (net.mode === "filtered") return [{ mode: "denyAll", denyNetworks: UNFILTERED_DNS.filter((entry) => !net.dns.includes(entry.replace(/\/32$/, ""))) }];
   return [{ mode: "denyAll", denyNetworks: ["**"] }];
 }
 /** Settings the desktop image's start script reads for its browser start page and DNS (see desktop/rootfs/startup.sh); none when offline, its default. */
@@ -454,8 +474,9 @@ export function buildSeedScript(seed, { desktop = false, desktopPort = CLOUD_DEF
   const startWatch = "if [ -f /home/learner/.lab-watch.sh ]; then if [ \"$(id -u)\" = 0 ]; then su learner -c 'nohup sh /home/learner/.lab-watch.sh >/dev/null 2>&1 &' || true; else nohup sh /home/learner/.lab-watch.sh >/dev/null 2>&1 & fi; fi";
   if (desktop) {
     lines.push(
-      // A readable prompt, UTF-8 output, and a short record of typed commands that the controller may read for the lab checks.
-      `printf '%s\\n' '' '# Cole Learning Labs' 'export LANG=C.UTF-8' 'PS1='"'"'\\[\\e]0;learner@lab-pc: \\w\\a\\]\\[\\e[1;32m\\]learner@lab-pc\\[\\e[0m\\]:\\[\\e[1;34m\\]\\w\\[\\e[0m\\]\\$ '"'"'' 'PROMPT_COMMAND='"'"'history -a; tail -n 200 "$HOME/.bash_history" > "$HOME/.lab-history" 2>/dev/null'"'"'' >> /home/learner/.bashrc`,
+      // A readable prompt, UTF-8 output, and a short record of typed commands that the controller may read for the lab checks
+      // (HISTCONTROL is cleared so a command pasted with a space before it is still recorded).
+      `printf '%s\\n' '' '# Cole Learning Labs' 'export LANG=C.UTF-8' 'HISTCONTROL=' 'PS1='"'"'\\[\\e]0;learner@lab-pc: \\w\\a\\]\\[\\e[1;32m\\]learner@lab-pc\\[\\e[0m\\]:\\[\\e[1;34m\\]\\w\\[\\e[0m\\]\\$ '"'"'' 'PROMPT_COMMAND='"'"'history -a; tail -n 200 "$HOME/.bash_history" > "$HOME/.lab-history" 2>/dev/null'"'"'' >> /home/learner/.bashrc`,
       ": > /home/learner/.lab-history",
       "chown -R learner:learner /home/learner/lab /home/learner/.bashrc /home/learner/.lab-history",
       "for f in /home/learner/.lab-check.sh /home/learner/.lab-watch.sh /home/learner/.lab-progress; do if [ -e $f ]; then chown learner:learner $f; fi; done",
@@ -891,6 +912,12 @@ export async function spawnCloudSandbox(session, cfg, deps = {}) {
       write: (data) => sendToShell(socket, data),
       resize: (cols, rows) => resizeShell(socket, cols, rows),
       readFile: async (file) => (destroyed || !allowedFiles.has(file) ? null : readLabFile(file)),
+      // The shell's own history (HISTFILE, saved after every command), which
+      // has the commands as run, Tab completions included.
+      history: async () => {
+        const text = destroyed ? null : await readLabFile("/home/learner/.sh_history", 65536);
+        return text ? text.split("\n").map((line) => line.trim()).filter(Boolean).slice(-200) : [];
+      },
       destroy,
     };
   } catch (error) {

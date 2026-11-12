@@ -102,7 +102,7 @@ RUN --mount=type=secret,id=apt_ca,required=false,mode=0444 \
 # after the packages so they replace the packages' defaults.
 COPY rootfs/ /
 RUN set -eux; \
-    chmod 755 /startup.sh /usr/local/bin/cll-session /usr/local/bin/cll-vnc-relay /usr/local/bin/cll-open-lab; \
+    chmod 755 /startup.sh /usr/local/bin/cll-session /usr/local/bin/cll-vnc-relay /usr/local/bin/cll-open-lab /usr/local/bin/cll-terminal-size /usr/local/bin/cll-keep-windows; \
     python3 -m json.tool /etc/firefox/policies/policies.json >/dev/null; \
     test -x /usr/lib/firefox-esr/firefox-bin; test -f /usr/lib/firefox-esr/defaults/pref/cll-lab.js; \
     sh /usr/local/share/cll/configure-desktop.sh; rm -rf /usr/local/share/cll/configure-desktop.sh

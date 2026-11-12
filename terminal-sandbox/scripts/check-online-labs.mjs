@@ -42,6 +42,7 @@ print("PROBE_JSON " + json.dumps({
     "resolve exampleadultsite.com": resolve("exampleadultsite.com"),
     "DNS straight to 8.8.8.8": dns_to("8.8.8.8"),
     "DNS straight to 1.1.1.1": dns_to("1.1.1.1"),
+    "DNS straight to 156.154.70.1 (not on the deny list)": dns_to("156.154.70.1"),
     "https://dns.google (DNS over HTTPS)": https("https://dns.google/"),
 }))
 `;
@@ -56,6 +57,10 @@ const EXPECT = {
   filtered: [["https://example.com", ok, "reachable"], ["https://www.wikipedia.org", ok, "reachable"], ["DNS straight to 8.8.8.8", failed, "blocked"], ["DNS straight to 1.1.1.1", failed, "blocked"], ["https://dns.google (DNS over HTTPS)", failed, "blocked"]],
 };
 
+// The machine being tested, so Ctrl-C or a kill still deletes it.
+let current = null;
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { console.log("\nStopping: deleting the test machine..."); Promise.resolve(current?.()).catch(() => {}).finally(() => process.exit(130)); });
+
 async function probe(mode) {
   const env = { ...process.env, SANDBOX_BACKEND: "cloud" };
   // The network the controller would give a networking lab in this mode...
@@ -63,7 +68,20 @@ async function probe(mode) {
   if (mode !== "offline" && network.mode !== mode) throw new Error("this configuration gives no " + mode + " network (check LAB_FILTER_DNS)");
   // ...on the light terminal machine, whose shell runs the test as the learner.
   const cfg = configuration({ ...env, SANDBOX_VIEW: "terminal" });
-  const sandbox = await spawnCloudSandbox({ id: "online-check-" + mode, labId: "NET-202", network, screen: null, timeZone: "" }, cfg, { labFiles: [{ path: "README.txt", content: "Online labs check\n" }] });
+  // The test ships as a lab file: a long typed command would be cut by the shell's line editor.
+  let sandbox;
+  try {
+    sandbox = await spawnCloudSandbox({ id: "online-check-" + mode, labId: "NET-202", network, screen: null, timeZone: "" }, cfg, { labFiles: [{ path: "README.txt", content: "Online labs check\n" }, { path: "probe.py", content: PROBE }] });
+  } catch (error) {
+    // A machine that was created but failed later carries its own clean-up.
+    if (typeof error?.cleanup === "function") {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { await error.cleanup(); break; } catch { if (attempt === 2) console.log("  Could not delete a test machine. In the Docker console, delete sandboxes labelled io.colelearninglabs.session=online-check-" + mode + "."); }
+      }
+    }
+    throw error;
+  }
+  current = () => sandbox.destroy();
   try {
     let output = "";
     const done = new Promise((resolve, reject) => {
@@ -75,10 +93,11 @@ async function probe(mode) {
         try { const parsed = JSON.parse(line.slice(11)); clearTimeout(timer); resolve(parsed); } catch {}
       });
     });
-    sandbox.write("printf '%s' '" + Buffer.from(PROBE).toString("base64") + "' | base64 -d > /tmp/probe.py && python3 /tmp/probe.py\n");
+    sandbox.write("python3 ~/lab/probe.py\n");
     return { network, results: await done };
   } finally {
     await sandbox.destroy();
+    current = null;
   }
 }
 
@@ -101,6 +120,7 @@ for (const mode of modes) {
       if (!good) problems++;
       console.log((good ? "  PASS " : "  FAIL ") + "the machine looks names up through the filter " + network.dns.join(", "));
       console.log("  CHECK exampleadultsite.com is the filter's test name: it should not resolve to a real site (the filter answers with a block address or nothing).");
+      console.log("  INFO a resolver not on the deny list " + (failed(results["DNS straight to 156.154.70.1 (not on the deny list)"]) ? "did not answer." : "answered: a learner could look names up around the filter this way (see Online labs, Limits)."));
     }
   } catch (error) {
     problems++;

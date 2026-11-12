@@ -25,7 +25,10 @@ set -u
 umask 022
 
 name=${USER:-learner}
-[[ $name =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || name=learner
+# Letters spelled out: in this image's UTF-8 locale [a-z] also matches letters of other alphabets.
+[[ $name =~ ^[abcdefghijklmnopqrstuvwxyz_][abcdefghijklmnopqrstuvwxyz0123456789_-]{0,31}$ ]] || name=learner
+# Never an existing system account such as root: the desktop always runs as an ordinary user.
+if id -u "$name" >/dev/null 2>&1 && [ "$(id -u "$name")" -lt 1000 ]; then name=learner; fi
 geometry=${RESOLUTION:-1280x800}
 [[ $geometry =~ ^[0-9]{3,4}x[0-9]{3,4}$ ]] || geometry=1280x800
 zone=${TZ:-Etc/UTC}

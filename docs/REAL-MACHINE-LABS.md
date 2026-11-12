@@ -318,10 +318,14 @@ works with it; only resizing the desktop needs the new image.
 - **More height for the machine.** The page's own bars above the screen went
   from 155-176 px to 126 px: the machine bar keeps to one row on the lab page
   (the page already names the lab) and, with a mouse, the step strip and machine
-  buttons are compact (touch screens keep 44 px targets). A short lab area on a
+  buttons are compact (touch screens keep the larger sizes). The strip keeps
+  its width when a step is finished (the check takes the place of an open
+  circle), so finishing a step never shrinks the screen. A short lab area on a
   high-density or zoomed display (a 1080p laptop at 125%) now gets a desktop up
-  to 640 px tall, using the display's extra pixels, scaled to fit, so ordinary
-  windows fit above the taskbar; the largest desktop is now 1920x1200.
+  to 640 px tall, using the display's extra pixels, scaled to fit and still
+  following the window; the largest desktop is now 1920x1200. The first
+  terminal and file manager windows, and new terminals, are sized to fit above
+  the taskbar of the screen they open on.
 - **A web browser.** The desktop image has Firefox ESR from Mozilla's own APT
   repository (Ubuntu 24.04's `firefox` package is a snap, which cannot run in a
   container), managed by enterprise policies: no telemetry, studies, sponsored
@@ -350,9 +354,10 @@ labs); the Linux basics course and the coding labs always stay offline.
   (`curl -vI https://example.com`) and a real anti-spoofing record
   (`dig +short TXT example.com`). They can also browse in Firefox.
 - **How it is enforced.** The controller sends Docker Cloud a network policy for
-  each machine: `sites` is "deny everything (`**`), allow example.com";
-  `filtered` is "allow, except well-known unfiltered DNS services and DNS over
-  HTTPS endpoints", and the machine's resolver is set to the filter
+  each machine (an inline policy's mode is always `denyAll`): `sites` is "deny
+  everything (`**`), allow example.com"; `filtered` denies only well-known
+  unfiltered DNS services and DNS over HTTPS endpoints, leaving everything
+  else to the account's default "allow" layer, and the machine's resolver is set to the filter
   (`LAB_FILTER_DNS`, default CleanBrowsing Family Filter `185.228.168.168` and
   `185.228.169.168`, which blocks adult, proxy and VPN sites and turns on
   SafeSearch). A filtered machine whose resolver cannot be set does not start.
@@ -360,12 +365,16 @@ labs); the Linux basics course and the coding labs always stay offline.
   and terminal-only machines stay offline, and the controller warns at start-up
   when `LAB_INTERNET` is set for them.
 - **Limits to tell schools.** DNS filtering is not a complete web filter: it
-  does not see pages, and a determined learner could still reach a site by its
-  IP address. The traffic leaves from Docker Cloud, not the school network, so
-  the school's own web filter and logs do not see it. The filter service
-  receives the names the machine looks up (not who the learner is). Review
-  online labs with district IT before turning `filtered` on; `sites` keeps the
-  machine to the one teaching site.
+  does not see pages, and every other kind of traffic is allowed, so a
+  determined learner can get around it with a DNS service not on the deny
+  list, a tunnel, or by connecting to an address directly. The traffic leaves
+  from Docker Cloud, not the school network, so the school's own web filter and
+  logs do not see it. The filter service receives the names the machine looks
+  up (not who the learner is); websites receive what the learner types. The
+  setting is for the whole service, not per school: a started machine's status
+  line says what it can reach, and `/terminal/api/health` reports it as
+  `onlineLabs`. Review online labs with district IT before turning `filtered`
+  on; `sites` keeps the machine to the one teaching site.
 
 **Turning it on** (not done by this change; production stays `off`):
 
@@ -381,10 +390,17 @@ labs); the Linux basics course and the coding labs always stay offline.
    each must reach and block (example.com, another site, DNS straight to
    public resolvers, DNS over HTTPS). Docker Cloud's policy for named sites has
    not been verified live yet, so this step is required.
-3. If every check passes, set `LAB_INTERNET=sites` (or `filtered`) in
-   `deploy/.env.production` (the private repository's compose file passes it
-   through) and run `cll-update`. Open a networking lab and confirm the two
-   online steps appear and tick. To go back, set `LAB_INTERNET=off`.
+   It also tries a public resolver that is not on the deny list and reports
+   the answer as information: that is how far a DNS-only filter goes.
+3. If every check passes, add the `LAB_INTERNET` line to the server's copy of
+   the compose file (deploy/VPS-SETUP.md has the command; `cll-update` does not
+   update that copy), set `LAB_INTERNET=sites` (or `filtered`) in
+   `deploy/.env.production` and run `cll-update`. Confirm the controller has it
+   with `docker exec $(docker ps -qf name=orchestrator) printenv LAB_INTERNET`
+   and at `/terminal/api/health` (`onlineLabs`). Open a networking lab: the
+   status line should say what the machine can reach, `nslookup example.com`
+   should print an address and `curl -I https://example.com` an `HTTP/2 200`
+   line (not just tick the step). To go back, set `LAB_INTERNET=off`.
 
 ## Hosting the controller (set up)
 

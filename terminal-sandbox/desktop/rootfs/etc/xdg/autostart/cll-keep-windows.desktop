@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Keep windows on the screen
+Comment=Moves windows back into view when the screen gets smaller
+Exec=/usr/local/bin/cll-keep-windows
+NoDisplay=true
+OnlyShowIn=XFCE;
+X-XFCE-Autostart-Override=true
