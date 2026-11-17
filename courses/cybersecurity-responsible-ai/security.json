@@ -1,0 +1,185 @@
+[
+  {
+    "title": "Who can see the club file?",
+    "objective": "Identify what needs protecting and explain how three different problems can affect the same file.",
+    "terms": [
+      {"term": "Cybersecurity", "meaning": "Protecting computers, accounts and digital information so people can use them safely."},
+      {"term": "Asset", "meaning": "Something people rely on and want to protect, such as a club's schedule."},
+      {"term": "Permission", "meaning": "Approval to do a particular thing with a particular resource."},
+      {"term": "Confidentiality", "meaning": "Only people with permission can see the information."},
+      {"term": "Integrity", "meaning": "Information stays accurate and changes happen as intended."},
+      {"term": "Availability", "meaning": "People with permission can use the information when they need it."}
+    ],
+    "example": "The cafeteria menu screen works, but yesterday's lunch is still listed. I would check the date against today's menu because a working screen can still give people the wrong information.",
+    "caseTitle": "The missing setup crew",
+    "caseText": "The Harbor School art club needs its setup sheet for Friday's show. You have permission to examine the fictional cards below. At the show, even a sheet with every name spelled correctly can let the crew down.",
+    "evidence": [
+      "Club agreement. Only crew members and the adviser may read the setup sheet. Only the adviser may change it. The crew needs it at 2 p.m. on Friday.",
+      "Copy A. The guesses for surprise award winners are on the sheet. Anyone at school can read it. All entries still match the adviser's copy.",
+      "Copy B. Only the crew and adviser can open it. The adviser confirmed the crew meets in Room 12, but the sheet now says Room 21.",
+      "Copy C. The saved entries match the adviser's copy. At 2 p.m. the crew's screen says “File unavailable.”"
+    ],
+    "tasks": [
+      "Name the asset, who uses it, and one action the agreement allows a crew member to take. Explain why finding a working link would be insufficient permission to share it.",
+      "For A, B, and C, identify the main security concern. Underline one clue on each card. Tell a partner how the problem would affect someone at the show.",
+      "Pick one copy. Recommend a change the adviser could make, then describe what a crew member or adviser would observe if it worked."
+    ],
+    "exit": "At 2 p.m. the crew can open the supply list, and only crew members can read it. It says to bring 4 tables. The adviser approved 14. Which security goal needs attention? Give the clue that decided it.",
+    "teacher": [
+      {"minutes": 5, "instruction": "Ask students what could go wrong if a team depended on one setup sheet. Collect examples in their own words."},
+      {"minutes": 8, "instruction": "Read the club agreement. Introduce the three security goals with three questions. Who can see it? Is it correct? Can the crew get it on time?"},
+      {"minutes": 14, "instruction": "Give pairs the three copy cards. Have one reader name the effect on the crew and the other locate evidence. Switch roles after each card."},
+      {"minutes": 8, "instruction": "Pairs trade one proposed change and test. Ask whether the test checks the original problem and respects the club agreement."},
+      {"minutes": 5, "instruction": "Give the exit case individually. Collect the chosen security goal and the numerical clue."}
+    ],
+    "lookFor": "Students justify each goal with a detail from the file and connect the proposed fix to the people affected.",
+    "support": "Read one copy at a time. Ask yourself who can see it, whether it is correct and whether the crew can get it on time. Point to a clue and explain it aloud.",
+    "stretch": "The adviser locks the sheet so only the adviser can open it. Which original problem might that solve? What new problem would the crew have on Friday?"
+  },
+  {
+    "title": "Give each person the access they need",
+    "objective": "Design an account and sharing plan that protects a club roster while letting people do their jobs.",
+    "terms": [
+      {"term": "Passphrase", "meaning": "A long password made from several words. Choose unrelated words privately and use a different passphrase for each account."},
+      {"term": "Multifactor authentication (MFA)", "meaning": "A sign-in check that uses two different kinds of proof, such as a passphrase you know and a security key you have."},
+      {"term": "Least privilege", "meaning": "Give a person just the access they need for their job, for the time they need it."}
+    ],
+    "example": "A stage manager updates the rehearsal calendar. As an actor, I only need to read it to find my rehearsal, so I would ask for viewing access.",
+    "caseTitle": "The yearbook wants a headcount",
+    "caseText": "The art club co-chairs need Friday's roster. The yearbook editor asks how many students joined. Sketch a sharing plan on paper. Keep every real passphrase, code and account detail out of your work.",
+    "evidence": [
+      "The roster has 18 member names, the jobs they picked and an attendance column. The two co-chairs update attendance using school accounts. The adviser manages sharing.",
+      "The yearbook editor needs one number for a caption. Club members need the list of available jobs but can choose a job by telling a co-chair.",
+      "Plan A. Both co-chairs share one sign-in. Its password is also used for a game. Anyone with the roster link can edit.",
+      "Plan B. Each co-chair has a separate school account with its own long passphrase and a school-issued security key for sign-in. The adviser can choose who gets the roster, a job list or a count."
+    ],
+    "tasks": [
+      "Choose a starting plan. Explain what could happen to Plan A's school sign-in if the game password were exposed. Describe how Plan B changes that risk.",
+      "Make a four-row list for adviser, co-chair, member and yearbook editor. Write what each role receives and what that person may do. Account for the caption and the attendance update.",
+      "A co-chair steps down. Circle the permissions the adviser should review. Sketch a check showing that the new co-chair can do the job and the former co-chair can no longer edit."
+    ],
+    "exit": "A member signs in with a passphrase and security key. The roster then lets them edit attendance by mistake. Which setting should the adviser review, and why did the sign-in checks still succeed?",
+    "teacher": [
+      {"minutes": 5, "instruction": "Read the yearbook request. Ask students to answer it in the fewest pieces of information possible."},
+      {"minutes": 8, "instruction": "Draw two boxes. Label one “Who signed in?” and the other “What may they do?” Model where a security key and an edit setting fit."},
+      {"minutes": 13, "instruction": "Pairs compare the sign-in plans and build the four-row sharing list. Have partners challenge one permission by asking which task requires it."},
+      {"minutes": 9, "instruction": "Announce the change in co-chairs. Partners revise their lists and explain how the adviser could check both roles using the school's approved process."},
+      {"minutes": 5, "instruction": "Students complete the exit individually using the two questions from the board."}
+    ],
+    "lookFor": "Each role can finish its assigned job. The explanation distinguishes signing in from the actions someone can take afterward.",
+    "support": "Make a table with the headings Person, Job, Information and Allowed action. You can also say your choices aloud or arrange role cards with a partner.",
+    "stretch": "A new volunteer needs to check people in for one meeting. Design access that ends after the job and a way to confirm when it has ended."
+  },
+  {
+    "title": "Decide what to do with an urgent message",
+    "objective": "Use a message's request, destination and context to decide whether to report it, verify it or use a known route.",
+    "terms": [
+      {"term": "Phishing", "meaning": "A deceptive message that tries to get someone to reveal information or take a harmful action."},
+      {"term": "Display name", "meaning": "The label shown beside a message. Two senders can use the same label."},
+      {"term": "Independent verification", "meaning": "Check a request through a route you already trust, such as talking to the adviser in person."}
+    ],
+    "example": "A message tells me my library book is overdue. I can check the due date in the library app I already use, even if I have no idea who sent the reminder.",
+    "caseTitle": "Three messages before the show",
+    "caseText": "It's ten minutes before club. Three notes arrive at once. Read the paper message cards or practice inspecting clues in Inbox Defender. All the requests below are fictional.",
+    "evidence": [
+      "Message A. Display name “Art Club Help.” It asks for a sign-in code in a reply within two minutes to save the roster. You did not start a sign-in. The class help poster says to take unexpected code requests to the adviser.",
+      "Message B. A familiar classmate's name appears on an unexpected invitation to review a new poster folder. It asks for no secret. You can ask the classmate at the meeting before opening the invitation.",
+      "Message C. This morning the adviser said a supply checklist would appear in the class portal. A reminder asks you to use your usual portal bookmark. It includes no link and requests no reply."
+    ],
+    "tasks": [
+      "For each card choose an action. Use “stop and report,” “verify another way,” or “use the known bookmark.” Name the exact detail that influenced you most.",
+      "Write the first sentence you would say to the adviser about A. Include what the message asked for and whether you took any action. Keep secrets out of your report.",
+      "A partner says B must be safe because the name looks familiar. Give a reason for checking and identify one way to do so without using the invitation."
+    ],
+    "exit": "A message labeled “Club Adviser” says the room changed and asks you to use an unfamiliar link for directions. You can see the adviser across the hall. What will you do first, and what makes that check independent?",
+    "teacher": [
+      {"minutes": 5, "instruction": "Read only the display names on the paper messages. Invite predictions, then reveal the actual requests and ask who wants more evidence."},
+      {"minutes": 7, "instruction": "Model locating a request, its destination and something the class already knows. Introduce the three response options."},
+      {"minutes": 10, "instruction": "Use Inbox Defender's Evidence challenge in pairs or read the three cards aloud. Each pair records a decision and two clues for one case."},
+      {"minutes": 13, "instruction": "Use all three paper cases for comparison. Partners write a short report for A and rehearse an independent check for B. Ask one pair to justify handling C differently."},
+      {"minutes": 5, "instruction": "Collect an individual decision and a reason for the exit scenario."}
+    ],
+    "lookFor": "The decision for each message cites its particular request and a clue about where it came from, where it leads or what the club already knows.",
+    "support": "Ask a partner to read one message at a time. Point to an action in the first task, then quote or describe the clue you used.",
+    "stretch": "Rewrite the reminder in C after the adviser changes the plan to tomorrow. Which facts would a reader be able to confirm independently?",
+    "activity": {
+      "route": "#play/inbox-defender",
+      "label": "Play Inbox Defender",
+      "prompt": "Choose Evidence challenge. In a round, inspect the sender, destination and context before choosing a response. Record two clues and explain your decision. The three message cards work on paper."
+    }
+  },
+  {
+    "title": "Rebuild a timeline and check the recovery",
+    "objective": "Use time-stamped records to report a fictional incident, identify what is still unknown and check a proposed recovery.",
+    "terms": [
+      {"term": "Event log", "meaning": "A record of events that includes times and observations."},
+      {"term": "Containment", "meaning": "An action that limits further harm while someone investigates."},
+      {"term": "Recovery", "meaning": "Restoring the work people need and checking that they can use it again."}
+    ],
+    "example": "After a morning announcement cuts out, the technician says the microphone has power again. I would ask someone at the back of the gym whether they can hear a whole sentence.",
+    "caseTitle": "Where did the labels go?",
+    "caseText": "Friday's art show needs 12 printed display labels. The adviser keeps old versions of the label sheet. You are the student who found a problem. Use the records to give the adviser an accurate handoff.",
+    "evidence": [
+      "1:24 p.m. • Adviser's test. A member opens the restored copy and counts 12 labels. Print preview shows only 8.",
+      "1:04 p.m. • Adviser's note. The approved sheet has 12 finished labels. The adviser saves a copy marked 1:04.",
+      "1:16 p.m. • Adviser's note. Editing is paused. The adviser keeps the changed sheet and its history, then opens a separate copy of the 1:04 version.",
+      "1:12 p.m. • Member report. The sheet opens, but 4 of the 12 label rows are blank. No one saw how the rows changed."
+    ],
+    "tasks": [
+      "Order the four records by time. In two sentences report what the member actually observed and one fact the records cannot tell the adviser.",
+      "Mark one action that limits further changes and one that preserves evidence. Explain why the adviser would keep the changed sheet while working on a separate copy.",
+      "The team wants to announce that the labels are ready. Compare the print crew's need for 12 labels with the 1:24 result. Give the adviser one next check and the result that would justify saying the job is finished."
+    ],
+    "exit": "A copy of the seating chart opens after recovery. The door team still gets “Access denied.” Write the next handoff in two lines. What has been verified, and what does the team still need someone to test?",
+    "teacher": [
+      {"minutes": 5, "instruction": "Ask what the print-table crew needs in its hands at showtime. Write the success condition where everyone can see it."},
+      {"minutes": 8, "instruction": "Read the scrambled records. Model labeling a time and an observation. Invite one explanation that the records leave uncertain."},
+      {"minutes": 13, "instruction": "Pairs order the records and draft a handoff. One partner reads it as the adviser and asks which statement comes directly from the sheet."},
+      {"minutes": 9, "instruction": "Compare containment and recovery actions. Have each pair design a last check that would catch the difference between 12 rows on screen and 8 in print preview."},
+      {"minutes": 5, "instruction": "Give the seating-chart exit. Ask each learner to distinguish tested access from access still needing a check."}
+    ],
+    "lookFor": "The report gives a time and a concrete observation, leaves the cause open, and checks the crew's real task before declaring recovery.",
+    "support": "Arrange the four records by time or ask a partner to read them aloud. Start your report with “At ___ we saw ___” and “We still need to check ___.”",
+    "stretch": "The 1:04 copy omitted a new label approved at 1:08. What additional evidence would the adviser need before choosing a final version?"
+  },
+  {
+    "title": "Write an AI prompt that leaves out private details",
+    "objective": "Revise a request for an AI writing tool so it includes only the information needed, then decide who should review the result.",
+    "terms": [
+      {"term": "Artificial intelligence (AI)", "meaning": "Computer systems that use patterns in data to do tasks such as recognizing speech or drafting text. An AI writing tool can produce a convincing sentence that gets a fact wrong."},
+      {"term": "Prompt", "meaning": "A question or instruction given to an AI tool. Files and pasted text can also give the tool information."},
+      {"term": "Data minimization", "meaning": "Use only the information needed for a particular task."},
+      {"term": "Indirect identifier", "meaning": "A clue that can point to a person when combined with other details, even if their name is missing."}
+    ],
+    "example": "I want a practice question about fractions. I can ask for one that uses halves and quarters and leave out my name and last quiz grade.",
+    "caseTitle": "A welcome sign for the art show",
+    "caseText": "The club needs a short welcome sign. A classmate suggests pasting the volunteer sheet into an AI writing tool. On paper, design a request that could produce a useful draft. All details on these cards are invented.",
+    "evidence": [
+      "Approved public notice. The Harbor School Art Show opens Friday at 3 p.m. All visitors check in at the art-room door. The adviser wants a friendly sign of 25 words or fewer.",
+      "Volunteer sheet. It lists first names and private pickup arrangements. One entry reads “The only seventh-grade drummer will leave early for a clinic visit.”",
+      "Classmate's draft request. “Use the attached volunteer sheet to write our welcome sign. Mention someone by name to make it friendly.”",
+      "Adviser's rule. The club may publish the approved event details. Volunteer arrangements are for the adviser. The adviser checks every sign before it is posted."
+    ],
+    "tasks": [
+      "Sort the details into two groups. Which help a visitor arrive and check in? Which belong with the adviser? Explain why removing a name alone might still leave a student recognizable.",
+      "Write a replacement prompt using the event facts and length limit. Include enough information for a visitor to know when to arrive and where to check in. Work on paper without uploading anything.",
+      "Swap prompts. Use your partner's prompt to draft a sign by hand. Check the sign against the public notice. Circle a fact the adviser should verify before posting and explain why."
+    ],
+    "exit": "A club wants three new names for its supply bins. A draft prompt includes a photo of students standing next to the bins. What could the club share instead, and what detail would that still give the writer?",
+    "teacher": [
+      {"minutes": 5, "instruction": "Read the public notice. Ask students what a visitor at the door would need to know."},
+      {"minutes": 8, "instruction": "Introduce the three vocabulary words and read the volunteer card. Ask how someone could recognize a student from a combination of details."},
+      {"minutes": 12, "instruction": "Pairs sort the details and write individual prompts. Ask them to explain one omission and one fact they kept."},
+      {"minutes": 10, "instruction": "Partners act as the writer and reviewer. They draft a sign, check each factual claim against the notice and flag anything for the adviser."},
+      {"minutes": 5, "instruction": "Give the supply-bin exit. Collect a replacement input and the reason it serves the task."}
+    ],
+    "lookFor": "The revised request gives the writer enough to do the task. The explanation justifies an omission, and the review identifies a fact a person can check.",
+    "support": "Point to the details your sign writer needs. You can dictate your prompt or build it from three parts. What is the event? Who will read the sign? How should it sound?",
+    "stretch": "Suppose the public notice gives a time but no room. Revise the prompt so the sign writer can flag the missing location for a person to check.",
+    "activity": {
+      "route": "#practice/AI-301",
+      "label": "Build a useful prompt",
+      "prompt": "On the “Build a useful prompt” board, use the prompt tiles to ask for a short explanation of networks and a practice question for a fictional learner. Add a check against class notes, edit your wording and choose “Save prompt.” Compare what the writer needs to know with two details you left out. You can try the same task on paper."
+    }
+  }
+]

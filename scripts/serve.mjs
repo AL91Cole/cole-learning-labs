@@ -3,10 +3,10 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_FILES, PUBLIC_LANDING_PAGES, publicFilesFor, buildSite } from './build.mjs';
+import { PUBLIC_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES, publicFilesFor, buildSite } from './build.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
-import {COURSE_PAGE_FILES,coursePageRoute} from './foundations-course.mjs';
+import {coursePageRoute} from './foundations-course.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const FILES = new Set(PUBLIC_FILES);
