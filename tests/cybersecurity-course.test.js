@@ -11,6 +11,7 @@ import {MEMBER_FILES, publicFilesFor} from '../scripts/build.mjs';
 import {createPreviewServer} from '../scripts/serve.mjs';
 import {learningRoute} from '../src/learning-routes.js';
 import {routeAccess} from '../src/access-policy.js';
+import {CATALOG} from '../src/lab-catalog.js';
 
 const directory = 'courses/cybersecurity-responsible-ai';
 const sources = ['security.json', 'responsible-ai.json'].map(name => directory + '/' + name);
@@ -36,7 +37,8 @@ test('each 40-minute lesson supplies its evidence, student handout, and teacher 
     const text = visibleText(pages.get(file));
     assert.equal(lesson.teacher.reduce((total, step) => total + step.minutes, 0), 40, file);
     assert.ok(lesson.evidence.length && lesson.terms.length && lesson.tasks.length, file);
-    for (const passage of [lesson.title, lesson.caseText, ...lesson.evidence, ...lesson.tasks, lesson.exit]) {
+    for (const passage of [lesson.title, lesson.example, lesson.caseText, ...lesson.evidence, ...lesson.tasks, lesson.exit]) {
+      assert.ok(passage, file + ' has a blank passage');
       assert.ok(text.includes(passage), file + ' is missing student text: ' + passage);
       assert.ok(allHandouts.includes(passage), 'Workbook is missing student text: ' + passage);
     }
@@ -52,10 +54,20 @@ test('each 40-minute lesson supplies its evidence, student handout, and teacher 
       assert.equal(url.origin, origin);
       assert.equal(url.searchParams.get('mode'), 'student');
       assert.equal(url.searchParams.get('cart'), 'true');
-      assert.equal(routeAccess(learningRoute(url.hash)), 'public', 'Activity requires access in preview mode: ' + url.href);
+      const route = learningRoute(url.hash);
+      assert.equal(routeAccess(route), 'public', 'Activity requires access in preview mode: ' + url.href);
+      if (route.page === 'practice') {
+        assert.ok(CATALOG.some(lab => lab.id === route.id && lab.grade === '7–8'), url.href);
+      }
     }
   });
-  assert.match(visibleText(project), /rubric/iu);
+  assert.equal(lessons[2].activity.route, '#play/inbox-defender');
+  assert.equal(lessons[4].activity.route, '#practice/AI-301');
+  const rubric = project.match(/<section\b[^>]*id="rubric"[^>]*>([\s\S]*?)<\/section>/u)?.[1];
+  assert.ok(rubric);
+  assert.equal([...rubric.matchAll(/<dt>/gu)].length, 4);
+  assert.match(visibleText(rubric), /0 to 2, for a total of 8/u);
+  assert.ok(workbook.includes('href="/' + directory + '/project"'));
 });
 
 test('course pages keep working internal links, safe external destinations and one main heading', () => {
