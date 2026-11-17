@@ -64,7 +64,7 @@ test('generated lessons are inert documents with intact code, internal anchors a
   for(const [file,html]of pages){
     const route=coursePageRoute(file);
     assert.equal([...html.matchAll(/<h1[ >]/gu)].length,1,file);
-    assert.match(html,new RegExp('rel="canonical" href="'+origin+route+'"'));
+    assert.ok(html.includes('rel="canonical" href="'+origin+route+'"'),file+' uses the exact canonical URL');
     assert.match(html,/<main id="main"/u);
     assert.doesNotMatch(html,/<(?:script|iframe|form|input|textarea|embed|object)\b|\son[a-z]+\s*=|javascript:/iu);
     assert.doesNotMatch(html,/handoutAnswers|exitAnswer|teacher-key|drive\.google\.com|\/workspace\/(?:work|cole-learning-labs)|student-project\.html/u);
