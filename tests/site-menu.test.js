@@ -25,7 +25,7 @@ test('the home page header reaches student, family, teacher and school pages wit
   assert.deepEqual(menu.map(group => group.name), CATEGORIES);
   for (const group of menu) assert.ok(group.links.length >= 2, group.name + ' lists its pages');
   const hrefs = menu.flatMap(group => group.links.map(link => link.href));
-  for (const href of ['#labs', '#explore', '#play/inbox-defender', '#guide', 'student-workbook.html', 'practice-quizzes.html', 'everyday-tech.html', 'teach.html', '#educators', '/verify', 'district-review.html', 'school-it.html', '/compliance', '#privacy', '#about', '#connect']) assert.ok(hrefs.includes(href), href + ' is in the header');
+  for (const href of ['#labs', '#explore', '#play/inbox-defender', '#guide', 'student-workbook.html', 'practice-quizzes.html', 'everyday-tech.html', '/courses', 'teach.html', '#educators', '/verify', 'district-review.html', 'school-it.html', '/compliance', '#privacy', '#about', '#connect']) assert.ok(hrefs.includes(href), href + ' is in the header');
   assert.equal(new Set(hrefs).size, hrefs.length, 'no page is listed twice');
   assert.equal(hrefs.some(href => href.includes('signin') || href.includes('membership')), false);
 });
@@ -60,7 +60,7 @@ test('the home page footer keeps every link, grouped under four short headings i
   assert.deepEqual(columns.map(column => column.match(/^<h2 class="footer-heading">([^<]+)<\/h2>/u)?.[1]), ['Learn', 'Teachers', 'Schools', 'Site']);
   const hrefs = columns.map(column => [...column.matchAll(/<a href="([^"]+)"/gu)].map(match => match[1]));
   for (const list of hrefs) assert.ok(list.length >= 2 && list.length <= 4, 'each column stays short');
-  assert.deepEqual(hrefs.flat().sort(), ['#connect', '#educators', '#guide', '#membership', '#privacy', '#signin', '/compliance', '/verify', 'district-review.html', 'everyday-tech.html', 'https://github.com/AL91Cole/cole-learning-labs', 'school-it.html', 'teach.html'], 'no footer link was dropped');
+  assert.deepEqual(hrefs.flat().sort(), ['#connect', '#educators', '#guide', '#membership', '#privacy', '#signin', '/compliance', '/courses', '/verify', 'district-review.html', 'everyday-tech.html', 'https://github.com/AL91Cole/cole-learning-labs', 'school-it.html', 'teach.html'], 'no footer link was dropped');
   assert.ok(styles.includes('.footer-links{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))'), 'four columns on a wide screen');
   assert.ok(styles.includes('.footer-links{grid-template-columns:repeat(2,minmax(0,1fr))'), 'two columns on a narrow screen');
   assert.ok(styles.includes('.footer-column:not(:has(a:not([hidden]))){display:none}'), 'a heading with no visible links is not shown');

@@ -21,7 +21,17 @@ The PDFs contain selectable text. The workbook is untagged and has no document l
 
 The public build also includes [student-workbook.html](../student-workbook.html) and [practice-quizzes.html](../practice-quizzes.html): structured HTML alternatives preserving all six workbook sections and eight quiz forms, without solutions or answer keys. Native labeled fields, fieldsets, headings, a reference table, keyboard instructions, and print styles support browser use. These static pages have no scripts, submission, or application saving; entries are temporary and browser/extension handling is separate. Long responses need a print-preview check or copying into an approved document. Focused tests verify prompt/choice parity, radio grouping, labels, and absent submission paths; they do not replace assistive-technology acceptance. Keep the original PDFs and their pinned hashes unchanged unless the document-review process is repeated. Neither format is certified accessible; see [Accessibility review](ACCESSIBILITY-REVIEW.md).
 
-DOCX editions are not approved for publication because their final rendering review is incomplete. Their absence does not prevent using the reviewed PDF companions or HTML instructions.
+The historical DOCX companions remain outside the public release because their final rendering review is incomplete. The separately authored foundations-course student documents below have their own review; this does not approve other Word documents or private teacher guides.
+
+## First complete course — November 17, 2026
+
+The user requested publication of the authored 45-lesson grades 7–8 **Technology, AI & Cybersecurity Foundations** course. Public delivery includes a course map, 45 lesson plans with student prompts, a project brief/rubric and a selected NYSED crosswalk. These are original public teaching instructions and worked instructional examples, not confidential answer guidance or completed student work.
+
+The four newly reviewed downloads are `assets/courses/foundations/student-workbook.pdf`, `student-workbook.docx`, `student-project.pdf` and `student-project.docx`. Their exact hashes are pinned in the curriculum-download checks. The Word files contain no macros, embedded objects, comments or tracked revisions. Their only external relationships are generic public simulation links; the default empty bibliography part contains no sources or personal information. The PDF files were read back, selected pages visually reviewed, and all text checked against page bounds. They are untagged print companions; structured HTML and editable Word alternatives are provided without claiming accessibility certification.
+
+Teacher answer guidance, handout answers, exit answers and misconceptions remain outside this public checkout and hosted artifact. The public source data contains only the reviewed course and lesson fields, is parsed as literals rather than executed by the generator, and is excluded from hosted and member manifests. Generated static lesson HTML is the public interface. Do not add the full teacher package or its ZIP archives to this repository.
+
+The new course and its four student downloads are intentionally public in both access configurations. They do not grant member access, open a classroom service, import rosters, save responses or sync grades. A teacher shares a generic lesson URL to Google's posting interface and attaches school-owned student materials separately. Student records remain in the school's approved assignment workflow; ordinary hosting metadata still applies.
 
 ## Material held outside the checkout
 

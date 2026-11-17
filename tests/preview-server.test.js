@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createPreviewServer, previewContentType } from '../scripts/serve.mjs';
-import {publicFilesFor} from '../scripts/build.mjs';
+import {publicFilesFor,COURSE_DOWNLOAD_FILES} from '../scripts/build.mjs';
 const PUBLIC_FILES=publicFilesFor('preview');
 
 const PRIVATE_CANARY = 'PRIVATE_CURRICULUM_OR_SECRET_MUST_NOT_BE_SERVED';
@@ -172,7 +172,7 @@ test('curriculum MIME mappings remain explicit while paid document files are abs
   assert.equal(previewContentType('slides.pptx'), 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
   assert.equal(previewContentType('unrecognized.bin'), 'application/octet-stream');
   const { root,server } = await fixture(t);
-  assert.deepEqual(PUBLIC_FILES.filter(filename => /\.(?:pdf|docx|pptx)$/i.test(filename)),[]);
+  assert.deepEqual(PUBLIC_FILES.filter(filename => /\.(?:pdf|docx|pptx)$/i.test(filename)).sort(),[...COURSE_DOWNLOAD_FILES].sort());
   for (const filename of ['assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']) {
     await put(root,filename,PRIVATE_CANARY);
     const response = await request(server, `/${filename}`);
