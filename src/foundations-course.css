@@ -1,0 +1,100 @@
+/* Public course pages are static HTML. These styles preserve authored code spacing and print without scripts. */
+.fc-page{background:#f5f4ee;color:#193345;font-size:17px;line-height:1.65}
+.fc-header{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.fc-header nav{display:flex!important;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:12px 24px;position:static!important;background:transparent;box-shadow:none;padding:0}
+.fc-header nav a{font-size:.9rem;font-weight:700;padding:8px 0}
+.fc-main{max-width:1160px;padding-top:25px;padding-bottom:30px}
+.fc-main:focus{outline:none}
+.fc-main p{max-width:88ch}
+.fc-main a,.fc-footer a{text-underline-offset:.18em;overflow-wrap:anywhere}
+.fc-main a:focus-visible,.fc-header a:focus-visible,.fc-footer a:focus-visible,.fc-table-scroll:focus-visible{outline:3px solid #a84e08;outline-offset:5px;border-radius:2px}
+.fc-main h1,.fc-main h2,.fc-main h3,.fc-main h4{color:#123948;line-height:1.23;text-wrap:balance}
+.fc-intro{padding:28px 0 30px}
+.fc-intro h1{font-size:clamp(2.15rem,4.5vw,3.65rem);letter-spacing:-.045em;max-width:1000px;margin:10px 0 25px}
+.fc-intro .eyebrow{font-size:.77rem;color:#355b60;font-weight:800;letter-spacing:.09em}
+.fc-lede{font-size:1.14rem;color:#294c58;line-height:1.7}
+.fc-breadcrumb{font-size:.86rem;display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:#45616b}
+.fc-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:28px 0}
+.fc-facts>div{background:#fff;border:1px solid #c5d2d0;border-radius:8px;padding:15px 18px}
+.fc-facts dt{font-size:.7rem;letter-spacing:.09em;text-transform:uppercase;font-weight:750;color:#49616b}
+.fc-facts dd{margin:5px 0 0;font-weight:750;line-height:1.5}
+.fc-status,.fc-notice{padding:15px 20px;border-left:4px solid #a26a18;background:#fff3dc;color:#5b3b13;border-radius:4px;font-size:.94rem}
+.fc-small{font-size:.88rem;color:#435d68}
+.fc-downloads{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;margin:20px 0;font-size:.91rem;font-weight:650}
+.fc-downloads a{display:inline-block;padding:8px 0}
+.fc-section-nav,.fc-lesson-nav{display:flex;align-items:center;justify-content:flex-start;gap:14px 25px;flex-wrap:wrap;border-top:1px solid #bacdca;border-bottom:1px solid #bacdca;padding:16px 0;margin:18px 0 34px;font-size:.92rem;font-weight:700}
+.fc-lesson-nav{justify-content:space-between}
+.fc-section{margin:0 0 42px;padding:28px 0 12px;border-top:1px solid #bacdca;scroll-margin-top:24px}
+.fc-section h2{font-size:1.9rem;margin:0 0 22px;letter-spacing:-.025em}
+.fc-section h3{font-size:1.25rem;margin:29px 0 15px}
+.fc-section h4{font-size:1.05rem;margin:20px 0 12px}
+.fc-section ul,.fc-section ol{max-width:92ch;margin:14px 0 25px;padding-left:1.55em}
+.fc-section li{margin-bottom:.75em}
+.fc-authored{white-space:pre-wrap;tab-size:4;overflow-wrap:anywhere}
+.fc-units{list-style:none;padding:0!important;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;max-width:none!important}
+.fc-units li{background:#e5eeea;border-radius:7px;border:1px solid #bed0cb;padding:15px;line-height:1.5;font-size:.86rem}
+.fc-units span{display:block;margin-top:8px;font-size:.77rem;color:#45616b}
+.fc-week-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:26px 0}
+.fc-week{background:#fff;border:1px solid #c5d2d0;border-top:5px solid #2e807a;border-radius:8px;padding:20px 23px;min-width:0}
+.fc-week h3{font-size:1.28rem;margin:0 0 18px}
+.fc-week ol{font-size:.9rem;line-height:1.5;margin-bottom:0}
+.fc-week li{margin-bottom:14px}
+.fc-print-help{background:#e5eeea;border-left:4px solid #4b7979;padding:16px 20px;border-radius:4px}
+.fc-vocabulary{max-width:92ch;border-top:1px solid #c6d2ce;margin:18px 0 25px}
+.fc-vocabulary>div{display:grid;grid-template-columns:minmax(130px,1fr) 4fr;gap:16px;padding:11px 0;border-bottom:1px solid #c6d2ce}
+.fc-vocabulary dt{font-weight:750;color:#264e58}
+.fc-vocabulary dd{margin:0}
+.fc-context{background:#fff;border:1px solid #c5d2d0;border-radius:7px;padding:3px 23px 14px;margin:24px 0}
+.fc-address{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.79rem;color:#405c66;overflow-wrap:anywhere}
+.fc-fallback{background:#edf1e9;border:1px solid #c9d4c8;border-radius:7px;padding:3px 23px 14px;margin:25px 0}
+.fc-fallback h3{font-size:1.1rem;margin-top:20px}
+.fc-response{height:105px;background:repeating-linear-gradient(transparent,transparent 34px,#d1dcd6 34px,#d1dcd6 35px);border-bottom:1px solid #8b9fa0;margin:14px 0 20px}
+.fc-response.fc-short{height:70px;max-width:92ch}
+.fc-questions li{padding-bottom:8px}
+.fc-sequence{list-style:none;padding:0!important;counter-reset:fc-sequence;max-width:none!important}
+.fc-sequence>li{counter-increment:fc-sequence;position:relative;border:1px solid #c5d2d0;border-radius:7px;background:#fff;padding:19px 23px 12px 66px;margin:14px 0}
+.fc-sequence>li::before{content:counter(fc-sequence);position:absolute;left:20px;top:20px;background:#196768;color:#fff;font-weight:800;width:30px;height:30px;line-height:1.7;text-align:center;border-radius:50%}
+.fc-sequence h4{margin:0 0 13px}
+.fc-sequence h4 span{font-size:.88rem;font-weight:600;color:#47626b}
+.fc-section table{border-collapse:collapse;width:100%;margin:20px 0 26px;background:#fff;font-size:.92rem;table-layout:fixed}
+.fc-section caption{text-align:left;color:#45616b;font-size:.85rem;padding-bottom:10px}
+.fc-section th,.fc-section td{border:1px solid #bed0ca;padding:13px 16px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.fc-section thead{background:#e0ece7}
+.fc-section th[scope="row"]{font-weight:750;width:27%}
+.fc-table-scroll{max-width:100%;overflow-x:auto;margin:20px 0 28px;outline-offset:4px}
+.fc-section .fc-rubric{min-width:980px;font-size:.83rem;line-height:1.5}
+.fc-rubric th:first-child{width:18%}
+.fc-section .fc-crosswalk{min-width:800px;font-size:.86rem}
+.fc-crosswalk th:first-child{width:30%}
+.fc-crosswalk th:nth-child(2){width:18%}
+.fc-crosswalk th:nth-child(3){width:52%}
+.fc-standard{display:inline-block;margin:0 6px 6px 0;padding:2px 8px;border:1px solid #a6c5bd;background:#e4efeb;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.85rem;font-weight:750;color:#18464b}
+.fc-footer{max-width:1160px;border-top:1px solid #bacdca;font-size:.86rem;color:#45616b;padding-top:28px;padding-bottom:35px}
+@media(max-width:920px){.fc-units{grid-template-columns:repeat(2,minmax(0,1fr))}.fc-week-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fc-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.fc-header{justify-content:flex-start}.fc-header nav{gap:10px 18px}}
+@media(max-width:600px){.fc-page{font-size:16px}.fc-week-grid,.fc-units{grid-template-columns:1fr}.fc-vocabulary>div{grid-template-columns:1fr;gap:4px}.fc-sequence>li{padding-left:55px;padding-right:16px}.fc-sequence>li::before{left:15px}.fc-header nav a{font-size:.82rem}.fc-lesson-nav{gap:9px 14px;font-size:.84rem}.fc-main .button{width:auto}}
+@media(forced-colors:active){.fc-facts>div,.fc-status,.fc-notice,.fc-print-help,.fc-context,.fc-fallback,.fc-week,.fc-units li,.fc-sequence>li,.fc-standard{border:1px solid CanvasText}.fc-response{background:none}}
+@media print{
+  @page{size:auto;margin:18mm 16mm}
+  .fc-page{background:#fff;color:#000;font-size:10pt;line-height:1.45}
+  .fc-header,.fc-footer,.fc-breadcrumb,.fc-section-nav,.fc-lesson-nav,.fc-downloads,.fc-main .button-row,.fc-page .skip-link{display:none!important}
+  .fc-main{padding:0;width:100%;max-width:none}
+  .fc-intro{padding:0 0 5mm}.fc-intro h1{font-size:24pt;margin-bottom:5mm;letter-spacing:-.03em}
+  .fc-lede{font-size:11pt;color:#000}
+  .fc-section{border-top:1px solid #777;padding-top:5mm;margin-bottom:7mm}
+  .fc-section h2{font-size:17pt}.fc-section h3{font-size:12pt;margin-top:5mm}.fc-section h4{font-size:10pt}
+  .fc-main h1,.fc-main h2,.fc-main h3,.fc-main h4{color:#000;break-after:avoid}
+  .fc-main p,.fc-main li{orphans:3;widows:3}.fc-main a{color:#000}
+  .fc-facts{gap:3mm;margin:5mm 0}.fc-facts>div{padding:3mm;border-color:#777}.fc-facts dt,.fc-facts dd{color:#000}
+  .fc-status,.fc-notice,.fc-print-help,.fc-context,.fc-fallback,.fc-week,.fc-units li,.fc-sequence>li{color:#000;background:#fff;border-color:#777;border-radius:0}
+  .fc-status,.fc-notice,.fc-print-help{padding:3mm 4mm}.fc-context,.fc-fallback{padding:1mm 4mm 2mm}
+  .fc-week-grid,.fc-units{display:block}.fc-week,.fc-units li{break-inside:avoid;margin-bottom:4mm;padding:4mm}
+  .fc-units span,.fc-sequence h4 span,.fc-address,.fc-small{color:#000}
+  .fc-address{font-size:7.5pt}.fc-print-help{font-size:9pt}
+  .fc-vocabulary{break-inside:avoid}.fc-vocabulary>div{padding:2mm 0;grid-template-columns:29mm 1fr;gap:3mm}.fc-vocabulary dt{color:#000}
+  .fc-questions li{break-inside:avoid}.fc-response{background:none;height:23mm;border-color:#777}.fc-response.fc-short{height:16mm}
+  .fc-sequence>li{padding:4mm 4mm 2mm 13mm;break-inside:avoid}.fc-sequence>li::before{background:#fff;color:#000;border:1px solid #777;left:4mm;top:4mm;width:6mm;height:6mm;line-height:1.6}
+  .fc-section table{font-size:9pt;break-inside:avoid}.fc-section th,.fc-section td{padding:3mm;border-color:#777}.fc-section thead{background:#fff;display:table-header-group}.fc-section caption{color:#000;font-size:8pt}
+  .fc-table-scroll{overflow:visible}.fc-section .fc-rubric,.fc-section .fc-crosswalk{min-width:0;font-size:7pt;line-height:1.35;break-inside:auto}.fc-rubric tr,.fc-crosswalk tr{break-inside:avoid}.fc-section .fc-rubric th,.fc-section .fc-rubric td,.fc-section .fc-crosswalk th,.fc-section .fc-crosswalk td{padding:2mm}
+  .fc-standard{color:#000;background:#fff;border-color:#777;font-size:8pt}
+  #teacher-plan{break-before:page}
+}

@@ -8,6 +8,8 @@ import { bundleTier } from './tier-bundles.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import {bundlePageStyles,styleBundlePath} from './style-bundles.mjs';
 import {PART_ART} from '../src/part-art.js';
+import {COURSE_PAGE_FILES,COURSE_DOWNLOAD_FILES,COURSE_DATA_FILE,parseFoundationsData,renderFoundationsCourse} from './foundations-course.mjs';
+export {COURSE_PAGE_FILES,COURSE_DOWNLOAD_FILES,COURSE_DATA_FILE} from './foundations-course.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
@@ -16,7 +18,7 @@ const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 // Their only script is src/site-menu.js, which lets Escape close a header menu.
 // They are published on the public site only and never join the member or owner bundles.
 export const PUBLIC_LANDING_PAGES = Object.freeze([
-  'teach.html', 'everyday-tech.html', 'district-review.html', 'support.html',
+  'teach.html', 'courses.html', 'everyday-tech.html', 'district-review.html', 'support.html',
   'lessons/blank-monitor.html', 'lessons/inbox-defender.html', 'lessons/packet-post.html',
   'lessons/k-6.html', 'lessons/troubleshooting-pilot.html', 'lessons/design-a-ticket.html'
 ]);
@@ -25,6 +27,8 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/turnstile-client.js', 'src/receipt-schema.js', 'src/lab-telemetry.js', 'src/receipt-verifier.js', 'src/receipt-verifier.css',
   'index.html', '404.html', 'classroom.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', 'teacher/index.html', 'student-workbook.html', 'practice-quizzes.html',
   ...PUBLIC_LANDING_PAGES, 'src/landing.css', 'src/site-menu.js',
+  // JSON-valued data is read for generated HTML only, never delivered as a source endpoint.
+  COURSE_DATA_FILE, 'src/foundations-course.css', ...COURSE_DOWNLOAD_FILES,
   'manifest.webmanifest', 'sw.js', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/icon-maskable-512.png', 'assets/apple-touch-icon.png',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
@@ -62,7 +66,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
 const PUBLIC_RECEIPT_TOOLS = new Set(['compliance.html','verify.html','src/receipt-verifier.js','src/receipt-verifier.css']);
 // The installable-app shell and offline cache belong to the public root site only.
 export const PUBLIC_SHELL_FILES = Object.freeze(['manifest.webmanifest','sw.js','assets/icon-192.png','assets/icon-512.png','assets/icon-maskable-512.png','assets/apple-touch-icon.png']);
-export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)&&!PUBLIC_LANDING_PAGES.includes(filename)&&filename!=='src/landing.css'&&filename!=='assets/buymeacoffee-qr.webp'));
+export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)&&!PUBLIC_LANDING_PAGES.includes(filename)&&!COURSE_DOWNLOAD_FILES.includes(filename)&&filename!==COURSE_DATA_FILE&&filename!=='src/foundations-course.css'&&filename!=='src/landing.css'&&filename!=='assets/buymeacoffee-qr.webp'));
 const PREVIEW_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', ...PUBLIC_LANDING_PAGES,
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
@@ -73,12 +77,13 @@ const PREVIEW_FILES = Object.freeze([
 ]);
 const OPEN_RESOURCES=Object.freeze(['student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
 export const publicFilesFor=access=>{
-  const files=[...PREVIEW_FILES,...(labsAreOpen(access)?OPEN_RESOURCES:[])].filter(filename=>!filename.endsWith('.css'));
+  // This authored public course and its reviewed student downloads remain free in either mode.
+  const files=[...PREVIEW_FILES,...COURSE_PAGE_FILES,...COURSE_DOWNLOAD_FILES,...(labsAreOpen(access)?OPEN_RESOURCES:[])].filter(filename=>!filename.endsWith('.css'));
   return Object.freeze([...files,...files.filter(filename=>filename.endsWith('.html')).map(styleBundlePath)]);
 };
 export const PUBLIC_FILES=publicFilesFor(PUBLIC_LAB_ACCESS);
 const FILES = new Set(PUBLIC_SOURCE_FILES);
-const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', 'lessons', '.well-known'];
+const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', 'lessons', 'courses', '.well-known'];
 
 async function directoryOnly(filename) {
   const info = await lstat(filename);
@@ -92,7 +97,10 @@ async function validatePublicTree(root, relative) {
     const filename = `${relative}/${entry.name}`;
     const info = await lstat(path.join(root, filename));
     if (info.isSymbolicLink()) throw new Error(`Symbolic links cannot be published: ${filename}`);
-    if (!info.isFile() || !FILES.has(filename)) throw new Error(`Unapproved public file or directory: ${filename}`);
+    if(info.isDirectory()){
+      if(![...FILES].some(approved=>approved.startsWith(filename+'/')))throw new Error(`Unapproved public file or directory: ${filename}`);
+      await validatePublicTree(root,filename);
+    }else if(!info.isFile()||!FILES.has(filename))throw new Error(`Unapproved public file or directory: ${filename}`);
   }
 }
 
@@ -184,6 +192,8 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   for (const directory of PUBLIC_DIRECTORIES) await validatePublicTree(root, directory);
   const sources = new Map();
   for (const filename of PUBLIC_SOURCE_FILES) sources.set(filename, await sourceBytes(root, filename));
+  const courseData=parseFoundationsData(sources.get(COURSE_DATA_FILE).toString('utf8'));
+  for(const [filename,html]of renderFoundationsCourse(courseData))sources.set(filename,Buffer.from(html));
   const content = new Map(publicFiles.filter(filename=>sources.has(filename)).map(filename=>[filename,sources.get(filename)]));
   for(const filename of publicFiles.filter(filename=>filename.endsWith('.html'))){
     const bundled=await bundlePageStyles(filename,sources.get(filename).toString('utf8'),sources);

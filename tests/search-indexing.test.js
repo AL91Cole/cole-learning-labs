@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES } from '../scripts/build.mjs';
+import { PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES } from '../scripts/build.mjs';
 import { previewContentType } from '../scripts/serve.mjs';
 
 const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8');
@@ -12,6 +12,7 @@ const canonicalPages = new Map([
   ...PUBLIC_LANDING_PAGES.map(file => [file, '/' + file.replace(/.html$/u, '')])
 ]);
 const origin = 'https://www.colelearninglabs.com';
+const coursePaths = ['/courses/foundations', ...Array.from({length:45}, (_, index) => '/courses/foundations/day-' + String(index + 1).padStart(2, '0')), '/courses/foundations/project', '/courses/foundations/standards'];
 
 test('reviewed HTML sources retain their stable canonical URLs independently of public publication', () => {
   for (const [file, pathname] of canonicalPages) {
@@ -27,7 +28,7 @@ test('reviewed HTML sources retain their stable canonical URLs independently of 
 
 test('sitemap includes the public companions and information pages while protected classroom pages stay excluded', () => {
   const utilities = ['classroom.html', 'teacher/index.html'];
-  const contentPaths = [...canonicalPages].filter(([name]) => PUBLIC_FILES.includes(name)&&!utilities.includes(name)).map(([, pathname]) => origin + pathname).sort();
+  const contentPaths = [...[...canonicalPages].filter(([name]) => PUBLIC_FILES.includes(name)&&!utilities.includes(name)).map(([, pathname]) => origin + pathname), ...coursePaths.map(pathname => origin + pathname)].sort();
   const sitemap = read('sitemap.xml');
   const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(match => match[1]).sort();
   assert.deepEqual(locations, contentPaths);
@@ -42,6 +43,15 @@ test('sitemap includes the public companions and information pages while protect
   }
   for (const file of ['robots.txt', 'sitemap.xml', '_redirects']) assert.ok(PUBLIC_FILES.includes(file), file + ' must reach the reviewed build');
   assert.equal(previewContentType('sitemap.xml'), 'application/xml; charset=utf-8');
+});
+
+test('the course sitemap covers its hub, all 45 lessons, project and standards at stable public paths', () => {
+  const generatedPaths = COURSE_PAGE_FILES.map(file => '/' + file.replace(/\/index\.html$/u, '').replace(/\.html$/u, ''));
+  assert.deepEqual(generatedPaths, coursePaths);
+  assert.equal(COURSE_PAGE_FILES.every(file => PUBLIC_FILES.includes(file)), true);
+  const locations = [...read('sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/gu)].map(match => match[1]);
+  assert.equal(locations.filter(url => url.startsWith(origin + '/courses')).length, 49);
+  for (const pathname of ['/courses', ...coursePaths]) assert.equal(locations.filter(url => url === origin + pathname).length, 1, pathname);
 });
 
 test('homepage and explicit member-document redirects stay relative without a broad catch-all', () => {
