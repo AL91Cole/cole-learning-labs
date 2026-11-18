@@ -14,20 +14,21 @@
     "caseTitle": "The missing setup crew",
     "caseText": "The Harbor School art club needs its setup sheet for Friday's show. You have permission to examine the fictional cards below. At the show, even a sheet with every name spelled correctly can let the crew down.",
     "evidence": [
-      "Club agreement. Only crew members and the adviser may read the setup sheet. Only the adviser may change it. The crew needs it at 2 p.m. on Friday.",
+      "Club agreement. Only crew members and the adviser may read the setup sheet. Only the adviser may edit it. The crew needs it at 2 p.m. on Friday.",
+      "At rehearsal, a crew member and a visitor both see “Connected to school Wi-Fi.” Both can read the public show program. The original setup sheet opens for the crew member. The visitor sees “You need permission.”",
       "Copy A. The guesses for surprise award winners are on the sheet. Anyone at school can read it. All entries still match the adviser's copy.",
       "Copy B. Only the crew and adviser can open it. The adviser confirmed the crew meets in Room 12, but the sheet now says Room 21.",
       "Copy C. The saved entries match the adviser's copy. At 2 p.m. the crew's screen says “File unavailable.”"
     ],
     "tasks": [
-      "Name the asset, who uses it, and one action the agreement allows a crew member to take. Explain why finding a working link would be insufficient permission to share it.",
+      "Name the file the club is protecting. At rehearsal, which result shows both people have a working network connection? Which result shows their file permissions differ? Decide whether the visitor's message matches the club agreement.",
       "For A, B, and C, identify the main security concern. Underline one clue on each card. Tell a partner how the problem would affect someone at the show.",
       "Pick one copy. Recommend a change the adviser could make, then describe what a crew member or adviser would observe if it worked."
     ],
     "exit": "At 2 p.m. the crew can open the supply list, and only crew members can read it. It says to bring 4 tables. The adviser approved 14. Which security goal needs attention? Give the clue that decided it.",
     "teacher": [
       {"minutes": 5, "instruction": "Ask students what could go wrong if a team depended on one setup sheet. Collect examples in their own words."},
-      {"minutes": 8, "instruction": "Read the club agreement. Introduce the three security goals with three questions. Who can see it? Is it correct? Can the crew get it on time?"},
+      {"minutes": 8, "instruction": "Compare the two rehearsal results on paper. Ask which clue describes the Wi-Fi connection and which describes access to the file. Then relate each security goal to who can read the sheet, its accuracy or the time it is needed."},
       {"minutes": 14, "instruction": "Give pairs the three copy cards. Have one reader name the effect on the crew and the other locate evidence. Switch roles after each card."},
       {"minutes": 8, "instruction": "Pairs trade one proposed change and test. Ask whether the test checks the original problem and respects the club agreement."},
       {"minutes": 5, "instruction": "Give the exit case individually. Collect the chosen security goal and the numerical clue."}
@@ -54,7 +55,7 @@
       "Plan B. Each co-chair has a separate school account with its own long passphrase and a school-issued security key for sign-in. The adviser can choose who gets the roster, a job list or a count."
     ],
     "tasks": [
-      "Choose a starting plan. Explain what could happen to Plan A's school sign-in if the game password were exposed. Describe how Plan B changes that risk.",
+      "Pick one risk in Plan A. What could happen if the game password became public, or if a roster link reached the wrong person? Match your risk to one safeguard in Plan B and explain how it would help.",
       "Make a four-row list for adviser, co-chair, member and yearbook editor. Write what each role receives and what that person may do. Account for the caption and the attendance update.",
       "A co-chair steps down. Circle the permissions the adviser should review. Sketch a check showing that the new co-chair can do the job and the former co-chair can no longer edit."
     ],
@@ -62,7 +63,7 @@
     "teacher": [
       {"minutes": 5, "instruction": "Read the yearbook request. Ask students to answer it in the fewest pieces of information possible."},
       {"minutes": 8, "instruction": "Draw two boxes. Label one “Who signed in?” and the other “What may they do?” Model where a security key and an edit setting fit."},
-      {"minutes": 13, "instruction": "Pairs compare the sign-in plans and build the four-row sharing list. Have partners challenge one permission by asking which task requires it."},
+      {"minutes": 13, "instruction": "Pairs draw a line from their chosen risk in Plan A to a safeguard in Plan B and explain the match. Then they build the four-row sharing list and check that each permission serves a job."},
       {"minutes": 9, "instruction": "Announce the change in co-chairs. Partners revise their lists and explain how the adviser could check both roles using the school's approved process."},
       {"minutes": 5, "instruction": "Students complete the exit individually using the two questions from the board."}
     ],
@@ -128,14 +129,14 @@
     "tasks": [
       "Order the four records by time. In two sentences report what the member actually observed and one fact the records cannot tell the adviser.",
       "Mark one action that limits further changes and one that preserves evidence. Explain why the adviser would keep the changed sheet while working on a separate copy.",
-      "The team wants to announce that the labels are ready. Compare the print crew's need for 12 labels with the 1:24 result. Give the adviser one next check and the result that would justify saying the job is finished."
+      "Use the timeline to finish the club's response playbook, a short guide to what to do next. Fill in both lines for the adviser. “If the print test falls short, we should ___.” “We can tell the crew the labels are ready when ___.” Use the 1:24 record to decide which line applies now."
     ],
     "exit": "A copy of the seating chart opens after recovery. The door team still gets “Access denied.” Write the next handoff in two lines. What has been verified, and what does the team still need someone to test?",
     "teacher": [
       {"minutes": 5, "instruction": "Ask what the print-table crew needs in its hands at showtime. Write the success condition where everyone can see it."},
       {"minutes": 8, "instruction": "Read the scrambled records. Model labeling a time and an observation. Invite one explanation that the records leave uncertain."},
       {"minutes": 13, "instruction": "Pairs order the records and draft a handoff. One partner reads it as the adviser and asks which statement comes directly from the sheet."},
-      {"minutes": 9, "instruction": "Compare containment and recovery actions. Have each pair design a last check that would catch the difference between 12 rows on screen and 8 in print preview."},
+      {"minutes": 9, "instruction": "Pairs trade their two-line playbooks. Give the partner the 1:24 result, then a hypothetical printout with all 12 correct labels. Ask them to follow the guide for each result and explain why the next action changes."},
       {"minutes": 5, "instruction": "Give the seating-chart exit. Ask each learner to distinguish tested access from access still needing a check."}
     ],
     "lookFor": "The report gives a time and a concrete observation, leaves the cause open, and checks the crew's real task before declaring recovery.",
@@ -168,7 +169,7 @@
     "exit": "A club wants three new names for its supply bins. A draft prompt includes a photo of students standing next to the bins. What could the club share instead, and what detail would that still give the writer?",
     "teacher": [
       {"minutes": 5, "instruction": "Read the public notice. Ask students what a visitor at the door would need to know."},
-      {"minutes": 8, "instruction": "Introduce the three vocabulary words and read the volunteer card. Ask how someone could recognize a student from a combination of details."},
+      {"minutes": 8, "instruction": "Introduce the vocabulary and read the volunteer card. Ask how someone could recognize a student from a combination of details."},
       {"minutes": 12, "instruction": "Pairs sort the details and write individual prompts. Ask them to explain one omission and one fact they kept."},
       {"minutes": 10, "instruction": "Partners act as the writer and reviewer. They draft a sign, check each factual claim against the notice and flag anything for the adviser."},
       {"minutes": 5, "instruction": "Give the supply-bin exit. Collect a replacement input and the reason it serves the task."}

@@ -11,19 +11,20 @@
     "caseText": "Finish the line “At twilight, the astronomy club looked up and saw ___.” Several endings would sound right. Which one actually happened? Now edit a pretend AI draft for the club. Families will use it to decide when to arrive and what to bring.",
     "evidence": [
       "A. Original notice, signed by the science teacher on October 2. “Sky Watch meets October 9, 6–7 p.m., on the east field. Borrow a star chart at the door.”",
-      "B. Sample AI draft, October 3. “Sky Watch starts at 6 p.m. on October 9 in the west field. A free telescope will be waiting for every visitor.”"
+      "B. Sample AI draft, October 3. “Sky Watch starts at 6 p.m. on October 9 in the west field. A free telescope will be waiting for every visitor.”",
+      "C. An unsigned note copied into the club's planning sheet says to announce a move to the gym. Anyone in the club can add notes. The science teacher approves location changes and posts them on the club board."
     ],
     "tasks": [
       "Make three rows on paper for the start date and time, the location, and the telescope promise. For each, mark supported, contradicted, or still unknown. Quote the words from A that led you there, or name what A leaves out.",
       "Rewrite B in two sentences a family could use. Underline each detail you kept and point to the matching words in A.",
-      "Write the question you would ask the science teacher before adding the telescope claim. Explain why getting another convincing answer from the same AI would leave the question open."
+      "C asks you to change the announcement. Circle the location you can publish now and name the record that supports it. Write one question you could ask the science teacher in person before making a change."
     ],
     "exit": "A new draft says visitors can borrow star charts. Which words support it? Which claim from the first draft still needs a person to confirm it?",
     "teacher": [
       {"minutes": 5, "instruction": "Collect three plausible endings to the twilight sentence. Ask what a witness would need to tell us to establish which one happened."},
       {"minutes": 8, "instruction": "Explain how predicting pieces of text can produce a convincing sentence with a wrong detail. Invite students to choose one claim and point to the record they would use to check it."},
       {"minutes": 12, "instruction": "Pairs classify the three claims. Ask them to justify each label with the original notice, including how they handled any detail that was hard to check."},
-      {"minutes": 10, "instruction": "Trade rewritten announcements. Have the other pair trace every published detail to the signed notice."},
+      {"minutes": 10, "instruction": "Trade rewritten announcements. Ask the other pair to trace the location to an approved record and explain how they would confirm the requested change."},
       {"minutes": 5, "instruction": "Collect the exit response and look for the difference between a contradiction and an unanswered question."}
     ],
     "lookFor": "The editor gives a reason for each claim label, traces the revised announcement to specific words in the source, and identifies an appropriate way to resolve an open question.",
@@ -76,11 +77,12 @@
     "evidence": [
       "A. The photographer says the repair-table photo may appear in the closed class slideshow. The two students pictured agreed to the slideshow. No one has agreed to a hallway display or an upload to an AI tool.",
       "B. Kai drew a wrench. Kai's note says, “Use my wrench drawing on the classroom-door poster and in the school bulletin. Credit me as K. Keep the drawing as it is.”",
-      "C. The editor asked for headline ideas using only the words “school repair club.” The sample AI suggested “Give it a second life.” The club has approved a headline brainstorm. Its teacher will review the final poster."
+      "C. The editor asked for headline ideas using only the words “school repair club.” The sample AI suggested “Give it a second life.” The club has approved a headline brainstorm. Its teacher will review the final poster.",
+      "D. The advisor approved this line for the poster and the family bulletin. “Club members will demonstrate how to sew on a button.”"
     ],
     "tasks": [
       "For A and B, list the allowed audience and use. Pick a visual for the classroom door, or design a text-only poster. Explain the permission behind your choice.",
-      "Sketch the poster on paper. If you use the wrench, label a box for Kai's original drawing and write the requested credit. If you borrow the AI headline, add a short note explaining the AI's help and the human editor's work.",
+      "Try C's headline idea on your sketch. You can edit it. Use the fact in D to write a short invitation for students on the poster and one sentence for families in the bulletin. Give each version a brief note saying what AI suggested and what you wrote or checked. Credit any artwork you use.",
       "Your partner wants to send the photo to an AI editor to remove the background. Write a reply that protects the people pictured and gives the team a usable alternative."
     ],
     "exit": "Someone writes “Photo by our club” under the photo. Which permissions would the team still need before publishing it on the door?",
@@ -88,7 +90,7 @@
       {"minutes": 5, "instruction": "Compare the audiences of a closed slideshow, a classroom door, and a school bulletin. Ask who can see each one."},
       {"minutes": 8, "instruction": "Read the permission cards. Make separate marks for who created an item, who appears in it, and where it may be shared."},
       {"minutes": 12, "instruction": "Pairs sketch the poster and add any needed credit and disclosure. Ask them to justify each item they choose."},
-      {"minutes": 10, "instruction": "Partners trade posters and act as editors. Ask them to point to a permission for each visual and account for any AI-written words."},
+      {"minutes": 10, "instruction": "Partners compare the student invitation with the family version. Ask them to point to the same verified fact in both, then check the permissions, credit, and disclosure."},
       {"minutes": 5, "instruction": "Collect the exit response and ask each student to distinguish the creator's role from the role of the people appearing in a picture."}
     ],
     "lookFor": "Students tie their media decision to the stated audience and permission. Their poster credits the work it uses, accounts for any AI contribution, and identifies who reviewed the finished work.",
