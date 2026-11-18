@@ -80,7 +80,7 @@ test('CSS bundling refuses remote and unreviewed imports before replacing a prev
   }
 });
 
-for (const unexpected of ['src/.env', 'src/unreviewed.js', 'assets/unreviewed.svg', 'assets/secret.json', 'teacher/extra.html', '.well-known/private.json']) {
+for (const unexpected of ['src/.env', 'src/unreviewed.js', 'assets/unreviewed.svg', 'assets/secret.json', 'teacher/extra.html', 'labs/extra.html', '.well-known/private.json']) {
   test(`an unreviewed file in a public directory fails closed: ${unexpected}`, async t => {
     const { root } = await fixture(t);
     await mkdir(path.join(root, 'dist'));

@@ -6,7 +6,7 @@ import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {createPreviewServer} from '../scripts/serve.mjs';
-import {publicFilesFor, PUBLIC_LANDING_PAGES, offlinePrecacheList} from '../scripts/build.mjs';
+import {publicFilesFor, PUBLIC_LANDING_PAGES, STANDALONE_LAB_PAGES, MEMBER_FILES, offlinePrecacheList} from '../scripts/build.mjs';
 import {learningRoute, labPageHash} from '../src/learning-routes.js';
 import {routeAccess} from '../src/access-policy.js';
 import {studentLinkAction} from '../src/session-modes.js';
@@ -21,7 +21,7 @@ async function preview(t, access) {
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(() => new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
   return pathname => new Promise((resolve, reject) => {
-    const request = http.request({hostname: '127.0.0.1', port: server.address().port, path: pathname, agent: false}, response => { const chunks = []; response.on('data', chunk => chunks.push(chunk)); response.on('end', () => resolve({status: response.statusCode, body: Buffer.concat(chunks).toString('utf8'), type: response.headers['content-type']})); });
+    const request = http.request({hostname: '127.0.0.1', port: server.address().port, path: pathname, agent: false}, response => { const chunks = []; response.on('data', chunk => chunks.push(chunk)); response.on('end', () => resolve({status: response.statusCode, body: Buffer.concat(chunks).toString('utf8'), type: response.headers['content-type'], policy: response.headers['content-security-policy']})); });
     request.on('error', reject); request.end();
   });
 }
@@ -35,6 +35,35 @@ test('every landing page opens directly at its ordinary address in both access m
     }
     for (const missing of ['/lessons/', '/lessons/unknown', '/lessons/blank-monitor/extra', '/teach/extra', '/lessons/../package.json']) assert.notEqual((await get(missing)).status, 200, missing);
     assert.equal((await get('/')).status, 200);
+  }
+});
+
+test('the standalone labs load only their reviewed local assets in either public access mode', async t => {
+  const labPolicy = (await read('_headers')).match(/^\/labs\/\*\n[^\n]*\n\s+Content-Security-Policy: (.+)$/mu)[1];
+  assert.match(labPolicy, /script-src 'self';/u);
+  assert.match(labPolicy, /connect-src 'none';/u);
+  for (const access of ['open', 'preview']) {
+    const get = await preview(t, access);
+    const artwork = 'assets/museum-record-m17.webp';
+    assert.equal((await get('/' + artwork)).type, 'image/webp');
+    assert.ok(!MEMBER_FILES.includes(artwork));
+    for (const file of STANDALONE_LAB_PAGES) {
+      const route = '/' + file.slice(0, -5);
+      const id = path.basename(route);
+      for (const candidate of [route, route + '/', route + '.html']) {
+        const response = await get(candidate);
+        assert.equal(response.status, 200, candidate);
+        assert.equal(response.policy, labPolicy, candidate);
+      }
+      for (const asset of ['src/' + id + '.js', 'src/labs-' + id + '-bundle.css']) {
+        assert.equal((await get('/' + asset)).status, 200, asset);
+        assert.ok(!MEMBER_FILES.includes(asset));
+      }
+      assert.ok(!MEMBER_FILES.includes(file));
+    }
+    for (const missing of ['/labs/unknown', '/labs/museum-label/extra', '/src/standalone-labs.css']) {
+      assert.equal((await get(missing)).status, 404, missing);
+    }
   }
 });
 

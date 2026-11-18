@@ -83,7 +83,9 @@ test('generated lessons are inert documents with intact code, internal anchors a
   assert.match(pages.get('courses/foundations/project.html'),/six|Six/u);
   const catalog=read('courses.html');
   assert.match(catalog,/More courses will be added here/u);
-  assert.equal([...catalog.matchAll(/class="lesson-card"/gu)].length,1);
+  assert.equal([...catalog.matchAll(/class="lesson-card"/gu)].length,2);
+  assert.ok(catalog.includes('href="/courses/foundations/day-01"'));
+  assert.ok(catalog.includes('href="/courses/cybersecurity-responsible-ai/lesson-01"'));
 });
 
 test('Classroom sharing contains only the generic public handout URL',()=>{

@@ -122,6 +122,7 @@ test('the build rejects a private filename even when it is accidentally added to
     .replace("'./tier-bundles.mjs'",JSON.stringify(new URL('../scripts/tier-bundles.mjs',import.meta.url).href))
     .replace("'./style-bundles.mjs'",JSON.stringify(new URL('../scripts/style-bundles.mjs',import.meta.url).href))
     .replaceAll("'./foundations-course.mjs'",JSON.stringify(new URL('../scripts/foundations-course.mjs',import.meta.url).href))
+    .replace("'./cybersecurity-course.mjs'",JSON.stringify(new URL('../scripts/cybersecurity-course.mjs',import.meta.url).href))
     .replace("'../src/part-art.js'",JSON.stringify(new URL('../src/part-art.js',import.meta.url).href));
   assert.notEqual(modified, source, 'The fixture must introduce an otherwise explicitly approved private-named file.');
   await put(root, 'scripts/build.mjs', modified);

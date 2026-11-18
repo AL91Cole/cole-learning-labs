@@ -47,11 +47,12 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   const built=await buildSeparately(t,{publicLabAccess:'preview'}),server=createPreviewServer({sourceRoot:built.directory,publicLabAccess:'preview'});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
-  assert.deepEqual((await readdir(path.join(built.directory,'src'))).filter(file=>file.endsWith('.js')).sort(),['app.js','receipt-verifier.js','secure-reports.js','site-menu.js']);
+  assert.deepEqual((await readdir(path.join(built.directory,'src'))).filter(file=>file.endsWith('.js')).sort(),['app.js','double-counted-ballot.js','locker-note.js','museum-label.js','receipt-verifier.js','secure-reports.js','site-menu.js','train-the-sorter.js']);
   assert.equal(publicFilesFor('preview').some(file=>file.startsWith('memberships/')),false);
   assert.deepEqual(publicFilesFor('preview').filter(file=>/\.(?:pdf|docx)$/u.test(file)).sort(),[...COURSE_DOWNLOAD_FILES].sort(),'Only the four explicitly reviewed public course downloads are available in a restricted preview.');
   for(const path of ['/src/scenarios.js','/src/expanded-labs.js','/src/coding-lab.js','/src/coding-workbench.js','/src/sign-in.js','/src/owner-preview.js','/src/owner-preview.js?ownerPreview=true','/src/coding-sandbox.js','/src/lesson-plans.js','/src/elementary-labs.js','/src/block-workshop.js','/src/assembly-builder.js','/src/inbox-defender.js',
-    '/memberships/worker.js','/memberships/dist/worker.mjs','/learn/src/app.js','/assets/cole-learning-labs-pop-quizzes.pdf','/'+COURSE_DATA_FILE,'/scripts/foundations-course.mjs','/assets/courses/foundations/teacher-guide.pdf']){
+    '/memberships/worker.js','/memberships/dist/worker.mjs','/learn/src/app.js','/assets/cole-learning-labs-pop-quizzes.pdf','/'+COURSE_DATA_FILE,'/scripts/foundations-course.mjs','/assets/courses/foundations/teacher-guide.pdf',
+    '/courses/cybersecurity-responsible-ai/security.json','/courses/cybersecurity-responsible-ai/responsible-ai.json','/scripts/cybersecurity-course.mjs']){
     const result=await request(server,path);assert.equal(result.status,404,path);
     assert.equal(result.body.includes('MY CREATIVE STUDIO'),false);
   }

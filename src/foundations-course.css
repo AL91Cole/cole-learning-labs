@@ -96,5 +96,8 @@
   .fc-section table{font-size:9pt;break-inside:avoid}.fc-section th,.fc-section td{padding:3mm;border-color:#777}.fc-section thead{background:#fff;display:table-header-group}.fc-section caption{color:#000;font-size:8pt}
   .fc-table-scroll{overflow:visible}.fc-section .fc-rubric,.fc-section .fc-crosswalk{min-width:0;font-size:7pt;line-height:1.35;break-inside:auto}.fc-rubric tr,.fc-crosswalk tr{break-inside:avoid}.fc-section .fc-rubric th,.fc-section .fc-rubric td,.fc-section .fc-crosswalk th,.fc-section .fc-crosswalk td{padding:2mm}
   .fc-standard{color:#000;background:#fff;border-color:#777;font-size:8pt}
-  #teacher-plan{break-before:page}
+  #teacher-plan,.fc-workbook>.fc-section{break-before:page}
 }
+
+.fc-skill-list{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.45rem 1.5rem}
+.fc-skill-list li{margin:0}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES } from '../scripts/build.mjs';
+import { PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES, STANDALONE_LAB_PAGES } from '../scripts/build.mjs';
 import { previewContentType } from '../scripts/serve.mjs';
 
 const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8');
@@ -9,10 +9,14 @@ const canonicalPages = new Map([
   ['index.html', '/'], ['school-it.html', '/school-it'], ['ai-use-notice.html','/ai-use-notice'], ['compliance.html','/compliance'], ['verify.html','/verify'],
   ['student-workbook.html', '/student-workbook'], ['practice-quizzes.html', '/practice-quizzes'],
   ['classroom.html', '/classroom'], ['secure-reports.html', '/secure-reports'], ['teacher/index.html', '/teacher/'],
-  ...PUBLIC_LANDING_PAGES.map(file => [file, '/' + file.replace(/.html$/u, '')])
+  ...[...PUBLIC_LANDING_PAGES, ...STANDALONE_LAB_PAGES].map(file => [file, '/' + file.replace(/\.html$/u, '')])
 ]);
 const origin = 'https://www.colelearninglabs.com';
-const coursePaths = ['/courses/foundations', ...Array.from({length:45}, (_, index) => '/courses/foundations/day-' + String(index + 1).padStart(2, '0')), '/courses/foundations/project', '/courses/foundations/standards'];
+const cyberCourse = '/courses/cybersecurity-responsible-ai';
+const coursePaths = [
+  '/courses/foundations', ...Array.from({length:45}, (_, index) => '/courses/foundations/day-' + String(index + 1).padStart(2, '0')), '/courses/foundations/project', '/courses/foundations/standards',
+  cyberCourse, ...Array.from({length:16}, (_, index) => cyberCourse + '/lesson-' + String(index + 1).padStart(2, '0')), cyberCourse + '/workbook', cyberCourse + '/project'
+];
 
 test('reviewed HTML sources retain their stable canonical URLs independently of public publication', () => {
   for (const [file, pathname] of canonicalPages) {
@@ -45,12 +49,12 @@ test('sitemap includes the public companions and information pages while protect
   assert.equal(previewContentType('sitemap.xml'), 'application/xml; charset=utf-8');
 });
 
-test('the course sitemap covers its hub, all 45 lessons, project and standards at stable public paths', () => {
+test('the course sitemap covers both hubs, all lessons and their project and reference pages', () => {
   const generatedPaths = COURSE_PAGE_FILES.map(file => '/' + file.replace(/\/index\.html$/u, '').replace(/\.html$/u, ''));
-  assert.deepEqual(generatedPaths, coursePaths);
+  assert.deepEqual(generatedPaths.sort(), [...coursePaths].sort());
   assert.equal(COURSE_PAGE_FILES.every(file => PUBLIC_FILES.includes(file)), true);
   const locations = [...read('sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/gu)].map(match => match[1]);
-  assert.equal(locations.filter(url => url.startsWith(origin + '/courses')).length, 49);
+  assert.equal(locations.filter(url => url.startsWith(origin + '/courses')).length, coursePaths.length + 1);
   for (const pathname of ['/courses', ...coursePaths]) assert.equal(locations.filter(url => url === origin + pathname).length, 1, pathname);
 });
 

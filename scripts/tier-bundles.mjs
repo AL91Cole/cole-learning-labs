@@ -8,6 +8,8 @@ import {FREE_LAB_IDS} from '../src/access-policy.js';
 import {FREE_ARCADE_IDS} from '../src/arcade-catalog.js';
 
 const PROJECT_ROOT=fileURLToPath(new URL('../',import.meta.url));
+export const STANDALONE_LAB_IDS = Object.freeze(['double-counted-ballot', 'museum-label', 'locker-note', 'train-the-sorter']);
+const reviewedEntries = new Set(['app.js', 'secure-reports.js', 'receipt-verifier.js', 'site-menu.js', ...STANDALONE_LAB_IDS.map(id => id + '.js')]);
 const FREE_IDS=Object.freeze([...FREE_LAB_IDS]);
 const FREE_SET=new Set(FREE_IDS);
 const TRACKS=new Set(['hardware','network','ai','security','coding']);
@@ -240,7 +242,7 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
   if(typeof split!=='boolean'||(split&&entry!=='app.js'))throw new Error('Route splitting is reviewed for the main application only.');
   if(typeof ownerPreview!=='boolean')throw new Error('A boolean owner-preview build option is required.');
   if(ownerPreview&&(!member||!localOnly||entry!=='app.js'))throw new Error('Owner preview navigation requires the full local-only main application.');
-  if(!['app.js','secure-reports.js','receipt-verifier.js','site-menu.js'].includes(entry))throw new Error('Only reviewed application, local report-reader, code-verifier, or header-menu entries may be bundled.');
+  if(!reviewedEntries.has(entry))throw new Error('Only reviewed application, utility, and standalone lab entries may be bundled.');
   const root=path.resolve(sourceRoot),info=await lstat(root);
   if(info.isSymbolicLink()||!info.isDirectory()||await realpath(root)!==root)throw new Error('Tier source root must be a canonical real directory.');
   const sourceDirectory=path.join(root,'src'),sourceInfo=await lstat(sourceDirectory);
