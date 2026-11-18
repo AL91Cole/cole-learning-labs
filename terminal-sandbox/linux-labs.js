@@ -13,15 +13,15 @@ const GRADE = "Grades 7\u201312";
 // it teaches; a step with several parts lists them as stages, each stage's
 // commands typed after the stage before (see typedInOrder in server.js). A
 // `done` step is awarded by the lab's progress checker, plus any typed stages.
-const typed = (id, title, description, hint, ...stages) => ({ id, title, description, hint, checkType: "history_regex", ...(stages.length === 1 && stages[0] instanceof RegExp ? { pattern: stages[0] } : { typed: stages }) });
-const done = (id, title, description, hint, ...stages) => ({ id, title, description, hint, checkType: "file_contains", filePath: PROGRESS, expectedSubstring: "[" + id + "]", ...(stages.length ? { typed: stages } : {}) });
+export const typed = (id, title, description, hint, ...stages) => ({ id, title, description, hint, checkType: "history_regex", ...(stages.length === 1 && stages[0] instanceof RegExp ? { pattern: stages[0] } : { typed: stages }) });
+export const done = (id, title, description, hint, ...stages) => ({ id, title, description, hint, checkType: "file_contains", filePath: PROGRESS, expectedSubstring: "[" + id + "]", ...(stages.length ? { typed: stages } : {}) });
 // A long listing: ls with -l among its options (ls -l tools, ls -la, ls tools -l).
-const LONG_LIST = /^\s*ls\s+(\S+\s+)*-\w*l/;
-const text = (lines) => lines.join("\n") + "\n";
+export const LONG_LIST = /^\s*ls\s+(\S+\s+)*-\w*l/;
+export const text = (lines) => lines.join("\n") + "\n";
 const plain = (value) => value.replace(/`/g, "");
 
 // The small line editor the other real-machine labs ship, for machines without a desktop.
-const EDIT_PY = Object.values(generatedLabs()).flatMap((lab) => lab.files || []).find((file) => file.path === "edit.py")?.content;
+export const EDIT_PY = Object.values(generatedLabs()).flatMap((lab) => lab.files || []).find((file) => file.path === "edit.py")?.content;
 
 /** README.txt for the lab folder, written from the same steps the checks use. */
 function readme(lab) {
@@ -37,10 +37,11 @@ function markdown(lab) {
   return ["# " + lab.id + " · " + lab.title, "", ...lab.intro, "", ...lab.milestones.flatMap((step, index) => ["### Step " + (index + 1) + ": " + step.title, step.description, ""])].join("\n");
 }
 
-function lab(definition) {
+/** Builds a lab from its steps, starting files and progress checks. `track` and `grade` default to Linux basics. */
+export function lab(definition) {
   const { intro, check, files, ...rest } = definition;
   const shipped = [...files, { path: ".lab-check.sh", content: text(["#!/bin/sh", "# Prints one [token] for each finished step of " + definition.id + ".", ...check, "exit 0"]) }];
-  return { ...rest, track: TRACK, grade: GRADE, markdown: markdown(definition), files: [{ path: "README.txt", content: readme(definition) }, ...shipped] };
+  return { track: TRACK, grade: GRADE, ...rest, markdown: markdown(definition), files: [{ path: "README.txt", content: readme(definition) }, ...shipped] };
 }
 
 // ---------------------------------------------------------------- LNX-101

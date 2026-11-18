@@ -248,6 +248,77 @@
     "stretch": "The school wants to publish the same poster on its public website. Identify exactly which part of Kai's permission would need a new conversation."
   },
   {
+    "title": "Let Python do the counting",
+    "objective": "Read and run a short Python script that counts failed sign-ins, change its settings and explain what the count cannot tell you.",
+    "skill": "Script Starter",
+    "warmup": {"title": "Human for-loop", "text": "Your teacher reads twenty sign-in results aloud, fast. Tally every FAILED by hand. Compare your total with two classmates. Did you all agree? What would a computer do differently?"},
+    "terms": [
+      {"term": "Automation", "meaning": "Getting a computer to do a repeated job the same way every time."},
+      {"term": "Script", "meaning": "A short program saved in a file. Python runs it from the first line to the last."},
+      {"term": "Variable", "meaning": "A name that holds a value, such as failed = 0. The value can change while the script runs."},
+      {"term": "Loop", "meaning": "Instructions that repeat once for every item, such as every line of a log."},
+      {"term": "Condition", "meaning": "A test that is true or false. An if runs its indented lines only when the test is true."}
+    ],
+    "example": "I walk down a row of lockers. For each tag, if it says OVERDUE, I add one to my count. That is a loop with a condition inside it. Python can do the same job on a thousand tags without getting bored.",
+    "caseTitle": "Too many lines to count by hand",
+    "caseText": "In lesson 7 you read a handful of records by hand. The practice lunch app writes hundreds of sign-in lines a day. The adviser wants a quick way to spot an account that keeps failing to sign in. You are the club’s first script writer. The log, the accounts and the addresses are invented.",
+    "evidence": [
+      "Adviser’s request. “Tell me when one account has 5 or more failed sign-ins. I will decide what it means.”",
+      "Log sample. Each line has a time, an account, a result and the address it came from. The six lines are printed under these cards.",
+      "The script, count_failures.py. Two settings sit at the top. The loop reads the log one line at a time. The if at the bottom decides whether to print an alert.",
+      "What happened next. On the full log of 30 lines, the script counted 8 failed sign-ins for the adviser account. The adviser says, “That was not me. I was teaching in Room 12.”"
+    ],
+    "code": [
+      {
+        "title": "Log sample",
+        "lines": [
+          "13:03:44 user=mia result=FAILED from=10.20.4.12",
+          "13:03:58 user=mia result=OK from=10.20.4.12",
+          "13:04:11 user=lena result=OK from=10.20.4.30",
+          "13:05:03 user=adviser result=FAILED from=10.20.9.50",
+          "13:06:10 user=adviser result=FAILED from=10.20.9.50",
+          "13:06:17 user=adviser result=FAILED from=10.20.9.50"
+        ]
+      },
+      {
+        "title": "count_failures.py",
+        "lines": [
+          "# Counts failed sign-ins for one account in the practice log.",
+          "account = \"mia\"",
+          "limit = 20",
+          "",
+          "failed = 0",
+          "log = open(\"logs/signin.log\")",
+          "for line in log:",
+          "    if \"FAILED\" in line and \"user=\" + account + \" \" in line:",
+          "        failed = failed + 1",
+          "log.close()",
+          "",
+          "print(account, \"failed\", failed, \"times\")",
+          "if failed >= limit:",
+          "    print(\"ALERT: tell the adviser about\", account)"
+        ]
+      }
+    ],
+    "tasks": [
+      "Play the computer. Suppose account is set to \"adviser\". Go down the log sample one line at a time and write the value of failed after each line. What does the script print? Does the ALERT line appear?",
+      "Change one setting at a time. Which line would you edit to count mia instead? Which line makes the alert appear at 5 failures? Predict what the script prints for mia on the sample. Then explain what would go wrong with limit = 1.",
+      "Read “What happened next.” List two things the script found out and two things it cannot know. Write a two-line handoff for the adviser, the way you did in lesson 7. Who decides what the count means?"
+    ],
+    "machineLab": {"id": "CYB-104", "prompt": "Run the real script on the full log. Point it at the account from lesson 7, set the limit the adviser asked for and save the alert report. Record the count and the exact line the script printed."},
+    "exit": "A script counts 6 failed sign-ins on your own account while you were at lunch. What can the script tell the adviser? What can only a person find out?",
+    "teacher": [
+      {"minutes": 5, "instruction": "Run the human for-loop. Read twenty invented results aloud at speed, compare tallies and ask why the totals differ. Name the job a loop does."},
+      {"minutes": 8, "instruction": "Introduce the terms with the worked example. Read the script aloud line by line: the two settings, the loop, the if inside it and the if at the bottom. Trace the first two sample lines together."},
+      {"minutes": 18, "instruction": "Pairs open Let Python Do the Counting on a real Linux computer. One partner types while the other predicts each result before Enter is pressed. If no practice computer is available, pairs finish tasks 1 and 2 on paper."},
+      {"minutes": 4, "instruction": "Discuss “What happened next.” Ask what a limit of 1 would do to the adviser’s day, and why the script names an account and never a person."},
+      {"minutes": 5, "instruction": "Give the exit individually. Collect one thing the script can report and one question only a person can answer."}
+    ],
+    "lookFor": "Students trace the count line by line, change a setting on purpose and predict the result before running it. They report the count as a fact about an account and leave the cause for a person to check.",
+    "support": "Cover the script with a sheet of paper and slide it down one line at a time. Keep the current value of failed on a sticky note and replace it whenever it changes.",
+    "stretch": "The script checks one account at a time. Describe, in words or in Python, a change that would also print the time of the first failure it finds."
+  },
+  {
     "title": "Draft a Safe-to-Share bulletin",
     "objective": "Prepare a club bulletin with checked event details and a private editor's note explaining your security and AI decisions.",
     "skill": "Bulletin Editor",

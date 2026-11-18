@@ -5,13 +5,15 @@ import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
 import {once} from 'node:events';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {renderCybersecurityCourse, NEW_COURSE_PAGE_FILES} from '../scripts/cybersecurity-course.mjs';
-import {coursePageRoute} from '../scripts/foundations-course.mjs';
+import {renderCybersecurityCourse, NEW_COURSE_PAGE_FILES, COURSE_DOWNLOADS, classroomShareURL} from '../scripts/cybersecurity-course.mjs';
+import {coursePageRoute} from '../scripts/course-page.mjs';
 import {MEMBER_FILES, publicFilesFor} from '../scripts/build.mjs';
 import {createPreviewServer} from '../scripts/serve.mjs';
 import {learningRoute} from '../src/learning-routes.js';
 import {routeAccess} from '../src/access-policy.js';
 import {CATALOG} from '../src/lab-catalog.js';
+import {CYBER_FIELD_LABS} from '../src/linux-catalog.js';
+import {SIGNIN_LOG, SIGNIN_FACTS, COUNT_SCRIPT} from '../terminal-sandbox/cyber-labs.js';
 
 const directory = 'courses/cybersecurity-responsible-ai';
 const sources = ['security.json', 'responsible-ai.json'].map(name => directory + '/' + name);
@@ -28,7 +30,7 @@ function visibleText(html) {
 }
 
 test('each 40-minute lesson supplies its evidence, student handout, and teacher plan', () => {
-  assert.equal(lessons.length, 16);
+  assert.equal(lessons.length, 17);
   assert.equal(new Set(lessons.map(lesson => lesson.title)).size, lessons.length);
   assert.deepEqual(new Set(pages.keys()), new Set(NEW_COURSE_PAGE_FILES));
   const allHandouts = visibleText(workbook);
@@ -145,26 +147,117 @@ test('extensionless course pages work in both preview modes while authoring file
         assert.ok(!manifest.includes(source) && !MEMBER_FILES.includes(source), source);
         assert.equal((await fetch(base + '/' + source)).status, 404, source);
       }
-      assert.equal((await fetch(base + '/' + directory + '/lesson-17')).status, 404);
+      assert.equal((await fetch(base + '/' + directory + '/lesson-18')).status, 404);
     } finally {
       await new Promise(resolve => server.close(resolve));
     }
   }
 });
 
-test('every unit has four lessons and the skill tracker lists each skill once', () => {
+test('the four units cover all seventeen lessons and the skill tracker lists each skill once', () => {
   const hub = pages.get(directory + '/index.html');
   const map = hub.split('id="lesson-map"')[1].split('id="course-labs"')[0];
   const units = [...map.matchAll(/<section class="fc-week"><h3>([^<]+)<\/h3><ol start="(\d+)">([\s\S]*?)<\/ol>/gu)];
   assert.deepEqual(units.map(([, heading, start, items]) => [heading.slice(0, 6), Number(start), [...items.matchAll(/<li>/gu)].length]),
-    [['Unit 1', 1, 4], ['Unit 2', 5, 4], ['Unit 3', 9, 4], ['Unit 4', 13, 4]]);
+    [['Unit 1', 1, 4], ['Unit 2', 5, 4], ['Unit 3', 9, 4], ['Unit 4', 13, 5]]);
   for (const page of [hub, workbook]) {
     const tracker = visibleText(page.split('id="skills"')[1].split('</section>')[0]).replace(/\s+/gu, ' ');
     lessons.forEach((lesson, i) => assert.ok(tracker.includes('Lesson ' + (i + 1) + ' · ' + lesson.skill), lesson.skill));
   }
-  for (const number of [15, 16]) {
+  for (const number of [16, 17]) {
     assert.ok(pages.get(directory + '/lesson-' + number + '.html').includes('href="/' + directory + '/project"'));
     assert.ok(project.includes('href="/' + directory + '/lesson-' + number + '#student-handout"'));
   }
   assert.equal([...workbook.matchAll(/<table>/gu)].length, 1, 'Only the survey lesson carries a tally sheet');
+});
+
+test('four lessons offer their real Linux lab through a public student link, with the other activities as the fallback', () => {
+  const hub = pages.get(directory + '/index.html');
+  assert.deepEqual(lessons.flatMap((lesson, i) => lesson.machineLab ? [[i + 1, lesson.machineLab.id]] : []), CYBER_FIELD_LABS.map(lab => [lab.lesson, lab.id]));
+  for (const lab of CYBER_FIELD_LABS) {
+    const lessonId = 'lesson-' + String(lab.lesson).padStart(2, '0');
+    const anchor = 'real-lab-' + String(lab.lesson).padStart(2, '0');
+    const page = pages.get(directory + '/' + lessonId + '.html');
+    const handout = page.split('id="student-handout"')[1].split('id="teacher-plan"')[0];
+    const box = handout.split('id="' + anchor + '"')[1].split('</aside>')[0];
+    const href = box.match(/<a href="([^"]+)"/u)[1].replaceAll('&amp;', '&');
+    const url = new URL(href, origin);
+    assert.equal(url.searchParams.get('mode'), 'student');
+    assert.equal(url.hash, '#linux/' + lab.id);
+    assert.equal(routeAccess(learningRoute(url.hash)), 'public');
+    const text = visibleText(box);
+    for (const passage of [lab.title, lab.minutes + ' minutes', lessons[lab.lesson - 1].machineLab.prompt, 'If no practice computer is available, use the other activities on this page.', 'Use these tools only on the practice files.']) {
+      assert.ok(text.includes(passage), lessonId + ' real lab box is missing: ' + passage);
+    }
+    assert.ok(workbook.includes('id="' + anchor + '"'), 'The workbook carries the same lab link');
+    assert.ok(hub.includes('href="/' + directory + '/' + lessonId + '#' + anchor + '"'), 'The overview links to the lab box in ' + lessonId);
+    assert.ok(lessons[lab.lesson - 1].tasks.length >= 3, 'The lesson still works without a practice computer');
+  }
+  assert.throws(() => renderCybersecurityCourse(lessons.map((lesson, i) => i === 2 ? {...lesson, machineLab: {id: 'CYB-101', prompt: 'x'}} : lesson)), /cyber field lab written for it/u);
+});
+
+test('the Python lesson prints the same script and log lines the real lab runs', () => {
+  const lesson = lessons[14];
+  assert.equal(lesson.title, 'Let Python do the counting');
+  assert.equal(lesson.machineLab.id, 'CYB-104');
+  const [sample, script] = lesson.code;
+  assert.equal(script.lines.join('\n') + '\n', COUNT_SCRIPT, 'The handout script is the lab script, line for line');
+  assert.equal(sample.lines.length, 6);
+  for (const line of sample.lines) assert.ok(SIGNIN_LOG.includes(line), line);
+  assert.equal(sample.lines.filter(line => line.includes('FAILED') && line.includes('user=adviser ')).length, 3, 'A hand trace for the adviser account reaches 3');
+  assert.equal(sample.lines.filter(line => line.includes('FAILED') && line.includes('user=mia ')).length, 1);
+  assert.ok(lesson.evidence.some(card => card.includes('full log of ' + SIGNIN_FACTS.lines + ' lines') && card.includes('counted ' + SIGNIN_FACTS.adviser + ' failed')));
+  const page = pages.get(directory + '/lesson-15.html');
+  const blocks = [...page.matchAll(/<pre class="fc-authored fc-code"><code>([\s\S]*?)<\/code><\/pre>/gu)].map(match => visibleText(match[1]));
+  assert.deepEqual(blocks, [sample.lines.join('\n'), script.lines.join('\n')], 'Indentation and line breaks survive on the page');
+  assert.match(blocks[1], /\n    if "FAILED" in line/u);
+  assert.equal([...workbook.matchAll(/<pre class="fc-authored fc-code">/gu)].length, 2);
+  assert.equal(lessons.filter(item => item.code).length, 1, 'Only the Python lesson carries code');
+});
+
+test('every lesson, the workbook, the project and each lab can be downloaded or shared to Google Classroom', () => {
+  const hub = pages.get(directory + '/index.html');
+  const assets = '/assets/courses/cybersecurity-responsible-ai/';
+  const hrefs = html => [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/gu)].map(([tag, href]) => ({tag, href: href.replaceAll('&amp;', '&')}));
+  const downloads = html => hrefs(html).filter(link => link.href.startsWith(assets));
+  const shared = html => hrefs(html).filter(link => link.href.startsWith('https://classroom.google.com/')).map(link => {
+    const url = new URL(link.href);
+    assert.equal(url.origin + url.pathname, 'https://classroom.google.com/share');
+    assert.deepEqual([...url.searchParams.keys()], ['url'], 'Google receives the public page address and nothing else');
+    assert.match(link.tag, /rel="noopener"/u);
+    return url.searchParams.get('url');
+  });
+  assert.equal(classroomShareURL('/labs/museum-label'), 'https://classroom.google.com/share?url=https%3A%2F%2Fwww.colelearninglabs.com%2Flabs%2Fmuseum-label');
+
+  const offered = new Set();
+  for (const [file, html] of pages) {
+    for (const link of downloads(html)) {
+      assert.match(link.tag, /\sdownload>/u, 'Download links save the file: ' + link.href);
+      assert.ok(COURSE_DOWNLOADS.includes(link.href.slice(1)), file + ' links to a download that is not published: ' + link.href);
+      offered.add(link.href.slice(1));
+    }
+    for (const address of shared(html)) {
+      const url = new URL(address);
+      assert.equal(url.origin, origin, 'Only this site is shared: ' + address);
+      if (url.pathname.startsWith('/' + directory)) assert.ok(pages.has((url.pathname.slice(1)) + '.html'), address);
+    }
+  }
+  assert.deepEqual([...offered].sort(), [...COURSE_DOWNLOADS].sort(), 'Every published download is linked from a course page');
+
+  lessons.forEach((lesson, i) => {
+    const slug = 'lesson-' + String(i + 1).padStart(2, '0');
+    const html = pages.get(directory + '/' + slug + '.html');
+    assert.deepEqual(downloads(html).map(link => link.href), [assets + slug + '.pdf'], slug);
+    const expected = [origin + '/' + directory + '/' + slug + '#student-handout',
+      ...(lesson.courseLab ? [origin + lesson.courseLab.path] : []),
+      ...(lesson.machineLab ? [origin + '/?mode=student&cart=true#linux/' + lesson.machineLab.id] : [])];
+    assert.deepEqual(shared(html), expected, slug);
+  });
+  assert.deepEqual(downloads(workbook).map(link => link.href), [assets + 'student-workbook.pdf']);
+  assert.equal(shared(workbook)[0], origin + '/' + directory + '/workbook');
+  assert.deepEqual(downloads(project).map(link => link.href), [assets + 'final-project.pdf']);
+  assert.deepEqual(shared(project), [origin + '/' + directory + '/project']);
+  const section = hub.split('id="print-share"')[1].split('</section>')[0];
+  assert.deepEqual(downloads(section).map(link => link.href), ['student-workbook', 'lesson-plans', 'printable-labs', 'final-project', 'lesson-01'].map(name => assets + name + '.pdf'));
+  assert.match(visibleText(section), /Cole Learning Labs receives no roster, no student work and no grades\./u);
 });

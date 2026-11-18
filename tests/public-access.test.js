@@ -5,7 +5,7 @@ import {once} from 'node:events';
 import {mkdtemp,readFile,readdir,rm} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {buildSite,publicFilesFor,COURSE_DOWNLOAD_FILES,COURSE_DATA_FILE} from '../scripts/build.mjs';
+import {buildSite,publicFilesFor,COURSE_DOWNLOAD_FILES} from '../scripts/build.mjs';
 import {createPreviewServer} from '../scripts/serve.mjs';
 import {CATALOG} from '../src/lab-catalog.js';
 import {FREE_LAB_IDS,ELEMENTARY_LAB_IDS} from '../src/access-policy.js';
@@ -49,9 +49,9 @@ test('the actual public artifact has no raw source or paid resource endpoint, in
   t.after(()=>new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve())));
   assert.deepEqual((await readdir(path.join(built.directory,'src'))).filter(file=>file.endsWith('.js')).sort(),['app.js','double-counted-ballot.js','locker-note.js','museum-label.js','receipt-verifier.js','secure-reports.js','site-menu.js','train-the-sorter.js']);
   assert.equal(publicFilesFor('preview').some(file=>file.startsWith('memberships/')),false);
-  assert.deepEqual(publicFilesFor('preview').filter(file=>/\.(?:pdf|docx)$/u.test(file)).sort(),[...COURSE_DOWNLOAD_FILES].sort(),'Only the four explicitly reviewed public course downloads are available in a restricted preview.');
+  assert.deepEqual(publicFilesFor('preview').filter(file=>/\.(?:pdf|docx)$/u.test(file)).sort(),[...COURSE_DOWNLOAD_FILES].sort(),'Only explicitly reviewed public course downloads are available in a restricted preview.');
   for(const path of ['/src/scenarios.js','/src/expanded-labs.js','/src/coding-lab.js','/src/coding-workbench.js','/src/sign-in.js','/src/owner-preview.js','/src/owner-preview.js?ownerPreview=true','/src/coding-sandbox.js','/src/lesson-plans.js','/src/elementary-labs.js','/src/block-workshop.js','/src/assembly-builder.js','/src/inbox-defender.js',
-    '/memberships/worker.js','/memberships/dist/worker.mjs','/learn/src/app.js','/assets/cole-learning-labs-pop-quizzes.pdf','/'+COURSE_DATA_FILE,'/scripts/foundations-course.mjs','/assets/courses/foundations/teacher-guide.pdf',
+    '/memberships/worker.js','/memberships/dist/worker.mjs','/learn/src/app.js','/assets/cole-learning-labs-pop-quizzes.pdf','/courses/cybersecurity-responsible-ai/security.json','/scripts/cybersecurity-course.mjs','/courses/foundations','/courses/foundations/day-01','/assets/courses/foundations/student-workbook.pdf','/assets/courses/foundations/teacher-guide.pdf',
     '/courses/cybersecurity-responsible-ai/security.json','/courses/cybersecurity-responsible-ai/responsible-ai.json','/scripts/cybersecurity-course.mjs']){
     const result=await request(server,path);assert.equal(result.status,404,path);
     assert.equal(result.body.includes('MY CREATIVE STUDIO'),false);

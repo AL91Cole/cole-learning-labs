@@ -1,5 +1,7 @@
 const ORIGIN='https://www.colelearninglabs.com';
 const RELEASE='20261117-foundations-course';
+/** A generated course file's public address: no .html and no /index. */
+export const coursePageRoute=file=>'/'+file.replace(/\/index\.html$/u,'').replace(/\.html$/u,'');
 export const esc=value=>String(value??'').replace(/[&<>"']/gu,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 export function coursePage({title,description,pathname,body,footerNote}){

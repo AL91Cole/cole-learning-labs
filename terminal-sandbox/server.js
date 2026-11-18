@@ -28,6 +28,7 @@ import {
 } from "./cloud-sandboxes.js";
 import { generatedLabs } from "./generated-labs.js";
 import { linuxLabs } from "./linux-labs.js";
+import { cyberLabs } from "./cyber-labs.js";
 import { withOnlineSteps, ONLINE_SITES } from "./online-steps.js";
 
 const execFileAsync = promisify(execFile),
@@ -560,6 +561,8 @@ export const labCatalog = () => [...LAB_CATALOG.values()];
 registerLabs(Object.values(generatedLabs()).map(withOnlineSteps));
 // Beginner labs on using a Linux computer (linux-labs.js).
 registerLabs(linuxLabs());
+// Cyber field labs for the grades 7-8 course: the same classroom cases, done with real tools.
+registerLabs(cyberLabs());
 /** Load a private content module (absolute path or file: URL) that exports `labs`. */
 export async function loadLabContent(specifier) {
   if (typeof specifier !== "string" || !specifier.trim()) return [];

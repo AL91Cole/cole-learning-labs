@@ -78,7 +78,8 @@
       "route": "#learn/SEC-400",
       "label": "Practice safe security habits",
       "prompt": "Open the Explore, Practice and Check tabs. Add a second sign-in factor to the practice account and limit what it may do. Record which step proved who was signing in and which step limited their actions. Use only the practice account on the screen."
-    }
+    },
+    "machineLab": {"id": "CYB-101", "prompt": "Do the roster plan with real file permissions. Read the letters, give the owner and the co-chair group the access they need, shut everyone else out, and share a head count with no names in it."}
   },
   {
     "title": "Follow a message across the network",
@@ -172,7 +173,8 @@
     ],
     "lookFor": "Students find the key by reasoning from a repeated word or by an organized brute-force search. They explain that the key must stay private, and they separate keeping a message secret from detecting a change.",
     "support": "Write the alphabet on two paper strips. Slide the bottom strip to line up a guess, then read straight across. Try the shortest words first.",
-    "stretch": "TAB and BAT have the same club fingerprint. Explain why. Then explain why the fingerprints used for real downloads are designed so that nobody can find two files that match."
+    "stretch": "TAB and BAT have the same club fingerprint. Explain why. Then explain why the fingerprints used for real downloads are designed so that nobody can find two files that match.",
+    "machineLab": {"id": "CYB-102", "prompt": "Decode the locker note with the tr command, then use real SHA-256 fingerprints to find the copy of the rule that still matches the adviser’s. Compare how much a real fingerprint changes when four letters change."}
   },
   {
     "title": "Decide what to do with an urgent message",
@@ -300,7 +302,8 @@
     ],
     "lookFor": "In the art case, students name a time and an observation and check the print result before declaring recovery. In the ballot handoff, they support the tally with a receipt and leave the cause open.",
     "support": "Arrange the four records by time or ask a partner to read them aloud. Start your report with “At ___ we saw ___” and “We still need to check ___.”",
-    "stretch": "The 1:04 copy omitted a new label approved at 1:08. What additional evidence would the adviser need before choosing a final version?"
+    "stretch": "The 1:04 copy omitted a new label approved at 1:08. What additional evidence would the adviser need before choosing a final version?",
+    "machineLab": {"id": "CYB-103", "prompt": "The label sheet changed just after 1:12 p.m. Search the sign-in log for the minutes before that. Count the failed sign-ins and find the account and address behind them. Report what the log shows and what it cannot tell you about a person."}
   },
   {
     "title": "Hackers with permission",

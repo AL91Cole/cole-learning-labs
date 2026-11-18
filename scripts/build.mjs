@@ -8,16 +8,17 @@ import { bundleTier, STANDALONE_LAB_IDS } from './tier-bundles.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import {bundlePageStyles,styleBundlePath} from './style-bundles.mjs';
 import {PART_ART} from '../src/part-art.js';
-import {COURSE_PAGE_FILES as FOUNDATIONS_PAGE_FILES,COURSE_DOWNLOAD_FILES,COURSE_DATA_FILE,parseFoundationsData,renderFoundationsCourse} from './foundations-course.mjs';
-import {NEW_COURSE_PAGE_FILES, renderCybersecurityCourse} from './cybersecurity-course.mjs';
-export {COURSE_DOWNLOAD_FILES, COURSE_DATA_FILE} from './foundations-course.mjs';
+import {NEW_COURSE_PAGE_FILES, COURSE_DOWNLOADS, renderCybersecurityCourse} from './cybersecurity-course.mjs';
 
-export const COURSE_PAGE_FILES = Object.freeze([...FOUNDATIONS_PAGE_FILES, ...NEW_COURSE_PAGE_FILES]);
+export const COURSE_PAGE_FILES = Object.freeze([...NEW_COURSE_PAGE_FILES]);
+// Reviewed PDF downloads that ship with a course. They are printed from the course pages by
+// scripts/generate-course-downloads.mjs; the curriculum-download checks pin each file's hash.
+export const COURSE_DOWNLOAD_FILES = Object.freeze([...COURSE_DOWNLOADS]);
 const CYBERSECURITY_DATA_FILES = [
   'courses/cybersecurity-responsible-ai/security.json',
   'courses/cybersecurity-responsible-ai/responsible-ai.json'
 ];
-const COURSE_DATA_FILES = [COURSE_DATA_FILE, ...CYBERSECURITY_DATA_FILES];
+const COURSE_DATA_FILES = CYBERSECURITY_DATA_FILES;
 export const STANDALONE_LAB_PAGES = Object.freeze(STANDALONE_LAB_IDS.map(id => 'labs/' + id + '.html'));
 const standaloneLabScripts = STANDALONE_LAB_IDS.map(id => 'src/' + id + '.js');
 const standaloneLabPublicFiles = [...STANDALONE_LAB_PAGES, ...standaloneLabScripts, 'assets/museum-record-m17.webp'];
@@ -205,8 +206,6 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   for (const directory of PUBLIC_DIRECTORIES) await validatePublicTree(root, directory);
   const sources = new Map();
   for (const filename of PUBLIC_SOURCE_FILES) sources.set(filename, await sourceBytes(root, filename));
-  const courseData=parseFoundationsData(sources.get(COURSE_DATA_FILE).toString('utf8'));
-  for(const [filename,html]of renderFoundationsCourse(courseData))sources.set(filename,Buffer.from(html));
   const securityLessons = CYBERSECURITY_DATA_FILES.flatMap(filename => JSON.parse(sources.get(filename).toString('utf8')));
   for (const [filename, html] of renderCybersecurityCourse(securityLessons)) sources.set(filename, Buffer.from(html));
   const content = new Map(publicFiles.filter(filename=>sources.has(filename)).map(filename=>[filename,sources.get(filename)]));

@@ -51,7 +51,10 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // screens, the machine's reach in its status line, the online-labs privacy
   // paragraph and the optional support link add about 4 KB of source; the
   // compiled caps stay unchanged.
-  assert.ok(bytes<1_854_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // The four cyber field labs for the grades 7–8 course (catalog entries, their
+  // section on the real-machine page and the links back to a lesson) add about
+  // 3 KB of source and raise this cap from 1,854,000.
+  assert.ok(bytes<1_858_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{

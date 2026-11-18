@@ -27,8 +27,9 @@ test('the configuration names the real machines but labs keep the simulated desk
   assert.equal(LAB_ENVIRONMENT_CONFIG.remote.base, '/terminal', 'same-origin through the Pages gateway keeps the Content-Security-Policy as it is');
   const wanted = SCENARIOS.filter(item => ['network', 'security', 'coding'].includes(item.track)).map(item => item.id).sort();
   const listed = Object.keys(LAB_ENVIRONMENT_CONFIG.remote.labs).sort();
-  assert.deepEqual(listed.filter(id => !id.startsWith('LNX-')), wanted, 'every networking, security and coding lab is listed');
+  assert.deepEqual(listed.filter(id => !/^(?:LNX|CYB)-/u.test(id)), wanted, 'every networking, security and coding lab is listed');
   assert.deepEqual(listed.filter(id => id.startsWith('LNX-')), ['LNX-101', 'LNX-102', 'LNX-103', 'LNX-104', 'LNX-105'], 'and the Linux basics course');
+  assert.deepEqual(listed.filter(id => id.startsWith('CYB-')), ['CYB-101', 'CYB-102', 'CYB-103', 'CYB-104'], 'and the course\'s cyber field labs');
   assert.equal(wanted.length, 28);
   assert.deepEqual(listLabEnvironments().map(item => item.id).sort(), ['remote-terminal', 'simulated-desktop']);
   assert.equal(remoteServiceState(), 'unknown', 'Node never probes the service on import');
