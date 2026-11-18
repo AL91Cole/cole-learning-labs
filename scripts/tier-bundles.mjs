@@ -8,7 +8,7 @@ import {FREE_LAB_IDS} from '../src/access-policy.js';
 import {FREE_ARCADE_IDS} from '../src/arcade-catalog.js';
 
 const PROJECT_ROOT=fileURLToPath(new URL('../',import.meta.url));
-export const STANDALONE_LAB_IDS = Object.freeze(['double-counted-ballot', 'museum-label']);
+export const STANDALONE_LAB_IDS = Object.freeze(['double-counted-ballot', 'museum-label', 'locker-note', 'train-the-sorter']);
 const reviewedEntries = new Set(['app.js', 'secure-reports.js', 'receipt-verifier.js', 'site-menu.js', ...STANDALONE_LAB_IDS.map(id => id + '.js')]);
 const FREE_IDS=Object.freeze([...FREE_LAB_IDS]);
 const FREE_SET=new Set(FREE_IDS);

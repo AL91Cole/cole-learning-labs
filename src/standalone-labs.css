@@ -97,6 +97,11 @@ details { margin: .8rem 0; }
 .lab-paper-ledger li { margin: 0; padding: .55rem; border: 1px solid #bdcec5; background: white; line-height: 1.3; }
 .lab-paper-ledger span { display: block; font-size: .8rem; color: #456163; }
 .lab-paper-ledger b { display: block; }
+.lab-table-full { max-height: none; }
+.lab-cipher { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .09em; overflow-wrap: anywhere; }
+.lab-note { font-size: clamp(1.2rem, 2.6vw, 1.7rem); font-weight: 650; line-height: 1.5; margin-block: 1rem; padding-block: .8rem; border-block: 1px solid #6b8a8c; }
+.lab-paper table { margin-block: .8rem; border: 1px solid #bdcfc8; background: white; }
+.lab-letter-strip { grid-template-columns: repeat(13,minmax(0,1fr)); text-align: center; }
 .lab-update { border-left: 3px solid #42786a; padding: .65rem 1rem; background: #eef4ef; }
 .lab-update p { margin-top: .6rem; }
 .lab-foot { margin-top: 2.75rem; padding: 1.15rem 0 2rem; border-top: 1px solid #a8beb4; font-size: .94rem; }
@@ -109,6 +114,7 @@ details { margin: .8rem 0; }
   .lab-intro { gap: 1rem; }
   .lab-photo { max-width: 31rem; }
   .lab-paper-ledger { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .lab-letter-strip { grid-template-columns: repeat(7,minmax(0,1fr)); }
   th, td { padding: .4rem; }
 }
 @media (max-width: 370px) {
@@ -130,6 +136,9 @@ details { margin: .8rem 0; }
   .lab-paper li { margin-bottom: 1mm; }
   .lab-paper h2, .lab-paper h3 { break-after: avoid; }
   .lab-paper-ledger { grid-template-columns: repeat(5,1fr); gap: 1mm; }
+  .lab-letter-strip { grid-template-columns: repeat(13,1fr); }
+  .lab-paper table { break-inside: avoid; }
+  .lab-paper th, .lab-paper td { padding: .6mm 2mm; }
   .lab-paper-ledger li { padding: 1mm 2mm; break-inside: avoid; }
   .lab-paper-ledger span { font-size: 8pt; }
   .lab-update { break-inside: avoid; }

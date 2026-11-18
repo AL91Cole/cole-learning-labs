@@ -38,7 +38,7 @@ test('every landing page opens directly at its ordinary address in both access m
   }
 });
 
-test('both standalone labs load only their reviewed local assets in either public access mode', async t => {
+test('the standalone labs load only their reviewed local assets in either public access mode', async t => {
   const labPolicy = (await read('_headers')).match(/^\/labs\/\*\n[^\n]*\n\s+Content-Security-Policy: (.+)$/mu)[1];
   assert.match(labPolicy, /script-src 'self';/u);
   assert.match(labPolicy, /connect-src 'none';/u);
