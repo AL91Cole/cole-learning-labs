@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES } from '../scripts/build.mjs';
+import { PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES, STANDALONE_LAB_PAGES } from '../scripts/build.mjs';
 import { previewContentType } from '../scripts/serve.mjs';
 
 const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8');
@@ -9,7 +9,7 @@ const canonicalPages = new Map([
   ['index.html', '/'], ['school-it.html', '/school-it'], ['ai-use-notice.html','/ai-use-notice'], ['compliance.html','/compliance'], ['verify.html','/verify'],
   ['student-workbook.html', '/student-workbook'], ['practice-quizzes.html', '/practice-quizzes'],
   ['classroom.html', '/classroom'], ['secure-reports.html', '/secure-reports'], ['teacher/index.html', '/teacher/'],
-  ...PUBLIC_LANDING_PAGES.map(file => [file, '/' + file.replace(/.html$/u, '')])
+  ...[...PUBLIC_LANDING_PAGES, ...STANDALONE_LAB_PAGES].map(file => [file, '/' + file.replace(/\.html$/u, '')])
 ]);
 const origin = 'https://www.colelearninglabs.com';
 const cyberCourse = '/courses/cybersecurity-responsible-ai';

@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES, publicFilesFor, buildSite } from './build.mjs';
+import { PUBLIC_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES, STANDALONE_LAB_PAGES, publicFilesFor, buildSite } from './build.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 import {coursePageRoute} from './foundations-course.mjs';
@@ -30,8 +30,9 @@ const ROUTES = new Map([
   ['/teacher', 'teacher/index.html'], ['/teacher/', 'teacher/index.html'],
   // Landing pages are served at their extensionless address, as on the published site.
   ...PUBLIC_LANDING_PAGES.map(file=>['/'+file.slice(0,-'.html'.length),file]),
-  ...COURSE_PAGE_FILES.flatMap(file=>[[coursePageRoute(file),file],[coursePageRoute(file)+'/',file]])
+  ...[...COURSE_PAGE_FILES, ...STANDALONE_LAB_PAGES].flatMap(file=>[[coursePageRoute(file),file],[coursePageRoute(file)+'/',file]])
 ]);
+const standaloneLabPolicy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests";
 const MEMBER_PATHS = new Set(['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html',
   '/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html']);
 const BASE_HEADERS = Object.freeze({
@@ -123,6 +124,7 @@ export function createPreviewServer({ sourceRoot = path.join(PROJECT_ROOT,'dist'
     try {
       const body = await publicFileBytes(sourceRoot, filename);
       const headers = { ...BASE_HEADERS, 'Content-Type': previewContentType(filename), 'Content-Length': body.length };
+      if (STANDALONE_LAB_PAGES.includes(filename)) headers['Content-Security-Policy'] = standaloneLabPolicy;
       if (DOWNLOAD_EXTENSIONS.has(path.extname(filename).toLowerCase())) {
         headers['Content-Disposition'] = `attachment; filename="${path.basename(filename).replaceAll(/["\\]/g, '_')}"`;
       }

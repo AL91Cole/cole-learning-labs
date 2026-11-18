@@ -131,15 +131,26 @@
       "Mark one action that limits further changes and one that preserves evidence. Explain why the adviser would keep the changed sheet while working on a separate copy.",
       "Use the timeline to finish the club's response playbook, a short guide to what to do next. Fill in both lines for the adviser. “If the print test falls short, we should ___.” “We can tell the crew the labels are ready when ___.” Use the 1:24 record to decide which line applies now."
     ],
+    "courseLab": {
+      "path": "/labs/double-counted-ballot",
+      "title": "The Double-Counted Ballot",
+      "introduction": "The art crew needed to know whether all 12 labels would print. Now the art club needs to know whether its results board counted each ballot once.",
+      "steps": [
+        "Read the preliminary totals and the signed club rule. Write down the displayed totals and explain what counts as one ballot.",
+        "Find a receipt that appears more than once. Test what happens when you count each receipt once. What changed on the board?",
+        "Choose what the crew can announce. Use one record to support it and identify one question a person still needs to check."
+      ],
+      "artifact": "Give the adviser a two-line handoff with the checked tally and its evidence on the first line. On the second, say what remains unknown and who should check it."
+    },
     "exit": "A copy of the seating chart opens after recovery. The door team still gets “Access denied.” Write the next handoff in two lines. What has been verified, and what does the team still need someone to test?",
     "teacher": [
-      {"minutes": 5, "instruction": "Ask what the print-table crew needs in its hands at showtime. Write the success condition where everyone can see it."},
-      {"minutes": 8, "instruction": "Read the scrambled records. Model labeling a time and an observation. Invite one explanation that the records leave uncertain."},
-      {"minutes": 13, "instruction": "Pairs order the records and draft a handoff. One partner reads it as the adviser and asks which statement comes directly from the sheet."},
-      {"minutes": 9, "instruction": "Pairs trade their two-line playbooks. Give the partner the 1:24 result, then a hypothetical printout with all 12 correct labels. Ask them to follow the guide for each result and explain why the next action changes."},
-      {"minutes": 5, "instruction": "Give the seating-chart exit. Ask each learner to distinguish tested access from access still needing a check."}
+      {"minutes": 4, "instruction": "Ask what the print-table crew needs in its hands at showtime. Write its success condition on the board."},
+      {"minutes": 10, "instruction": "As a class, order the art-show records and circle the action that preserved the changed sheet. Use the 1:24 print result to finish the two playbook lines together. Ask what nobody saw happen."},
+      {"minutes": 18, "instruction": "Give each pair The Double-Counted Ballot in its browser or paper edition. One partner reads the signed counting rule while the other compares the display with the receipt ledger. Swap roles to test a count-once rule and write the evidence and open question in a handoff."},
+      {"minutes": 3, "instruction": "Have two pairs exchange handoffs. Can the readers find the record behind the announced result? Ask them to underline any claim about a person that the records cannot establish."},
+      {"minutes": 5, "instruction": "Give the seating-chart exit. Ask each learner to use the same two-line handoff to distinguish tested access from access still needing a check."}
     ],
-    "lookFor": "The report gives a time and a concrete observation, leaves the cause open, and checks the crew's real task before declaring recovery.",
+    "lookFor": "In the art case, students name a time and an observation and check the print result before declaring recovery. In the ballot handoff, they support the tally with a receipt and leave the cause open.",
     "support": "Arrange the four records by time or ask a partner to read them aloud. Start your report with “At ___ we saw ___” and “We still need to check ___.”",
     "stretch": "The 1:04 copy omitted a new label approved at 1:08. What additional evidence would the adviser need before choosing a final version?"
   },

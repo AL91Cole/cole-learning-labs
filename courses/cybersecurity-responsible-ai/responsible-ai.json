@@ -19,15 +19,26 @@
       "Rewrite B in two sentences a family could use. Underline each detail you kept and point to the matching words in A.",
       "C asks you to change the announcement. Circle the location you can publish now and name the record that supports it. Write one question you could ask the science teacher in person before making a change."
     ],
+    "courseLab": {
+      "path": "/labs/museum-label",
+      "title": "Who Wrote the Museum Label?",
+      "introduction": "You checked a telescope promise against the science teacher’s notice. A museum now needs you to check a caption for photo M-17 before visitors read it.",
+      "steps": [
+        "Compare the AI caption with the photo description, the registrar’s signed card and the visitor’s note. Decide which claims you can support and select the evidence for each.",
+        "Draft a label using details a reader can check. Credit the records and say how the AI draft was used.",
+        "Read the curator’s March 12 update and revise your label. What changed about the two people in the picture? Which question still has no answer?"
+      ],
+      "artifact": "Keep both labels. Next to the changed words in the second version, name the record that supports your edit. Mark one claim you would still ask a person to verify."
+    },
     "exit": "A new draft says visitors can borrow star charts. Which words support it? Which claim from the first draft still needs a person to confirm it?",
     "teacher": [
-      {"minutes": 5, "instruction": "Collect three plausible endings to the twilight sentence. Ask what a witness would need to tell us to establish which one happened."},
-      {"minutes": 8, "instruction": "Explain how predicting pieces of text can produce a convincing sentence with a wrong detail. Invite students to choose one claim and point to the record they would use to check it."},
-      {"minutes": 12, "instruction": "Pairs classify the three claims. Ask them to justify each label with the original notice, including how they handled any detail that was hard to check."},
-      {"minutes": 10, "instruction": "Trade rewritten announcements. Ask the other pair to trace the location to an approved record and explain how they would confirm the requested change."},
-      {"minutes": 5, "instruction": "Collect the exit response and look for the difference between a contradiction and an unanswered question."}
+      {"minutes": 4, "instruction": "Collect plausible endings to the twilight sentence. Explain how predicting the next piece of text can produce a convincing sentence with a wrong detail."},
+      {"minutes": 10, "instruction": "Work the Sky Watch case together. Classify the three claims, draft a two-sentence correction on the board and identify who can confirm the unsigned location change."},
+      {"minutes": 18, "instruction": "Give pairs Who Wrote the Museum Label? in its browser or paper edition. Have them match caption claims to records, draft a credited label, then open the March 12 update. Keep both versions and mark which source justified their edit."},
+      {"minutes": 3, "instruction": "Partners trade labels and point to one revised claim. Ask what the curator’s update allows them to say and which question about the people is still open."},
+      {"minutes": 5, "instruction": "Return to the Sky Watch exit. Collect one supported claim with its exact evidence and one claim still needing confirmation."}
     ],
-    "lookFor": "The editor gives a reason for each claim label, traces the revised announcement to specific words in the source, and identifies an appropriate way to resolve an open question.",
+    "lookFor": "Students trace an announcement detail to the signed club notice. Their two museum labels show exactly which claim the curator’s update supports, credit the evidence and leave an unsupported claim open.",
     "support": "Fold a page in half. Put the AI's words on the left and the teacher's exact words on the right. Use a question mark when the notice is silent.",
     "stretch": "Could the newer date on B settle the location? Explain what would give a later update authority to change it."
   },

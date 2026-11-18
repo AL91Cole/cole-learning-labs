@@ -49,8 +49,16 @@ test('public browser security limits scripts, connections, forms, and embedded c
   assert.equal(publicHeaders.get('cross-origin-opener-policy'),'same-origin');
   assert.equal(publicHeaders.get('cross-origin-resource-policy'),'same-origin');
 
+  const standalonePolicy = cspDirectives(rules.get('/labs/*')?.get('content-security-policy'));
+  assert.deepEqual(standalonePolicy, new Map([
+    ['default-src', ["'none'"]], ['script-src', ["'self'"]], ['style-src', ["'self'"]],
+    ['img-src', ["'self'"]], ['font-src', ["'self'"]], ['connect-src', ["'none'"]],
+    ['object-src', ["'none'"]], ['base-uri', ["'none'"]], ['form-action', ["'none'"]],
+    ['frame-src', ["'none'"]], ['frame-ancestors', ["'none'"]], ['upgrade-insecure-requests', []]
+  ]), 'Standalone labs may run local scripts and load local assets with every other resource denied.');
+
   for (const [route, headers] of rules) {
-    if (!headers.has('content-security-policy')) continue;
+    if (!headers.has('content-security-policy') || route === '/labs/*') continue;
     const csp = cspDirectives(headers.get('content-security-policy'));
     const localReport = ['/secure-reports', '/secure-reports.html'].includes(route);
     const worksheet = WORKSHEET_ROUTES.includes(route);

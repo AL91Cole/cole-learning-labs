@@ -70,6 +70,23 @@ test('each 40-minute lesson supplies its evidence, student handout, and teacher 
   assert.ok(workbook.includes('href="/' + directory + '/project"'));
 });
 
+test('course readers can find both virtual labs from the map and the corresponding student handouts', () => {
+  const hub = pages.get(directory + '/index.html');
+  for (const [number, route] of [[4, '/labs/double-counted-ballot'], [6, '/labs/museum-label']]) {
+    const lessonId = 'lesson-' + String(number).padStart(2, '0');
+    assert.equal(lessons[number - 1].courseLab.path, route);
+    const page = pages.get(directory + '/' + lessonId + '.html');
+    const lessonHandout = page.split('id="student-handout"')[1]?.split('id="teacher-plan"')[0];
+    const workbookSection = workbook.split('id="' + lessonId + '"')[1]?.split('<section class="fc-section" id="lesson-')[0];
+    for (const location of [hub, lessonHandout, workbookSection]) {
+      assert.ok(location?.includes('href="' + route + '"'), 'Missing direct student link to ' + route);
+    }
+    for (const handout of [lessonHandout, workbookSection]) {
+      assert.ok(handout.includes('href="' + route + '#paper"'), 'Missing paper option for ' + route);
+    }
+  }
+});
+
 test('course pages keep working internal links, safe external destinations and one main heading', () => {
   const idsByRoute = new Map([...pages].map(([file, html]) => [
     coursePageRoute(file), [...html.matchAll(/\bid="([^"]+)"/gu)].map(match => match[1])

@@ -1,17 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, statSync} from 'node:fs';
-import {PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES, MEMBER_FILES, COURSE_PAGE_FILES} from '../scripts/build.mjs';
+import {PUBLIC_FILES, PUBLIC_SOURCE_FILES, PUBLIC_LANDING_PAGES, STANDALONE_LAB_PAGES, MEMBER_FILES, COURSE_PAGE_FILES} from '../scripts/build.mjs';
 import {learningRoute} from '../src/learning-routes.js';
 import {routeAccess} from '../src/access-policy.js';
 import {CATALOG} from '../src/lab-catalog.js';
 import {ARCADE_CATALOG} from '../src/arcade-catalog.js';
 import {ELEMENTARY_LABS} from '../src/elementary-labs.js';
+import {COURSE_DATA_FILE, coursePageRoute, parseFoundationsData, renderFoundationsCourse} from '../scripts/foundations-course.mjs';
+import {renderCybersecurityCourse} from '../scripts/cybersecurity-course.mjs';
 
 const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8');
 const origin = 'https://www.colelearninglabs.com';
 const cleanPath = file => '/' + file.replace(/\.html$/u, '');
 const pages = new Map(PUBLIC_LANDING_PAGES.map(file => [file, read(file)]));
+const cyberLessons = ['security', 'responsible-ai'].flatMap(topic => JSON.parse(read('courses/cybersecurity-responsible-ai/' + topic + '.json')));
+const pageTargets = new Map([
+  ...PUBLIC_SOURCE_FILES.filter(file => file.endsWith('.html')).map(file => [cleanPath(file), read(file)]),
+  ...[...renderFoundationsCourse(parseFoundationsData(read(COURSE_DATA_FILE))), ...renderCybersecurityCourse(cyberLessons)]
+    .map(([file, html]) => [coursePageRoute(file), html])
+]);
 const text = html => html.replace(/<[^>]+>/gu, ' ').replace(/&amp;/gu, '&').replace(/\s+/gu, ' ');
 const release = read('index.html').match(/src="src\/app\.js\?release=([^"]+)"/u)[1];
 
@@ -27,7 +35,7 @@ const VERIFIED_STANDARDS = new Map([
   ['9-12.CY.5', 'Recommend multiple actions to take prior and in response to various types of digital security breaches.']
 ]);
 const EXTERNAL_HOSTS = new Set(['www.nysed.gov', 'www.cloudflare.com', 'github.com', 'docs.goguardian.com', 'support.google.com', 'www.buymeacoffee.com']);
-const SITE_PAGES = new Set(['/', '/school-it', '/compliance', '/verify', '/ai-use-notice', '/secure-reports', '/student-workbook', '/practice-quizzes', ...PUBLIC_LANDING_PAGES.map(cleanPath), ...COURSE_PAGE_FILES.map(file => '/' + file.replace(/\/index\.html$/u, '').replace(/\.html$/u, ''))]);
+const SITE_PAGES = new Set(['/', '/school-it', '/compliance', '/verify', '/ai-use-notice', '/secure-reports', '/student-workbook', '/practice-quizzes', ...PUBLIC_LANDING_PAGES.map(cleanPath), ...STANDALONE_LAB_PAGES.map(cleanPath), ...COURSE_PAGE_FILES.map(file => '/' + file.replace(/\/index\.html$/u, '').replace(/\.html$/u, ''))]);
 
 function activityExists(route) {
   if (route.page === 'lab' || route.page === 'practice') return CATALOG.some(item => item.id === route.id);
@@ -108,7 +116,7 @@ test('every link on a landing page resolves to a real route, a published page or
         assert.match(url.search, /^\?mode=student(?:&cart=true)?$|^\?cart=true$/u, context + ' uses a documented classroom link mode');
       }
       if (url.pathname === '/' && url.hash) checkHash(url.hash, context);
-      else if (url.hash) assert.match(html + [...pages].find(([name]) => cleanPath(name) === url.pathname)?.[1], new RegExp('id="' + url.hash.slice(1) + '"', 'u'), context + ' names a real section');
+      else if (url.hash) assert.ok(pageTargets.get(url.pathname)?.includes('id="' + url.hash.slice(1) + '"'), context + ' names a section on its destination page');
     }
     for (const [, shown] of html.matchAll(/class="lesson-share-text lesson-share-link">([^<]+)</gu)) {
       const url = new URL(shown.trim());

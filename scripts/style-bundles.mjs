@@ -33,7 +33,8 @@ export async function bundlePageStyles(htmlName, html, sources) {
     }}]
   });
   const filename = styleBundlePath(htmlName);
-  const relative = htmlName === '404.html' ? '/' + filename : path.posix.relative(path.posix.dirname(htmlName), filename);
+  // Standalone lab URLs resolve with or without a trailing slash.
+  const relative = htmlName === '404.html' || htmlName.startsWith('labs/') ? '/' + filename : path.posix.relative(path.posix.dirname(htmlName), filename);
   const release = links[0][0].match(/\?release=([^"&]+)/u)?.[1];
   let first = true;
   const bundledHtml = html.replace(/<link\b[^>]*rel="stylesheet"[^>]*>/gu, () => {

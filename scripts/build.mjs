@@ -4,7 +4,7 @@ import { lstat, mkdir, mkdtemp, open, readdir, realpath, rename, rm, writeFile }
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
-import { bundleTier } from './tier-bundles.mjs';
+import { bundleTier, STANDALONE_LAB_IDS } from './tier-bundles.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import {bundlePageStyles,styleBundlePath} from './style-bundles.mjs';
 import {PART_ART} from '../src/part-art.js';
@@ -18,6 +18,10 @@ const CYBERSECURITY_DATA_FILES = [
   'courses/cybersecurity-responsible-ai/responsible-ai.json'
 ];
 const COURSE_DATA_FILES = [COURSE_DATA_FILE, ...CYBERSECURITY_DATA_FILES];
+export const STANDALONE_LAB_PAGES = Object.freeze(STANDALONE_LAB_IDS.map(id => 'labs/' + id + '.html'));
+const standaloneLabScripts = STANDALONE_LAB_IDS.map(id => 'src/' + id + '.js');
+const standaloneLabPublicFiles = [...STANDALONE_LAB_PAGES, ...standaloneLabScripts, 'assets/museum-record-m17.webp'];
+const standaloneLabSources = new Set([...standaloneLabPublicFiles, 'src/standalone-labs.css']);
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
@@ -35,6 +39,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/turnstile-client.js', 'src/receipt-schema.js', 'src/lab-telemetry.js', 'src/receipt-verifier.js', 'src/receipt-verifier.css',
   'index.html', '404.html', 'classroom.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', 'teacher/index.html', 'student-workbook.html', 'practice-quizzes.html',
   ...PUBLIC_LANDING_PAGES, 'src/landing.css', 'src/site-menu.js',
+  ...standaloneLabSources,
   // JSON-valued data is read for generated HTML only, never delivered as a source endpoint.
   ...COURSE_DATA_FILES, 'src/foundations-course.css', ...COURSE_DOWNLOAD_FILES,
   'manifest.webmanifest', 'sw.js', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/icon-maskable-512.png', 'assets/apple-touch-icon.png',
@@ -74,13 +79,13 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
 const PUBLIC_RECEIPT_TOOLS = new Set(['compliance.html','verify.html','src/receipt-verifier.js','src/receipt-verifier.css']);
 // The installable-app shell and offline cache belong to the public root site only.
 export const PUBLIC_SHELL_FILES = Object.freeze(['manifest.webmanifest','sw.js','assets/icon-192.png','assets/icon-512.png','assets/icon-maskable-512.png','assets/apple-touch-icon.png']);
-export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)&&!PUBLIC_LANDING_PAGES.includes(filename)&&!COURSE_DOWNLOAD_FILES.includes(filename)&&!COURSE_DATA_FILES.includes(filename)&&filename!=='src/foundations-course.css'&&filename!=='src/landing.css'&&filename!=='assets/buymeacoffee-qr.webp'));
+export const MEMBER_FILES = Object.freeze(PUBLIC_SOURCE_FILES.filter(filename=>!PUBLIC_METADATA_FILES.includes(filename)&&!PUBLIC_RECEIPT_TOOLS.has(filename)&&!PUBLIC_SHELL_FILES.includes(filename)&&!PUBLIC_LANDING_PAGES.includes(filename)&&!standaloneLabSources.has(filename)&&!COURSE_DOWNLOAD_FILES.includes(filename)&&!COURSE_DATA_FILES.includes(filename)&&filename!=='src/foundations-course.css'&&filename!=='src/landing.css'&&filename!=='assets/buymeacoffee-qr.webp'));
 const PREVIEW_FILES = Object.freeze([
   'index.html', '404.html', 'school-it.html', 'ai-use-notice.html', 'secure-reports.html', 'compliance.html', 'verify.html', ...PUBLIC_LANDING_PAGES,
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   ...PUBLIC_METADATA_FILES, ...PUBLIC_SHELL_FILES,
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png', 'assets/buymeacoffee-qr.webp', ...Object.values(PART_ART),
-  'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js', 'src/site-menu.js',
+  'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js', 'src/site-menu.js', ...standaloneLabPublicFiles,
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
 const OPEN_RESOURCES=Object.freeze(['student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
@@ -91,7 +96,7 @@ export const publicFilesFor=access=>{
 };
 export const PUBLIC_FILES=publicFilesFor(PUBLIC_LAB_ACCESS);
 const FILES = new Set(PUBLIC_SOURCE_FILES);
-const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', 'lessons', 'courses', '.well-known'];
+const PUBLIC_DIRECTORIES = ['assets', 'src', 'teacher', 'lessons', 'courses', 'labs', '.well-known'];
 
 async function directoryOnly(filename) {
   const info = await lstat(filename);
@@ -235,6 +240,10 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   // The landing pages load the header menu helper on its own; the home page gets it inside the application bundle.
   const siteMenu = await bundleTier({sourceRoot:root,member:false,entry:'site-menu.js'});
   content.set('src/site-menu.js',Buffer.from(siteMenu.javascript));
+  for (const id of STANDALONE_LAB_IDS) {
+    const bundle = await bundleTier({sourceRoot:root, member:false, localOnly:true, entry:id + '.js'});
+    content.set('src/' + id + '.js', Buffer.from(bundle.javascript));
+  }
   content.set('sw.js',Buffer.from(offlineWorkerSource(content.get('sw.js').toString('utf8'),offlinePrecacheList(content))));
   await safeBuildDirectory(outputParent, output, 'dist');
 
