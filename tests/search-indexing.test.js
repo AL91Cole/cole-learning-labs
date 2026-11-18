@@ -15,7 +15,7 @@ const origin = 'https://www.colelearninglabs.com';
 const cyberCourse = '/courses/cybersecurity-responsible-ai';
 const coursePaths = [
   '/courses/foundations', ...Array.from({length:45}, (_, index) => '/courses/foundations/day-' + String(index + 1).padStart(2, '0')), '/courses/foundations/project', '/courses/foundations/standards',
-  cyberCourse, ...Array.from({length:10}, (_, index) => cyberCourse + '/lesson-' + String(index + 1).padStart(2, '0')), cyberCourse + '/workbook', cyberCourse + '/project'
+  cyberCourse, ...Array.from({length:16}, (_, index) => cyberCourse + '/lesson-' + String(index + 1).padStart(2, '0')), cyberCourse + '/workbook', cyberCourse + '/project'
 ];
 
 test('reviewed HTML sources retain their stable canonical URLs independently of public publication', () => {

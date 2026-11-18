@@ -28,7 +28,7 @@ function visibleText(html) {
 }
 
 test('each 40-minute lesson supplies its evidence, student handout, and teacher plan', () => {
-  assert.equal(lessons.length, 10);
+  assert.equal(lessons.length, 16);
   assert.equal(new Set(lessons.map(lesson => lesson.title)).size, lessons.length);
   assert.deepEqual(new Set(pages.keys()), new Set(NEW_COURSE_PAGE_FILES));
   const allHandouts = visibleText(workbook);
@@ -37,7 +37,8 @@ test('each 40-minute lesson supplies its evidence, student handout, and teacher 
     const text = visibleText(pages.get(file));
     assert.equal(lesson.teacher.reduce((total, step) => total + step.minutes, 0), 40, file);
     assert.ok(lesson.evidence.length && lesson.terms.length && lesson.tasks.length, file);
-    for (const passage of [lesson.title, lesson.example, lesson.caseText, ...lesson.evidence, ...lesson.tasks, lesson.exit]) {
+    assert.ok(lesson.terms.length <= 6, file + ' introduces too many terms for one period');
+    for (const passage of [lesson.title, lesson.example, lesson.caseText, ...lesson.evidence, ...lesson.tasks, lesson.exit, lesson.warmup.title, lesson.warmup.text, lesson.skill]) {
       assert.ok(passage, file + ' has a blank passage');
       assert.ok(text.includes(passage), file + ' is missing student text: ' + passage);
       assert.ok(allHandouts.includes(passage), 'Workbook is missing student text: ' + passage);
@@ -61,8 +62,11 @@ test('each 40-minute lesson supplies its evidence, student handout, and teacher 
       }
     }
   });
-  assert.equal(lessons[2].activity.route, '#play/inbox-defender');
-  assert.equal(lessons[4].activity.route, '#practice/AI-301');
+  assert.deepEqual(lessons.flatMap((lesson, i) => lesson.activity ? [[i + 1, lesson.activity.route]] : []), [
+    [2, '#learn/SEC-400'], [3, '#learn/NET-200'], [5, '#play/inbox-defender'], [10, '#practice/AI-301']
+  ]);
+  assert.equal(new Set(lessons.map(lesson => lesson.skill)).size, lessons.length);
+  assert.equal(new Set(lessons.map(lesson => lesson.warmup.title)).size, lessons.length);
   const rubric = project.match(/<section\b[^>]*id="rubric"[^>]*>([\s\S]*?)<\/section>/u)?.[1];
   assert.ok(rubric);
   assert.equal([...rubric.matchAll(/<dt>/gu)].length, 4);
@@ -70,9 +74,14 @@ test('each 40-minute lesson supplies its evidence, student handout, and teacher 
   assert.ok(workbook.includes('href="/' + directory + '/project"'));
 });
 
-test('course readers can find both virtual labs from the map and the corresponding student handouts', () => {
+test('course readers can find all four virtual labs from the map and the corresponding student handouts', () => {
   const hub = pages.get(directory + '/index.html');
-  for (const [number, route] of [[4, '/labs/double-counted-ballot'], [6, '/labs/museum-label']]) {
+  const labs = [[4, '/labs/locker-note'], [7, '/labs/double-counted-ballot'], [9, '/labs/train-the-sorter'], [11, '/labs/museum-label']];
+  assert.deepEqual(lessons.flatMap((lesson, i) => lesson.courseLab ? [[i + 1, lesson.courseLab.path]] : []), labs);
+  for (const [number, route] of labs) {
+    const labPage = readFileSync(new URL('..' + route + '.html', import.meta.url), 'utf8');
+    assert.ok(labPage.includes('href="/' + directory + '/lesson-' + String(number).padStart(2, '0') + '#student-handout"'), route + ' returns to its lesson');
+    assert.doesNotMatch(labPage.replaceAll('lesson-' + String(number).padStart(2, '0'), ''), /lesson-\d\d/u, route + ' links to one lesson only');
     const lessonId = 'lesson-' + String(number).padStart(2, '0');
     assert.equal(lessons[number - 1].courseLab.path, route);
     const page = pages.get(directory + '/' + lessonId + '.html');
@@ -136,9 +145,26 @@ test('extensionless course pages work in both preview modes while authoring file
         assert.ok(!manifest.includes(source) && !MEMBER_FILES.includes(source), source);
         assert.equal((await fetch(base + '/' + source)).status, 404, source);
       }
-      assert.equal((await fetch(base + '/' + directory + '/lesson-11')).status, 404);
+      assert.equal((await fetch(base + '/' + directory + '/lesson-17')).status, 404);
     } finally {
       await new Promise(resolve => server.close(resolve));
     }
   }
+});
+
+test('every unit has four lessons and the skill tracker lists each skill once', () => {
+  const hub = pages.get(directory + '/index.html');
+  const map = hub.split('id="lesson-map"')[1].split('id="course-labs"')[0];
+  const units = [...map.matchAll(/<section class="fc-week"><h3>([^<]+)<\/h3><ol start="(\d+)">([\s\S]*?)<\/ol>/gu)];
+  assert.deepEqual(units.map(([, heading, start, items]) => [heading.slice(0, 6), Number(start), [...items.matchAll(/<li>/gu)].length]),
+    [['Unit 1', 1, 4], ['Unit 2', 5, 4], ['Unit 3', 9, 4], ['Unit 4', 13, 4]]);
+  for (const page of [hub, workbook]) {
+    const tracker = visibleText(page.split('id="skills"')[1].split('</section>')[0]).replace(/\s+/gu, ' ');
+    lessons.forEach((lesson, i) => assert.ok(tracker.includes('Lesson ' + (i + 1) + ' · ' + lesson.skill), lesson.skill));
+  }
+  for (const number of [15, 16]) {
+    assert.ok(pages.get(directory + '/lesson-' + number + '.html').includes('href="/' + directory + '/project"'));
+    assert.ok(project.includes('href="/' + directory + '/lesson-' + number + '#student-handout"'));
+  }
+  assert.equal([...workbook.matchAll(/<table>/gu)].length, 1, 'Only the survey lesson carries a tally sheet');
 });

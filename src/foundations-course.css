@@ -98,3 +98,6 @@
   .fc-standard{color:#000;background:#fff;border-color:#777;font-size:8pt}
   #teacher-plan,.fc-workbook>.fc-section{break-before:page}
 }
+
+.fc-skill-list{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.45rem 1.5rem}
+.fc-skill-list li{margin:0}

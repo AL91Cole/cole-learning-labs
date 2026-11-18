@@ -2,6 +2,8 @@
   {
     "title": "Who can see the club file?",
     "objective": "Identify what needs protecting and explain how three different problems can affect the same file.",
+    "skill": "Triad Spotter",
+    "warmup": {"title": "Three ways to ruin a pizza order", "text": "Your class has one shared pizza order form. In one minute, list three different ways the order could go wrong before lunch. Keep your list. You will sort it later."},
     "terms": [
       {"term": "Cybersecurity", "meaning": "Protecting computers, accounts and digital information so people can use them safely."},
       {"term": "Asset", "meaning": "Something people rely on and want to protect, such as a club's schedule."},
@@ -27,8 +29,8 @@
     ],
     "exit": "At 2 p.m. the crew can open the supply list, and only crew members can read it. It says to bring 4 tables. The adviser approved 14. Which security goal needs attention? Give the clue that decided it.",
     "teacher": [
-      {"minutes": 5, "instruction": "Ask students what could go wrong if a team depended on one setup sheet. Collect examples in their own words."},
-      {"minutes": 8, "instruction": "Compare the two rehearsal results on paper. Ask which clue describes the Wi-Fi connection and which describes access to the file. Then relate each security goal to who can read the sheet, its accuracy or the time it is needed."},
+      {"minutes": 5, "instruction": "Run the pizza-order warm-up. Collect the ways the order could go wrong in students’ own words and keep the list on the board for sorting by security goal later."},
+      {"minutes": 8, "instruction": "Compare the two rehearsal results on paper. Ask which clue describes the Wi-Fi connection and which describes access to the file. Then relate each security goal to who can read the sheet, its accuracy or the time it is needed. Sort the warm-up list under the three goals."},
       {"minutes": 14, "instruction": "Give pairs the three copy cards. Have one reader name the effect on the crew and the other locate evidence. Switch roles after each card."},
       {"minutes": 8, "instruction": "Pairs trade one proposed change and test. Ask whether the test checks the original problem and respects the club agreement."},
       {"minutes": 5, "instruction": "Give the exit case individually. Collect the chosen security goal and the numerical clue."}
@@ -40,6 +42,8 @@
   {
     "title": "Give each person the access they need",
     "objective": "Design an account and sharing plan that protects a club roster while letting people do their jobs.",
+    "skill": "Access Architect",
+    "warmup": {"title": "Passphrase showdown", "text": "Rank these three invented sign-in secrets from easiest to hardest to guess: soccer12, S0cc3r!2 and lantern-pickle-orbit-canoe. Be ready to say why. Never use a worksheet example as a real password."},
     "terms": [
       {"term": "Passphrase", "meaning": "A long password made from several words. Choose unrelated words privately and use a different passphrase for each account."},
       {"term": "Multifactor authentication (MFA)", "meaning": "A sign-in check that uses two different kinds of proof, such as a passphrase you know and a security key you have."},
@@ -61,7 +65,7 @@
     ],
     "exit": "A member signs in with a passphrase and security key. The roster then lets them edit attendance by mistake. Which setting should the adviser review, and why did the sign-in checks still succeed?",
     "teacher": [
-      {"minutes": 5, "instruction": "Read the yearbook request. Ask students to answer it in the fewest pieces of information possible."},
+      {"minutes": 5, "instruction": "Run the passphrase showdown and ask why four unrelated words beat a short word with swapped symbols. Then read the yearbook request and ask students to answer it in the fewest pieces of information possible."},
       {"minutes": 8, "instruction": "Draw two boxes. Label one “Who signed in?” and the other “What may they do?” Model where a security key and an edit setting fit."},
       {"minutes": 13, "instruction": "Pairs draw a line from their chosen risk in Plan A to a safeguard in Plan B and explain the match. Then they build the four-row sharing list and check that each permission serves a job."},
       {"minutes": 9, "instruction": "Announce the change in co-chairs. Partners revise their lists and explain how the adviser could check both roles using the school's approved process."},
@@ -69,12 +73,114 @@
     ],
     "lookFor": "Each role can finish its assigned job. The explanation distinguishes signing in from the actions someone can take afterward.",
     "support": "Make a table with the headings Person, Job, Information and Allowed action. You can also say your choices aloud or arrange role cards with a partner.",
-    "stretch": "A new volunteer needs to check people in for one meeting. Design access that ends after the job and a way to confirm when it has ended."
+    "stretch": "A new volunteer needs to check people in for one meeting. Design access that ends after the job and a way to confirm when it has ended.",
+    "activity": {
+      "route": "#learn/SEC-400",
+      "label": "Practice safe security habits",
+      "prompt": "Open the Explore, Practice and Check tabs. Add a second sign-in factor to the practice account and limit what it may do. Record which step proved who was signing in and which step limited their actions. Use only the practice account on the screen."
+    }
+  },
+  {
+    "title": "Follow a message across the network",
+    "objective": "Trace a web page request step by step and explain which part of the trip HTTPS protects.",
+    "skill": "Packet Tracker",
+    "warmup": {"title": "Packet relay", "text": "Write a twelve-word message. Tear it into four strips and number them. Pass each strip across the room by a different route. Can the reader rebuild it? What should the reader do if strip 3 never arrives?"},
+    "terms": [
+      {"term": "Packet", "meaning": "A small, numbered chunk of data. Large messages travel as many packets and are put back together at the other end."},
+      {"term": "IP address", "meaning": "The number that identifies a device’s connection on a network, so packets know where to go."},
+      {"term": "Router", "meaning": "A device that passes packets from one network toward another."},
+      {"term": "DNS", "meaning": "The internet’s contact list. It finds the IP address that belongs to a name."},
+      {"term": "HTTPS", "meaning": "A way of loading a web page that encrypts what travels between your browser and the site and checks the site’s certificate for that name."}
+    ],
+    "example": "I type the library’s web address. Before anything loads, my browser asks DNS for the number that goes with that name, the way I look up a contact before I call.",
+    "caseTitle": "The stream that would not load",
+    "caseText": "Families want to watch the Harbor School robotics club demo on the club page. It loads for some people and fails for others. You are the club’s network tracker. Every name and address on these cards is invented.",
+    "evidence": [
+      "Trip cards, shuffled. (P) The browser checks the site’s certificate and sets up an encrypted HTTPS connection. (Q) The laptop joins the school Wi-Fi and is given a local address, 10.20.4.37. (R) The web server at 203.0.113.20 sends the page back as packets. (S) The browser asks a DNS server which address belongs to clubs.harbor.example. (T) The browser puts the packets back in order and shows the page.",
+      "Always on duty. Routers pass each packet along, one hop at a time, toward the address written on it. Every step after the laptop joins the network depends on them.",
+      "Report 1. A tablet in the gym shows no Wi-Fi bars. The laptop beside it loads the club page.",
+      "Report 2. On one laptop, typing clubs.harbor.example gives “Server not found.” From the same laptop, the adviser’s connection test to 203.0.113.20 succeeds.",
+      "Report 3. On the bus Wi-Fi, a sign-in page opens at an address starting http:// and the browser shows “Not secure.”",
+      "Wi-Fi card. The club poster says the school network is named HarborSchool and asks for a school sign-in. At the game, a second network named HarborSchool-FREE appears and asks for nothing."
+    ],
+    "tasks": [
+      "Put trip cards P to T in order. Star the card where a name becomes a number. Draw a lock on the card where the data gets scrambled for the trip.",
+      "Match each report to the trip card where the trouble starts. Quote the clue that told you. For one report, say what you would test next and what result would prove you right.",
+      "Mark each statement true or false, then fix the false ones. “The lock icon means the people running the site are honest.” “HTTPS keeps others on the same Wi-Fi from reading what I send to the site.” “Two networks with nearly the same name must belong to the same owner.” Decide what to do about the Wi-Fi card and who to ask."
+    ],
+    "exit": "A classmate says, “The page has a lock, so the message asking for my password must be real.” What does the lock tell you? What does it leave out?",
+    "teacher": [
+      {"minutes": 5, "instruction": "Run the packet relay with one volunteer message. Ask how the numbers helped and what the reader should request when a strip goes missing."},
+      {"minutes": 8, "instruction": "Introduce the five terms with the worked example. Model the first two trip cards on the board and place the router card beside the whole route."},
+      {"minutes": 12, "instruction": "Pairs order the remaining trip cards and match the three reports. One partner names the step and the other finds the clue. Ask each pair for a test that would confirm one diagnosis."},
+      {"minutes": 10, "instruction": "Work the three lock statements and the Wi-Fi card. Pairs that finish early can open the beginner networking lab and compare its name-lookup card with report 2."},
+      {"minutes": 5, "instruction": "Give the lock exit individually. Collect what HTTPS protects and what it cannot promise."}
+    ],
+    "lookFor": "Students place the name lookup before the secure connection and tie each report to a specific step with a quoted clue. They separate an encrypted connection from a trustworthy sender.",
+    "support": "Act it out. One person is the browser, one is DNS and one is the web server. Hand the trip cards along in order and say what each person does.",
+    "stretch": "Three packets arrive in the order 2, 3, 1. Explain how the numbers fix that. Then decide what the receiver should ask for when packet 2 never arrives.",
+    "activity": {
+      "route": "#learn/NET-200",
+      "label": "Follow a network connection",
+      "prompt": "Open the Explore, Practice and Check tabs. Connect the practice PC, let it get its network settings and open the practice page. Find the name lookup card and compare it with report 2. Record one part that carried the connection and one that only looked up a name."
+    }
+  },
+  {
+    "title": "Keep a secret, catch a change",
+    "objective": "Use a shift cipher to see how a key protects a message, then use a fingerprint to tell whether a file was changed.",
+    "skill": "Code Cracker",
+    "warmup": {"title": "KHOOR", "text": "Every letter in KHOOR was moved three places forward in the alphabet. Move each one back three. What does it say? Time yourself."},
+    "terms": [
+      {"term": "Encryption", "meaning": "Scrambling information so that only someone with the right key can read it."},
+      {"term": "Key", "meaning": "The secret piece of information that locks and unlocks an encrypted message."},
+      {"term": "Cipher", "meaning": "The method used to scramble a message. A shift cipher moves every letter the same number of places."},
+      {"term": "Brute force", "meaning": "Trying every possible key until one works."},
+      {"term": "Hash", "meaning": "A short fingerprint calculated from a file. Change the file and the fingerprint changes too."}
+    ],
+    "example": "My key is 4, so C becomes G, L becomes P, U becomes Y and B becomes F. I send GPYF. My partner knows the key, counts back four and reads CLUB.",
+    "caseTitle": "The locker note",
+    "caseText": "The Harbor School puzzle club hides the start of its scavenger hunt in a scrambled note. A copy of the hunt rules is also going around, and one copy looks different. You are the club’s code cracker. Everything on these cards is invented.",
+    "evidence": [
+      "Note found by locker 114. “AOL OBUA ZAHYAZ HA AOL NFT KVVY”",
+      "Club cipher card. Every letter moved forward the same number of places, wrapping from Z back to A. That number is the key. A shift cipher has only 25 keys that change the message.",
+      "Real-world card. The encryption that protects a web page uses a key picked from more possibilities than every computer on Earth could try in billions of years.",
+      "Fingerprint card. The adviser posted the rule START AT NOON with fingerprint 157. The club fingerprint adds the position of every letter, so A adds 1 and Z adds 26. The hallway copy of the rule says START AT NINE."
+    ],
+    "tasks": [
+      "Decode the worked example’s GPYF yourself to check the method. Then look at the locker note. One three-letter word appears twice. Use it to guess the key.",
+      "A partner chooses a key and whispers it to you. Scramble a three-word invented reply and trade. Explain why the key must travel by a different route from the note.",
+      "Fingerprint the hallway copy. Compare it with the adviser’s number. Say what the fingerprint proves and what it cannot tell you about who changed the rule."
+    ],
+    "courseLab": {
+      "path": "/labs/locker-note",
+      "title": "Crack the Locker Note",
+      "introduction": "You moved four letters by hand. Now turn a cipher wheel to crack the whole locker note, send a secret reply and catch the copy of the rules that changed.",
+      "steps": [
+        "Turn the wheel until the note reads as English. Record the key and how many keys you tried.",
+        "Scramble a short invented reply and choose how the key should reach your partner.",
+        "Fingerprint both copies of the rule. Decide which copy still matches the adviser’s and what the fingerprint cannot tell you."
+      ],
+      "artifact": "Hand in the key, your count of tries and both fingerprints. Add one sentence on why real encryption cannot be cracked the way you cracked the note."
+    },
+    "exit": "Encryption and hashing do different jobs. Which one keeps a note secret? Which one shows that a download was changed? Match each to a security goal from lesson 1.",
+    "teacher": [
+      {"minutes": 4, "instruction": "Race the KHOOR warm-up. Ask what a reader must know to undo the scramble and name that piece the key."},
+      {"minutes": 8, "instruction": "Introduce the terms with the worked example. Model moving one word by a key of 4 and back again. Ask how many different keys a shift cipher can have."},
+      {"minutes": 18, "instruction": "Give each pair Crack the Locker Note in its browser or paper edition. One partner turns the wheel while the other tallies keys tried. Swap roles for the reply and the fingerprint check."},
+      {"minutes": 5, "instruction": "Draw two columns headed Keeps it secret and Shows it changed. Sort the note, the key, the fingerprint and the hallway copy. Ask why the fingerprint cannot name a person."},
+      {"minutes": 5, "instruction": "Give the exit individually. Collect one job for encryption, one for hashing and the matching security goals."}
+    ],
+    "lookFor": "Students find the key by reasoning from a repeated word or by an organized brute-force search. They explain that the key must stay private, and they separate keeping a message secret from detecting a change.",
+    "support": "Write the alphabet on two paper strips. Slide the bottom strip to line up a guess, then read straight across. Try the shortest words first.",
+    "stretch": "TAB and BAT have the same club fingerprint. Explain why. Then explain why the fingerprints used for real downloads are designed so that nobody can find two files that match."
   },
   {
     "title": "Decide what to do with an urgent message",
     "objective": "Use a message's request, destination and context to decide whether to report it, verify it or use a known route.",
+    "skill": "Phish Spotter",
+    "warmup": {"title": "Hold the door?", "text": "A stranger carrying a huge box asks you to hold open the locked computer lab door. Thumbs up, thumbs down or “ask first”? Be ready to say what you would check, and how."},
     "terms": [
+      {"term": "Social engineering", "meaning": "Tricking a person into opening the door, instead of breaking the lock. It works on computers, phones and real doors."},
       {"term": "Phishing", "meaning": "A deceptive message that tries to get someone to reveal information or take a harmful action."},
       {"term": "Display name", "meaning": "The label shown beside a message. Two senders can use the same label."},
       {"term": "Independent verification", "meaning": "Check a request through a route you already trust, such as talking to the adviser in person."}
@@ -94,7 +200,7 @@
     ],
     "exit": "A message labeled “Club Adviser” says the room changed and asks you to use an unfamiliar link for directions. You can see the adviser across the hall. What will you do first, and what makes that check independent?",
     "teacher": [
-      {"minutes": 5, "instruction": "Read only the display names on the paper messages. Invite predictions, then reveal the actual requests and ask who wants more evidence."},
+      {"minutes": 5, "instruction": "Take the hold-the-door vote and name the trick: asking a helpful person to skip a check. Then read only the display names on the paper messages. Invite predictions, reveal the actual requests and ask who wants more evidence."},
       {"minutes": 7, "instruction": "Model locating a request, its destination and something the class already knows. Introduce the three response options."},
       {"minutes": 10, "instruction": "Use Inbox Defender's Evidence challenge in pairs or read the three cards aloud. Each pair records a decision and two clues for one case."},
       {"minutes": 13, "instruction": "Use all three paper cases for comparison. Partners write a short report for A and rehearse an independent check for B. Ask one pair to justify handling C differently."},
@@ -102,7 +208,7 @@
     ],
     "lookFor": "The decision for each message cites its particular request and a clue about where it came from, where it leads or what the club already knows.",
     "support": "Ask a partner to read one message at a time. Point to an action in the first task, then quote or describe the clue you used.",
-    "stretch": "Rewrite the reminder in C after the adviser changes the plan to tomorrow. Which facts would a reader be able to confirm independently?",
+    "stretch": "Rewrite the reminder in C after the adviser changes the plan to tomorrow. Which facts would a reader be able to confirm independently? Then explain why perfect spelling no longer proves a message is real, now that AI tools can polish any message.",
     "activity": {
       "route": "#play/inbox-defender",
       "label": "Play Inbox Defender",
@@ -110,8 +216,50 @@
     }
   },
   {
+    "title": "Build your layers",
+    "objective": "Match safeguards to the ways a small computer lab can fail and design layers that still hold when one of them breaks.",
+    "skill": "Layer Builder",
+    "warmup": {"title": "Swiss cheese stack", "text": "Punch three holes in each of three scrap sheets, in different places. Stack them. Can you see through? Now line the holes up. What would each sheet be if this stack were guarding a computer?"},
+    "terms": [
+      {"term": "Vulnerability", "meaning": "A weakness that could be used to cause harm, such as software that is missing a fix."},
+      {"term": "Malware", "meaning": "Software made to harm, spy or lock files. Ransomware is malware that locks files and demands payment."},
+      {"term": "Update", "meaning": "A fix from the software’s maker. Many updates close a known weakness, which is why waiting is risky."},
+      {"term": "Backup", "meaning": "A separate copy kept somewhere else, which you can restore if the original is lost."},
+      {"term": "Defense in depth", "meaning": "Using several different safeguards, so one failure does not sink everything."}
+    ],
+    "example": "My bike has a lock, a registered serial number and a spot inside the garage. If I forget to lock it one day, the other two still help. No single layer has to be perfect.",
+    "caseTitle": "The media lab makeover",
+    "caseText": "The Cedar Middle media club is editing a documentary on three shared laptops. The adviser gives your team six shield points to spend on safeguards. Spend them where they matter. The lab and its troubles are invented.",
+    "evidence": [
+      "Lab facts. Three laptops stay in an unlocked room. Every member signs in with the same administrator account. The only copy of the documentary is on laptop 2.",
+      "Trouble card 1. A free “video speed booster” download asks for the administrator password before it will install.",
+      "Trouble card 2. Laptop 3 has postponed its updates for nine weeks. The maker released a fix for a known weakness in week one.",
+      "Trouble card 3. A drink spills on laptop 2 the night before the premiere. Nobody attacked anything.",
+      "Trouble card 4. A laptop is missing from the unlocked room on Monday morning.",
+      "Safeguard menu. Automatic updates, 1 point. Weekly backup to the school drive, 2 points. Second backup kept in another building, 2 points. Locked cabinet, 1 point. Separate member accounts without install rights, 1 point. Club rule to install only from the school’s approved list, 1 point. School security software that scans downloads, 1 point. “Hackers keep out” sticker, 1 point."
+    ],
+    "tasks": [
+      "For each trouble card, name the weakness that let it happen and every safeguard on the menu that would help. Label each safeguard as technology, a rule for people or a physical barrier.",
+      "Spend exactly six points. Draw your layers as rings around the documentary. Pick one trouble card and show two different layers that cover it.",
+      "Stress test. Your partner picks a trouble card and crosses out one of your layers, saying “that one failed today.” Does another layer still catch the trouble? Revise your plan and say what you gave up."
+    ],
+    "exit": "The club’s only backup sits in a folder on laptop 2, beside the documentary. Name one event that would destroy both copies. Where should a better backup live?",
+    "teacher": [
+      {"minutes": 5, "instruction": "Run the Swiss cheese stack. Ask what happens when every hole lines up, and why three different sheets beat three copies of the same sheet."},
+      {"minutes": 8, "instruction": "Introduce the terms. Read the lab facts and trouble cards aloud. Ask which trouble involves no attacker at all, and why it still counts as a security problem."},
+      {"minutes": 12, "instruction": "Pairs match troubles to safeguards, label each one as technology, rule or physical, then spend six points and draw their rings."},
+      {"minutes": 10, "instruction": "Run the stress test. Each partner removes one layer and plays one trouble card. Pairs revise and report one trade-off they accepted."},
+      {"minutes": 5, "instruction": "Give the backup exit individually. Collect the shared failure and a better location."}
+    ],
+    "lookFor": "Students connect each safeguard to a specific weakness, mix technology, rules and physical barriers, and can show a second layer catching a trouble after the first one fails. They notice that the sticker protects nothing.",
+    "support": "Lay the four trouble cards in a row. Under each one, place every safeguard that would have helped. Start spending on the trouble with the fewest cards under it.",
+    "stretch": "A common backup rule is 3-2-1: keep three copies, on two kinds of storage, with one copy somewhere else. Score the club’s current setup against that rule and say what one more point would buy."
+  },
+  {
     "title": "Rebuild a timeline and check the recovery",
     "objective": "Use time-stamped records to report a fictional incident, identify what is still unknown and check a proposed recovery.",
+    "skill": "Incident Reporter",
+    "warmup": {"title": "Seen or guessed?", "text": "A classmate reports, “The lab door was open at 8:05. The projector was warm. Someone watched a movie before school.” Which parts did somebody observe? Which part is a guess?"},
     "terms": [
       {"term": "Event log", "meaning": "A record of events that includes times and observations."},
       {"term": "Containment", "meaning": "An action that limits further harm while someone investigates."},
@@ -144,7 +292,7 @@
     },
     "exit": "A copy of the seating chart opens after recovery. The door team still gets “Access denied.” Write the next handoff in two lines. What has been verified, and what does the team still need someone to test?",
     "teacher": [
-      {"minutes": 4, "instruction": "Ask what the print-table crew needs in its hands at showtime. Write its success condition on the board."},
+      {"minutes": 4, "instruction": "Use the warm-up to separate what was observed from a guess. Then ask what the print-table crew needs in its hands at showtime and write its success condition on the board."},
       {"minutes": 10, "instruction": "As a class, order the art-show records and circle the action that preserved the changed sheet. Use the 1:24 print result to finish the two playbook lines together. Ask what nobody saw happen."},
       {"minutes": 18, "instruction": "Give each pair The Double-Counted Ballot in its browser or paper edition. One partner reads the signed counting rule while the other compares the display with the receipt ledger. Swap roles to test a count-once rule and write the evidence and open question in a handoff."},
       {"minutes": 3, "instruction": "Have two pairs exchange handoffs. Can the readers find the record behind the announced result? Ask them to underline any claim about a person that the records cannot establish."},
@@ -155,43 +303,41 @@
     "stretch": "The 1:04 copy omitted a new label approved at 1:08. What additional evidence would the adviser need before choosing a final version?"
   },
   {
-    "title": "Write an AI prompt that leaves out private details",
-    "objective": "Revise a request for an AI writing tool so it includes only the information needed, then decide who should review the result.",
+    "title": "Hackers with permission",
+    "objective": "Use a testing agreement to decide which actions are allowed, report a weakness responsibly and match security jobs to the skills you have practiced.",
+    "skill": "Permission Pro",
+    "warmup": {"title": "Locksmith or burglar?", "text": "A locksmith and a burglar can open the same lock with the same tools. List three things that make one of them a professional and the other a criminal."},
     "terms": [
-      {"term": "Artificial intelligence (AI)", "meaning": "Computer systems that use patterns in data to do tasks such as recognizing speech or drafting text. An AI writing tool can produce a convincing sentence that gets a fact wrong."},
-      {"term": "Prompt", "meaning": "A question or instruction given to an AI tool. Files and pasted text can also give the tool information."},
-      {"term": "Data minimization", "meaning": "Use only the information needed for a particular task."},
-      {"term": "Indirect identifier", "meaning": "A clue that can point to a person when combined with other details, even if their name is missing."}
+      {"term": "Authorization", "meaning": "Clear permission from the owner of a system to test it."},
+      {"term": "Scope", "meaning": "The exact systems, actions and times that the permission covers. Everything else is off limits."},
+      {"term": "Ethical hacker", "meaning": "A security professional who looks for weaknesses with permission, so that they can be fixed. Also called a penetration tester."},
+      {"term": "Responsible disclosure", "meaning": "Reporting a weakness privately to the people who can fix it, without using it or spreading it."},
+      {"term": "Threat actor", "meaning": "A person or group that might cause harm. Their reasons differ, from money to showing off."}
     ],
-    "example": "I want a practice question about fractions. I can ask for one that uses halves and quarters and leave out my name and last quiz grade.",
-    "caseTitle": "A welcome sign for the art show",
-    "caseText": "The club needs a short welcome sign. A classmate suggests pasting the volunteer sheet into an AI writing tool. On paper, design a request that could produce a useful draft. All details on these cards are invented.",
+    "example": "I notice the gym storage door does not latch. I do not go in to see what I could take. I tell the coach which door, when I noticed and that I left it alone.",
+    "caseTitle": "The bug in the lunch app",
+    "caseText": "The Harbor School coding club built a lunch pre-order app and keeps a practice copy for testing. Rey, a club member, has stumbled on a weakness in the live app. Help Rey decide what happens next. The app, the orders and the people are invented.",
     "evidence": [
-      "Approved public notice. The Harbor School Art Show opens Friday at 3 p.m. All visitors check in at the art-room door. The adviser wants a friendly sign of 25 words or fewer.",
-      "Volunteer sheet. It lists first names and private pickup arrangements. One entry reads “The only seventh-grade drummer will leave early for a clinic visit.”",
-      "Classmate's draft request. “Use the attached volunteer sheet to write our welcome sign. Mention someone by name to make it friendly.”",
-      "Adviser's rule. The club may publish the approved event details. Volunteer arrangements are for the adviser. The adviser checks every sign before it is posted."
+      "What Rey saw. Rey’s order page address ends in order=118. Rey mistyped 119 and another student’s sandwich order appeared. Rey closed the page.",
+      "Testing agreement, signed by the adviser. Club members may test the practice copy at practice.lunch.harbor.example during club meetings, using test accounts only. Report every weakness to the adviser the same day. The live app and real orders are outside this agreement.",
+      "Four ideas from classmates. (1) “Try every number from 1 to 500 on the live app to see how bad it is.” (2) “Post a screenshot in the group chat to warn everyone.” (3) “Tell the adviser today. Say what you typed, what appeared and that you stopped.” (4) “Stay quiet so you do not get in trouble.”",
+      "Career cards. Security operations analyst: watches alerts and investigates. Penetration tester: tests systems with written permission. Incident responder: contains a problem and helps people recover. Security awareness trainer: teaches people to spot tricks. AI security tester: checks whether AI tools can be fooled. Policy and compliance analyst: writes the rules and checks they are followed."
     ],
     "tasks": [
-      "Sort the details into two groups. Which help a visitor arrive and check in? Which belong with the adviser? Explain why removing a name alone might still leave a student recognizable.",
-      "Write a replacement prompt using the event facts and length limit. Include enough information for a visitor to know when to arrive and where to check in. Work on paper without uploading anything.",
-      "Swap prompts. Use your partner's prompt to draft a sign by hand. Check the sign against the public notice. Circle a fact the adviser should verify before posting and explain why."
+      "Sort the four ideas into inside the agreement, outside the agreement or leaves the weakness unfixed. For each, quote the line of the agreement or the fact from Rey’s card that decided it.",
+      "Write Rey’s report to the adviser in three sentences. Include what Rey typed, what appeared, when it happened and that Rey stopped. Leave out the other student’s name and order.",
+      "Pick two career cards. For each, name a lesson in this course where you did part of that job. Write one question you would ask a person who does it for a living."
     ],
-    "exit": "A club wants three new names for its supply bins. A draft prompt includes a photo of students standing next to the bins. What could the club share instead, and what detail would that still give the writer?",
+    "exit": "A friend says, “I only looked. I did not change anything.” Use the words authorization and scope to explain why looking can still break the rules.",
     "teacher": [
-      {"minutes": 5, "instruction": "Read the public notice. Ask students what a visitor at the door would need to know."},
-      {"minutes": 8, "instruction": "Introduce the vocabulary and read the volunteer card. Ask how someone could recognize a student from a combination of details."},
-      {"minutes": 12, "instruction": "Pairs sort the details and write individual prompts. Ask them to explain one omission and one fact they kept."},
-      {"minutes": 10, "instruction": "Partners act as the writer and reviewer. They draft a sign, check each factual claim against the notice and flag anything for the adviser."},
-      {"minutes": 5, "instruction": "Give the supply-bin exit. Collect a replacement input and the reason it serves the task."}
+      {"minutes": 5, "instruction": "Collect answers to the locksmith warm-up. Group them under permission, purpose and what happens to what they find."},
+      {"minutes": 8, "instruction": "Introduce the terms. Read the testing agreement together and box three limits: which copy, when and which accounts. Note that entering systems or accounts without permission can break school rules and the law."},
+      {"minutes": 12, "instruction": "Pairs sort the four ideas and write Rey’s three-sentence report. Ask why the report leaves out the other student’s details."},
+      {"minutes": 10, "instruction": "Hand out the career cards. Pairs match two jobs to earlier lessons and share one question for a professional. Point out that every job on the cards works with permission."},
+      {"minutes": 5, "instruction": "Give the exit individually. Collect an explanation that uses both authorization and scope."}
     ],
-    "lookFor": "The revised request gives the writer enough to do the task. The explanation justifies an omission, and the review identifies a fact a person can check.",
-    "support": "Point to the details your sign writer needs. You can dictate your prompt or build it from three parts. What is the event? Who will read the sign? How should it sound?",
-    "stretch": "Suppose the public notice gives a time but no room. Revise the prompt so the sign writer can flag the missing location for a person to check.",
-    "activity": {
-      "route": "#practice/AI-301",
-      "label": "Build a useful prompt",
-      "prompt": "On the “Build a useful prompt” board, use the prompt tiles to ask for a short explanation of networks and a practice question for a fictional learner. Add a check against class notes, edit your wording and choose “Save prompt.” Compare what the writer needs to know with two details you left out. You can try the same task on paper."
-    }
+    "lookFor": "Students use the agreement’s own words to rule actions in or out, report the weakness without exposing another student, and recognize that skill without permission is not ethical hacking.",
+    "support": "Underline three limits in the agreement: where, when and with which accounts. Hold each classmate idea against those three limits, one at a time.",
+    "stretch": "Write two more lines for the testing agreement: one that covers what a tester does after seeing real data by accident, and one that says how fast the club must fix a reported weakness."
   }
 ]

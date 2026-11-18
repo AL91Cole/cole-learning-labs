@@ -202,7 +202,7 @@ test('pathway changes keep the existing toolbar and focus instead of replacing t
   const practice=h.elements.get('#practice-entries');
   const courseLinks=html=>[...html.matchAll(/href="\/labs\/([a-z-]+)"/gu)].map(([,path])=>path);
   for(const memberContent of [true,false]){
-    assert.deepEqual(courseLinks(harness({memberContent}).context.library()),['double-counted-ballot','museum-label']);
+    assert.deepEqual(courseLinks(harness({memberContent}).context.library()),['locker-note','double-counted-ballot','train-the-sorter','museum-label']);
   }
   h.context.filterLibraryTrack('hardware');
   assert.equal(h.renders,0);assert.equal(button.focused,1);assert.equal(button.attributes['aria-pressed'],'true');
@@ -212,10 +212,10 @@ test('pathway changes keep the existing toolbar and focus instead of replacing t
   assert.equal(h.elements.get('#practice-entries').innerHTML,'');assert.equal(h.elements.get('#network-sequence').innerHTML,'');
   h.context.filterLibraryTrack('network');assert.match(h.elements.get('#practice-entries').innerHTML,/#studio\/network/u);assert.match(h.elements.get('#network-sequence').innerHTML,/10 labs/u);
   h.context.filterLibraryTrack('ai');assert.match(h.elements.get('#practice-entries').innerHTML,/#practice\/AI-301/u);assert.doesNotMatch(h.elements.get('#practice-entries').innerHTML,/#studio\/network/u);assert.equal(h.elements.get('#network-sequence').innerHTML,'');
-  assert.deepEqual(courseLinks(practice.innerHTML),['museum-label']);
+  assert.deepEqual(courseLinks(practice.innerHTML),['train-the-sorter','museum-label']);
   h.context.filterLibraryTrack('security');
   assert.match(practice.innerHTML,/#practice\/SEC-401/u);
-  assert.deepEqual(courseLinks(practice.innerHTML),['double-counted-ballot']);
+  assert.deepEqual(courseLinks(practice.innerHTML),['locker-note','double-counted-ballot']);
   assert.deepEqual(h.store,h.before);
 });
 

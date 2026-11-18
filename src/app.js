@@ -208,7 +208,9 @@ function about(){return `<section class="wrap page-intro about-intro"><div><p cl
 function networkSequence(){if(!MEMBER_CONTENT)return '';const labs=SCENARIOS.filter(s=>s.networkStep).sort((a,b)=>a.networkStep-b.networkStep);return `<details class="network-sequence"><summary>Try networking in order · ${labs.length} labs</summary><p>Start with the network basics, then work through these classroom problems. Read the clues, save your idea, try a change and explain the result.</p><ol>${labs.map(s=>`<li><a href="#lab/${esc(s.id)}">${esc(s.title)}</a><p>${esc(s.summary)}</p></li>`).join('')}</ol><a class="text-link" href="#learn/network">Start with the network basics →</a></details>`;}
 function practiceEntries(){
   const entries = [
+    ['security','/labs/locker-note','Crack the Locker Note'],
     ['security','/labs/double-counted-ballot','The Double-Counted Ballot'],
+    ['ai','/labs/train-the-sorter','Train the Sorter'],
     ['ai','/labs/museum-label','Who Wrote the Museum Label?'],
     ['network','#studio/network','Network Studio · Members'],
     ['network','#practice/NET-201','Network lab workbenches'],
