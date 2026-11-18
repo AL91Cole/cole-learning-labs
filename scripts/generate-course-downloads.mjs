@@ -43,11 +43,13 @@ export function courseDownloadSourceDigest() {
   return hash.digest('hex');
 }
 
-/** A page that prints without a server: styles and pictures inlined, links pointed at the public site. */
+/**
+ * A page that prints without a server: styles and pictures inlined, links pointed at the public site.
+ * Script tags are left as they are. The print context has JavaScript turned off, so nothing runs.
+ */
 function standalone(html) {
   return html
     .replace(/<link rel="stylesheet" href="\/([^"?]+)(?:\?[^"]*)?">/gu, (_, file) => '<style>' + read(file).toString('utf8') + '</style>')
-    .replace(/<script\b[^>]*><\/script>/gu, '')
     .replace(/src="\/(assets\/[^"]+\.webp)"/gu, (_, file) => 'src="data:image/webp;base64,' + read(file).toString('base64') + '"')
     .replace(/href="\/(?!\/)/gu, 'href="' + ORIGIN + '/');
 }

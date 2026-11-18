@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, chmodSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { cyberLabs, SIGNIN_LOG, SIGNIN_FACTS, COUNT_SCRIPT } from "../cyber-labs.js";
+import { cyberLabs, literal, SIGNIN_LOG, SIGNIN_FACTS, COUNT_SCRIPT } from "../cyber-labs.js";
 import { linuxLabs } from "../linux-labs.js";
 import { labFor, validateLabDefinition, verifySessionMilestones } from "../server.js";
 import { PROGRESS_CHECK, PROGRESS_FILE } from "../cloud-sandboxes.js";
@@ -143,4 +143,21 @@ test("typed steps do not pass on unrelated commands", () => {
   assert.ok(stage("CYB-103", "count").test("grep FAILED logs/signin.log | wc -l") && !stage("CYB-103", "count").test("grep FAILED logs/signin.log"));
   assert.ok(stage("CYB-103", "by-account").test("grep FAILED logs/signin.log | cut -d' ' -f2 | sort | uniq -c") && !stage("CYB-103", "by-account").test("sort logs/signin.log"));
   assert.ok(stage("CYB-104", "run").test("python3 count_failures.py") && !stage("CYB-104", "run").test("cat count_failures.py"));
+});
+
+test("text placed in a check pattern is fully escaped, the backslash included", () => {
+  assert.equal(literal("10.20.9.50"), "10\\.20\\.9\\.50");
+  assert.equal(literal("a\\b.c"), "a\\\\b\\.c");
+  for (const text of ["count_failures.py", "a\\b", "x+y(z)[1]{2}|^$*?", "rules/posted.sha256"]) {
+    const pattern = new RegExp("^" + literal(text) + "$");
+    assert.ok(pattern.test(text), text);
+    assert.ok(!pattern.test(text.replace(/[.]/, "x")) || !text.includes("."), "a dot matches only a dot: " + text);
+  }
+  const check = byId["CYB-103"].files.find((file) => file.path === PROGRESS_CHECK).content;
+  assert.ok(check.includes("10\\.20\\.9\\.50"), "the address check matches the dots literally");
+  const box = materialize(byId["CYB-103"]);
+  try {
+    box.sh("printf 'failed: 11\\naccount: adviser\\naddress: 10x20y9z50\\nsuccess time: 13:10\\n' > answer.txt");
+    assert.ok(!box.progress().includes("[burst]"), "an address with other characters in place of the dots is refused");
+  } finally { box.done(); }
 });

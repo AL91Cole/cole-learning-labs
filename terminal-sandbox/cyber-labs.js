@@ -13,7 +13,9 @@ const GRADE = "Grades 7–8";
 const course = (definition) => lab({ track: TRACK, grade: GRADE, ...definition });
 const editor = EDIT_PY ? [{ path: "edit.py", content: EDIT_PY }] : [];
 const READ = /^\s*(cat|less|more|head|tail)\s+(\S+\s+)*\S*/;
-const reads = (name) => new RegExp(READ.source + name.replace(/[.]/g, "\\.") + "\\b");
+/** A literal for use inside a regular expression: every special character escaped, the backslash included. */
+export const literal = (value) => String(value).replace(/[\\^$.*+?()[\]{}|\/-]/g, "\\$&");
+const reads = (name) => new RegExp(READ.source + literal(name) + "\\b");
 
 // ---------------------------------------------------------------- CYB-101
 const ROSTER = ["Amara", "Ben", "Chidi", "Dana", "Eli", "Farah", "Gus", "Hana", "Ivan", "Jo", "Kai", "Lena", "Mateo", "Nia", "Omar", "Priya", "Quinn", "Rey"];
@@ -109,7 +111,7 @@ const CYB103 = course({
     done("success", "Find what happened next", "Type `grep 'user=adviser ' logs/signin.log`. Find the first OK after the failures. Write its hour and minute after success time: in answer.txt and save.", "Read down the times. The failures stop, then one line from the same address says OK. Write the time like 13:05.", /^\s*grep\s+(\S+\s+)*\S*adviser/),
   ],
   check: [
-    "grep -Eiq '^ *failed *: *" + SIGNIN_FACTS.failed + " *$' answer.txt 2>/dev/null && grep -Eiq '^ *account *: *adviser *$' answer.txt && grep -Eq '^ *address *: *" + BURST_FROM.replace(/\./g, "\\.") + " *$' answer.txt && echo '[burst]'",
+    "grep -Eiq '^ *failed *: *" + SIGNIN_FACTS.failed + " *$' answer.txt 2>/dev/null && grep -Eiq '^ *account *: *adviser *$' answer.txt && grep -Eq '^ *address *: *" + literal(BURST_FROM) + " *$' answer.txt && echo '[burst]'",
     "grep -Eiq '^ *success time *: *" + SIGNIN_FACTS.success + "(:02)? *$' answer.txt 2>/dev/null && echo '[success]'",
   ],
   files: [
