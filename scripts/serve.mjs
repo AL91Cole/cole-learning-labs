@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { PUBLIC_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES, STANDALONE_LAB_PAGES, publicFilesFor, buildSite } from './build.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
-import {coursePageRoute} from './foundations-course.mjs';
+import {coursePageRoute} from './course-page.mjs';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const FILES = new Set(PUBLIC_FILES);

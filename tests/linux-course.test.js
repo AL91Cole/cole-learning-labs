@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {LINUX_COURSE,linuxLab,nextLinuxLab} from '../src/linux-catalog.js';
+import {LINUX_COURSE,CYBER_FIELD_LABS,REAL_MACHINE_LABS,linuxLab,nextLinuxLab} from '../src/linux-catalog.js';
+import {cyberLabs} from '../terminal-sandbox/cyber-labs.js';
 import {renderLinuxCourse,mountLinuxCourse,linuxStepText,currentLinuxStep} from '../src/linux-course.js?release=20261107-tech-team';
 import {renderLinuxEntry} from '../src/home-entries.js?release=20261107-tech-team';
 import {routeAccess} from '../src/access-policy.js?release=20261107-tech-team';
+import {studentLinkAction} from '../src/session-modes.js';
 import {learningRoute} from '../src/learning-routes.js?release=20261107-tech-team';
 import {remoteLabFor} from '../src/lab-remote.js?release=20261107-tech-team';
 import {PUBLIC_SOURCE_FILES} from '../scripts/build.mjs';
@@ -151,4 +153,54 @@ test('the lab checks list redraws only when a check changes and keeps open hints
   assert.match(source,/'<details' \+ \(open\.has\(item\.id\) \? ' open' : ''\)/,'a hint that was open stays open when the list does change');
   assert.match(source,/querySelector\('summary'\)\?\.focus\(\{preventScroll:true\}\)/,'the keyboard focus returns to the same hint');
   assert.match(source,/'<li data-milestone="' \+ esc\(item\.id\)/,'each check is identified by its id');
+});
+
+test('the cyber field labs open on the same real machine, match the lab server and stay inside their course',()=>{
+  assert.deepEqual(CYBER_FIELD_LABS.map(lab=>[lab.id,lab.lesson]),[['CYB-101',2],['CYB-102',4],['CYB-103',7],['CYB-104',15]]);
+  assert.deepEqual(REAL_MACHINE_LABS.map(lab=>lab.id),[...LINUX_COURSE,...CYBER_FIELD_LABS].map(lab=>lab.id));
+  const served=new Map(cyberLabs().map(lab=>[lab.id,lab]));
+  for(const lab of CYBER_FIELD_LABS){
+    assert.ok(Object.isFrozen(lab)&&Object.isFrozen(lab.skills));
+    for(const field of ['title','minutes','summary'])assert.equal(lab[field],served.get(lab.id)[field],lab.id+' '+field+' matches the lab server');
+    assert.equal(remoteLabFor(lab),lab.id);
+    assert.equal(routeAccess(learningRoute('#linux/'+lab.id)),'public');
+    assert.equal(linuxLab(lab.id),lab);
+  }
+  assert.equal(nextLinuxLab('LNX-105'),null,'Linux basics does not run on into the cyber labs');
+  assert.equal(nextLinuxLab('CYB-101').id,'CYB-102');assert.equal(nextLinuxLab('CYB-104'),null);
+  assert.equal(routeAccess(learningRoute('#linux/CYB-105')),'unknown');
+  const index=renderLinuxCourse(undefined);
+  assert.match(index,/id="cyber-field-labs"/);assert.match(index,/<h2 id="cyber-field-title">Cyber field labs<\/h2>/);
+  for(const lab of CYBER_FIELD_LABS){assert.ok(index.includes('href="#linux/'+lab.id+'"'));assert.ok(index.includes(lab.id+' · Lesson '+lab.lesson));}
+  assert.match(index,/Never try these tools on a real account, network or person without written permission/);
+  const page=renderLinuxCourse('CYB-103');
+  assert.match(page,/<h1>CYB-103 · Read the Sign-in Log<\/h1>/);assert.match(page,/←<\/span> Cyber field labs<\/a>/);
+  assert.match(page,/href="#linux\/CYB-104">Next lab/);
+  assert.match(renderLinuxCourse('CYB-104'),/href="\/courses\/cybersecurity-responsible-ai\/lesson-15#student-handout">Back to lesson 15/);
+  assert.match(renderLinuxCourse('LNX-102'),/←<\/span> Linux basics<\/a>/);
+});
+
+test('a cyber field lab points back to its lesson when no practice computer answers',async()=>{
+  const {node,root}=page();
+  mountLinuxCourse(root,{id:'CYB-102',probe:async()=>'disabled',hosts:()=>false});
+  await flush();
+  assert.match(node('[data-linux-step]').innerHTML,/practice computers are not available right now/);
+  assert.match(node('[data-linux-stage]').innerHTML,/href="\/courses\/cybersecurity-responsible-ai\/lesson-04#student-handout">Use the lesson 4 browser or paper activity instead/);
+});
+
+test('student mode keeps the links from a cyber field lab back to its lesson and nothing wider',async()=>{
+  // Every course link opens these labs with ?mode=student, which hides links to pages it does not list.
+  const base='https://www.colelearninglabs.com/?mode=student&cart=true';
+  const linksIn=html=>[...html.matchAll(/href="([^"]+)"/g)].map(match=>match[1]);
+  for(const lab of CYBER_FIELD_LABS){
+    const {node,root}=page();
+    mountLinuxCourse(root,{id:lab.id,probe:async()=>'disabled',hosts:()=>false});
+    await flush();
+    const links=[...linksIn(renderLinuxCourse(lab.id)),...linksIn(node('[data-linux-stage]').innerHTML)];
+    assert.ok(links.some(href=>href.startsWith('/courses/')),lab.id+' links back to its lesson');
+    for(const href of links)assert.equal(studentLinkAction(href,base),'keep',lab.id+' link survives student mode: '+href);
+  }
+  for(const href of linksIn(renderLinuxCourse(undefined)))assert.equal(studentLinkAction(href,base),'keep','index link survives student mode: '+href);
+  for(const href of ['/courses/cybersecurity-responsible-ai/lesson-04#student-handout','/courses/cybersecurity-responsible-ai/workbook','/courses/cybersecurity-responsible-ai/project/'])assert.equal(studentLinkAction(href,base),'keep',href);
+  for(const href of ['/courses','/courses/cybersecurity-responsible-ai','/courses/cybersecurity-responsible-ai/lesson-4','/courses/cybersecurity-responsible-ai/lesson-04/extra','/courses/other/lesson-04','/teach','/assets/courses/cybersecurity-responsible-ai/lesson-plans.pdf'])assert.equal(studentLinkAction(href,base),'hide',href+' stays hidden in student mode');
 });

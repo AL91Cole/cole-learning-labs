@@ -3,7 +3,7 @@
 // the guided labs use). The page shows one step at a time above the machine;
 // the steps and their checks come from the server once the machine starts.
 // When the lab server is not answering, the page says so and starts nothing.
-import {LINUX_COURSE,linuxLab,nextLinuxLab} from './linux-catalog.js?release=20261107-tech-team';
+import {LINUX_COURSE,CYBER_FIELD_LABS,linuxLab,nextLinuxLab} from './linux-catalog.js?release=20261107-tech-team';
 import {renderLabRemote,mountLabRemote,probeRemoteService,remoteServiceHosts} from './lab-remote.js?release=20261107-tech-team';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
@@ -12,14 +12,18 @@ export const linuxStepText=value=>String(value??'').split('`').map((part,index)=
 /** The step to show: the first unfinished one, or the last when all are done. */
 export const currentLinuxStep=steps=>{const index=steps.findIndex(step=>!step.completed);return index<0?Math.max(0,steps.length-1):index;};
 
+const COURSE='/courses/cybersecurity-responsible-ai';
+const lessonHref=lab=>COURSE+'/lesson-'+String(lab.lesson).padStart(2,'0')+'#student-handout';
+const labCard=(lab,index,level)=>'<a class="basics-card linux-card" data-track="'+(lab.lesson?'security':'network')+'" href="#linux/'+esc(lab.id)+'"><span class="basics-symbol" aria-hidden="true">'+(index+1)+'</span><span class="eyebrow">'+esc(lab.id)+' · '+level+'</span><h3>'+esc(lab.title)+'</h3><p>'+esc(lab.summary)+'</p><p class="linux-skills" aria-label="You will use">'+lab.skills.map(skill=>'<code>'+esc(skill)+'</code>').join(' ')+'</p><span class="text-link">'+esc(lab.minutes)+' min · Start <span aria-hidden="true">→</span></span></a>';
 function renderIndex(){
   return '<section class="wrap page-intro linux-intro"><p class="eyebrow">Beginner course · Grades 7–12 · Free</p><h1>Linux basics</h1><p>Learn to use a Linux computer by using one. Each lab opens a real Linux desktop in your browser, with a Files window and a terminal. Nothing is installed on your computer.</p><p class="panel-help linux-availability" data-linux-availability role="status">Checking for a practice computer…</p></section>'
-    +'<section class="wrap basics-section linux-labs" aria-label="Linux basics labs"><div class="basics-grid">'+LINUX_COURSE.map((lab,index)=>'<a class="basics-card linux-card" data-track="network" href="#linux/'+esc(lab.id)+'"><span class="basics-symbol" aria-hidden="true">'+(index+1)+'</span><span class="eyebrow">'+esc(lab.id)+' · Beginner</span><h3>'+esc(lab.title)+'</h3><p>'+esc(lab.summary)+'</p><p class="linux-skills" aria-label="You will use">'+lab.skills.map(skill=>'<code>'+esc(skill)+'</code>').join(' ')+'</p><span class="text-link">'+esc(lab.minutes)+' min · Start <span aria-hidden="true">→</span></span></a>').join('')+'</div>'
-    +'<p class="panel-help">Each machine is private to you, has no internet access and is erased when you leave. Do the labs in order the first time.</p></section>';
+    +'<section class="wrap basics-section linux-labs" aria-label="Linux basics labs"><div class="basics-grid">'+LINUX_COURSE.map((lab,index)=>labCard(lab,index,'Beginner')).join('')+'</div>'
+    +'<p class="panel-help">Each machine is private to you, has no internet access and is erased when you leave. Do the labs in order the first time.</p></section>'
+    +'<section class="wrap basics-section linux-labs" id="cyber-field-labs" aria-labelledby="cyber-field-title"><p class="eyebrow">Grades 7–8 · Free · For the course</p><h2 id="cyber-field-title">Cyber field labs</h2><p>Four cases from the course Intro to Cybersecurity and Responsible AI, done with the real tools a security analyst uses. Every step shows the exact command to type. New to Linux? Try '+esc(LINUX_COURSE[0].id)+' first.</p><div class="basics-grid">'+CYBER_FIELD_LABS.map((lab,index)=>labCard(lab,index,'Lesson '+lab.lesson)).join('')+'</div><p class="panel-help">Use only the practice files on the lab computer. Never try these tools on a real account, network or person without written permission.</p></section>';
 }
 function renderLab(lab){
   const next=nextLinuxLab(lab.id);
-  return '<section class="linux-lab" data-linux-lab="'+esc(lab.id)+'"><header class="linux-bar"><a class="linux-back" href="#linux"><span aria-hidden="true">←</span> Linux basics</a><h1>'+esc(lab.id)+' · '+esc(lab.title)+'</h1><span class="linux-progress" data-linux-progress role="status"></span>'+(next?'<a class="linux-next" href="#linux/'+esc(next.id)+'">Next lab <span aria-hidden="true">→</span></a>':'<a class="linux-next" href="#labs">All labs <span aria-hidden="true">→</span></a>')+'</header>'
+  return '<section class="linux-lab" data-linux-lab="'+esc(lab.id)+'"><header class="linux-bar"><a class="linux-back" href="#linux"><span aria-hidden="true">←</span> '+(lab.lesson?'Cyber field labs':'Linux basics')+'</a><h1>'+esc(lab.id)+' · '+esc(lab.title)+'</h1><span class="linux-progress" data-linux-progress role="status"></span>'+(next?'<a class="linux-next" href="#linux/'+esc(next.id)+'">Next lab <span aria-hidden="true">→</span></a>':lab.lesson?'<a class="linux-next" href="'+lessonHref(lab)+'">Back to lesson '+lab.lesson+' <span aria-hidden="true">→</span></a>':'<a class="linux-next" href="#labs">All labs <span aria-hidden="true">→</span></a>')+'</header>'
     +'<div class="linux-step" data-linux-step aria-live="polite"><p><b>'+esc(lab.summary)+'</b> Checking for a practice computer…</p></div>'
     +'<div class="linux-stage" data-linux-stage></div></section>';
 }
@@ -76,7 +80,7 @@ export function mountLinuxCourse(root,{id,showNotice=()=>{},onComplete=()=>{},pr
   },{signal:controller.signal});
   const unavailable=()=>{
     strip.innerHTML='<p><b>The practice computers are not available right now.</b> This lab needs a real Linux computer from the lab server. Try again in a few minutes, or ask your teacher.</p>';
-    stage.innerHTML='<div class="linux-unavailable"><h2>'+esc(lab.title)+'</h2><p>'+esc(lab.summary)+'</p><p>You will use: '+lab.skills.map(skill=>'<code>'+esc(skill)+'</code>').join(' ')+'</p><p><button type="button" class="button" data-linux-retry>Try again</button> <a class="text-link" href="#linux">Back to Linux basics</a></p></div>';
+    stage.innerHTML='<div class="linux-unavailable"><h2>'+esc(lab.title)+'</h2><p>'+esc(lab.summary)+'</p><p>You will use: '+lab.skills.map(skill=>'<code>'+esc(skill)+'</code>').join(' ')+'</p><p><button type="button" class="button" data-linux-retry>Try again</button> '+(lab.lesson?'<a class="text-link" href="'+lessonHref(lab)+'">Use the lesson '+lab.lesson+' browser or paper activity instead</a>':'<a class="text-link" href="#linux">Back to Linux basics</a>')+'</p></div>';
     $('[data-linux-retry]')?.addEventListener('click',()=>{strip.innerHTML='<p>Checking for a practice computer…</p>';stage.innerHTML='';check(true);},{signal:controller.signal});
   };
   const check=force=>Promise.resolve(probe(force?{force:true}:undefined)).then(state=>{

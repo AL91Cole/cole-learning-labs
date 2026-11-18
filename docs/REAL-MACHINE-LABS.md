@@ -182,6 +182,15 @@ answering.
 | `LNX-104` | Who May Read, Write and Run | `whoami`, `ls -l`, `chmod` |
 | `LNX-105` | Search, Filter and Get Help | `grep`, pipes, `find`, `--help` |
 
+Four **cyber field labs** for the grades 7–8 course Intro to Cybersecurity and Responsible AI use the same page and checks (`terminal-sandbox/cyber-labs.js`, listed under Cyber field labs at `#linux`). Each follows one lesson, which keeps a browser or paper activity for when no practice computer answers.
+
+| Lab | Lesson | Title | Real tools |
+| --- | --- | --- | --- |
+| `CYB-101` | 2 | Lock Down the Club Roster | `id`, `ls -l`, `chmod`, `wc -l` |
+| `CYB-102` | 4 | Real Ciphers, Real Fingerprints | `tr`, `sha256sum`, `sha256sum -c` |
+| `CYB-103` | 7 | Read the Sign-in Log | `grep`, `cut`, `sort`, `uniq -c` |
+| `CYB-104` | 15 | Let Python Do the Counting | `python3`, a loop, an `if`, `>` |
+
 - **The page.** One step at a time in a strip above a full-width desktop, with
   a hint and back/forward buttons. The strip follows the learner's progress.
   It fits an 11-inch Chromebook: the reading and display buttons move into the

@@ -13,6 +13,9 @@ const STUDENT_HIDDEN_PAGES = new Set(['projects', 'about', 'connect', 'educators
 // Same-site pages a learner may still need: the AI-use notice, the data-practices page
 // linked beside optional sharing choices, and the local report tool.
 const STUDENT_SITE_PAGES = new Set(['/ai-use-notice', '/ai-use-notice.html', '/compliance', '/compliance.html', '/secure-reports', '/secure-reports.html']);
+// The course's own student pages: a cyber field lab sends the learner back to its lesson handout,
+// which is where the browser and paper activities are. Teacher pages and the catalog stay hidden.
+const STUDENT_COURSE_PAGE = /^\/courses\/cybersecurity-responsible-ai\/(?:lesson-\d\d|workbook|project)$/;
 const STANDALONE_CONTROL = '.button,.text-link,.lab-tool,.pathway-card,#site-nav a,.footer-links a,.footer-support';
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'input', 'scroll'];
 
@@ -36,7 +39,8 @@ export function studentLinkAction(href, base) {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return 'off';
   if (url.origin !== home.origin) return 'off';
   if (url.pathname === home.pathname) return studentHidesPage(url.hash.replace(/^#/, '').split(/[/?]/)[0]) ? 'hide' : 'keep';
-  return STUDENT_SITE_PAGES.has(url.pathname.replace(/\/$/, '')) ? 'keep' : 'hide';
+  const page = url.pathname.replace(/\/$/, '');
+  return STUDENT_SITE_PAGES.has(page) || STUDENT_COURSE_PAGE.test(page) ? 'keep' : 'hide';
 }
 
 /**

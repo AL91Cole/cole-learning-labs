@@ -1,7 +1,7 @@
 import {codeQuestMeta} from './code-quest-catalog.js?release=20261107-tech-team';
 import {arcadeMeta,FREE_ARCADE_IDS} from './arcade-catalog.js?release=20261107-tech-team';
 import {CATALOG} from './lab-catalog.js?release=20261107-tech-team';
-import {LINUX_COURSE} from './linux-catalog.js?release=20261107-tech-team';
+import {REAL_MACHINE_LABS} from './linux-catalog.js?release=20261107-tech-team';
 
 /** The public entry cannot grant membership from browser state or a URL.
  * The protected member build or the reviewed open-public release replaces this content constant. It never authenticates an account. */
@@ -30,8 +30,8 @@ const informationalPages=new Set(['home','projects','about','connect','privacy',
 const practiceTopics=new Set(['network','ai','security']);
 const studioIds=new Set(['network','coding']);
 const sandboxIds=new Set(['blank','pixel-pet','arcade','rover','tiles']);
-// The Linux basics beginner course is free, like the other beginner courses.
-const linuxIds=new Set(LINUX_COURSE.map(lab=>lab.id));
+// The Linux basics beginner course and the course's cyber field labs are free, like the other beginner courses.
+const linuxIds=new Set(REAL_MACHINE_LABS.map(lab=>lab.id));
 
 export const isFreeLab=id=>typeof id==='string'&&freeLabIds.has(id);
 
