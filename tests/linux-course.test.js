@@ -6,6 +6,7 @@ import {cyberLabs} from '../terminal-sandbox/cyber-labs.js';
 import {renderLinuxCourse,mountLinuxCourse,linuxStepText,currentLinuxStep} from '../src/linux-course.js?release=20261107-tech-team';
 import {renderLinuxEntry} from '../src/home-entries.js?release=20261107-tech-team';
 import {routeAccess} from '../src/access-policy.js?release=20261107-tech-team';
+import {studentLinkAction} from '../src/session-modes.js';
 import {learningRoute} from '../src/learning-routes.js?release=20261107-tech-team';
 import {remoteLabFor} from '../src/lab-remote.js?release=20261107-tech-team';
 import {PUBLIC_SOURCE_FILES} from '../scripts/build.mjs';
@@ -185,4 +186,21 @@ test('a cyber field lab points back to its lesson when no practice computer answ
   await flush();
   assert.match(node('[data-linux-step]').innerHTML,/practice computers are not available right now/);
   assert.match(node('[data-linux-stage]').innerHTML,/href="\/courses\/cybersecurity-responsible-ai\/lesson-04#student-handout">Use the lesson 4 browser or paper activity instead/);
+});
+
+test('student mode keeps the links from a cyber field lab back to its lesson and nothing wider',async()=>{
+  // Every course link opens these labs with ?mode=student, which hides links to pages it does not list.
+  const base='https://www.colelearninglabs.com/?mode=student&cart=true';
+  const linksIn=html=>[...html.matchAll(/href="([^"]+)"/g)].map(match=>match[1]);
+  for(const lab of CYBER_FIELD_LABS){
+    const {node,root}=page();
+    mountLinuxCourse(root,{id:lab.id,probe:async()=>'disabled',hosts:()=>false});
+    await flush();
+    const links=[...linksIn(renderLinuxCourse(lab.id)),...linksIn(node('[data-linux-stage]').innerHTML)];
+    assert.ok(links.some(href=>href.startsWith('/courses/')),lab.id+' links back to its lesson');
+    for(const href of links)assert.equal(studentLinkAction(href,base),'keep',lab.id+' link survives student mode: '+href);
+  }
+  for(const href of linksIn(renderLinuxCourse(undefined)))assert.equal(studentLinkAction(href,base),'keep','index link survives student mode: '+href);
+  for(const href of ['/courses/cybersecurity-responsible-ai/lesson-04#student-handout','/courses/cybersecurity-responsible-ai/workbook','/courses/cybersecurity-responsible-ai/project/'])assert.equal(studentLinkAction(href,base),'keep',href);
+  for(const href of ['/courses','/courses/cybersecurity-responsible-ai','/courses/cybersecurity-responsible-ai/lesson-4','/courses/cybersecurity-responsible-ai/lesson-04/extra','/courses/other/lesson-04','/teach','/assets/courses/cybersecurity-responsible-ai/lesson-plans.pdf'])assert.equal(studentLinkAction(href,base),'hide',href+' stays hidden in student mode');
 });

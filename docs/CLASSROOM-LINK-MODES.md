@@ -16,7 +16,7 @@ The combined link is the launch link of the [no-account school pilot](SCHOOL-PIL
 - The mode comes from `location.search`. Lab links are hash links, so the mode stays in the address while a learner moves between activities and when the page reloads.
 - Hidden pages are `projects`, `about`, `connect`, `educators`, `signin` and `membership`. Opening one shows a short "outside student mode" page with links back to the activities.
 - Every link is classified as it is added to the page. Inside a sentence, a link to another website, a hidden or teacher-facing page, an email or phone link, or a script or data address loses its destination and is announced as an unavailable link; its words stay readable. Navigation, footer and button links of those kinds are removed. A click guard covers a link activated before it is processed.
-- Kept: every learning route, the student guide, the privacy page, the AI-use notice, the data-practices page linked beside optional sharing choices, the local encrypted-report tool, and a report the learner downloads.
+- Kept: every learning route, the lesson, workbook and project pages of Intro to Cybersecurity and Responsible AI (a real Linux lab links back to its lesson, where the browser and paper activities are), the student guide, the privacy page, the AI-use notice, the data-practices page linked beside optional sharing choices, the local encrypted-report tool, and a report the learner downloads.
 
 ## Shared-device mode
 
