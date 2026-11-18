@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {PUBLIC_FILES,publicFilesFor,PUBLIC_SOURCE_FILES,MEMBER_FILES,COURSE_DOWNLOAD_FILES} from '../scripts/build.mjs';
+import {DOWNLOAD_MANIFEST,courseDownloadSourceDigest} from '../scripts/generate-course-downloads.mjs';
 import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
 const read=file=>readFileSync(new URL(`../${file}`,import.meta.url));
@@ -12,8 +13,10 @@ const reviewed=new Map([
   ['assets/cole-learning-labs-student-workbook.pdf','4122cd0fda1a77dd345215dd8a3aa1011928f6c03c411668f182d5c68731fc93'],
   ['assets/cole-learning-labs-pop-quizzes.pdf','0384b582622b93c5f0571cc8a7fe4babd0c48362ef16bef55e7cb322e451df19']
 ]);
-// No course ships a download at present. Add each reviewed file and its SHA-256 here when one does.
-const courseReviewed=new Map([]);
+// The course PDFs are printed by scripts/generate-course-downloads.mjs, which records each file's hash
+// and a digest of the pages they were printed from. Regenerate and review them when that digest moves.
+const courseManifest=JSON.parse(read(DOWNLOAD_MANIFEST).toString());
+const courseReviewed=new Map(Object.entries(courseManifest.files));
 test('retained curriculum matches the exact reviewed companion files and is excluded from public publishing',()=>{
   assert.deepEqual(PUBLIC_SOURCE_FILES.filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...reviewed.keys(),...courseReviewed.keys()].sort());
   assert.deepEqual(PUBLIC_FILES.filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...reviewed.keys(),...courseReviewed.keys()].sort());
@@ -50,18 +53,27 @@ test('README repository pathway totals are derived from the complete source cata
   }
 });
 
-test('course downloads are limited to reviewed student editions with exact content and isolated delivery',()=>{
-  assert.doesNotMatch(read('_headers').toString(),/assets\/courses\//u,'No header rule may outlive its removed course download');
+test('course downloads are the reviewed PDFs printed from the current pages, with isolated delivery',()=>{
   assert.deepEqual([...COURSE_DOWNLOAD_FILES].sort(),[...courseReviewed.keys()].sort());
+  assert.equal(COURSE_DOWNLOAD_FILES.length,21,'four packs and one PDF for each of the seventeen lessons');
+  assert.equal(courseManifest.source,courseDownloadSourceDigest(),'A lesson, printable lab or print style changed. Run node scripts/generate-course-downloads.mjs, review the PDFs and commit them.');
+  const rule=read('_headers').toString().split('/assets/courses/cybersecurity-responsible-ai/*\n')[1]?.split(/\n\s*\n/u)[0];
+  assert.ok(rule,'The course downloads need their header rule');
+  assert.match(rule,/Content-Disposition: attachment/u);
+  assert.match(rule,/Content-Type: application\/pdf/u);
+  assert.match(rule,/Cache-Control: public, max-age=0, must-revalidate, no-transform/u);
+  assert.equal([...read('_headers').toString().matchAll(/^\/assets\/courses\//gmu)].length,1,'No header rule may outlive a removed course download');
+  let total=0;
   for(const [file,digest] of courseReviewed){
-    assert.equal(createHash('sha256').update(read(file)).digest('hex'),digest,file);
+    const bytes=read(file);total+=bytes.length;
+    assert.match(file,/^assets\/courses\/cybersecurity-responsible-ai\/[a-z0-9-]+\.pdf$/u);
+    assert.equal(bytes.subarray(0,5).toString(),'%PDF-',file);
+    assert.equal(createHash('sha256').update(bytes).digest('hex'),digest,file);
     assert.ok(PUBLIC_FILES.includes(file));
     assert.ok(publicFilesFor('preview').includes(file));
     assert.equal(MEMBER_FILES.includes(file),false);
-    const block=read('_headers').toString().split('/'+file+'\n')[1]?.split(/\n\s*\n/u)[0];
-    assert.ok(block,file);
-    assert.match(block,/Content-Disposition: attachment/u);
-    assert.match(block,/Cache-Control: public, max-age=0, must-revalidate, no-transform/u);
-    assert.match(block,file.endsWith('.pdf')?/Content-Type: application\/pdf/u:/Content-Type: application\/vnd.openxmlformats-officedocument.wordprocessingml.document/u);
+    assert.doesNotMatch(bytes.toString('latin1'),/127\.0\.0\.1|localhost|\/home\/|file:\/\//u,file+' carries no local address or path');
   }
+  assert.ok(total<8_000_000,'The course downloads stay small enough to keep in the repository');
+  assert.equal(PUBLIC_SOURCE_FILES.includes(DOWNLOAD_MANIFEST),false,'The manifest is an authoring record, not a published file');
 });

@@ -8,11 +8,12 @@ import { bundleTier, STANDALONE_LAB_IDS } from './tier-bundles.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import {bundlePageStyles,styleBundlePath} from './style-bundles.mjs';
 import {PART_ART} from '../src/part-art.js';
-import {NEW_COURSE_PAGE_FILES, renderCybersecurityCourse} from './cybersecurity-course.mjs';
+import {NEW_COURSE_PAGE_FILES, COURSE_DOWNLOADS, renderCybersecurityCourse} from './cybersecurity-course.mjs';
 
 export const COURSE_PAGE_FILES = Object.freeze([...NEW_COURSE_PAGE_FILES]);
-// Reviewed student downloads that ship with a course. None at present; each addition needs its own content review and a pinned hash in the curriculum-download checks.
-export const COURSE_DOWNLOAD_FILES = Object.freeze([]);
+// Reviewed PDF downloads that ship with a course. They are printed from the course pages by
+// scripts/generate-course-downloads.mjs; the curriculum-download checks pin each file's hash.
+export const COURSE_DOWNLOAD_FILES = Object.freeze([...COURSE_DOWNLOADS]);
 const CYBERSECURITY_DATA_FILES = [
   'courses/cybersecurity-responsible-ai/security.json',
   'courses/cybersecurity-responsible-ai/responsible-ai.json'

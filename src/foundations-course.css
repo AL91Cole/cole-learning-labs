@@ -103,3 +103,5 @@
 .fc-skill-list li{margin:0}
 .fc-code{background:#f3f6f4;border:1px solid #c9d6cf;border-radius:.35rem;padding:.75rem 1rem;font:500 .92rem/1.5 ui-monospace,"Cascadia Mono",Consolas,monospace;overflow-x:auto;white-space:pre}
 .fc-fallback code,.fc-week code{font-size:.9em}
+.fc-context .fc-downloads,.fc-fallback .fc-downloads{margin:6px 0 0}
+.fc-vocabulary dt a{text-decoration:underline;text-underline-offset:.18em}

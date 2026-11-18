@@ -10,6 +10,24 @@ const labPacing = 'Grades 7–8 · 15–20 minutes';
 const practiceId = number => 'practice-' + String(number).padStart(2, '0');
 const lessonSlug = number => 'lesson-' + String(number).padStart(2, '0');
 const lessonPath = number => base + '/' + lessonSlug(number);
+const ORIGIN = 'https://www.colelearninglabs.com';
+const downloadDirectory = 'assets/courses/cybersecurity-responsible-ai';
+const lessonDownload = number => lessonSlug(number) + '.pdf';
+const packDownloads = [
+  ['student-workbook.pdf', 'Student workbook', 'All seventeen student handouts with the skill tracker.'],
+  ['lesson-plans.pdf', 'Lesson plans', 'Every lesson in one file: each student handout followed by its timed teaching plan.'],
+  ['printable-labs.pdf', 'Printable labs', 'The paper editions of the four browser investigations.'],
+  ['final-project.pdf', 'Project and rubric', 'The Safe-to-Share Bulletin brief and its four-criterion rubric.']
+];
+/** Reviewed PDF downloads. scripts/generate-course-downloads.mjs prints them from these pages; a test fails when they fall behind. */
+export const COURSE_DOWNLOADS = Object.freeze([
+  ...packDownloads.map(([name]) => downloadDirectory + '/' + name),
+  ...Array.from({length: lessonCount}, (_, i) => downloadDirectory + '/' + lessonDownload(i + 1))
+]);
+const downloadLink = (name, label) => `<a href="/${downloadDirectory}/${name}" download>${esc(label)}</a>`;
+/** Google's share page receives only this public address. Sign-in and class selection happen on Google's side. */
+export const classroomShareURL = address => 'https://classroom.google.com/share?url=' + encodeURIComponent(ORIGIN + address);
+const shareLink = (address, label) => `<a href="${esc(classroomShareURL(address))}" rel="noopener">${esc(label)}</a>`;
 const lessonFiles = Array.from({length: lessonCount}, (_, i) => directory + '/' + lessonSlug(i + 1) + '.html');
 export const NEW_COURSE_PAGE_FILES = Object.freeze([
   directory + '/index.html', ...lessonFiles, directory + '/workbook.html', directory + '/project.html'
@@ -54,6 +72,7 @@ function machineLab(entry, number) {
     <p><strong>Grades 7–8 · ${lab.minutes} minutes · ${lab.skills.map(skill => `<code>${esc(skill)}</code>`).join(' ')}</strong></p>
     <p><a href="/?mode=student&amp;cart=true#linux/${esc(lab.id)}">Open ${esc(lab.id)} on a real Linux computer</a></p>
     <p>${esc(entry.prompt)}</p>
+    <p class="fc-downloads">${shareLink('/?mode=student&cart=true#linux/' + lab.id, 'Share this lab to Google Classroom')}</p>
     <p>This lab opens a real Linux desktop in your browser. It is private to you, has no internet access and is erased when you leave. Every step shows the exact command to type. If no practice computer is available, use the other activities on this page. Use these tools only on the practice files.</p></aside>`;
 }
 
@@ -70,7 +89,8 @@ function classLab(lab, number) {
     <p><strong>${labPacing}</strong></p><p>${esc(lab.introduction)}</p>
     <div class="button-row"><a class="button" href="${esc(lab.path)}">Open interactive lab</a>
     <a class="button button-outline" href="${esc(lab.path)}#paper">Open printable lab</a></div>
-    ${list(lab.steps, 'ol')}<p><strong>What to turn in.</strong> ${esc(lab.artifact)}</p></section>`;
+    ${list(lab.steps, 'ol')}<p><strong>What to turn in.</strong> ${esc(lab.artifact)}</p>
+    <p class="fc-downloads">${shareLink(lab.path, 'Share this lab to Google Classroom')}</p></section>`;
 }
 
 function handout(lesson, number) {
@@ -106,7 +126,8 @@ function lessonPage(lesson, number) {
   const body = `${breadcrumb('Lesson ' + number)}
     <header class="fc-intro"><p class="eyebrow">Lesson ${number} of ${lessonCount} · 40 minutes</p>
     <h1>${esc(lesson.title)}</h1><p class="fc-lede">${esc(lesson.objective)}</p>
-    <div class="button-row"><a class="button" href="#student-handout">Open the case</a>${lesson.courseLab ? `<a class="button button-outline" href="#${practiceId(number)}">Hands-on investigation</a>` : ''}<a class="button button-outline" href="#teacher-plan">Teacher plan</a></div></header>
+    <div class="button-row"><a class="button" href="#student-handout">Open the case</a>${lesson.courseLab ? `<a class="button button-outline" href="#${practiceId(number)}">Hands-on investigation</a>` : ''}<a class="button button-outline" href="#teacher-plan">Teacher plan</a></div>
+    <p class="fc-downloads">${downloadLink(lessonDownload(number), 'Download this lesson (PDF)')}${shareLink(lessonPath(number) + '#student-handout', 'Share to Google Classroom')}</p></header>
     ${projectLessons.includes(number) ? `<p class="fc-notice">Use the <a href="${base}/project">Safe-to-Share Bulletin project brief and rubric</a> with this case.</p>` : ''}
     ${section('student-handout', 'Student handout', handout(lesson, number))}
     ${teacherPlan(lesson)}${nav}`;
@@ -142,14 +163,20 @@ function overview(lessons) {
     <p class="fc-lede">A scrambled note falls out of a locker. A message wants your sign-in code in two minutes. A robot aces its practice cards, then puts a soup can in the trash. Each lesson hands you a case from a fictional school club. Your job is to work out what happened and what to do next.</p>
     <dl class="fc-facts"><div><dt>Class time</dt><dd>${lessonCount} × 40 minutes</dd></div><div><dt>Experience</dt><dd>Beginner</dd></div><div><dt>Materials</dt><dd>Browser, real Linux lab or paper</dd></div><div><dt>Final project</dt><dd>Safe-to-Share Bulletin</dd></div></dl>
     <div class="button-row"><a class="button" href="${lessonPath(1)}">Start lesson 1</a><a class="button button-outline" href="${base}/workbook">Student workbook</a></div></header>
-    <nav class="fc-section-nav" aria-label="Course sections"><a href="#lesson-map">Lesson map</a><a href="#course-labs">Hands-on investigations</a><a href="#skills">Skill tracker</a><a href="#teach">Teacher setup</a><a href="${base}/project">Project and rubric</a><a href="#background">Course background</a></nav>
+    <nav class="fc-section-nav" aria-label="Course sections"><a href="#lesson-map">Lesson map</a><a href="#course-labs">Hands-on investigations</a><a href="#skills">Skill tracker</a><a href="#print-share">Print and share</a><a href="#teach">Teacher setup</a><a href="${base}/project">Project and rubric</a><a href="#background">Course background</a></nav>
     ${section('lesson-map', 'What will you investigate?', `<div class="fc-week-grid">${map}</div>
       <p>By the end, you can match a safeguard to a risk, explain how a message travels and stays secret, report an incident using evidence, say what an AI model learned and why it can be wrong, read a short Python script that automates a security check, and decide what an AI-assisted announcement needs before anyone shares it.</p>`)}
     ${section('course-labs', 'Hands-on investigations', `<p><strong>${labPacing} per lab.</strong> Each investigation fits inside its 40-minute lesson. Choose the browser or paper edition. Lessons 2, 3, 5 and 10 also link to a practice simulation.</p><div class="fc-week-grid">${classLabs}</div>
       <h3 id="real-labs">On a real Linux computer</h3><p>Four cyber field labs repeat a classroom case with the tools a security analyst uses. Each opens a real Linux desktop in the browser and checks every step. They need the Cole Learning Labs practice computers to be available, so each lesson keeps a browser or paper activity as well.</p><div class="fc-week-grid">${realLabs}</div>`)}
     ${section('skills', 'Skill tracker', `<p>Every lesson starts with a short warm-up challenge and ends with a skill. Tick a skill once you can explain your exit ticket answer to a partner.</p>${skillTracker(lessons)}`)}
+    ${section('print-share', 'Print, download and share', `<p>Everything in the course can be handed out on paper. Download a PDF, or open any lesson and use Print in your browser. Lesson pages print the student handout first and start the teaching plan on a new page, so you can print only the pages students need.</p>
+      <dl class="fc-vocabulary">${packDownloads.map(([name, label, about]) => `<div><dt>${downloadLink(name, label + ' (PDF)')}</dt><dd>${esc(about)}</dd></div>`).join('')}
+      <div><dt>One lesson at a time</dt><dd>Each lesson page has its own <strong>Download this lesson (PDF)</strong> link. Start with ${downloadLink(lessonDownload(1), 'lesson 1 (PDF)')}.</dd></div></dl>
+      <h3>Connect a lesson to Google Classroom</h3><p>Every lesson, the workbook, the project and each lab has a <strong>Share to Google Classroom</strong> link. It opens Google Classroom, where you sign in, choose a class and post the page as an assignment, a question, an announcement or a material. To hand out paper or a file instead, attach the downloaded PDF to your Classroom post.</p>
+      <p>The link passes Google only the public address of that page. Google handles sign-in and class selection. Cole Learning Labs receives no roster, no student work and no grades. Students turn work in to you in Classroom, and your school keeps those records. ${shareLink(lessonPath(1) + '#student-handout', 'Share lesson 1 to Google Classroom')} to try it.</p>
+      <p>The real Linux labs and practice simulations open in student mode and shared-device mode, which hide links to other websites and store nothing on the device.</p>`)}
     ${section('teach', 'Before you teach', `<p>Plan for three and a half school weeks at five classes per week, or use one lesson per meeting. Units 1 and 2 cover cybersecurity, unit 3 covers how AI works and where it goes wrong, and unit 4 adds a first Python script before the project brings everything together. Start with lesson 1. Reserve the last two periods for drafting and revising the bulletin.</p>
-      <h3>Prepare the cases</h3><p>Give each pair a copy of the <a href="${base}/workbook">student workbook</a> and each reviewer the <a href="${base}/project#rubric">project rubric</a>. Use the print command in your browser or project one case at a time. Students can write, draw an annotated timeline or dictate a response. For lessons ${labLessons.slice(0, -1).join(', ')} and ${labLessons.at(-1)}, also open each printable lab from the student handout and print its evidence and prompts before class.</p>
+      <h3>Prepare the cases</h3><p>Give each pair a copy of the <a href="${base}/workbook">student workbook</a> and each reviewer the <a href="${base}/project#rubric">project rubric</a>. <a href="#print-share">Download the PDFs</a>, use the print command in your browser or project one case at a time. Students can write, draw an annotated timeline or dictate a response. For lessons ${labLessons.slice(0, -1).join(', ')} and ${labLessons.at(-1)}, also open each printable lab from the student handout and print its evidence and prompts before class.</p>
       <h3>Try the real Linux labs first</h3><p>Lessons ${CYBER_FIELD_LABS.map(lab => lab.lesson).slice(0, -1).join(', ')} and ${CYBER_FIELD_LABS.at(-1).lesson} each offer a <a href="#real-labs">real Linux lab</a>. Open one on a student device and your school network before class. In lessons 4 and 7 it can replace the browser investigation or fill an extra period. If the practice computers are not available, teach from the browser and paper activities, which cover the same ideas. Students new to a command line can warm up with the first <a href="/?mode=student&amp;cart=true#linux">Linux basics</a> lab.</p>
       <h3>Gather a few supplies</h3><p>The warm-ups use scrap paper, a hole punch for lesson 6, six small classroom objects for lesson 9 and a short fact card about an invented animal for lesson 11. No warm-up needs a device.</p>
       <h3>Run the investigations</h3><p>Open with the warm-up challenge. Ask one partner to read the evidence and the other to challenge one assumption. Swap roles in the next case. Each lesson has a timed plan, an exit ticket and a description of what to listen for. Use the exit ticket to decide which idea to revisit next class.</p>
@@ -177,7 +204,8 @@ function workbook(lessons) {
   const description = 'Printable evidence cards, investigation prompts and exit tickets for every lesson.';
   const body = `${breadcrumb('Student workbook')}<header class="fc-intro">
     <p class="eyebrow">Student workbook · Grades 7–8</p><h1>Cybersecurity and Responsible AI workbook</h1>
-    <p class="fc-lede">Start each case with the warm-up challenge. Use the evidence cards to make a decision. Write down what you saw, what you would do and what you still need to check.</p></header>
+    <p class="fc-lede">Start each case with the warm-up challenge. Use the evidence cards to make a decision. Write down what you saw, what you would do and what you still need to check.</p>
+    <p class="fc-downloads">${downloadLink('student-workbook.pdf', 'Download the workbook (PDF)')}${shareLink(base + '/workbook', 'Share to Google Classroom')}</p></header>
     <p class="fc-print-help">Use browser Print to print this workbook. Answer on a separate sheet, in a school-managed document or aloud with a partner. Label each response with the lesson and question number. All names and records in the cases are fictional.</p>
     <section class="fc-section" id="skills"><h2>My skill tracker</h2>${skillTracker(lessons)}</section>
     <nav aria-label="Workbook contents"><ol>${lessons.map((lesson, i) => `<li><a href="#${lessonSlug(i + 1)}">${esc(lesson.title)}</a>${lesson.courseLab ? ` · <a href="#${practiceId(i + 1)}">${esc(lesson.courseLab.title)}</a>` : ''}</li>`).join('')}</ol></nav>
@@ -188,7 +216,8 @@ function workbook(lessons) {
 
 function project() {
   const body = `${breadcrumb('Final project')}<header class="fc-intro"><p class="eyebrow">Student project · Lessons ${projectLessons[0]} and ${projectLessons[1]}</p>
-    <h1>Safe-to-Share Bulletin</h1><p class="fc-lede">Your school club has a draft announcement, a suspicious message and a drawing it might use. Your job is to give students a bulletin they can trust and show the adviser why it’s ready.</p></header>
+    <h1>Safe-to-Share Bulletin</h1><p class="fc-lede">Your school club has a draft announcement, a suspicious message and a drawing it might use. Your job is to give students a bulletin they can trust and show the adviser why it’s ready.</p>
+    <p class="fc-downloads">${downloadLink('final-project.pdf', 'Download the project and rubric (PDF)')}${shareLink(base + '/project', 'Share to Google Classroom')}</p></header>
     ${section('brief', 'What to hand in', `<ol>
     <li>Use the <a href="${lessonPath(projectLessons[0])}#student-handout">lesson ${projectLessons[0]} records</a> to write a short public bulletin. Include the facts a student needs to attend, the approved way to sign up, and a credit line for any artwork you choose to use.</li>
     <li>Attach an editor’s note for the adviser. List what the AI draft got right, what you changed or left out, and the clue or dated source behind each choice. Describe how you would report the suspicious message.</li>

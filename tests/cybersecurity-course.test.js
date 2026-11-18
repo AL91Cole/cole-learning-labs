@@ -5,7 +5,7 @@ import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
 import {once} from 'node:events';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {renderCybersecurityCourse, NEW_COURSE_PAGE_FILES} from '../scripts/cybersecurity-course.mjs';
+import {renderCybersecurityCourse, NEW_COURSE_PAGE_FILES, COURSE_DOWNLOADS, classroomShareURL} from '../scripts/cybersecurity-course.mjs';
 import {coursePageRoute} from '../scripts/course-page.mjs';
 import {MEMBER_FILES, publicFilesFor} from '../scripts/build.mjs';
 import {createPreviewServer} from '../scripts/serve.mjs';
@@ -213,4 +213,51 @@ test('the Python lesson prints the same script and log lines the real lab runs',
   assert.match(blocks[1], /\n    if "FAILED" in line/u);
   assert.equal([...workbook.matchAll(/<pre class="fc-authored fc-code">/gu)].length, 2);
   assert.equal(lessons.filter(item => item.code).length, 1, 'Only the Python lesson carries code');
+});
+
+test('every lesson, the workbook, the project and each lab can be downloaded or shared to Google Classroom', () => {
+  const hub = pages.get(directory + '/index.html');
+  const assets = '/assets/courses/cybersecurity-responsible-ai/';
+  const hrefs = html => [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/gu)].map(([tag, href]) => ({tag, href: href.replaceAll('&amp;', '&')}));
+  const downloads = html => hrefs(html).filter(link => link.href.startsWith(assets));
+  const shared = html => hrefs(html).filter(link => link.href.startsWith('https://classroom.google.com/')).map(link => {
+    const url = new URL(link.href);
+    assert.equal(url.origin + url.pathname, 'https://classroom.google.com/share');
+    assert.deepEqual([...url.searchParams.keys()], ['url'], 'Google receives the public page address and nothing else');
+    assert.match(link.tag, /rel="noopener"/u);
+    return url.searchParams.get('url');
+  });
+  assert.equal(classroomShareURL('/labs/museum-label'), 'https://classroom.google.com/share?url=https%3A%2F%2Fwww.colelearninglabs.com%2Flabs%2Fmuseum-label');
+
+  const offered = new Set();
+  for (const [file, html] of pages) {
+    for (const link of downloads(html)) {
+      assert.match(link.tag, /\sdownload>/u, 'Download links save the file: ' + link.href);
+      assert.ok(COURSE_DOWNLOADS.includes(link.href.slice(1)), file + ' links to a download that is not published: ' + link.href);
+      offered.add(link.href.slice(1));
+    }
+    for (const address of shared(html)) {
+      const url = new URL(address);
+      assert.equal(url.origin, origin, 'Only this site is shared: ' + address);
+      if (url.pathname.startsWith('/' + directory)) assert.ok(pages.has((url.pathname.slice(1)) + '.html'), address);
+    }
+  }
+  assert.deepEqual([...offered].sort(), [...COURSE_DOWNLOADS].sort(), 'Every published download is linked from a course page');
+
+  lessons.forEach((lesson, i) => {
+    const slug = 'lesson-' + String(i + 1).padStart(2, '0');
+    const html = pages.get(directory + '/' + slug + '.html');
+    assert.deepEqual(downloads(html).map(link => link.href), [assets + slug + '.pdf'], slug);
+    const expected = [origin + '/' + directory + '/' + slug + '#student-handout',
+      ...(lesson.courseLab ? [origin + lesson.courseLab.path] : []),
+      ...(lesson.machineLab ? [origin + '/?mode=student&cart=true#linux/' + lesson.machineLab.id] : [])];
+    assert.deepEqual(shared(html), expected, slug);
+  });
+  assert.deepEqual(downloads(workbook).map(link => link.href), [assets + 'student-workbook.pdf']);
+  assert.equal(shared(workbook)[0], origin + '/' + directory + '/workbook');
+  assert.deepEqual(downloads(project).map(link => link.href), [assets + 'final-project.pdf']);
+  assert.deepEqual(shared(project), [origin + '/' + directory + '/project']);
+  const section = hub.split('id="print-share"')[1].split('</section>')[0];
+  assert.deepEqual(downloads(section).map(link => link.href), ['student-workbook', 'lesson-plans', 'printable-labs', 'final-project', 'lesson-01'].map(name => assets + name + '.pdf'));
+  assert.match(visibleText(section), /Cole Learning Labs receives no roster, no student work and no grades\./u);
 });

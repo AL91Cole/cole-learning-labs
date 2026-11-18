@@ -55,6 +55,12 @@ https://:version.cole-learning-labs.pages.dev/*
   Cache-Control: public, max-age=0, must-revalidate, no-transform
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests
 
+# Printable course PDFs are offered as downloads.
+/assets/courses/cybersecurity-responsible-ai/*
+  Content-Type: application/pdf
+  Content-Disposition: attachment
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+
 /
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 
