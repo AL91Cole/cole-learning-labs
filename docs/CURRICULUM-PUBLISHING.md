@@ -21,54 +21,10 @@ The PDFs contain selectable text. The workbook is untagged and has no document l
 
 The public build also includes [student-workbook.html](../student-workbook.html) and [practice-quizzes.html](../practice-quizzes.html): structured HTML alternatives preserving all six workbook sections and eight quiz forms, without solutions or answer keys. Native labeled fields, fieldsets, headings, a reference table, keyboard instructions, and print styles support browser use. These static pages have no scripts, submission, or application saving; entries are temporary and browser/extension handling is separate. Long responses need a print-preview check or copying into an approved document. Focused tests verify prompt/choice parity, radio grouping, labels, and absent submission paths; they do not replace assistive-technology acceptance. Keep the original PDFs and their pinned hashes unchanged unless the document-review process is repeated. Neither format is certified accessible; see [Accessibility review](ACCESSIBILITY-REVIEW.md).
 
-The historical DOCX companions remain outside the public release because their final rendering review is incomplete. The separately authored foundations-course student documents below have their own review; this does not approve other Word documents or private teacher guides.
+The historical DOCX companions remain outside the public release because their final rendering review is incomplete.
 
-## First complete course — November 17, 2026
+## Classroom course — November 18, 2026
 
-The user requested publication of the authored 45-lesson grades 7–8 **Technology, AI & Cybersecurity Foundations** course. Public delivery includes a course map, 45 lesson plans with student prompts, a project brief/rubric and a selected NYSED crosswalk. These are original public teaching instructions and worked instructional examples, not confidential answer guidance or completed student work.
+The first complete course, the 45-lesson **Technology, AI & Cybersecurity Foundations**, was published on November 17, 2026 and removed the next day at the owner's request. **Intro to Cybersecurity and Responsible AI** replaces it. The Foundations lesson pages, its public source data and its four reviewed student downloads (`assets/courses/foundations/…`) are no longer in this repository or the hosted artifact, and their header rules are gone. `/courses/foundations` redirects to the new course. No course ships a Word or PDF download at present; `COURSE_DOWNLOAD_FILES` in `scripts/build.mjs` is empty, and any future download needs its own content review and a pinned hash in the curriculum-download checks.
 
-The four newly reviewed downloads are `assets/courses/foundations/student-workbook.pdf`, `student-workbook.docx`, `student-project.pdf` and `student-project.docx`. Their exact hashes are pinned in the curriculum-download checks. The Word files contain no macros, embedded objects, comments or tracked revisions. Their only external relationships are generic public simulation links; the default empty bibliography part contains no sources or personal information. The PDF files were read back, selected pages visually reviewed, and all text checked against page bounds. They are untagged print companions; structured HTML and editable Word alternatives are provided without claiming accessibility certification.
-
-Teacher answer guidance, handout answers, exit answers and misconceptions remain outside this public checkout and hosted artifact. The public source data contains only the reviewed course and lesson fields, is parsed as literals rather than executed by the generator, and is excluded from hosted and member manifests. Generated static lesson HTML is the public interface. Do not add the full teacher package or its ZIP archives to this repository.
-
-The new course and its four student downloads are intentionally public in both access configurations. They do not grant member access, open a classroom service, import rosters, save responses or sync grades. A teacher shares a generic lesson URL to Google's posting interface and attaches school-owned student materials separately. Student records remain in the school's approved assignment workflow; ordinary hosting metadata still applies.
-
-## Material held outside the checkout
-
-| Original material | Decision |
-| --- | --- |
-| Original student workbook DOCX and PDF | Hold outside the checkout; publish only the reviewed revised PDF listed above |
-| Pop-quiz answer keys, DOCX and PDF | Private teacher resources only |
-| Completed INC-101 worked report | Private teacher exemplar only |
-| Instructor guide and speaking script, DOCX and PDF | Private teacher resources; contain troubleshooting walkthroughs |
-| Complete slide deck, Lesson 1 deck, and Lesson 2 deck | Private teacher resources; visible slides and speaker notes contain solution guidance |
-| Original blank-quiz documents | Hold outside the checkout; publish only the reviewed unmarked PDF listed above |
-| Optional input-event HTML | Retain as a separate offline teacher diagnostic; not approved for the website |
-| ZIP archives and unreviewed imports | Keep outside the checkout pending content, metadata, and executable-content review |
-
-Removing PowerPoint notes would still leave solution guidance in visible slides. A future student-facing deck needs its own review of slides, hidden slides, notes, comments, relationships, embedded files, media, and document properties. Do not publish the original teaching decks as public downloads.
-
-The optional input-event HTML observes actual input on its own page. Its extracted script passed a syntax check, but its inline script conflicts with the website's current Content Security Policy. A future public edition would need reviewed code and policy integration, manifest approval, and browser testing. Keep the current original offline.
-
-The public `teacher/index.html` includes a fictional demo and is not a private-material delivery service. A teacher label, hidden tab, unlisted URL, or browser PIN does not secure downloadable content. Keep private files entirely outside the checkout, even when an ignore pattern would exclude them.
-
-## Repository, build, and preview safeguards
-
-`.gitignore` reduces accidental additions. It does not remove files already tracked, prevent a forced addition, inspect document contents, or erase public history. If confidential information was previously published, treat it as exposed and follow the appropriate removal and incident process; this release does not claim to purge prior copies or repository history.
-
-The checks work together:
-
-1. `npm run check` checks module syntax and audits tracked repository paths for private curriculum and archive names. A source snapshot without a Git index is checked as a source tree. Tracked-path inspection includes files even if they match an ignore rule.
-2. `npm test` exercises curriculum boundaries, public preview behavior, and the existing application and privacy protections.
-3. `npm run build` publishes only the explicit reviewed `PUBLIC_FILES` manifest into `dist`. Private curriculum path checks also apply to manifest entries, and unapproved files in public source directories cause the build to refuse publication.
-4. `npm run dev` serves the reviewed public allowlist rather than arbitrary files from the checkout. Linked or unapproved files must not become reachable through the local preview. If another server is used, serve `dist` rather than the checkout root.
-
-Filename checks cannot recognize every confidential document or a solution hidden in a harmlessly named file. Review actual content and metadata before adding an asset. Do not weaken the manifest or preview allowlist to make an unreviewed import appear.
-
-## Download responses and release review
-
-Serve approved PDF companions with an appropriate PDF content type, a download filename, and MIME-sniffing protection. Apply public-download caching only to the reviewed public assets. Do not extend those cache rules to `/api/*`, teacher review, encrypted report tools, or any student record or submission response. API and private-work responses must retain their own no-store protections. The Pages Functions route remains limited to `/api/*`; public PDF downloads do not need classroom API execution.
-
-Before release, inspect the diff and the exact build manifest, run the checks above, open both revised PDFs, and verify their deployed content type, download behavior, and cache headers. Confirm that answer keys, worked reports, guides, scripts, original decks, archives, and private key files are absent from the commit and `dist`. Confirm that direct requests for private paths fail in the local preview. Deployment checks must use fictional data and must not enable the closed production classroom service.
-
-For teaching and report export, see [Teaching guidance](TEACHING.md). For confidential assessment storage, see [Teacher rubric storage](TEACHER-RUBRICS.md). The [Privacy release requirements](PRIVACY-RELEASE-GATE.md) remain independent of curriculum publishing.
+The new course is seventeen generated static lesson pages, a workbook and a project page, authored in `courses/cybersecurity-responsible-ai/security.json` and `responsible-ai.json`. Those data files are build input only and are not hosted. Public pages contain teaching instructions, evidence cards and descriptions of what good work looks like. They contain no answer keys. The browser labs and the real-machine cyber field labs necessarily carry their own checks; treat those as activity logic, not as teacher guidance. Do not add a teacher answer package or its archives to this repository.
