@@ -14,7 +14,6 @@ const canonicalPages = new Map([
 const origin = 'https://www.colelearninglabs.com';
 const cyberCourse = '/courses/cybersecurity-responsible-ai';
 const coursePaths = [
-  '/courses/foundations', ...Array.from({length:45}, (_, index) => '/courses/foundations/day-' + String(index + 1).padStart(2, '0')), '/courses/foundations/project', '/courses/foundations/standards',
   cyberCourse, ...Array.from({length:16}, (_, index) => cyberCourse + '/lesson-' + String(index + 1).padStart(2, '0')), cyberCourse + '/workbook', cyberCourse + '/project'
 ];
 
@@ -61,7 +60,8 @@ test('the course sitemap covers both hubs, all lessons and their project and ref
 test('homepage and explicit member-document redirects stay relative without a broad catch-all', () => {
   const rules = read('_redirects').split(/\r?\n/u).map(line => line.trim()).filter(line => line && !line.startsWith('#'));
   assert.deepEqual(rules, ['/index.html / 301', '/index / 301',
-    ...['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html','/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html'].map(route=>route+' /#membership 302')]);
+    ...['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html','/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html'].map(route=>route+' /#membership 302'),
+    '/courses/foundations /courses/cybersecurity-responsible-ai 301','/courses/foundations/ /courses/cybersecurity-responsible-ai 301']);
   assert.equal(rules.some(rule=>rule.includes('*')||rule.includes('https://')),false);
 });
 

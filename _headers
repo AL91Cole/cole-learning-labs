@@ -55,26 +55,6 @@ https://:version.cole-learning-labs.pages.dev/*
   Cache-Control: public, max-age=0, must-revalidate, no-transform
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests
 
-/assets/courses/foundations/student-workbook.pdf
-  Content-Type: application/pdf
-  Content-Disposition: attachment; filename="foundations-student-workbook.pdf"
-  Cache-Control: public, max-age=0, must-revalidate, no-transform
-
-/assets/courses/foundations/student-project.pdf
-  Content-Type: application/pdf
-  Content-Disposition: attachment; filename="foundations-student-project.pdf"
-  Cache-Control: public, max-age=0, must-revalidate, no-transform
-
-/assets/courses/foundations/student-workbook.docx
-  Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
-  Content-Disposition: attachment; filename="foundations-student-workbook.docx"
-  Cache-Control: public, max-age=0, must-revalidate, no-transform
-
-/assets/courses/foundations/student-project.docx
-  Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
-  Content-Disposition: attachment; filename="foundations-student-project.docx"
-  Cache-Control: public, max-age=0, must-revalidate, no-transform
-
 /
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 

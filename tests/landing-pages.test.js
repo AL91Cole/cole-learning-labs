@@ -7,7 +7,7 @@ import {routeAccess} from '../src/access-policy.js';
 import {CATALOG} from '../src/lab-catalog.js';
 import {ARCADE_CATALOG} from '../src/arcade-catalog.js';
 import {ELEMENTARY_LABS} from '../src/elementary-labs.js';
-import {COURSE_DATA_FILE, coursePageRoute, parseFoundationsData, renderFoundationsCourse} from '../scripts/foundations-course.mjs';
+import {coursePageRoute} from '../scripts/course-page.mjs';
 import {renderCybersecurityCourse} from '../scripts/cybersecurity-course.mjs';
 
 const read = name => readFileSync(new URL('../' + name, import.meta.url), 'utf8');
@@ -17,7 +17,7 @@ const pages = new Map(PUBLIC_LANDING_PAGES.map(file => [file, read(file)]));
 const cyberLessons = ['security', 'responsible-ai'].flatMap(topic => JSON.parse(read('courses/cybersecurity-responsible-ai/' + topic + '.json')));
 const pageTargets = new Map([
   ...PUBLIC_SOURCE_FILES.filter(file => file.endsWith('.html')).map(file => [cleanPath(file), read(file)]),
-  ...[...renderFoundationsCourse(parseFoundationsData(read(COURSE_DATA_FILE))), ...renderCybersecurityCourse(cyberLessons)]
+  ...[...renderCybersecurityCourse(cyberLessons)]
     .map(([file, html]) => [coursePageRoute(file), html])
 ]);
 const text = html => html.replace(/<[^>]+>/gu, ' ').replace(/&amp;/gu, '&').replace(/\s+/gu, ' ');

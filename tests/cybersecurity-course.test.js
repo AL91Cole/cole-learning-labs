@@ -6,7 +6,7 @@ import {once} from 'node:events';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {renderCybersecurityCourse, NEW_COURSE_PAGE_FILES} from '../scripts/cybersecurity-course.mjs';
-import {coursePageRoute} from '../scripts/foundations-course.mjs';
+import {coursePageRoute} from '../scripts/course-page.mjs';
 import {MEMBER_FILES, publicFilesFor} from '../scripts/build.mjs';
 import {createPreviewServer} from '../scripts/serve.mjs';
 import {learningRoute} from '../src/learning-routes.js';
