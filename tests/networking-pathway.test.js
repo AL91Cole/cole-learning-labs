@@ -308,7 +308,7 @@ test('the networking course has an overview, a 40-minute plan for every mission,
     assert.doesNotMatch(html, /<script\b|Meets target|Misses target|answer key|\b[0-2] points?\b|out of 8|mastery/iu, file + ' carries no script, verdict or point scale');
     // Every site link is a published page, a mission address or an application route.
     for (const [, href] of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gu)) {
-      if (href.startsWith('https://classroom.google.com/share?url=')) {assert.ok(decodeURIComponent(href).includes('https://www.colelearninglabs.com/networking/'), href); continue;}
+      if (/^https:/u.test(href)) {const share = new URL(href.replaceAll('&amp;', '&')), shared = new URL(share.searchParams.get('url')); assert.deepEqual([share.origin, share.pathname, shared.origin], ['https://classroom.google.com', '/share', 'https://www.colelearninglabs.com'], href); assert.ok(NETWORKING_REDIRECTS.some(([from]) => from === shared.pathname), href); continue;}
       if (href === '#main') continue;
       assert.ok(href.startsWith('/'), file + ' → ' + href);
       const [pathname, hash] = href.split('#');
