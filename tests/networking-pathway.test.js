@@ -260,8 +260,8 @@ test('build: /networking is the application shell on the pathway route, with sho
     const short = await get('/networking/frozen-robot-cam'); assert.equal(short.status, 302); assert.equal(short.headers.get('location'), '/networking#lab/FAIR-204/request');
     assert.equal((await get('/networking/')).headers.get('location'), '/networking'); assert.equal((await get('/networking/not-a-mission')).status, 404);
     const handout = await get('/networking-handout');
-    if (access === 'open') {assert.equal(handout.status, 200); const text = await handout.text(); assert.match(text, /Networking word guide/u); assert.match(text, /class="evidence-card"/u); assert.doesNotMatch(text, /Meets target|Misses target|answer key/iu, 'cards show readings, not verdicts');}
-    else {assert.equal(handout.status, 302); assert.equal(handout.headers.get('location'), '/#membership');}
+    if (access === 'open') {assert.equal(handout.status, 200); const text = await handout.text(); assert.match(text, /Networking word guide/u); assert.match(text, /class="evidence-card"/u); assert.doesNotMatch(text, /Meets target|Misses target|answer key/iu, 'cards show readings, not verdicts'); assert.match(text, /href="\/assets\/networking-evidence-cards\.pdf" download>/u); assert.equal((await get('/assets/networking-evidence-cards.pdf')).status, 200);}
+    else {assert.equal(handout.status, 302); assert.equal(handout.headers.get('location'), '/#membership'); assert.equal((await get('/assets/networking-evidence-cards.pdf')).status, 404, 'the cards are withheld with the handout');}
   }
 });
 
@@ -335,4 +335,16 @@ test('the networking course has an overview, a 40-minute plan for every mission,
   const catalogue = await readFile(new URL('../courses.html', import.meta.url), 'utf8');
   assert.ok(catalogue.includes('href="/courses/networking-tech-fair"') && catalogue.includes(NETWORKING_COURSE_TITLE));
   assert.match(pages.get(dir + 'workbook.html'), /Networking word guide[\s\S]*Mission record sheet/u);
+});
+
+test('the printable evidence cards cover every mission and the capstone with readings and supplied evidence, never a verdict', async () => {
+  const {renderEvidenceCardsPrint, NETWORKING_CARDS_PDF} = await import('../scripts/networking-pages.mjs');
+  const template = await readFile(new URL('../lessons/packet-post.html', import.meta.url), 'utf8'), html = renderEvidenceCardsPrint({release:'20261107-tech-fair', template});
+  assert.equal(NETWORKING_CARDS_PDF, 'assets/networking-evidence-cards.pdf');
+  for (const mission of FAIR_MISSIONS) assert.ok(html.includes('id="cards-' + mission.id + '"') && html.includes(mission.id + ' · ' + mission.title), mission.id);
+  assert.ok(html.includes('id="cards-FAIR-600"')); assert.equal((html.match(/class="print-new-page"/gu) || []).length, 12, 'each mission starts a new sheet');
+  assert.ok((html.match(/class="evidence-card"/gu) || []).length > 150);
+  for (const reading of ['<strong>4 of 10</strong>', '<strong>7 of 10</strong>', 'Frame snapshots of the same photo', '02:00:00:00:01:01', 'Counter readings', 'Address plan']) assert.ok(html.includes(reading), reading);
+  assert.doesNotMatch(html, /<script\b|Meets target|Misses target|meets target|misses target|✓|✗|answer key/u);
+  assert.throws(() => renderEvidenceCardsPrint({release:'x', template:'<p>none</p>'}), /header/u);
 });

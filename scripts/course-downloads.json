@@ -1,6 +1,7 @@
 {
   "source": "b6a52029f25b4e24a0f637bfe383f9cc3c78c78f6f8237066d88f08f6c5588a5",
   "networkingSource": "e344356862dbb0b2ecda4cd10dac00531978ca814aa55d050f8fc44ddd0e54e9",
+  "cardsSource": "29f0a1fdf25f719159ac16dec483ebe252284b7bbe94f0dd5240deeb55509486",
   "files": {
     "assets/courses/cybersecurity-responsible-ai/student-workbook.pdf": "b9e840c53def39fd86af5896bcd7fb1631c1dc86834bda0f3aa876ede4bee1b8",
     "assets/courses/cybersecurity-responsible-ai/lesson-plans.pdf": "57d44024095ce8da33ea28b7c5f36d644d4689d0223fa533412eb285ec10aa9d",
@@ -38,5 +39,8 @@
     "assets/courses/networking-tech-fair/lesson-11.pdf": "187adb020038dfa09512ba5a4c7b970943295a1fb9baa9cc7ab64f91f30c2f8f",
     "assets/courses/networking-tech-fair/lesson-12.pdf": "215cee9e3a2d836ea1e36f1ed2df143657d37b6d1f61e8d505aa5bb38ae55682",
     "assets/courses/networking-tech-fair/lesson-13.pdf": "d84aa9c3690f6edd0a16e5ef35abafd9a9b6b24f8c8920137941fc3450b4baf0"
+  },
+  "openFiles": {
+    "assets/networking-evidence-cards.pdf": "45e19898be8bf8e4c6b10921f9c8e4c8f230e9bd85ff28c3b0c654b3a5c3369d"
   }
 }

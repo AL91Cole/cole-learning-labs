@@ -40,6 +40,10 @@ https://:version.cole-learning-labs.pages.dev/*
   Content-Disposition: attachment; filename="cole-learning-labs-student-workbook.pdf"
   Cache-Control: private, no-store, no-transform
 
+/assets/networking-evidence-cards.pdf
+  Content-Type: application/pdf
+  Content-Disposition: attachment; filename="networking-evidence-cards.pdf"
+
 /assets/cole-learning-labs-pop-quizzes.pdf
   Content-Type: application/pdf
   Content-Disposition: attachment; filename="cole-learning-labs-pop-quizzes.pdf"

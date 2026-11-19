@@ -9,7 +9,7 @@ import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import {bundlePageStyles,styleBundlePath} from './style-bundles.mjs';
 import {PART_ART} from '../src/part-art.js';
 import {NEW_COURSE_PAGE_FILES, COURSE_DOWNLOADS, renderCybersecurityCourse} from './cybersecurity-course.mjs';
-import {NETWORKING_SHELL_PAGE, NETWORKING_HANDOUT_PAGE, renderNetworkingShell, renderNetworkingHandout} from './networking-pages.mjs';
+import {NETWORKING_SHELL_PAGE, NETWORKING_HANDOUT_PAGE, NETWORKING_CARDS_PDF, renderNetworkingShell, renderNetworkingHandout} from './networking-pages.mjs';
 import {FAIR_SLUGS} from '../src/fair-catalog.js';
 import {NETWORKING_COURSE_PAGE_FILES, NETWORKING_COURSE_DOWNLOADS, renderNetworkingCourse} from './networking-course.mjs';
 
@@ -55,7 +55,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'manifest.webmanifest', 'sw.js', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/icon-maskable-512.png', 'assets/apple-touch-icon.png',
   '_headers', '_routes.json', '_redirects', 'robots.txt', 'sitemap.xml',
   'assets/favicon.svg', 'assets/cole-learning-labs-logo.png', 'assets/cole-learning-labs-logo-dark.png', 'assets/cole-learning-labs-logo.webp', 'assets/cole-learning-labs-logo-dark.webp', 'assets/cole-learning-labs-social.png',
-  'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf',
+  'assets/cole-learning-labs-student-workbook.pdf', 'assets/cole-learning-labs-pop-quizzes.pdf', NETWORKING_CARDS_PDF,
   // The support page's QR code (buymeacoffee.com/colelearninglabs).
   'assets/buymeacoffee-qr.webp',
   'src/assembly-model.js', 'src/assembly-tools.js', 'src/assembly-cables.js', 'src/assembly-workbench.js', 'src/assembly-builder.js', 'src/workbench-guidance.js', 'src/pc-activity.js', 'src/assembly.css',
@@ -99,7 +99,7 @@ const PREVIEW_FILES = Object.freeze([
   'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js', 'src/site-menu.js', ...standaloneLabPublicFiles,
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
-const OPEN_RESOURCES=Object.freeze([NETWORKING_HANDOUT_PAGE,'student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
+const OPEN_RESOURCES=Object.freeze([NETWORKING_HANDOUT_PAGE,NETWORKING_CARDS_PDF,'student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
 export const publicFilesFor=access=>{
   // Public course pages and reviewed student downloads are available in either mode.
   const files=[...PREVIEW_FILES,...COURSE_PAGE_FILES,...COURSE_DOWNLOAD_FILES,...(labsAreOpen(access)?OPEN_RESOURCES:[])].filter(filename=>!filename.endsWith('.css'));

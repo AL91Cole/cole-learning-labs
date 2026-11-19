@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {PUBLIC_FILES,publicFilesFor,PUBLIC_SOURCE_FILES,MEMBER_FILES,COURSE_DOWNLOAD_FILES} from '../scripts/build.mjs';
-import {DOWNLOAD_MANIFEST,courseDownloadSourceDigest,networkingDownloadSourceDigest} from '../scripts/generate-course-downloads.mjs';
+import {DOWNLOAD_MANIFEST,courseDownloadSourceDigest,networkingDownloadSourceDigest,evidenceCardsSourceDigest} from '../scripts/generate-course-downloads.mjs';
 import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
 const read=file=>readFileSync(new URL(`../${file}`,import.meta.url));
@@ -17,9 +17,11 @@ const reviewed=new Map([
 // and a digest of the pages they were printed from. Regenerate and review them when that digest moves.
 const courseManifest=JSON.parse(read(DOWNLOAD_MANIFEST).toString());
 const courseReviewed=new Map(Object.entries(courseManifest.files));
+// Printed from mission readings, so published only in the open release, like the student handout.
+const openReviewed=new Map(Object.entries(courseManifest.openFiles));
 test('retained curriculum matches the exact reviewed companion files and is excluded from public publishing',()=>{
-  assert.deepEqual(PUBLIC_SOURCE_FILES.filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...reviewed.keys(),...courseReviewed.keys()].sort());
-  assert.deepEqual(PUBLIC_FILES.filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...reviewed.keys(),...courseReviewed.keys()].sort());
+  assert.deepEqual(PUBLIC_SOURCE_FILES.filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...reviewed.keys(),...courseReviewed.keys(),...openReviewed.keys()].sort());
+  assert.deepEqual(publicFilesFor('open').filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...reviewed.keys(),...courseReviewed.keys(),...openReviewed.keys()].sort());
   assert.deepEqual(publicFilesFor('preview').filter(file=>/\.(pdf|docx|pptx|zip)$/i.test(file)).sort(),[...courseReviewed.keys()].sort());
   for(const [file,digest] of reviewed){
     assert.ok(MEMBER_FILES.includes(file),`${file}: curriculum belongs to protected delivery`);
@@ -83,4 +85,19 @@ test('course downloads are the reviewed PDFs printed from the current pages, wit
   // Two courses: about 5 MB for the cybersecurity course and 3.2 MB for the networking course.
   assert.ok(total<10_000_000,'The course downloads stay small enough to keep in the repository');
   assert.equal(PUBLIC_SOURCE_FILES.includes(DOWNLOAD_MANIFEST),false,'The manifest is an authoring record, not a published file');
+});
+
+test('the networking evidence cards are one reviewed PDF, printed from the mission models and published only in the open release',()=>{
+  assert.deepEqual([...openReviewed.keys()],['assets/networking-evidence-cards.pdf']);
+  assert.equal(courseManifest.cardsSource,evidenceCardsSourceDigest(),'A mission model, the card layout or a print style changed. Run node scripts/generate-course-downloads.mjs, review the PDF and commit it.');
+  const [[file,digest]]=openReviewed,bytes=read(file);
+  assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),digest,file+': document review must be renewed');
+  assert.ok(bytes.length<3_000_000);
+  assert.ok(publicFilesFor('open').includes(file));
+  assert.equal(publicFilesFor('preview').includes(file),false,'mission readings are not published in the restricted preview');
+  assert.equal(COURSE_DOWNLOAD_FILES.includes(file),false);
+  assert.doesNotMatch(bytes.toString('latin1'),/127\.0\.0\.1|localhost|\/home\/|file:\/\//u,'no local address or path');
+  const rule=read('_headers').toString().split('/assets/networking-evidence-cards.pdf\n')[1]?.split(/\n\s*\n/u)[0];
+  assert.match(rule,/Content-Type: application\/pdf/u);assert.match(rule,/Content-Disposition: attachment/u);
 });
