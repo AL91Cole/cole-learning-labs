@@ -11,8 +11,9 @@ import {PART_ART} from '../src/part-art.js';
 import {NEW_COURSE_PAGE_FILES, COURSE_DOWNLOADS, renderCybersecurityCourse} from './cybersecurity-course.mjs';
 import {NETWORKING_SHELL_PAGE, NETWORKING_HANDOUT_PAGE, renderNetworkingShell, renderNetworkingHandout} from './networking-pages.mjs';
 import {FAIR_SLUGS} from '../src/fair-catalog.js';
+import {NETWORKING_COURSE_PAGE_FILES, renderNetworkingCourse} from './networking-course.mjs';
 
-export const COURSE_PAGE_FILES = Object.freeze([...NEW_COURSE_PAGE_FILES]);
+export const COURSE_PAGE_FILES = Object.freeze([...NEW_COURSE_PAGE_FILES, ...NETWORKING_COURSE_PAGE_FILES]);
 // Reviewed PDF downloads that ship with a course. They are printed from the course pages by
 // scripts/generate-course-downloads.mjs; the curriculum-download checks pin each file's hash.
 export const COURSE_DOWNLOAD_FILES = Object.freeze([...COURSE_DOWNLOADS]);
@@ -217,6 +218,8 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   for (const filename of PUBLIC_SOURCE_FILES) sources.set(filename, await sourceBytes(root, filename));
   const securityLessons = CYBERSECURITY_DATA_FILES.flatMap(filename => JSON.parse(sources.get(filename).toString('utf8')));
   for (const [filename, html] of renderCybersecurityCourse(securityLessons)) sources.set(filename, Buffer.from(html));
+  // The networking course is written from the mission catalogue and models; it has no data file of its own.
+  for (const [filename, html] of renderNetworkingCourse()) sources.set(filename, Buffer.from(html));
   // The student handout is printed from the mission models themselves, so paper and screen agree.
   const release=sources.get('index.html').toString('utf8').match(/src\/app\.js\?release=([A-Za-z0-9_-]+)/u)?.[1];
   if(openLabs)sources.set(NETWORKING_HANDOUT_PAGE,Buffer.from(renderNetworkingHandout({release,template:sources.get('lessons/packet-post.html').toString('utf8')})));

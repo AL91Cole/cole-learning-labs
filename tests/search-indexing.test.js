@@ -13,8 +13,11 @@ const canonicalPages = new Map([
 ]);
 const origin = 'https://www.colelearninglabs.com';
 const cyberCourse = '/courses/cybersecurity-responsible-ai';
+const networkingCourse = '/courses/networking-tech-fair';
 const coursePaths = [
-  cyberCourse, ...Array.from({length:17}, (_, index) => cyberCourse + '/lesson-' + String(index + 1).padStart(2, '0')), cyberCourse + '/workbook', cyberCourse + '/project'
+  cyberCourse, ...Array.from({length:17}, (_, index) => cyberCourse + '/lesson-' + String(index + 1).padStart(2, '0')), cyberCourse + '/workbook', cyberCourse + '/project',
+  // Networking: Run the School Tech Fair. Twelve mission lessons, the capstone lesson and the workbook.
+  networkingCourse, ...Array.from({length:13}, (_, index) => networkingCourse + '/lesson-' + String(index + 1).padStart(2, '0')), networkingCourse + '/workbook'
 ];
 
 test('reviewed HTML sources retain their stable canonical URLs independently of public publication', () => {

@@ -8,7 +8,7 @@ The catalogue contains **29 investigations**: 8 Hardware & ServiceDesk, 6 Networ
 
 ## Networking pathway — November 19, 2026
 
-`lessons/networking-fair.html` (pacing, pair roles, debrief questions, look-fors) and the generated `networking-handout.html` (word guide, record sheet, evidence cards; open release only) are public teaching pages. They contain no point scale, pass mark or mission outcome stated as an answer. The pathway’s scoring sheet is kept outside this repository. See [Networking pathway](NETWORKING-PATHWAY.md).
+`lessons/networking-fair.html` (pacing, pair roles, debrief questions, look-fors) and the generated `networking-handout.html` (word guide, record sheet, evidence cards; open release only) are public teaching pages. They contain no point scale, pass mark or mission outcome stated as an answer. The same holds for the fifteen generated pages of the **Networking: Run the School Tech Fair** course under `courses/networking-tech-fair/` (overview, thirteen lessons, workbook), which have no data file and no PDF downloads. Adding the Networking pathway link to the shared course header moved the source digest for the cybersecurity course PDFs; they were regenerated with `node scripts/generate-course-downloads.mjs` and compared with the previous files (same page counts, text and sizes). The pathway’s scoring sheet is kept outside this repository. See [Networking pathway](NETWORKING-PATHWAY.md).
 
 ## Approved public companions
 

@@ -122,6 +122,7 @@ test('the build rejects a private filename even when it is accidentally added to
     .replace("'./tier-bundles.mjs'",JSON.stringify(new URL('../scripts/tier-bundles.mjs',import.meta.url).href))
     .replace("'./style-bundles.mjs'",JSON.stringify(new URL('../scripts/style-bundles.mjs',import.meta.url).href))
     .replace("'./cybersecurity-course.mjs'",JSON.stringify(new URL('../scripts/cybersecurity-course.mjs',import.meta.url).href))
+    .replace("'./networking-course.mjs'",JSON.stringify(new URL('../scripts/networking-course.mjs',import.meta.url).href))
     .replace("'./networking-pages.mjs'",JSON.stringify(new URL('../scripts/networking-pages.mjs',import.meta.url).href))
     .replace("'../src/fair-catalog.js'",JSON.stringify(new URL('../src/fair-catalog.js',import.meta.url).href))
     .replace("'../src/part-art.js'",JSON.stringify(new URL('../src/part-art.js',import.meta.url).href));

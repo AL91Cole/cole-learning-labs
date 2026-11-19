@@ -74,6 +74,8 @@ Every control is a native radio button, checkbox, button or text field. Named en
 
 ## Teaching material and what stays private
 
+- `/courses/networking-tech-fair`: the pathway as a complete course, listed on `/courses`. An overview, a lesson page for each of the twelve missions (student handout plus a 5, 5, 13, 10 and 7 minute teaching plan), a capstone lesson and a student workbook. `scripts/networking-course.mjs` writes the pages from the mission catalogue and models; the launch question, what to listen for, the look-for and the exit ticket are authored there. Lesson pages are published in both release modes and state no reading, outcome or point scale. The course has no PDF downloads yet; pages print from the browser.
+
 - `/lessons/networking-fair`: pacing (5, 5, 13, 10 and 7 minutes for the camera lesson), pair roles, debrief questions, look-fors at three levels, and assignment links.
 - `/networking-handout` (open release): a plain-language word guide, a mission record sheet and printable evidence cards generated from the same models (`scripts/networking-pages.mjs`). Cards show readings and targets, never a verdict.
 

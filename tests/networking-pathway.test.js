@@ -291,3 +291,46 @@ test('teacher notes are public guidance without a grading scheme or mission outc
   assert.doesNotMatch(notes, /Center rail|Press table|10\.20\.0\.53|scores-only/u, 'the notes do not state any mission’s outcome');
   for (const item of FAIR_CATALOG) assert.ok(notes.includes('https://www.colelearninglabs.com/networking/' + item.slug), item.slug);
 });
+
+test('the networking course has an overview, a 40-minute plan for every mission, a capstone lesson and a workbook', async () => {
+  const {renderNetworkingCourse, NETWORKING_COURSE_PAGE_FILES, NETWORKING_COURSE_TITLE, networkingLessonNumber} = await import('../scripts/networking-course.mjs');
+  const {COURSE_PAGE_FILES} = await import('../scripts/build.mjs');
+  const pages = renderNetworkingCourse(), dir = 'courses/networking-tech-fair/';
+  assert.equal(NETWORKING_COURSE_PAGE_FILES.length, 15); assert.deepEqual([...pages.keys()], [...NETWORKING_COURSE_PAGE_FILES]);
+  assert.ok(NETWORKING_COURSE_PAGE_FILES.every(file => COURSE_PAGE_FILES.includes(file)), 'every page is published with the course catalogue');
+  assert.deepEqual([networkingLessonNumber('FAIR-208'), networkingLessonNumber('FAIR-204'), networkingLessonNumber('FAIR-201'), networkingLessonNumber('FAIR-214'), networkingLessonNumber('FAIR-600')], [1, 3, 5, 12, 13]);
+  const titles = new Set();
+  for (const [file, html] of pages) {
+    assert.match(html, /^<!doctype html>/u, file); assert.equal((html.match(/<h1[\s>]/gu) || []).length, 1, file);
+    const heading = html.match(/<title>([^<]+)<\/title>/u)[1]; assert.equal(titles.has(heading), false, file); titles.add(heading);
+    const description = html.match(/<meta name="description" content="([^"]+)">/u)[1]; assert.ok(description.length >= 70 && description.length <= 180, file + ' description');
+    assert.ok(html.includes('<a href="/networking">Networking pathway</a>'), file + ' header links the pathway');
+    assert.doesNotMatch(html, /<script\b|Meets target|Misses target|answer key|\b[0-2] points?\b|out of 8|mastery/iu, file + ' carries no script, verdict or point scale');
+    // Every site link is a published page, a mission address or an application route.
+    for (const [, href] of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gu)) {
+      if (href.startsWith('https://classroom.google.com/share?url=')) {assert.ok(decodeURIComponent(href).includes('https://www.colelearninglabs.com/networking/'), href); continue;}
+      if (href === '#main') continue;
+      assert.ok(href.startsWith('/'), file + ' → ' + href);
+      const [pathname, hash] = href.split('#');
+      if (pathname === '/' && hash) {assert.notEqual(routeAccess(learningRoute('#' + hash)), 'unknown', file + ' → ' + href); continue;}
+      const known = ['/', '/courses', '/teach', '/district-review', '/networking', '/networking-handout', '/lessons/networking-fair', '/lessons/packet-post', ...NETWORKING_REDIRECTS.map(([from]) => from), ...NETWORKING_COURSE_PAGE_FILES.map(name => '/' + name.replace(/\/index\.html$/u, '').replace(/\.html$/u, ''))];
+      assert.ok(known.includes(pathname), file + ' → ' + href);
+    }
+  }
+  for (const mission of FAIR_MISSIONS) {
+    const html = pages.get(dir + 'lesson-' + String(networkingLessonNumber(mission.id)).padStart(2, '0') + '.html');
+    assert.ok(html.includes('id="student-handout"') && html.includes('id="teacher-plan"'), mission.id);
+    assert.deepEqual([...html.matchAll(/<strong>(\d+) minutes<\/strong> ·/gu)].map(match => Number(match[1])), [5, 5, 13, 10, 7], mission.id + ' is paced to 40 minutes');
+    for (const phrase of ['What to look for', 'Listen for', 'Pair roles', 'Exit ticket', 'Clues and retries carry no penalty', 'href="/networking/' + mission.slug + '"']) assert.ok(html.includes(phrase), mission.id + ' ' + phrase);
+    for (const item of mission.tests) assert.ok(html.includes(item.label), mission.id + ' lists ' + item.id);
+  }
+  const capstone = pages.get(dir + 'lesson-13.html');
+  assert.equal([...capstone.matchAll(/<strong>(\d+) minutes<\/strong> ·/gu)].reduce((sum, match) => sum + Number(match[1]), 0), 40);
+  for (const item of CAPSTONE_STATIONS) assert.ok(capstone.includes(item.title) && capstone.includes(item.rehearsal), item.id);
+  const overview = pages.get(dir + 'index.html');
+  assert.ok(overview.includes(NETWORKING_COURSE_TITLE)); assert.equal((overview.match(/href="\/courses\/networking-tech-fair\/lesson-13"/gu) || []).length, 3, 'each band ends with the capstone');
+  for (let number = 1; number <= 12; number++) assert.ok(overview.includes('href="/courses/networking-tech-fair/lesson-' + String(number).padStart(2, '0') + '"'), 'lesson ' + number);
+  const catalogue = await readFile(new URL('../courses.html', import.meta.url), 'utf8');
+  assert.ok(catalogue.includes('href="/courses/networking-tech-fair"') && catalogue.includes(NETWORKING_COURSE_TITLE));
+  assert.match(pages.get(dir + 'workbook.html'), /Networking word guide[\s\S]*Mission record sheet/u);
+});
