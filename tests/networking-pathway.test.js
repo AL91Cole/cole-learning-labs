@@ -122,7 +122,7 @@ test('the mission page maps three playable steps onto the four guide sections wi
     for (const section of GUIDE_SECTIONS) assert.ok(html.includes('data-guide-section="' + section.id + '"') && html.includes(section.title), mission.id + ' ' + section.id);
     for (const mode of learningModes) assert.ok(html.includes('data-fair-mode="' + mode.id + '"'), mission.id + ' offers ' + mode.label);
     assert.match(html, /data-fair-mode="independent" aria-current="true"/u);
-    for (const item of mission.controls) assert.ok(html.includes('<legend>' + item.label.replace(/’/gu, '’') + '</legend>'), mission.id + ' labels ' + item.name);
+    for (const item of mission.controls) assert.ok(html.includes('<legend>' + item.label + '</legend>'), mission.id + ' labels ' + item.name);
     assert.equal((html.match(/type="radio"/gu) || []).length, mission.controls.reduce((sum, item) => sum + item.options.length, 0), mission.id + ' uses native radio buttons for every choice');
     assert.equal((html.match(/data-fair-run="/gu) || []).length, mission.tests.length);
     assert.match(html, /role="img" aria-label="[^"]+ map\. The text view below lists the same devices and connections\."/u, mission.id);
@@ -226,7 +226,9 @@ test('build: /networking is the application shell on the pathway route, with sho
   const index = await readFile(new URL('../index.html', import.meta.url), 'utf8'), shell = renderNetworkingShell(index);
   assert.match(shell, /<html lang="en" data-start-route="networking">/u); assert.match(shell, /<link rel="canonical" href="https:\/\/www\.colelearninglabs\.com\/networking">/u);
   assert.match(shell, /<title>Networking pathway · Cole Learning Labs<\/title>/u); assert.doesNotMatch(shell, /rel="manifest"/u);
-  assert.equal(shell.match(/<script[^>]*>/gu).join(), index.match(/<script[^>]*>/gu).join(), 'the same entry script and nothing else');
+  const entryScripts = page => page.split('\n').filter(line => line.toLowerCase().includes('<script')).join('\n');
+  assert.equal(entryScripts(shell), entryScripts(index), 'the same entry script and nothing else');
+  assert.equal(entryScripts(shell).split('\n').length, 1);
   assert.throws(() => renderNetworkingShell('<html lang="fr">'), /reviewed markup/u);
   assert.deepEqual(APP_SHELL_PAGES, ['networking.html']); assert.ok(PUBLIC_LANDING_PAGES.includes('lessons/networking-fair.html'));
   assert.equal(NETWORKING_REDIRECTS.length, 13);
