@@ -9,6 +9,8 @@ import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import {bundlePageStyles,styleBundlePath} from './style-bundles.mjs';
 import {PART_ART} from '../src/part-art.js';
 import {NEW_COURSE_PAGE_FILES, COURSE_DOWNLOADS, renderCybersecurityCourse} from './cybersecurity-course.mjs';
+import {NETWORKING_SHELL_PAGE, NETWORKING_HANDOUT_PAGE, renderNetworkingShell, renderNetworkingHandout} from './networking-pages.mjs';
+import {FAIR_SLUGS} from '../src/fair-catalog.js';
 
 export const COURSE_PAGE_FILES = Object.freeze([...NEW_COURSE_PAGE_FILES]);
 // Reviewed PDF downloads that ship with a course. They are printed from the course pages by
@@ -33,8 +35,14 @@ const PUBLIC_METADATA_FILES = Object.freeze(['.well-known/security.txt']);
 export const PUBLIC_LANDING_PAGES = Object.freeze([
   'teach.html', 'courses.html', 'everyday-tech.html', 'district-review.html', 'support.html',
   'lessons/blank-monitor.html', 'lessons/inbox-defender.html', 'lessons/packet-post.html',
-  'lessons/k-6.html', 'lessons/troubleshooting-pilot.html', 'lessons/design-a-ticket.html'
+  'lessons/k-6.html', 'lessons/troubleshooting-pilot.html', 'lessons/design-a-ticket.html',
+  'lessons/networking-fair.html'
 ]);
+// Pages served from the application shell at their own address. They are generated from the
+// built home page, so they always load the same entry script and styles as the home page.
+export const APP_SHELL_PAGES = Object.freeze([NETWORKING_SHELL_PAGE]);
+// Short teacher assignment addresses: /networking/<slug> forwards to that mission in the shell.
+export const NETWORKING_REDIRECTS = Object.freeze(Object.entries(FAIR_SLUGS).map(([slug, hash]) => Object.freeze(['/networking/' + slug, '/networking' + hash])));
 // A new public file needs an explicit review here. Never publish the checkout root.
 export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/turnstile-client.js', 'src/receipt-schema.js', 'src/lab-telemetry.js', 'src/receipt-verifier.js', 'src/receipt-verifier.css',
@@ -68,6 +76,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/secure-reports.css', 'src/accessibility.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css',
   'src/access-policy.js', 'src/lab-catalog.js', 'src/owner-preview.js',
+  'src/fair-catalog.js', 'src/fair-missions.js', 'src/fair-capstone.js', 'src/fair-mission-page.js', 'src/networking-pathway.js', 'src/fair.css',
   'src/learning-routes.js', 'src/home-entries.js', 'src/sandbox-starters.js', 'src/coding-studio-model.js', 'src/display-menu.js', 'src/read-aloud.js', 'src/session-modes.js',
   'src/record-engines.js', 'src/classroom-session.js', 'src/foundation-catalog.js', 'src/coding-scenarios.js', 'src/expanded-scenarios.js', 'src/network-scenarios.js',
   'src/part-art.js', ...Object.values(PART_ART),
@@ -89,11 +98,11 @@ const PREVIEW_FILES = Object.freeze([
   'src/app.js', 'src/secure-reports.js', 'src/receipt-verifier.js', 'src/site-menu.js', ...standaloneLabPublicFiles,
   ...PUBLIC_SOURCE_FILES.filter(filename=>filename.endsWith('.css'))
 ]);
-const OPEN_RESOURCES=Object.freeze(['student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
+const OPEN_RESOURCES=Object.freeze([NETWORKING_HANDOUT_PAGE,'student-workbook.html','practice-quizzes.html','assets/cole-learning-labs-student-workbook.pdf','assets/cole-learning-labs-pop-quizzes.pdf']);
 export const publicFilesFor=access=>{
   // Public course pages and reviewed student downloads are available in either mode.
   const files=[...PREVIEW_FILES,...COURSE_PAGE_FILES,...COURSE_DOWNLOAD_FILES,...(labsAreOpen(access)?OPEN_RESOURCES:[])].filter(filename=>!filename.endsWith('.css'));
-  return Object.freeze([...files,...files.filter(filename=>filename.endsWith('.html')).map(styleBundlePath)]);
+  return Object.freeze([...files,...files.filter(filename=>filename.endsWith('.html')).map(styleBundlePath),...APP_SHELL_PAGES]);
 };
 export const PUBLIC_FILES=publicFilesFor(PUBLIC_LAB_ACCESS);
 const FILES = new Set(PUBLIC_SOURCE_FILES);
@@ -208,8 +217,11 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   for (const filename of PUBLIC_SOURCE_FILES) sources.set(filename, await sourceBytes(root, filename));
   const securityLessons = CYBERSECURITY_DATA_FILES.flatMap(filename => JSON.parse(sources.get(filename).toString('utf8')));
   for (const [filename, html] of renderCybersecurityCourse(securityLessons)) sources.set(filename, Buffer.from(html));
+  // The student handout is printed from the mission models themselves, so paper and screen agree.
+  const release=sources.get('index.html').toString('utf8').match(/src\/app\.js\?release=([A-Za-z0-9_-]+)/u)?.[1];
+  if(openLabs)sources.set(NETWORKING_HANDOUT_PAGE,Buffer.from(renderNetworkingHandout({release,template:sources.get('lessons/packet-post.html').toString('utf8')})));
   const content = new Map(publicFiles.filter(filename=>sources.has(filename)).map(filename=>[filename,sources.get(filename)]));
-  for(const filename of publicFiles.filter(filename=>filename.endsWith('.html'))){
+  for(const filename of publicFiles.filter(filename=>filename.endsWith('.html')&&!APP_SHELL_PAGES.includes(filename))){
     const bundled=await bundlePageStyles(filename,sources.get(filename).toString('utf8'),sources);
     if(!bundled)throw new Error(`Expected reviewed page styles: ${filename}`);
     content.set(filename,Buffer.from(bundled.html));
@@ -217,6 +229,9 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
   }
   // An access-mode change gets a new entry URL even when no source imports changed.
   content.set('index.html',Buffer.from(content.get('index.html').toString('utf8').replace(/(src\/app\.js\?release=[A-Za-z0-9_-]+)/u,'$1-'+publicLabAccess)));
+  // /networking is the same application opened on the pathway hub: one entry script, one stylesheet.
+  content.set(NETWORKING_SHELL_PAGE,Buffer.from(renderNetworkingShell(content.get('index.html').toString('utf8'))));
+  content.set('_redirects',Buffer.from(content.get('_redirects').toString('utf8').trimEnd()+'\n# Networking pathway: short assignment addresses for each mission.\n/networking/ /networking 301\n'+NETWORKING_REDIRECTS.map(([from,to])=>from+' '+to+' 302').join('\n')+'\n'));
   const routes = JSON.parse(content.get('_routes.json').toString('utf8'));
   if (JSON.stringify(routes) !== JSON.stringify({ version: 1, include: ['/api/requester', '/api/reach', '/api/telemetry', '/api/verify', '/terminal/*'], exclude: [] })) throw new Error('Only the reviewed requester, gated reach, optional receipt endpoints, and terminal gateway may invoke Functions; classroom collection routes must stay excluded.');
   // The main application is split by learning route: the entry module serves the
@@ -228,7 +243,7 @@ export async function buildSite({ sourceRoot = PROJECT_ROOT, publicLabAccess = P
     if(!/^src\/chunks\/[a-z0-9-]+-[A-Z0-9]+\.js$/u.test(chunk.filename)||content.has(chunk.filename))throw new Error('Unexpected generated route chunk: '+chunk.filename);
     content.set(chunk.filename,Buffer.from(chunk.javascript));generated.push(chunk.filename);
   }
-  if(openLabs){const redirects=content.get('_redirects').toString('utf8').split('\n').filter(line=>!/^\/(?:student-workbook|practice-quizzes)(?:[\s/.])/.test(line)).join('\n');content.set('_redirects',Buffer.from(redirects));}
+  if(openLabs){const redirects=content.get('_redirects').toString('utf8').split('\n').filter(line=>!/^\/(?:student-workbook|practice-quizzes|networking-handout)(?:[\s/.])/.test(line)).join('\n');content.set('_redirects',Buffer.from(redirects));}
   else content.set('sitemap.xml',Buffer.from(content.get('sitemap.xml').toString('utf8').replace(/\s*<url><loc>https:\/\/www\.colelearninglabs\.com\/(?:student-workbook|practice-quizzes)<\/loc><\/url>/gu,'')));
   // This public privacy tool has no course content; bundle its own reviewed
   // local graph so raw source modules are never an alternate content endpoint.

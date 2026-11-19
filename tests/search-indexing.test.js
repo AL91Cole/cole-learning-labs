@@ -31,7 +31,9 @@ test('reviewed HTML sources retain their stable canonical URLs independently of 
 
 test('sitemap includes the public companions and information pages while protected classroom pages stay excluded', () => {
   const utilities = ['classroom.html', 'teacher/index.html'];
-  const contentPaths = [...[...canonicalPages].filter(([name]) => PUBLIC_FILES.includes(name)&&!utilities.includes(name)).map(([, pathname]) => origin + pathname), ...coursePaths.map(pathname => origin + pathname)].sort();
+  // /networking is generated from the home page at build time, so it has no source file of its own.
+  assert.ok(PUBLIC_FILES.includes('networking.html'));
+  const contentPaths = [...[...canonicalPages].filter(([name]) => PUBLIC_FILES.includes(name)&&!utilities.includes(name)).map(([, pathname]) => origin + pathname), origin + '/networking', ...coursePaths.map(pathname => origin + pathname)].sort();
   const sitemap = read('sitemap.xml');
   const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(match => match[1]).sort();
   assert.deepEqual(locations, contentPaths);
@@ -60,7 +62,7 @@ test('the course sitemap covers both hubs, all lessons and their project and ref
 test('homepage and explicit member-document redirects stay relative without a broad catch-all', () => {
   const rules = read('_redirects').split(/\r?\n/u).map(line => line.trim()).filter(line => line && !line.startsWith('#'));
   assert.deepEqual(rules, ['/index.html / 301', '/index / 301',
-    ...['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html','/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html'].map(route=>route+' /#membership 302'),
+    ...['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html','/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html','/networking-handout','/networking-handout.html'].map(route=>route+' /#membership 302'),
     '/courses/foundations /courses/cybersecurity-responsible-ai 301','/courses/foundations/ /courses/cybersecurity-responsible-ai 301']);
   assert.equal(rules.some(rule=>rule.includes('*')||rule.includes('https://')),false);
 });

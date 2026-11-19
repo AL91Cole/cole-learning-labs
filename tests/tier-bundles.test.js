@@ -58,7 +58,9 @@ test('public artifact contains reviewed starter cases but excludes paid authored
   // Raised from 1,100,000 when the free Linux basics course page joined the public application (about 9 KB),
   // then to 1,121,000 for the optional support link on the contact and privacy pages (under 1 KB).
   // then to 1,124,000 for the four cyber field labs of the grades 7–8 course (about 2.3 KB).
-  assert.ok(result.javascript.length<1_124_000,'The compiled public application must stay within its reviewed size budget.');
+  // then to 1,142,000 for the Networking pathway hub, its public mission catalogue and routing (about 15 KB).
+  // The mission models themselves are stubbed out of this artifact.
+  assert.ok(result.javascript.length<1_142_000,'The compiled public application must stay within its reviewed size budget.');
   assert.deepEqual(result.metadata.filter(row=>row.access==='free').map(row=>row.id),FREE_LAB_IDS);
   for(const row of result.metadata)assert.deepEqual(Object.keys(row).sort(),['access','grade','id','minutes','title','track']);
   assert.ok(javascript.includes('The monitor has power and its input is set to HDMI.'));

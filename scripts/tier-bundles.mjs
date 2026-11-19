@@ -57,6 +57,23 @@ const publicStubs=Object.freeze({
     getExpandedMission:'()=>({passed:0,total:0,complete:false})',expandedDiagnostic:unavailable,
     disposeExpanded:noOperation,renderExpanded:unavailable
   },
+  // Tech fair missions are member content: the restricted preview keeps the pathway overview
+  // (src/fair-catalog.js, src/networking-pathway.js) and delivers no model, reading or feedback.
+  'fair-missions.js':{
+    DECISIONS:'Object.freeze([])',RUN_LIMIT:'0',HANDOFF_MINIMUM:'0',FAIR_MISSIONS:'Object.freeze([])',fairMission:'()=>null',supportsFairMission:falseValue,
+    fairSetupKey:'()=>""',initialFairState:emptyState,normalizeFairState:emptyState,fairView:'()=>null',
+    applyFairAction:'()=>({state:null,message:"Membership required."})',fairCompletion:'()=>({ready:false,blockers:[]})',
+    normalizeFairRecord:emptyState,fairReport:unavailable
+  },
+  'fair-capstone.js':{
+    CAPSTONE_STATIONS:'Object.freeze([])',ROLLBACK_OPTIONS:'Object.freeze([])',capstoneOwned:'()=>[]',initialCapstoneState:emptyState,normalizeCapstoneState:emptyState,
+    capstoneView:'()=>null',applyCapstoneAction:'()=>({state:null,message:"Membership required."})',capstoneCompletion:'()=>({ready:false,blockers:[]})',
+    normalizeCapstoneRecord:emptyState,capstoneStatusText:'()=>""',capstoneReport:unavailable
+  },
+  'fair-mission-page.js':{
+    FAIR_STEPS:'Object.freeze({})',fairMapHTML:'()=>""',fairMapText:'()=>""',fairGuide:'()=>null',fairReport:unavailable,capstoneReport:unavailable,
+    renderFairMissionPage:unavailable,mountFairMission:emptyMount,renderFairCapstonePage:unavailable,mountFairCapstone:emptyMount
+  },
   'lesson-plans.js':{
     renderLessonPlans:'()=>""',mountLessonPlans:emptyMount,hasLessonPlanWork:falseValue,clearLessonPlanWork:noOperation
   },

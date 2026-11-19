@@ -11,6 +11,8 @@
 /student-workbook.html /#membership 302
 /practice-quizzes /#membership 302
 /practice-quizzes.html /#membership 302
+/networking-handout /#membership 302
+/networking-handout.html /#membership 302
 # The first course was replaced by Intro to Cybersecurity and Responsible AI.
 /courses/foundations /courses/cybersecurity-responsible-ai 301
 /courses/foundations/ /courses/cybersecurity-responsible-ai 301

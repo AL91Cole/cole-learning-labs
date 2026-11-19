@@ -4,6 +4,8 @@ import { inquiryProgress } from './interview.js?release=20261107-tech-team';
 import { retainExperimentEvents, readExperiments, observationSnapshot, sameSetup } from './experiments.js?release=20261107-tech-team';
 import { registerRecordNormalizer } from './record-engines.js?release=20261107-tech-team';
 import { labFormat } from './lab-format.js?release=20261107-tech-team';
+import { normalizeFairRecord } from './fair-missions.js?release=20261107-tech-team';
+import { normalizeCapstoneRecord } from './fair-capstone.js?release=20261107-tech-team';
 
 // A saved explanation and a fresh working setup are both needed for page 3.
 // This guides the lesson; imported learner work is not an assessment credential.
@@ -36,6 +38,9 @@ export function workbenchProgress(scenario, record, result) {
 
 // Local storage and uploaded drafts are data, never trusted HTML or object shapes.
 export function normalizeLabRecord(scenario, value) {
+  // A tech fair mission keeps its own record under its own id. It never reads or rewrites the
+  // record of the investigation it grew from, so each assignment reports its own work.
+  if (scenario?.fair === true) return scenario.capstone === true ? normalizeCapstoneRecord(value) : normalizeFairRecord(scenario, value);
   const r = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const text = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
   const record = {

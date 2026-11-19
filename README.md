@@ -67,6 +67,8 @@ Mx. Cole is developing the project toward a future goal of teaching Computer Tec
 
 The networking catalog adds ten original investigations following the supplied communications syllabus and textbook lab topics. See [Networking sequence](docs/NETWORKING-SEQUENCE.md) for the order and simulation boundaries.
 
+The grades 7–12 Networking pathway at `/networking` adds twelve tech fair missions and a capstone with their own ids and records (`FAIR-…`). See [Networking pathway](docs/NETWORKING-PATHWAY.md).
+
 The prepared adult-member **Network Studio** (`#studio/network`) supports adding, removing and moving devices, connecting ports, selecting endpoints and watching modeled packets travel or stop at a failure. Connections and checks update with the layout. The ten course diagrams also support moving devices, cabling and packet traces; only NET-201 and NET-202 are in the free tier. The studio remains locked while membership activation is disabled.
 
 Networking, AI and cybersecurity offer direct practice workbenches with action controls for their approved free cases; other case variants require membership. The prepared adult-member **Creative Coding Studio** (`#studio/coding`) adds text-art and numeric-bar projects alongside the member JavaScript/Python sandbox. Both remain locked while membership activation is disabled. Practice and studio drafts stay in page memory and do not enter classroom submissions. Guided investigations keep their evidence and progression requirements. See [Interactive workbenches](docs/INTERACTIVE-LABS.md) for controls, accessibility and execution limits.

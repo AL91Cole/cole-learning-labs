@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PUBLIC_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES, STANDALONE_LAB_PAGES, publicFilesFor, buildSite } from './build.mjs';
+import { PUBLIC_FILES, PUBLIC_LANDING_PAGES, COURSE_PAGE_FILES, STANDALONE_LAB_PAGES, NETWORKING_REDIRECTS, publicFilesFor, buildSite } from './build.mjs';
 import {PUBLIC_LAB_ACCESS,labsAreOpen} from './public-release.mjs';
 import { assertPublicCurriculumPaths } from './curriculum-policy.mjs';
 import {coursePageRoute} from './course-page.mjs';
@@ -28,13 +28,15 @@ const ROUTES = new Map([
   ['/verify', 'verify.html'], ['/verify/', 'verify.html'],
   ['/student-workbook', 'student-workbook.html'], ['/practice-quizzes', 'practice-quizzes.html'],
   ['/teacher', 'teacher/index.html'], ['/teacher/', 'teacher/index.html'],
+  ['/networking', 'networking.html'], ['/networking-handout', 'networking-handout.html'],
   // Landing pages are served at their extensionless address, as on the published site.
   ...PUBLIC_LANDING_PAGES.map(file=>['/'+file.slice(0,-'.html'.length),file]),
   ...[...COURSE_PAGE_FILES, ...STANDALONE_LAB_PAGES].flatMap(file=>[[coursePageRoute(file),file],[coursePageRoute(file)+'/',file]])
 ]);
+const SHORT_LINKS = new Map(NETWORKING_REDIRECTS);
 const standaloneLabPolicy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests";
 const MEMBER_PATHS = new Set(['/classroom','/classroom/','/classroom.html','/teacher','/teacher/','/teacher/index.html',
-  '/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html']);
+  '/student-workbook','/student-workbook.html','/practice-quizzes','/practice-quizzes.html','/networking-handout','/networking-handout.html']);
 const BASE_HEADERS = Object.freeze({
   'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
   'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Resource-Policy': 'same-origin'
@@ -115,9 +117,12 @@ export function createPreviewServer({ sourceRoot = path.join(PROJECT_ROOT,'dist'
     if (!['GET', 'HEAD'].includes(req.method)) {
       res.writeHead(405, { ...BASE_HEADERS, Allow: 'GET, HEAD' }); res.end('Method not allowed'); return;
     }
-    if(MEMBER_PATHS.has(pathname)&&!(openLabs&&/^\/(?:student-workbook|practice-quizzes)(?:\.html)?$/.test(pathname))){
+    if(MEMBER_PATHS.has(pathname)&&!(openLabs&&/^\/(?:student-workbook|practice-quizzes|networking-handout)(?:\.html)?$/.test(pathname))){
       res.writeHead(302,{...BASE_HEADERS,Location:'/#membership'});res.end();return;
     }
+    // Short mission addresses forward to the pathway shell, as the published redirect file does.
+    const forward = pathname === '/networking/' ? '/networking' : SHORT_LINKS.get(pathname);
+    if (forward) { res.writeHead(302, { ...BASE_HEADERS, Location: forward }); res.end(); return; }
     const filename = ROUTES.get(pathname) || pathname.slice(1);
     // Preview the same reviewed files as production, never the checkout root.
     if (!FILES.has(filename)) { await notFound(req, res, sourceRoot); return; }

@@ -13,3 +13,6 @@ export function renderInboxDefenderEntry() {
 export function renderLinuxEntry() {
   return '<section class="wrap id-entry linux-entry" aria-labelledby="linux-entry-title"><div><p class="eyebrow">'+LINUX_COURSE.length+' beginner labs · Free · Grades 7–12</p><h2 id="linux-entry-title">Learn Linux on a real Linux computer.</h2><p>Open a real Linux desktop in your browser. Find files, tidy folders, edit text, set permissions and search, one small step at a time.</p></div><a class="button" href="#linux">Start Linux basics <span aria-hidden="true">→</span></a></section>';
 }
+export function renderNetworkingEntry() {
+  return '<section class="wrap id-entry fair-entry" aria-labelledby="fair-entry-title"><div><p class="eyebrow">Networking pathway · 12 missions · Grades 7–12</p><h2 id="fair-entry-title">Run the school tech fair.</h2><p>Fix a frozen robot camera, share the scores safely and keep the show on air. Make a decision, see what happens and explain it with evidence.</p></div><a class="button" href="#networking">Open the Networking pathway <span aria-hidden="true">→</span></a></section>';
+}

@@ -2,6 +2,7 @@ import {codeQuestMeta} from './code-quest-catalog.js?release=20261107-tech-team'
 import {arcadeMeta,FREE_ARCADE_IDS} from './arcade-catalog.js?release=20261107-tech-team';
 import {CATALOG} from './lab-catalog.js?release=20261107-tech-team';
 import {REAL_MACHINE_LABS} from './linux-catalog.js?release=20261107-tech-team';
+import {FAIR_IDS} from './fair-catalog.js?release=20261107-tech-team';
 
 /** The public entry cannot grant membership from browser state or a URL.
  * The protected member build or the reviewed open-public release replaces this content constant. It never authenticates an account. */
@@ -32,6 +33,9 @@ const studioIds=new Set(['network','coding']);
 const sandboxIds=new Set(['blank','pixel-pet','arcade','rover','tiles']);
 // The Linux basics beginner course and the course's cyber field labs are free, like the other beginner courses.
 const linuxIds=new Set(REAL_MACHINE_LABS.map(lab=>lab.id));
+// Tech fair missions are their own activities. None of them is a free sample: the restricted
+// preview keeps the pathway overview public and delivers no mission model.
+const fairIds=new Set(FAIR_IDS);
 
 export const isFreeLab=id=>typeof id==='string'&&freeLabIds.has(id);
 
@@ -51,7 +55,8 @@ export function routeAccess(route){
   if(page==='labs')return noId||topics.has(id)?'public':'unknown';
   if(page==='learn')return foundationIds.has(id)?'public':'unknown';
   if(page==='linux')return noId||linuxIds.has(id)?'public':'unknown';
-  if(page==='lab')return catalogue.has(id)?(isFreeLab(id)?'public':'member'):'unknown';
+  if(page==='networking')return noId?'public':id==='opening-day'?'member':'unknown';
+  if(page==='lab')return catalogue.has(id)?(isFreeLab(id)?'public':'member'):fairIds.has(id)?'member':'unknown';
   if(page==='practice'){
     const lab=catalogue.get(id);
     return lab&&practiceTopics.has(lab.track)?(isFreeLab(id)?'public':'member'):'unknown';
