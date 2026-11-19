@@ -11,12 +11,12 @@ import {PART_ART} from '../src/part-art.js';
 import {NEW_COURSE_PAGE_FILES, COURSE_DOWNLOADS, renderCybersecurityCourse} from './cybersecurity-course.mjs';
 import {NETWORKING_SHELL_PAGE, NETWORKING_HANDOUT_PAGE, renderNetworkingShell, renderNetworkingHandout} from './networking-pages.mjs';
 import {FAIR_SLUGS} from '../src/fair-catalog.js';
-import {NETWORKING_COURSE_PAGE_FILES, renderNetworkingCourse} from './networking-course.mjs';
+import {NETWORKING_COURSE_PAGE_FILES, NETWORKING_COURSE_DOWNLOADS, renderNetworkingCourse} from './networking-course.mjs';
 
 export const COURSE_PAGE_FILES = Object.freeze([...NEW_COURSE_PAGE_FILES, ...NETWORKING_COURSE_PAGE_FILES]);
 // Reviewed PDF downloads that ship with a course. They are printed from the course pages by
 // scripts/generate-course-downloads.mjs; the curriculum-download checks pin each file's hash.
-export const COURSE_DOWNLOAD_FILES = Object.freeze([...COURSE_DOWNLOADS]);
+export const COURSE_DOWNLOAD_FILES = Object.freeze([...COURSE_DOWNLOADS, ...NETWORKING_COURSE_DOWNLOADS]);
 const CYBERSECURITY_DATA_FILES = [
   'courses/cybersecurity-responsible-ai/security.json',
   'courses/cybersecurity-responsible-ai/responsible-ai.json'

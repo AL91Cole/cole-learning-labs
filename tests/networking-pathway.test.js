@@ -299,7 +299,7 @@ test('the networking course has an overview, a 40-minute plan for every mission,
   assert.equal(NETWORKING_COURSE_PAGE_FILES.length, 15); assert.deepEqual([...pages.keys()], [...NETWORKING_COURSE_PAGE_FILES]);
   assert.ok(NETWORKING_COURSE_PAGE_FILES.every(file => COURSE_PAGE_FILES.includes(file)), 'every page is published with the course catalogue');
   assert.deepEqual([networkingLessonNumber('FAIR-208'), networkingLessonNumber('FAIR-204'), networkingLessonNumber('FAIR-201'), networkingLessonNumber('FAIR-214'), networkingLessonNumber('FAIR-600')], [1, 3, 5, 12, 13]);
-  const titles = new Set();
+  const titles = new Set(), offered = new Set(), {NETWORKING_COURSE_DOWNLOADS} = await import('../scripts/networking-course.mjs');
   for (const [file, html] of pages) {
     assert.match(html, /^<!doctype html>/u, file); assert.equal((html.match(/<h1[\s>]/gu) || []).length, 1, file);
     const heading = html.match(/<title>([^<]+)<\/title>/u)[1]; assert.equal(titles.has(heading), false, file); titles.add(heading);
@@ -307,7 +307,8 @@ test('the networking course has an overview, a 40-minute plan for every mission,
     assert.ok(html.includes('<a href="/networking">Networking pathway</a>'), file + ' header links the pathway');
     assert.doesNotMatch(html, /<script\b|Meets target|Misses target|answer key|\b[0-2] points?\b|out of 8|mastery/iu, file + ' carries no script, verdict or point scale');
     // Every site link is a published page, a mission address or an application route.
-    for (const [, href] of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gu)) {
+    for (const [tag, href] of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/gu)) {
+      if (href.startsWith('/assets/')) {assert.ok(NETWORKING_COURSE_DOWNLOADS.includes(href.slice(1)) && tag.endsWith(' download>'), file + ' → ' + href); offered.add(href.slice(1)); continue;}
       if (/^https:/u.test(href)) {const share = new URL(href.replaceAll('&amp;', '&')), shared = new URL(share.searchParams.get('url')); assert.deepEqual([share.origin, share.pathname, shared.origin], ['https://classroom.google.com', '/share', 'https://www.colelearninglabs.com'], href); assert.ok(NETWORKING_REDIRECTS.some(([from]) => from === shared.pathname), href); continue;}
       if (href === '#main') continue;
       assert.ok(href.startsWith('/'), file + ' → ' + href);
@@ -317,6 +318,7 @@ test('the networking course has an overview, a 40-minute plan for every mission,
       assert.ok(known.includes(pathname), file + ' → ' + href);
     }
   }
+  assert.equal(NETWORKING_COURSE_DOWNLOADS.length, 15); assert.deepEqual([...offered].sort(), [...NETWORKING_COURSE_DOWNLOADS].sort(), 'every published download is linked from a course page');
   for (const mission of FAIR_MISSIONS) {
     const html = pages.get(dir + 'lesson-' + String(networkingLessonNumber(mission.id)).padStart(2, '0') + '.html');
     assert.ok(html.includes('id="student-handout"') && html.includes('id="teacher-plan"'), mission.id);

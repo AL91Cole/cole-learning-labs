@@ -61,6 +61,11 @@ https://:version.cole-learning-labs.pages.dev/*
   Content-Disposition: attachment
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 
+/assets/courses/networking-tech-fair/*
+  Content-Type: application/pdf
+  Content-Disposition: attachment
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+
 /
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 

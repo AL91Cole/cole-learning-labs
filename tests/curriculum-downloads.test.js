@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {PUBLIC_FILES,publicFilesFor,PUBLIC_SOURCE_FILES,MEMBER_FILES,COURSE_DOWNLOAD_FILES} from '../scripts/build.mjs';
-import {DOWNLOAD_MANIFEST,courseDownloadSourceDigest} from '../scripts/generate-course-downloads.mjs';
+import {DOWNLOAD_MANIFEST,courseDownloadSourceDigest,networkingDownloadSourceDigest} from '../scripts/generate-course-downloads.mjs';
 import {SCENARIOS} from '../src/scenarios.js';
 import {FOUNDATION_LABS} from '../src/foundation-model.js';
 const read=file=>readFileSync(new URL(`../${file}`,import.meta.url));
@@ -55,18 +55,24 @@ test('README repository pathway totals are derived from the complete source cata
 
 test('course downloads are the reviewed PDFs printed from the current pages, with isolated delivery',()=>{
   assert.deepEqual([...COURSE_DOWNLOAD_FILES].sort(),[...courseReviewed.keys()].sort());
-  assert.equal(COURSE_DOWNLOAD_FILES.length,21,'four packs and one PDF for each of the seventeen lessons');
+  const courseDirectories=['cybersecurity-responsible-ai','networking-tech-fair'];
+  assert.equal(COURSE_DOWNLOAD_FILES.filter(file=>file.includes('/cybersecurity-responsible-ai/')).length,21,'four packs and one PDF for each of the seventeen lessons');
+  assert.equal(COURSE_DOWNLOAD_FILES.filter(file=>file.includes('/networking-tech-fair/')).length,15,'the workbook, the combined lesson plans and one PDF for each of the thirteen lessons');
+  assert.equal(COURSE_DOWNLOAD_FILES.length,36);
+  assert.equal(courseManifest.networkingSource,networkingDownloadSourceDigest(),'A networking lesson or a print style changed. Run node scripts/generate-course-downloads.mjs, review the PDFs and commit them.');
   assert.equal(courseManifest.source,courseDownloadSourceDigest(),'A lesson, printable lab or print style changed. Run node scripts/generate-course-downloads.mjs, review the PDFs and commit them.');
-  const rule=read('_headers').toString().split('/assets/courses/cybersecurity-responsible-ai/*\n')[1]?.split(/\n\s*\n/u)[0];
-  assert.ok(rule,'The course downloads need their header rule');
-  assert.match(rule,/Content-Disposition: attachment/u);
-  assert.match(rule,/Content-Type: application\/pdf/u);
-  assert.match(rule,/Cache-Control: public, max-age=0, must-revalidate, no-transform/u);
-  assert.equal([...read('_headers').toString().matchAll(/^\/assets\/courses\//gmu)].length,1,'No header rule may outlive a removed course download');
+  for(const name of courseDirectories){
+    const rule=read('_headers').toString().split('/assets/courses/'+name+'/*\n')[1]?.split(/\n\s*\n/u)[0];
+    assert.ok(rule,name+': the course downloads need their header rule');
+    assert.match(rule,/Content-Disposition: attachment/u);
+    assert.match(rule,/Content-Type: application\/pdf/u);
+    assert.match(rule,/Cache-Control: public, max-age=0, must-revalidate, no-transform/u);
+  }
+  assert.equal([...read('_headers').toString().matchAll(/^\/assets\/courses\//gmu)].length,courseDirectories.length,'No header rule may outlive a removed course download');
   let total=0;
   for(const [file,digest] of courseReviewed){
     const bytes=read(file);total+=bytes.length;
-    assert.match(file,/^assets\/courses\/cybersecurity-responsible-ai\/[a-z0-9-]+\.pdf$/u);
+    assert.match(file,/^assets\/courses\/(?:cybersecurity-responsible-ai|networking-tech-fair)\/[a-z0-9-]+\.pdf$/u);
     assert.equal(bytes.subarray(0,5).toString(),'%PDF-',file);
     assert.equal(createHash('sha256').update(bytes).digest('hex'),digest,file);
     assert.ok(PUBLIC_FILES.includes(file));
@@ -74,6 +80,7 @@ test('course downloads are the reviewed PDFs printed from the current pages, wit
     assert.equal(MEMBER_FILES.includes(file),false);
     assert.doesNotMatch(bytes.toString('latin1'),/127\.0\.0\.1|localhost|\/home\/|file:\/\//u,file+' carries no local address or path');
   }
-  assert.ok(total<8_000_000,'The course downloads stay small enough to keep in the repository');
+  // Two courses: about 5 MB for the cybersecurity course and 3.2 MB for the networking course.
+  assert.ok(total<10_000_000,'The course downloads stay small enough to keep in the repository');
   assert.equal(PUBLIC_SOURCE_FILES.includes(DOWNLOAD_MANIFEST),false,'The manifest is an authoring record, not a published file');
 });

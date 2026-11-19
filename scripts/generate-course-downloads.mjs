@@ -15,6 +15,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {renderCybersecurityCourse, COURSE_DOWNLOADS} from './cybersecurity-course.mjs';
 import {STANDALONE_LAB_IDS} from './tier-bundles.mjs';
+import {renderNetworkingCourse, NETWORKING_COURSE_DOWNLOADS, NETWORKING_COURSE_TITLE} from './networking-course.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const ORIGIN = 'https://www.colelearninglabs.com';
@@ -40,6 +41,15 @@ export function courseDownloadSourceDigest() {
   for (const name of [...LAB_ORDER.map(id => 'labs/' + id + '.html'), ...STYLE_SOURCES, 'assets/museum-record-m17.webp']) {
     hash.update(name + '\n').update(read(name)).update('\n');
   }
+  return hash.digest('hex');
+}
+const NETWORKING_COURSE = 'courses/networking-tech-fair';
+const NETWORKING_STYLE_SOURCES = ['src/styles.css', 'src/school.css', 'src/foundations-course.css', 'src/accessibility.css'];
+/** The same kind of digest for the networking course, kept separately so one course can change without reprinting the other. */
+export function networkingDownloadSourceDigest() {
+  const hash = createHash('sha256');
+  for (const [file, html] of [...renderNetworkingCourse()].sort(([a], [b]) => a.localeCompare(b))) hash.update(file + '\n' + html + '\n');
+  for (const name of NETWORKING_STYLE_SOURCES) hash.update(name + '\n').update(read(name)).update('\n');
   return hash.digest('hex');
 }
 
@@ -77,7 +87,22 @@ function documents() {
   return COURSE_DOWNLOADS.map(file => {
     const entry = named.get(path.basename(file));
     if (!entry) throw new Error('No page is printed for ' + file);
-    return {file, ...entry};
+    return {file, course: COURSE_TITLE, ...entry};
+  });
+}
+
+function networkingDocuments() {
+  const pages = renderNetworkingCourse(), page = name => pages.get(NETWORKING_COURSE + '/' + name + '.html');
+  const lessonNames = [...pages.keys()].filter(file => /\/lesson-\d\d\.html$/u.test(file)).sort().map(file => path.basename(file, '.html'));
+  const named = new Map([
+    ['student-workbook.pdf', {html: page('workbook'), label: 'Student workbook'}],
+    ['lesson-plans.pdf', {html: combined(lessonNames.map(page), 'Lesson plans · ' + NETWORKING_COURSE_TITLE), label: 'Lesson plans'}],
+    ...lessonNames.map(name => [name + '.pdf', {html: page(name), label: 'Lesson ' + Number(name.slice(-2))}])
+  ]);
+  return NETWORKING_COURSE_DOWNLOADS.map(file => {
+    const entry = named.get(path.basename(file));
+    if (!entry) throw new Error('No page is printed for ' + file);
+    return {file, course: NETWORKING_COURSE_TITLE, ...entry};
   });
 }
 
@@ -85,11 +110,20 @@ async function generate() {
   let chromium;
   try { ({chromium} = createRequire(import.meta.url)('playwright')); }
   catch { throw new Error('Playwright with Chromium is needed to print the course downloads. Install it on the authoring machine, then run this script again.'); }
+  // A course is reprinted only when its own pages or styles moved, so an unchanged course keeps its reviewed files.
+  let previous = {files: {}};
+  try { previous = JSON.parse(read(DOWNLOAD_MANIFEST).toString('utf8')); } catch { /* first run */ }
+  const sources = {source: courseDownloadSourceDigest(), networkingSource: networkingDownloadSourceDigest()};
+  const kept = (list, key) => previous[key] === sources[key] && list.every(file => previous.files?.[file]);
+  const queue = [], files = {};
+  for (const [list, key, build] of [[COURSE_DOWNLOADS, 'source', documents], [NETWORKING_COURSE_DOWNLOADS, 'networkingSource', networkingDocuments]]) {
+    if (kept(list, key)) { for (const file of list) files[file] = previous.files[file]; console.log('Unchanged, kept: ' + path.dirname(list[0])); }
+    else queue.push(...build());
+  }
   const browser = await chromium.launch();
-  const files = {};
   try {
     const context = await browser.newContext({javaScriptEnabled: false});
-    for (const {file, html, label} of documents()) {
+    for (const {file, html, label, course} of queue) {
       const tab = await context.newPage();
       await tab.setContent(standalone(html), {waitUntil: 'load'});
       await tab.emulateMedia({media: 'print'});
@@ -97,7 +131,7 @@ async function generate() {
         format: 'Letter', tagged: true, outline: true, printBackground: false, displayHeaderFooter: true,
         margin: {top: '16mm', bottom: '18mm', left: '16mm', right: '16mm'},
         headerTemplate: '<span></span>',
-        footerTemplate: `<div style="width:100%;font:8px Arial,sans-serif;color:#444;text-align:center">Cole Learning Labs · ${COURSE_TITLE} · ${label} · page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`
+        footerTemplate: `<div style="width:100%;font:8px Arial,sans-serif;color:#444;text-align:center">Cole Learning Labs · ${course} · ${label} · page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`
       });
       await tab.close();
       mkdirSync(path.dirname(path.join(ROOT, file)), {recursive: true});
@@ -108,7 +142,7 @@ async function generate() {
   } finally {
     await browser.close();
   }
-  writeFileSync(path.join(ROOT, DOWNLOAD_MANIFEST), JSON.stringify({source: courseDownloadSourceDigest(), files}, null, 2) + '\n');
+  writeFileSync(path.join(ROOT, DOWNLOAD_MANIFEST), JSON.stringify({...sources, files: Object.fromEntries([...COURSE_DOWNLOADS, ...NETWORKING_COURSE_DOWNLOADS].map(file => [file, files[file]]))}, null, 2) + '\n');
   console.log('Wrote ' + DOWNLOAD_MANIFEST + '. Review each PDF before committing.');
 }
 
