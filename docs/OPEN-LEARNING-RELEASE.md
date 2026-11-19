@@ -16,7 +16,7 @@ The preview compiler removes the 32 originally restricted investigations, studio
 
 Restoring restrictions controls future delivery; it cannot recall already downloaded code, worksheets or copies. The GitHub source remains public. Content restrictions are not a confidentiality boundary for information already published.
 
-The Networking pathway follows the same setting: open publishes its twelve missions, capstone and student handout; preview keeps only the pathway overview and teaching notes. The activity counts above do not include the pathway. See [Networking pathway](NETWORKING-PATHWAY.md).
+The Networking pathway follows the same setting: open publishes its twelve missions, capstone and student handout; preview keeps the pathway overview, the teaching notes and one free sample mission, The frozen robot cam. The activity counts above do not include the pathway. See [Networking pathway](NETWORKING-PATHWAY.md).
 
 ## Boundaries that stay closed
 

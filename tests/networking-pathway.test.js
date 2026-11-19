@@ -4,7 +4,7 @@ import {mkdtemp, readFile, rm} from 'node:fs/promises';
 import {once} from 'node:events';
 import os from 'node:os';
 import path from 'node:path';
-import {FAIR_CATALOG, FAIR_CAPSTONE, FAIR_RECORDS, FAIR_SLUGS, FAIR_FOLLOW_UPS, SYSTEMS_SUPPORT, isFairId} from '../src/fair-catalog.js';
+import {FAIR_CATALOG, FAIR_CAPSTONE, FAIR_RECORDS, FAIR_SLUGS, FAIR_FOLLOW_UPS, FREE_FAIR_IDS, SYSTEMS_SUPPORT, isFairId} from '../src/fair-catalog.js';
 import {learningRoute, labPageHash, learningModes} from '../src/learning-routes.js';
 import {routeAccess} from '../src/access-policy.js';
 import {CATALOG} from '../src/lab-catalog.js';
@@ -42,7 +42,9 @@ test('routes: the hub, its band, the capstone and each mission parse; anything e
   }
   assert.equal(routeAccess(learningRoute('#networking')), 'public');
   assert.equal(routeAccess(learningRoute('#networking/opening-day')), 'member');
-  for (const item of FAIR_CATALOG) assert.equal(routeAccess({page:'lab', id:item.id}), 'member', item.id);
+  // One sample mission is free in the restricted preview; the rest are member content there.
+  for (const item of FAIR_CATALOG) assert.equal(routeAccess({page:'lab', id:item.id}), item.id === 'FAIR-204' ? 'public' : 'member', item.id);
+  assert.deepEqual(FREE_FAIR_IDS, ['FAIR-204']);
   assert.equal(routeAccess({page:'lab', id:FAIR_CAPSTONE.id}), 'unknown', 'the capstone is not a lab route');
   assert.equal(routeAccess({page:'lab', id:'FAIR-999'}), 'unknown');
   assert.equal(routeAccess({page:'practice', id:'FAIR-204'}), 'unknown', 'a mission has no ungraded practice twin');
@@ -100,7 +102,11 @@ test('the hub offers three bands, a start for the selected band, the 12-minute i
   assert.equal(renderNetworkingPathway({}).includes('id="fair-start" href="#lab/FAIR-208/request"'), true, 'grades 7–8 is the default band');
   const student = renderNetworkingPathway({band:'7-8', student:true});
   assert.doesNotMatch(student, /Teacher: assignment link|lessons\/|networking-handout/u, 'student mode hides the adult links');
-  assert.match(renderNetworkingPathway({band:'7-8', open:false}), /Membership required/u);
+  const preview = renderNetworkingPathway({band:'7-8', open:false});
+  assert.equal((preview.match(/Membership required/gu) || []).length, 4, 'three missions and the capstone need membership');
+  assert.match(preview, /data-mission="FAIR-204"[\s\S]*?Ready to start · free sample/u);
+  for (const band of ['7-8', '9-10', '11-12']) assert.match(renderNetworkingPathway({band, open:false}), /id="fair-start" href="#lab\/FAIR-204\/request">Try the free mission: The frozen robot cam/u, band);
+  assert.doesNotMatch(preview, /networking-handout/u, 'the handout stays with the open release');
   assert.equal(fairStartMission('7-8', {'FAIR-208':{closed:true}}).id, 'FAIR-215', 'start continues after a handed-off mission');
   assert.deepEqual([fairStationStatus(undefined).id, fairStationStatus({state:{runs:[{}]}}).id, fairStationStatus({closed:true, state:{decision:'open'}}).id, fairStationStatus({closed:true, state:{decision:'hold'}}).id], ['ready', 'progress', 'online', 'held']);
 });
@@ -211,11 +217,16 @@ test('capstone: each band owns its stations, stations open independently, and 11
   assert.match(page, /Opening-day board/u); assert.match(page, /3 of 4 stations open\. A station on hold does not stop the others\./u); assert.equal((page.match(/data-cap-run="/gu) || []).length, 4);
 });
 
-test('release modes: the restricted preview keeps the hub and withholds every mission model', async () => {
+test('release modes: the restricted preview keeps the hub and the free robot-camera mission, and withholds every other model', async () => {
   const preview = Buffer.from((await bundleTier({member:false})).javascript).toString('utf8');
   assert.ok(preview.includes('Run the school <em>tech fair.</em>'), 'the pathway overview is public');
-  assert.ok(preview.includes('The frozen robot cam'), 'mission titles are catalogue teasers');
-  for (const marker of ['robot keeps moving, but its camera', 'Run a lap', 'Lower the curtain', 'D · Press table', 'What happened at the', 'Judge Okafor', 'Rehearsal lap: 10, 8 and 10', 'Hand off &amp; open report']) assert.equal(preview.includes(marker), false, marker + ' must not reach the restricted artifact');
+  for (const marker of ['robot keeps moving, but its camera', 'Run a lap', 'Lower the curtain', 'Hand off &amp; open report']) assert.ok(preview.includes(marker), marker + ': the free mission is playable');
+  // Every other mission's brief, people, readings and feedback, and the whole capstone, stay out.
+  const others = FAIR_MISSIONS.filter(mission => mission.id !== 'FAIR-204');
+  assert.equal(others.length, 11);
+  for (const mission of others) for (const text of [mission.observe.slice(0, 45), mission.replay.text.slice(0, 45), mission.worked.slice(0, 45)]) assert.equal(preview.includes(text), false, mission.id + ': ' + text);
+  // The page code for the capstone ships with the mission page, but none of its stations, readings or options do.
+  for (const marker of ['Judge Okafor', 'Rehearsal lap: 10, 8 and 10', 'Rescheduled into show time', 'Factory reset every station', '0.25 errors/second', '10.20.0.53 (same as kiosk 2)']) assert.equal(preview.includes(marker), false, marker + ' must not reach the restricted artifact');
   const open = await bundleTier({member:true, localOnly:true, publicLabsOpen:true, split:true});
   const entry = Buffer.from(open.javascript).toString('utf8'), all = entry + open.chunks.map(chunk => Buffer.from(chunk.javascript).toString('utf8')).join('\n');
   for (const marker of ['robot keeps moving, but its camera', 'Run a lap', 'Lower the curtain', 'Judge Okafor', 'Rehearsal lap: 10, 8 and 10']) {assert.ok(all.includes(marker), marker); assert.equal(entry.includes(marker), false, marker + ' downloads with the mission, not with the home page');}

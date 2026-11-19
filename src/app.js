@@ -6,7 +6,7 @@ import {MEMBER_CONTENT,PUBLIC_LABS_OPEN,routeAccess} from './access-policy.js?re
 import {CODE_QUESTS,codeQuestMeta} from './code-quest-catalog.js?release=20261107-tech-team';
 import {ARCADE_CATALOG,arcadeMeta} from './arcade-catalog.js?release=20261107-tech-team';
 import {renderArcadeEntry,renderCodeQuestEntry,renderInboxDefenderEntry,renderLinuxEntry,renderNetworkingEntry} from './home-entries.js?release=20261107-tech-team';
-import {FAIR_RECORDS,FAIR_CAPSTONE,isFairId} from './fair-catalog.js?release=20261107-tech-team';
+import {FAIR_RECORDS,FAIR_CAPSTONE,FREE_FAIR_IDS,isFairId} from './fair-catalog.js?release=20261107-tech-team';
 import {renderNetworkingPathway,mountNetworkingPathway} from './networking-pathway.js?release=20261107-tech-team';
 import {OWNER_PREVIEW} from './owner-preview.js?release=20261107-tech-team';
 import {CATALOG} from './lab-catalog.js?release=20261107-tech-team';
@@ -123,7 +123,7 @@ let storageKey=MEMBER_CONTENT?(SESSION.cart?WORK_PREFIX:classroomStorageKey()):P
 const tracks={hardware:{name:'Hardware & ServiceDesk',short:'Hardware',symbol:'◈',color:'teal',description:'Work the bench. Trace symptoms, inspect components, and bring a computer back to life.'},network:{name:'Networking & operating systems',short:'Networks & OS',symbol:'⌘',color:'blue',description:'Follow the connection. Work with addresses, permissions, networks, and system services.'},ai:{name:'AI literacy & audit',short:'AI & ethics',symbol:'✳',color:'violet',description:'Question the output. Protect privacy, check evidence, and examine the code.'},security:{name:'Ethical cybersecurity',short:'Cybersecurity',symbol:'◇',color:'amber',description:'Investigate responsibly. Triage an incident, reduce access, and patch a simulated weakness.'},coding:{name:'Coding sandbox',short:'Coding sandbox',symbol:'⌨',color:'rose',description:'Write a small program. Run it with fictional inputs, inspect the output, and explain how it works.'}};
 // Saved work covers the investigations and, where missions are delivered, each tech fair mission
 // and the capstone under its own id. A mission never shares a record with an investigation.
-const RECORD_SCENARIOS=Object.freeze([...SCENARIOS,...(MEMBER_CONTENT?FAIR_RECORDS:[])]);
+const RECORD_SCENARIOS=Object.freeze([...SCENARIOS,...FAIR_RECORDS.filter(item=>MEMBER_CONTENT||FREE_FAIR_IDS.includes(item.id))]);
 let store={version:2,labs:{}};
 let foundationRecords=Object.create(null);
 let codingStudioState=initialCodingStudioState();

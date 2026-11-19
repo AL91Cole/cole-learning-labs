@@ -29,6 +29,8 @@ export const FAIR_CATALOG = Object.freeze([
 export const FAIR_CAPSTONE = Object.freeze({id:'FAIR-600', slug:'opening-day', title:'Opening day at the tech fair', minutes:40, crew:'Open each station only when its evidence is ready.', skill:'Decide open, hold or revise for each station'});
 
 export const FAIR_IDS = Object.freeze(FAIR_CATALOG.map(item => item.id));
+/** The sample mission that stays playable in the restricted preview. Every other mission is member content there. */
+export const FREE_FAIR_IDS = Object.freeze(['FAIR-204']);
 export const fairMeta = id => FAIR_CATALOG.find(item => item.id === id) || null;
 export const fairBand = id => FAIR_BANDS.find(band => band.id === id) || null;
 export const fairBandMissions = band => FAIR_CATALOG.filter(item => item.band === band).sort((a, b) => a.order - b.order);

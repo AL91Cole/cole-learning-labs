@@ -60,9 +60,9 @@ Values the brief did not give were chosen to follow the same pattern and should 
 ## Release modes
 
 - **Open** (current `PUBLIC_LAB_ACCESS`): the hub, all twelve missions, the capstone and `networking-handout.html` are published. Mission code downloads with the investigation route, not with the home page.
-- **Preview**: the hub and the teaching notes stay public. `scripts/tier-bundles.mjs` replaces `fair-missions.js`, `fair-capstone.js` and `fair-mission-page.js` with empty stubs, mission links show the membership notice, mission records are not read or written, and `/networking-handout` redirects to `/#membership`.
+- **Preview**: the hub, the teaching notes and one free sample mission stay public: `FAIR-204` The frozen robot cam (`FREE_FAIR_IDS` in `src/fair-catalog.js`). `scripts/tier-bundles.mjs` compiles `fair-missions.js` down to that one mission’s model and replaces `fair-capstone.js` with an empty stub. Every other mission link and the capstone show the membership notice, only the free mission’s record is read or written, the hub’s start button goes to the free mission, and `/networking-handout` and the evidence-cards PDF stay withheld.
 
-No mission is a free sample in preview. Missions register nothing with the reach, receipt or improvement services, so the pathway adds no data flow.
+Missions register nothing with the reach, receipt or improvement services, so the pathway adds no data flow.
 
 ## Saving, shared devices and privacy
 
