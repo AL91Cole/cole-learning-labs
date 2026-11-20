@@ -14,3 +14,5 @@ export {normalizeLabRecord,workbenchProgress} from './records.js?release=2026110
 export {labFormat} from './lab-format.js?release=20261107-tech-team';
 export {renderLabGuidePage,mountLabGuide,labGuideReport} from './lab-guide.js?release=20261107-tech-team';
 export {attachClassroomLab} from './classroom-client.js?release=20261107-tech-team';
+// Networking pathway: tech fair missions and the shared capstone.
+export {renderFairMissionPage,mountFairMission,renderFairCapstonePage,mountFairCapstone} from './fair-mission-page.js?release=20261107-tech-team';

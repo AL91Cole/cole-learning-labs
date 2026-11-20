@@ -28,7 +28,7 @@ export function coursePage({title,description,pathname,body,footerNote}){
 </head>
 <body class="fc-page">
   <a class="skip-link" href="#main">Skip to main content</a>
-  <header class="site-header school-header fc-header"><a class="brand" href="/"><img src="/assets/cole-learning-labs-logo.webp" alt="Cole Learning Labs" width="336" height="140"></a><nav aria-label="Site menu"><a href="/courses">Courses</a><a href="/teach">For teachers</a><a href="/#labs">Interactive labs</a><a href="/district-review">School review</a></nav></header>
+  <header class="site-header school-header fc-header"><a class="brand" href="/"><img src="/assets/cole-learning-labs-logo.webp" alt="Cole Learning Labs" width="336" height="140"></a><nav aria-label="Site menu"><a href="/courses">Courses</a><a href="/teach">For teachers</a><a href="/#labs">Interactive labs</a><a href="/networking">Networking pathway</a><a href="/district-review">School review</a></nav></header>
   <main id="main" class="wrap fc-main" tabindex="-1">${body}</main>
   <footer class="wrap fc-footer">${footerNote}<p>Student work is submitted and graded through the school’s approved system. <a href="/district-review">Review the site’s data practices</a>.</p></footer>
 </body>

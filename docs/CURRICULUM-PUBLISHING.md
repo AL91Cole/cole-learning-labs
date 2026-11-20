@@ -6,6 +6,10 @@ Review imported curriculum outside the public source checkout before copying any
 
 The catalogue contains **29 investigations**: 8 Hardware & ServiceDesk, 6 Network & Operating Systems, 6 AI Literacy & Audit, 6 Ethical Hacking & Penetration Testing, and 3 Coding Sandbox. Eight support requests are detailed and five are incomplete. The incomplete requests are INC-101, INC-103, INC-108, NET-201 and NET-205.
 
+## Networking pathway — November 19, 2026
+
+`lessons/networking-fair.html` (pacing, pair roles, debrief questions, look-fors) and the generated `networking-handout.html` (word guide, record sheet, evidence cards; open release only) are public teaching pages. They contain no point scale, pass mark or mission outcome stated as an answer. The same holds for the fifteen generated pages of the **Networking: Run the School Tech Fair** course under `courses/networking-tech-fair/` (overview, thirteen lessons, workbook), which have no data file. Its fifteen PDFs (`student-workbook.pdf`, `lesson-plans.pdf`, `lesson-01.pdf` to `lesson-13.pdf`) are printed from those pages and hash-pinned like the cybersecurity course’s, under a separate `networkingSource` digest. `assets/networking-evidence-cards.pdf` holds the mission readings as printable cards; it is published only in the open release, with the student handout. Adding the Networking pathway link to the shared course header moved the source digest for the cybersecurity course PDFs; they were regenerated with `node scripts/generate-course-downloads.mjs` and compared with the previous files (same page counts, text and sizes). The pathway’s scoring sheet is kept outside this repository. See [Networking pathway](NETWORKING-PATHWAY.md).
+
 ## Approved public companions
 
 Only these revised curriculum PDFs are approved for the current public build:

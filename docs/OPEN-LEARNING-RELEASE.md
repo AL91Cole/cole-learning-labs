@@ -16,6 +16,8 @@ The preview compiler removes the 32 originally restricted investigations, studio
 
 Restoring restrictions controls future delivery; it cannot recall already downloaded code, worksheets or copies. The GitHub source remains public. Content restrictions are not a confidentiality boundary for information already published.
 
+The Networking pathway follows the same setting: open publishes its twelve missions, capstone and student handout; preview keeps the pathway overview, the teaching notes and one free sample mission, The frozen robot cam. The activity counts above do not include the pathway. See [Networking pathway](NETWORKING-PATHWAY.md).
+
 ## Boundaries that stay closed
 
 Opening learning content does not change owner Access authorization, authentication factors, membership entitlement, prices, billing activation, classroom enrollment, student-record collection, improvement collection, APIs or terminal deployment. The existing optional services retain their independent source gates. The open build turns online requester replies off; it does not add a provider, key, paid plan or data flow.

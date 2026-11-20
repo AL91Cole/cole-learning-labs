@@ -40,6 +40,10 @@ https://:version.cole-learning-labs.pages.dev/*
   Content-Disposition: attachment; filename="cole-learning-labs-student-workbook.pdf"
   Cache-Control: private, no-store, no-transform
 
+/assets/networking-evidence-cards.pdf
+  Content-Type: application/pdf
+  Content-Disposition: attachment; filename="networking-evidence-cards.pdf"
+
 /assets/cole-learning-labs-pop-quizzes.pdf
   Content-Type: application/pdf
   Content-Disposition: attachment; filename="cole-learning-labs-pop-quizzes.pdf"
@@ -57,6 +61,11 @@ https://:version.cole-learning-labs.pages.dev/*
 
 # Printable course PDFs are offered as downloads.
 /assets/courses/cybersecurity-responsible-ai/*
+  Content-Type: application/pdf
+  Content-Disposition: attachment
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+
+/assets/courses/networking-tech-fair/*
   Content-Type: application/pdf
   Content-Disposition: attachment
   Cache-Control: public, max-age=0, must-revalidate, no-transform

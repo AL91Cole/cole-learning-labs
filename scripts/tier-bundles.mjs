@@ -6,6 +6,7 @@ import {build} from 'esbuild';
 import {parse} from 'acorn';
 import {FREE_LAB_IDS} from '../src/access-policy.js';
 import {FREE_ARCADE_IDS} from '../src/arcade-catalog.js';
+import {FREE_FAIR_IDS} from '../src/fair-catalog.js';
 
 const PROJECT_ROOT=fileURLToPath(new URL('../',import.meta.url));
 export const STANDALONE_LAB_IDS = Object.freeze(['double-counted-ballot', 'museum-label', 'locker-note', 'train-the-sorter']);
@@ -56,6 +57,14 @@ const publicStubs=Object.freeze({
     applyExpandedAction:'()=>({state:null,message:"Membership required."})',verifyExpanded:'()=>({ok:false})',
     getExpandedMission:'()=>({passed:0,total:0,complete:false})',expandedDiagnostic:unavailable,
     disposeExpanded:noOperation,renderExpanded:unavailable
+  },
+  // Tech fair missions are member content, except the free sample: the restricted preview keeps the
+  // pathway overview and the mission page, compiles fair-missions.js down to the sample mission's
+  // model (publicFairMissions below) and delivers no capstone.
+  'fair-capstone.js':{
+    CAPSTONE_STATIONS:'Object.freeze([])',ROLLBACK_OPTIONS:'Object.freeze([])',capstoneOwned:'()=>[]',initialCapstoneState:emptyState,normalizeCapstoneState:emptyState,
+    capstoneView:'()=>null',applyCapstoneAction:'()=>({state:null,message:"Membership required."})',capstoneCompletion:'()=>({ready:false,blockers:[]})',
+    normalizeCapstoneRecord:emptyState,capstoneStatusText:'()=>""',capstoneReport:unavailable
   },
   'lesson-plans.js':{
     renderLessonPlans:'()=>""',mountLessonPlans:emptyMount,hasLessonPlanWork:falseValue,clearLessonPlanWork:noOperation
@@ -155,6 +164,14 @@ function publicCoding(source){
     replacements.push({start:statement.start,end:statement.end,value:'function storyCard(){return "";}'});
   }
   return replaceParts(source,replacements);
+}
+/** Keep only the free sample mission's model; every other mission's brief, readings and feedback are removed. */
+function publicFairMissions(source){
+  const node=declaration(tree(source),'MISSIONS');
+  if(node.type!=='CallExpression'||node.callee.type!=='MemberExpression'||node.callee.object.name!=='Object'||node.callee.property.name!=='freeze'||node.arguments.length!==1||node.arguments[0].type!=='ObjectExpression')throw new Error('Fair missions require one reviewed frozen map.');
+  const map=node.arguments[0],properties=map.properties.filter(property=>FREE_FAIR_IDS.includes(propertyName(property)));
+  if(properties.length!==FREE_FAIR_IDS.length||new Set(properties.map(propertyName)).size!==FREE_FAIR_IDS.length)throw new Error('Reviewed free fair missions are missing or duplicated.');
+  return replaceParts(source,[{start:map.start,end:map.end,value:'{'+properties.map(property=>source.slice(property.start,property.end)).join(',')+'}'}]);
 }
 function accessContext(source,member,publicLabsOpen=false){
   const ast=tree(source),node=declaration(ast,'MEMBER_CONTENT'),open=declaration(ast,'PUBLIC_LABS_OPEN');
@@ -319,6 +336,7 @@ export async function bundleTier({sourceRoot=PROJECT_ROOT,member=false,entry='ap
         else if(!member&&filename==='coding-lab.js')contents=publicCoding(source);
         else if(!member&&filename==='coding-scenarios.js')contents=publicCodingScenarios(source);
         else if(!member&&filename==='arcade-levels.js')contents=publicArcade(source);
+        else if(!member&&filename==='fair-missions.js')contents=publicFairMissions(source);
         else if(!member&&filename==='ai-activities.js')contents=publicActivity(source,'AI');
         else if(!member&&filename==='security-activities.js')contents=publicActivity(source,'SEC');
         else if(!member&&filename==='interactive-tools.js')contents=publicControls(source);

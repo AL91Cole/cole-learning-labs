@@ -1,5 +1,7 @@
 # Networking investigations
 
+The grades 7–12 **Networking pathway** (`/networking`) builds twelve tech fair missions beside these investigations; see [Networking pathway](NETWORKING-PATHWAY.md). The investigations below keep their ids, links, saved work and reports.
+
 These ten original activities draw on the supplied **ISSC231: Networking Concepts** syllabus (dated February 14, 2023, outline on pages 2-7) and the public lab topics for Michael G. Solomon's **Fundamentals of Communications and Networking with Cloud Labs, Third Edition**. The syllabus supplies course objectives and assignments; the book's lab list supplies the sequence below. Cole Learning Labs uses original classroom situations, fixed local models and the plain wording already used in its labs. These activities cover selected topics and do not claim full course equivalence.
 
 Start with **Follow a network connection** (`#learn/network`). Then use the ordered networking list in the lab catalog. Each investigation keeps the existing three sections: **Request & clues**, **Workbench & test**, and **Check & explain**. Students ask a question, collect two clues, save separate symptom and hypothesis notes, apply a plan, inspect readings, run a current test and explain the result. Existing section gates also apply to the new labs.
