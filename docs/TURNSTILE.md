@@ -6,6 +6,12 @@ require a fresh token (see `telemetry/README.md` for the receipt and verify
 actions). Availability GETs remain cheap and do not generate AI
 or store activity. Classroom and improvement collection remain source-locked.
 
+One lab feature is the exception: **Start machine** on a real Linux machine
+asks for a token (action `machine`) when the terminal controller has its bot
+check on, because each machine costs money to run. The controller verifies
+that token itself. The simulated desktop and every other lab stay open. See
+`docs/REAL-MACHINE-LABS.md`, Cost and abuse guards.
+
 ## Configuration before merging
 
 Use the Cloudflare account's **Cole Learning Labs APIs** widget in **Invisible**

@@ -96,3 +96,14 @@ test('the Pages entry point reads the request and environment from its context',
   const response = await onRequest({ request: request('/terminal/api/health'), env: {} });
   assert.equal(response.status, 503);
 });
+
+test('the health answer carries the public Turnstile site key only when Turnstile is fully configured', async () => {
+  const health = () => recorder(() => new Response('{"status":"enabled","humanCheck":true}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  const configured = { ...ENV, TURNSTILE_SITE_KEY: '0x4AAAAAAAexamplekey', TURNSTILE_SECRET_KEY: 'a'.repeat(40) };
+  const withKey = await proxyTerminal(request('/terminal/api/health'), configured, { fetch: health().fetch });
+  assert.equal(withKey.headers.get('X-CLL-Turnstile-Sitekey'), '0x4AAAAAAAexamplekey');
+  assert.ok(!JSON.stringify([...withKey.headers]).includes('a'.repeat(40)), 'the secret never leaves the server');
+  assert.equal((await proxyTerminal(request('/terminal/api/health'), ENV, { fetch: health().fetch })).headers.get('X-CLL-Turnstile-Sitekey'), null);
+  assert.equal((await proxyTerminal(request('/terminal/api/health'), { ...ENV, TURNSTILE_SITE_KEY: '0x4AAAAAAAexamplekey' }, { fetch: health().fetch })).headers.get('X-CLL-Turnstile-Sitekey'), null, 'a site key without its secret is not offered');
+  assert.equal((await proxyTerminal(request('/terminal/api/labs'), configured, { fetch: health().fetch })).headers.get('X-CLL-Turnstile-Sitekey'), null, 'other routes do not carry it');
+});

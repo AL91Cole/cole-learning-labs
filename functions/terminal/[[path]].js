@@ -14,6 +14,8 @@
  * assets. Cookies and Cloudflare headers are
  * never forwarded; only the request headers the controller needs are.
  */
+import { turnstileSitekey, TURNSTILE_KEY_HEADER } from '../../edge/turnstile.js';
+
 const PATHS = /^\/(ws|desktop|api\/health|api\/labs|vendor\/[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*)$/;
 const FORWARDED = ['accept', 'accept-encoding', 'origin', 'upgrade', 'connection', 'sec-websocket-key', 'sec-websocket-version', 'sec-websocket-protocol', 'sec-websocket-extensions', 'if-none-match'];
 const RESPONSE_HEADERS = ['content-type', 'content-length', 'cache-control', 'etag', 'last-modified', 'vary'];
@@ -65,6 +67,9 @@ export async function proxyTerminal(request, env, { fetch: fetchImpl = globalThi
   const responseHeaders = new Headers({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cross-Origin-Resource-Policy': 'same-origin' });
   for (const name of RESPONSE_HEADERS) { const value = upstream.headers.get(name); if (value !== null) responseHeaders.set(name, value); }
   if (!responseHeaders.has('cache-control')) responseHeaders.set('Cache-Control', path.startsWith('/vendor/') ? 'public, max-age=86400' : 'no-store, private');
+  // The lab page needs the public Turnstile site key when the controller asks for a human check before a machine starts.
+  const sitekey = path === '/api/health' ? turnstileSitekey(env) : null;
+  if (sitekey) responseHeaders.set(TURNSTILE_KEY_HEADER, sitekey);
   return new Response(request.method === 'HEAD' ? null : upstream.body, { status: upstream.status, headers: responseHeaders });
 }
 

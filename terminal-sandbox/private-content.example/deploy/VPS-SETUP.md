@@ -103,4 +103,7 @@ own, so a stopped server never breaks a lab, it only removes the real machine.
 - Rotate the Docker token or teacher key: edit `deploy/.env.production` and
   rerun the `up -d` line.
 - Cost check: the Docker console shows sandbox hours; the controller deletes
-  each machine when the learner stops, after 5 minutes idle, or after one hour.
+  each machine when the learner stops, after 10 minutes without keyboard or
+  mouse input (it asks "Are you still working?" two minutes before), or after
+  one hour, and starts no new machine once the day's `DAILY_MACHINE_HOURS`
+  are used. The log line `Daily machine-time cap reached` means the cap was hit.

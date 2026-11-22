@@ -411,6 +411,41 @@ labs); the Linux basics course and the coding labs always stay offline.
    should print an address and `curl -I https://example.com` an `HTTP/2 200`
    line (not just tick the step). To go back, set `LAB_INTERNET=off`.
 
+## Cost and abuse guards (2026-11-22)
+
+Learner machines are billed by the second, so the controller limits who can
+start one and how long it runs. All of these are controller settings
+(`terminal-sandbox/.env.example`; production values in the private
+repository's `deploy/.env.production`).
+
+| Guard | Setting | Default | What it does |
+|---|---|---|---|
+| Bot check | `TURNSTILE_SECRET_KEY` | empty (off) | A machine starts only after the browser passes the site's Turnstile check (action `machine`). The controller verifies the token with Cloudflare itself, so reaching the controller's own hostname without the site does not get around it. One pass covers one connection. |
+| Idle shutdown | `IDLE_TIMEOUT_MINUTES` | 10 | A machine with no keyboard, mouse, clipboard or terminal input is deleted. An open tab, the screen refreshing and the page's automatic progress checks do not count as use. |
+| "Are you still working?" | `IDLE_WARNING_SECONDS` | 120 | That long before the idle shutdown the lab page shows a prompt with a countdown. **I'm still working**, or any input on the machine, keeps it; no answer deletes it. |
+| Time limit | `MAX_SESSION_MINUTES` | 60 | Every machine is deleted at this age, in use or not. |
+| Machines at once | `MAX_SESSIONS` | 24 | Further starts answer "every lab machine is in use". |
+| Daily spending cap | `DAILY_MACHINE_HOURS` | 0 (off); 80 in the production compose file | Once that much machine time has been used in a UTC day, no new machine starts until the next day. Running machines finish under their own limits, so the overshoot is at most `MAX_SESSIONS` × `MAX_SESSION_MINUTES`. The count is kept in memory and starts again if the controller restarts. |
+
+Worst case per day is `DAILY_MACHINE_HOURS` × the hourly price: 80 hours of
+small desktops (about $0.14/h) is about $11. Without the cap and the bot
+check, 24 machines kept busy by a script for 24 hours would be about $80 a
+day.
+
+The site learns from `/terminal/api/health` (`"humanCheck": true`) that a
+check is needed; the gateway adds the public site key to that answer. Turn it
+on in this order: merge the site change, then set `TURNSTILE_SECRET_KEY` on
+the controller. The Turnstile widget must list `colelearninglabs.com`. A
+school network that blocks `challenges.cloudflare.com` cannot start machines
+while the check is on; the simulated desktop still works there.
+
+Limits of these guards: Turnstile raises the cost of automation but does not
+prove a person is present, and a script that passes it can still answer the
+idle prompt. The machine cap, the time limit and the daily cap are what bound
+the bill in that case. The controller's standalone page
+(`terminal.colelearninglabs.com`) has no Turnstile widget, so learners cannot
+start machines from it while the check is on; the teacher view is unaffected.
+
 ## Hosting the controller (set up)
 
 The site is wired for the real machines already:

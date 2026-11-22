@@ -36,6 +36,19 @@ services:
       # The tunnel connector below is the only peer; it forwards https.
       TRUSTED_PROXY_ADDRESSES: 172.31.250.10,::ffff:172.31.250.10
       MAX_UPGRADES_PER_PEER_MINUTE: ${MAX_UPGRADES_PER_PEER_MINUTE:-240}
+      # Cost and abuse guards (public repository: docs/REAL-MACHINE-LABS.md,
+      # "Cost and abuse guards"). A machine is deleted after IDLE_TIMEOUT_MINUTES
+      # without keyboard or mouse input (the learner is asked "Are you still
+      # working?" first) and always at MAX_SESSION_MINUTES. No new machine starts
+      # once DAILY_MACHINE_HOURS of machine time were used in a UTC day. With
+      # TURNSTILE_SECRET_KEY set, a machine starts only for a browser that passed
+      # the site's Turnstile check; empty leaves machine starts open to anyone.
+      IDLE_TIMEOUT_MINUTES: ${IDLE_TIMEOUT_MINUTES:-10}
+      IDLE_WARNING_SECONDS: ${IDLE_WARNING_SECONDS:-120}
+      MAX_SESSION_MINUTES: ${MAX_SESSION_MINUTES:-60}
+      MAX_SESSIONS: ${MAX_SESSIONS:-24}
+      DAILY_MACHINE_HOURS: ${DAILY_MACHINE_HOURS:-80}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
       TEACHER_ACCESS_KEY: ${TEACHER_ACCESS_KEY:?set a random secret of at least 32 characters}
     volumes:
       - ../labs:/content/labs:ro

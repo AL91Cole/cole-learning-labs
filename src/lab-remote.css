@@ -142,3 +142,15 @@ body:has(.linux-lab) .access-panel{left:auto;right:0;bottom:auto;top:52px}
   .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-chrome .lab-tool{white-space:normal}
   .lab-remote:has(.remote-desktop-tools:not([hidden])) .remote-status{flex-basis:100%;order:5;white-space:normal}
 }
+/* “Are you still working?”: shown over the machine before an idle shutdown. */
+.lab-remote{position:relative}
+.remote-idle{position:absolute;inset:0;z-index:30;display:grid;place-items:center;padding:16px;background:rgba(8,10,14,.72)}
+.remote-idle[hidden]{display:none}
+.remote-idle-card{max-width:440px;padding:20px 22px;background:#1f2430;border:2px solid #f3ce85;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.5);color:#eaf6f3}
+.remote-idle-card h3{margin:0 0 8px;font-size:1.15rem}
+.remote-idle-card p{margin:0 0 14px;font-size:.95rem;line-height:1.45}
+.remote-idle-card b{color:#f3ce85;white-space:nowrap}
+.remote-idle-actions{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+.remote-idle-actions .lab-tool{min-height:40px;padding:0 14px;font-size:.92rem;background:#2a313b;border:1px solid #4a5563;color:#fff;border-radius:6px}
+.remote-idle-actions .remote-idle-stay{background:#2f7fd6;border-color:#2f7fd6;font-weight:700}
+.remote-idle-actions .lab-tool:focus-visible{outline:3px solid #f3ce85;outline-offset:2px}
