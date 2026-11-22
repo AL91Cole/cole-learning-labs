@@ -43,7 +43,20 @@ export function browserTimeZone(intl = globalThis.Intl) {
 }
 
 /** One remote session. Handlers are optional; state is readable at any time. */
-export function createRemoteSession({url, labId, screen = null, timeZone = browserTimeZone(), WebSocket:Socket = globalThis.WebSocket, onOutput = () => {}, onStatus = () => {}, onReady = () => {}, onMilestones = () => {}, onError = () => {}, onClose = () => {}, onShell = () => {}}) {
+/** Why a machine stopped, in words for the learner. */
+export const remoteStopReason = reason => ({
+  idle_timeout:'This machine was shut down because nobody was using it. Start machine opens a fresh one.',
+  session_expired:'This machine reached its time limit and was shut down. Start machine opens a fresh one.'
+}[reason] || 'The machine was stopped (' + String(reason || 'session ended').replaceAll('_', ' ').slice(0, 60) + ').');
+/** A refusal to start, in words for the learner; empty for codes with no special wording. */
+export const remoteStartRefusal = code => ({
+  daily_limit_reached:'The lab machines have reached today’s usage limit. Please try again tomorrow, or use the simulated desktop.',
+  capacity_reached:'Every lab machine is in use right now. Please try again in a few minutes.',
+  human_check_required:'The “not a robot” check did not finish, so no machine was started. Reload the page and try again.',
+  human_check_failed:'The “not a robot” check did not pass, so no machine was started. Reload the page and try again.'
+}[code] || '');
+
+export function createRemoteSession({url, labId, screen = null, timeZone = browserTimeZone(), humanToken = '', onIdle = () => {}, WebSocket:Socket = globalThis.WebSocket, onOutput = () => {}, onStatus = () => {}, onReady = () => {}, onMilestones = () => {}, onError = () => {}, onClose = () => {}, onShell = () => {}}) {
   if (typeof Socket !== 'function') throw new Error('WebSocket is not available in this browser.');
   if (typeof labId !== 'string' || !/^[A-Z]{2,5}-\d{3}$/.test(labId) || labId.length > LIMITS.lab) throw new Error('Choose a lab the terminal service hosts.');
   const state = {phase:'connecting', labId, alias:'', sessionId:'', lab:null, milestones:[], limits:null, desktop:null, shell:'none', typed:false, verified:false, complete:false, error:''};
@@ -77,7 +90,7 @@ export function createRemoteSession({url, labId, screen = null, timeZone = brows
     try {message = JSON.parse(typeof event.data === 'string' ? event.data : '');} catch {return;}
     if (!message || typeof message.type !== 'string') return;
     switch (message.type) {
-      case 'auth:ok': state.alias = String(message.alias || '').slice(0, 64); status('starting', 'Starting your Linux machine. This takes about half a minute…'); send({type:'session:start', labId, mode:'self-paced', ...(screen && Number.isInteger(screen.width) && Number.isInteger(screen.height) ? {screen:{width:screen.width, height:screen.height}} : {}), ...(timeZone ? {timeZone} : {})}); break;
+      case 'auth:ok': state.alias = String(message.alias || '').slice(0, 64); status('starting', 'Starting your Linux machine. This takes about half a minute…'); send({type:'session:start', labId, mode:'self-paced', ...(screen && Number.isInteger(screen.width) && Number.isInteger(screen.height) ? {screen:{width:screen.width, height:screen.height}} : {}), ...(timeZone ? {timeZone} : {}), ...(typeof humanToken === 'string' && humanToken ? {humanToken} : {})}); break;
       case 'session:ready': state.sessionId = String(message.sessionId || '').slice(0, 64); state.lab = message.lab && typeof message.lab === 'object' ? {id:String(message.lab.id || ''), title:String(message.lab.title || '').slice(0, 160), minutes:Number(message.lab.minutes) || 0} : null; state.limits = message.limits && typeof message.limits === 'object' ? {memory:String(message.limits.memory || ''), cpus:String(message.limits.cpus || ''), inactivityTimeoutSeconds:Number(message.limits.inactivityTimeoutSeconds) || 0} : null; state.desktop = message.desktop && typeof message.desktop === 'object' && /^[a-f0-9]{32}$/.test(String(message.desktop.ticket)) && /^[A-Za-z0-9]{1,32}$/.test(String(message.desktop.password)) ? {ticket:String(message.desktop.ticket), password:String(message.desktop.password), width:Math.min(4096, Math.max(320, Number(message.desktop.width) || 1280)), height:Math.min(4096, Math.max(240, Number(message.desktop.height) || 800))} : null; state.reach = remoteReach(message.network); applyMilestones(message.milestones); status('ready', state.desktop ? 'Connected. This is a real Linux desktop on an isolated machine' + state.reach : 'Connected. This is a real Linux shell in an isolated container' + state.reach); onReady({...state}); break;
       case 'lab:switched': applyMilestones(message.milestones); status('ready', 'Lab ready.'); break;
       case 'terminal:output': if (typeof message.data === 'string') onOutput(message.data.slice(0, LIMITS.output)); break;
@@ -85,8 +98,11 @@ export function createRemoteSession({url, labId, screen = null, timeZone = brows
       case 'ping': send({type:'pong'}); break;
       case 'terminal:opened': state.shell = 'open'; onShell('open'); break;
       case 'terminal:closed': state.shell = 'closed'; onShell('closed'); break;
-      case 'session:terminated': status('ended', 'The machine was stopped (' + String(message.reason || 'session ended').replaceAll('_', ' ') + ').'); break;
-      case 'error': state.error = String(message.message || message.code || 'error').slice(0, 200); onError(state.error, String(message.code || '')); break;
+      // The service asks whether the learner is still there before an idle machine is shut down.
+      case 'session:idle-warning': onIdle(Math.min(3600, Math.max(1, Math.round(Number(message.secondsRemaining)) || 60))); break;
+      case 'session:idle-cleared': onIdle(0); break;
+      case 'session:terminated': onIdle(0); status('ended', remoteStopReason(message.reason)); break;
+      case 'error': state.error = (remoteStartRefusal(String(message.code || '')) || String(message.message || message.code || 'error')).slice(0, 200); onError(state.error, String(message.code || '')); break;
       default: break;
     }
   });
@@ -105,6 +121,8 @@ export function createRemoteSession({url, labId, screen = null, timeZone = brows
     },
     resize(cols, rows) {if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols < 20 || rows < 5 || cols > 500 || rows > 200) return false; return send({type:'terminal:resize', cols, rows});},
     verify() {return send({type:'milestone:verify'});},
+    /** The learner says they are still working: restarts the machine's idle clock. */
+    keepAlive() {return send({type:'session:keepalive'});},
     /** Desktop machines: open the text terminal (a login shell on the same machine). */
     openShell() {return send({type:'terminal:open'});},
     close() {try {ws.close(1000, 'Lab closed');} catch {}}

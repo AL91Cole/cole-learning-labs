@@ -39,6 +39,36 @@ const integer = (value, fallback, min, max) =>
   Number(value) <= max
     ? Number(value)
     : fallback;
+// A real Turnstile secret; Cloudflare's always-pass test secrets are refused.
+const validTurnstileSecret = (value) =>
+  typeof value === "string" && /^[A-Za-z0-9_-]{20,100}$/.test(value) && !/^\d+x0{10}/.test(value);
+export const HUMAN_CHECK_ACTION = "machine";
+/**
+ * Asks Cloudflare whether a Turnstile token is a fresh pass from one of this
+ * service's own sites for the "machine" action. Any doubt is a refusal. The
+ * token and secret are never logged.
+ */
+export async function verifyHumanToken(token, cfg, { fetch: fetchImpl = globalThis.fetch, now = Date.now, timeoutMs = 4000 } = {}) {
+  if (!cfg.turnstileSecret || typeof token !== "string" || token.length > 2048 || !/^[A-Za-z0-9_.-]+$/.test(token)) return false;
+  const hosts = new Set();
+  for (const origin of cfg.allowedOrigins) try { hosts.add(new URL(origin).hostname); } catch {}
+  try {
+    const response = await fetchImpl("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret: cfg.turnstileSecret, response: token }),
+      redirect: "error",
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) return false;
+    const text = await response.text();
+    if (text.length > 4096) return false;
+    const data = JSON.parse(text), age = now() - Date.parse(data?.challenge_ts);
+    return data?.success === true && hosts.has(data.hostname) && data.action === HUMAN_CHECK_ACTION && Number.isFinite(age) && age >= -30000 && age <= 300000;
+  } catch {
+    return false;
+  }
+}
 const loopback = (address) =>
   ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(address);
 export function configuration(env = process.env) {
@@ -78,9 +108,20 @@ export function configuration(env = process.env) {
     memoryLimit: "512m",
     cpuLimit: "0.5",
     pidsLimit: 64,
-    inactivityTimeoutMs: 300000,
-    maxLifetimeMs: 3600000,
-    reaperIntervalMs: 30000,
+    // A machine with no keyboard, mouse or terminal input for this long is
+    // deleted. The learner is asked "Are you still working?" idleWarningMs
+    // before that, and one click (or any input on the machine) keeps it.
+    inactivityTimeoutMs: integer(env.IDLE_TIMEOUT_MINUTES, 10, 2, 60) * 60000,
+    idleWarningMs: integer(env.IDLE_WARNING_SECONDS, 120, 30, 600) * 1000,
+    // Every machine is deleted at this age, active or not.
+    maxLifetimeMs: integer(env.MAX_SESSION_MINUTES, 60, 10, 240) * 60000,
+    // Spending cap: total machine time started per UTC day, in hours. When it is
+    // used up no new machine starts until the next day. 0 means no daily cap.
+    dailyMachineMs: integer(env.DAILY_MACHINE_HOURS, 0, 0, 2000) * 3600000,
+    // Bot check: with a Cloudflare Turnstile secret here, a machine starts only
+    // for a browser that passed the site's Turnstile check. Empty: no check.
+    turnstileSecret: validTurnstileSecret(env.TURNSTILE_SECRET_KEY) ? env.TURNSTILE_SECRET_KEY : "",
+    reaperIntervalMs: 10000,
     wsHeartbeatIntervalMs: 30000,
     authTimeoutMs: 5000,
     maxConnections: 48,
@@ -92,7 +133,8 @@ export function configuration(env = process.env) {
       30,
       600,
     ),
-    maxSessions: 24,
+    // Machines running at once, across every learner.
+    maxSessions: integer(env.MAX_SESSIONS, 24, 1, 24),
     maxClassrooms: 8,
     maxStudentsPerClass: 24,
     maxSnapshotBytes: 65536,
@@ -1195,7 +1237,29 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
           ? spawnDesktopContainer
           : spawnSandboxContainer),
     now = deps.now || Date.now,
-    logFailure = deps.log || ((...parts) => console.error(...parts));
+    logFailure = deps.log || ((...parts) => console.error(...parts)),
+    verifyHuman = deps.verifyHuman || ((token) => verifyHumanToken(token, cfg)),
+    // Machine time used today (UTC), for the daily spending cap. Kept in memory:
+    // a controller restart starts the count again.
+    usage = { day: "", ms: 0, announced: false };
+  const usageDay = () => {
+    const day = new Date(now()).toISOString().slice(0, 10);
+    if (usage.day !== day) { usage.day = day; usage.ms = 0; usage.announced = false; }
+    return usage;
+  };
+  const machineTimeToday = () => {
+    let total = usageDay().ms;
+    for (const s of sessions.values()) total += now() - s.created;
+    return total;
+  };
+  // Real work on the machine: restarts the idle clock and withdraws a warning.
+  function touch(s) {
+    s.lastActivity = now();
+    if (s.idleWarned) {
+      s.idleWarned = false;
+      send(s.owner, { type: "session:idle-cleared" });
+    }
+  }
   let stopping = false,
     pendingStarts = 0;
   async function cleanMachine(cleanup) {
@@ -1275,7 +1339,10 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       // RFB frames can combine protocol and input data. Close paused streams
       // instead of dropping opaque frames and corrupting the protocol state.
       if (s.paused) return link.close();
-      s.lastActivity = now();
+      // Only keyboard (4), pointer (5) and clipboard (6) messages are the
+      // learner working. The screen-refresh requests a viewer sends by itself
+      // must not keep an unattended machine running.
+      if (data.length && (data[0] === 4 || data[0] === 5 || data[0] === 6)) touch(s);
       if (upstream.readyState === 1) upstream.send(data);
       else if (pending.length < 64) pending.push(data);
     });
@@ -1299,6 +1366,8 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         productionApproved: false,
         // Whether networking and security labs go online here (off, sites or filtered), so school IT can check.
         onlineLabs: onlineLabMode(cfg),
+        // Whether a machine start needs the site's Turnstile check.
+        humanCheck: Boolean(cfg.turnstileSecret),
       });
     if (url.pathname === "/api/labs")
       return json(res, 200, {
@@ -1374,7 +1443,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     if (!s || s.destroyed) return;
     s.destroyed = true;
     clearTimeout(s.verifyTimer);
-    sessions.delete(s.id);
+    if (sessions.delete(s.id)) usageDay().ms += Math.max(0, now() - s.created);
     revoke(s);
     leaveRoom(s);
     s.desktopLink?.close();
@@ -1447,6 +1516,25 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
     if (pendingCleanup.size) throw failure("sandbox_unavailable");
     const lab = labFor(msg.labId);
     if (!lab) throw failure("unknown_lab");
+    if (cfg.dailyMachineMs > 0 && machineTimeToday() >= cfg.dailyMachineMs) {
+      if (!usage.announced) {
+        usage.announced = true;
+        logFailure("Daily machine-time cap reached (DAILY_MACHINE_HOURS); no new machines until " + usage.day + " ends (UTC).");
+      }
+      throw failure("daily_limit_reached");
+    }
+    // Bot check, once per connection: a fresh Turnstile pass from the site.
+    if (cfg.turnstileSecret && !c.human) {
+      if (typeof msg.humanToken !== "string" || !msg.humanToken) throw failure("human_check_required");
+      if (!(await verifyHuman(msg.humanToken))) {
+        if (++c.humanFailures < 3) throw failure("human_check_failed");
+        error(c, "human_check_failed");
+        c.ws.close(1008, "Human check failed");
+        return;
+      }
+      c.human = true;
+      if (c.closed || stopping) return;
+    }
     const code = msg.mode === "instructor-led" ? msg.classroomCode : "";
     if (code && (!classrooms.has(code) || typeof code !== "string"))
       throw failure("classroom_unavailable");
@@ -1481,6 +1569,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       lastSnapshotAt: 0,
       paused: false,
       lastActivity: now(),
+      idleWarned: false,
       created: now(),
       destroyed: false,
       sandbox: null,
@@ -1545,6 +1634,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         limits: {
           ...runtime.limits,
           inactivityTimeoutSeconds: cfg.inactivityTimeoutMs / 1000,
+          maxLifetimeSeconds: cfg.maxLifetimeMs / 1000,
         },
         lab: publicLab(lab, s.network),
         // What this machine can reach, so the lab pane can say so.
@@ -1728,7 +1818,7 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
       if (c.inputBytes > cfg.maxInputBytesPerSecond)
         throw failure("input_limit");
       s.sandbox.write(msg.data);
-      s.lastActivity = now();
+      touch(s);
       for (const ch of msg.data) {
         if (ch === "\r" || ch === "\n") {
           if (s.line.trim()) s.commandHistory.push(s.line.trim());
@@ -1765,10 +1855,13 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         if (s.destroyed) return;
         s.shellOpen = true;
       }
-      s.lastActivity = now();
+      touch(s);
       send(c, { type: "terminal:opened" });
+    } else if (msg.type === "session:keepalive") {
+      // The learner answered "Are you still working?" (or pressed a lab button).
+      touch(s);
     } else if (msg.type === "milestone:verify") {
-      s.lastActivity = now();
+      // The page asks for checks on a timer, so this is not a sign of work.
       await verify(s);
     } else if (msg.type === "lab:switch") {
       if (!labFor(msg.labId)) throw failure("unknown_lab");
@@ -1853,6 +1946,8 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         queued: 0,
         chain: Promise.resolve(),
         alive: true,
+        human: false,
+        humanFailures: 0,
       };
       connections.add(c);
       c.authTimer = setTimeout(
@@ -1924,6 +2019,9 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
                 "snapshot_rate_limit",
                 "student_action_denied",
                 "shell_unavailable",
+                "daily_limit_reached",
+                "human_check_required",
+                "human_check_failed",
               ].includes(e.code)
                 ? e.code
                 : "operation_failed",
@@ -1944,7 +2042,15 @@ export function createSandboxOrchestrator(overrides = {}, deps = {}) {
         now() - s.lastActivity >= cfg.inactivityTimeoutMs ||
         now() - s.created >= cfg.maxLifetimeMs
       )
-      .map((s) => destroySession(s, "session_expired"));
+      .map((s) => destroySession(s, now() - s.created >= cfg.maxLifetimeMs ? "session_expired" : "idle_timeout"));
+    // Ask a learner who has gone quiet whether they are still working.
+    const warnAfter = cfg.inactivityTimeoutMs - Math.min(cfg.idleWarningMs ?? 0, cfg.inactivityTimeoutMs / 2);
+    for (const s of sessions.values()) {
+      const idle = now() - s.lastActivity;
+      if (s.destroyed || s.idleWarned || idle < warnAfter) continue;
+      s.idleWarned = true;
+      send(s.owner, { type: "session:idle-warning", secondsRemaining: Math.max(1, Math.ceil((cfg.inactivityTimeoutMs - idle) / 1000)) });
+    }
     for (const c of connections)
       if (
         now() - c.created >= cfg.maxLifetimeMs ||

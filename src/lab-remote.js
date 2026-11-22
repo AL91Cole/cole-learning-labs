@@ -8,6 +8,7 @@
 import {registerLabEnvironment} from './lab-environment.js?release=20261107-tech-team';
 import {LAB_ENVIRONMENT_CONFIG} from './lab-environment-config.js?release=20261107-tech-team';
 import {createRemoteSession, remoteSocketUrl, remoteDesktopUrl, remoteAssetUrl} from './lab-remote-client.js?release=20261107-tech-team';
+import {requestTurnstileToken} from './turnstile-client.js?release=20261107-tech-team';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const ansi = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007]*\u0007|\u001b[()][A-Z0-9]/g;
@@ -18,7 +19,9 @@ export const remoteLabFor = scenario => {const labs = remoteConfig().labs; const
 // check (status "enabled"). Until then, and whenever the service is missing or
 // disabled, the guided labs keep the simulated desktop, so the configuration can
 // name the service before it is deployed and nothing breaks for learners.
-let serviceState = 'unknown', servicePromise = null, hostedLabs = null;
+let serviceState = 'unknown', servicePromise = null, hostedLabs = null, humanCheck = {required:false, sitekey:''};
+/** Whether the service starts a machine only after the site's Turnstile check, and the public site key for it. */
+export const remoteHumanCheck = () => ({...humanCheck});
 /** True when the service has not published a lab list yet, or the list includes this lab. */
 export const remoteServiceHosts = labId => hostedLabs === null || hostedLabs.has(labId);
 export function setRemoteHostedLabs(ids) {hostedLabs = Array.isArray(ids) ? new Set(ids.filter(id => typeof id === 'string')) : null; return hostedLabs;}
@@ -32,7 +35,12 @@ export function probeRemoteService({base = remoteConfig().base, fetch: fetchImpl
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = setTimeout(() => controller?.abort(), timeoutMs);
   servicePromise = fetchImpl(remoteAssetUrl(base, 'api/health'), {method:'GET', credentials:'omit', cache:'no-store', signal:controller?.signal})
-    .then(response => response.ok ? response.json() : null)
+    .then(async response => {
+      if (!response.ok) return null;
+      const sitekey = response.headers?.get?.('X-CLL-Turnstile-Sitekey') || '', body = await response.json();
+      humanCheck = {required:body?.humanCheck === true, sitekey:/^0x[A-Za-z0-9_-]{10,100}$/u.test(sitekey) ? sitekey : ''};
+      return body;
+    })
     .then(async body => {
       if (!body || body.status !== 'enabled') return setRemoteServiceState('unavailable');
       // Ask which labs this service really hosts, so a lab the site lists but the
@@ -115,7 +123,8 @@ export function renderLabRemote(scenario) {
     + '</span>'
     + '<span class="remote-actions"><button type="button" class="lab-tool remote-checks-toggle" data-remote-checks-toggle aria-expanded="true" aria-controls="remote-checks">Lab checks</button><button type="button" class="lab-tool" data-remote-start>Start machine</button><button type="button" class="lab-tool" data-remote-verify disabled>Check my work</button><button type="button" class="lab-tool" data-remote-stop disabled>Stop</button></span></div>'
     + '<div class="remote-clipboard" id="remote-clipboard" data-remote-clipboard hidden><label for="remote-clipboard-text">Clipboard <span class="panel-help">Copy and paste work between your computer and the machine with the usual keys. Text copied on the machine appears here; text written here can be sent to the machine.</span></label><textarea id="remote-clipboard-text" data-remote-clipboard-text rows="3" maxlength="20000" spellcheck="false"></textarea><span class="remote-clipboard-actions"><button type="button" class="lab-tool" data-remote-clipboard-send>Send to the machine’s clipboard</button><button type="button" class="lab-tool" data-remote-clipboard-type title="Types the text as key presses, for windows that do not accept a paste">Type it</button><button type="button" class="lab-tool" data-remote-clipboard-copy>Copy to my computer</button></span><span class="panel-help" data-remote-clipboard-note role="status"></span></div>'
-    + '<div class="remote-body"><div class="remote-terminal" data-remote-terminal tabindex="0" aria-label="Linux machine screen"><div class="remote-welcome" data-remote-welcome><h3>Your own Linux machine for this lab</h3><p>Start machine opens a real, isolated Linux machine on the lab server (' + esc(config.base) + ') with this lab’s files in the <b>lab</b> folder. Cloudflare relays the connection to a DigitalOcean controller and a Docker-hosted machine. Your keyboard and mouse input, text you copy or paste, time zone, screen size, files and command history are processed remotely. Use fictional details only; never enter student records, passwords or private keys. The machine has no internet access unless the service turns on online labs for this lab; the status line says what it can reach once it starts. The service requests deletion on Stop, disconnect or timeout; provider cleanup and retention can differ. Read the <a href="/#privacy">privacy information</a> before starting.</p><p class="panel-help">It takes about half a minute to start. Click inside the screen to use the keyboard and mouse; press Ctrl+Alt+Shift together to move the keyboard back out. Text terminal opens a screen-reader-friendly shell on the same machine.</p></div></div><aside class="remote-milestones" id="remote-checks" aria-label="Lab checks"><h3>Lab checks</h3><ol data-remote-milestones><li class="remote-milestone-empty">The machine reports its checks once it starts.</li></ol><p class="panel-help" data-remote-limits></p></aside></div></div>';
+    + '<div class="remote-body"><div class="remote-terminal" data-remote-terminal tabindex="0" aria-label="Linux machine screen"><div class="remote-welcome" data-remote-welcome><h3>Your own Linux machine for this lab</h3><p>Start machine opens a real, isolated Linux machine on the lab server (' + esc(config.base) + ') with this lab’s files in the <b>lab</b> folder. Cloudflare relays the connection to a DigitalOcean controller and a Docker-hosted machine. Your keyboard and mouse input, text you copy or paste, time zone, screen size, files and command history are processed remotely. Use fictional details only; never enter student records, passwords or private keys. The machine has no internet access unless the service turns on online labs for this lab; the status line says what it can reach once it starts. The service requests deletion on Stop, disconnect or timeout; provider cleanup and retention can differ. Read the <a href="/#privacy">privacy information</a> before starting.</p><p class="panel-help">It takes about half a minute to start. Click inside the screen to use the keyboard and mouse; press Ctrl+Alt+Shift together to move the keyboard back out. Text terminal opens a screen-reader-friendly shell on the same machine.</p></div></div><aside class="remote-milestones" id="remote-checks" aria-label="Lab checks"><h3>Lab checks</h3><ol data-remote-milestones><li class="remote-milestone-empty">The machine reports its checks once it starts.</li></ol><p class="panel-help" data-remote-limits></p></aside></div>'
+    + '<div class="remote-idle" data-remote-idle role="alertdialog" aria-modal="false" aria-labelledby="remote-idle-title" aria-describedby="remote-idle-text" hidden><div class="remote-idle-card"><h3 id="remote-idle-title">Are you still working?</h3><p id="remote-idle-text">Nobody has used this machine for a while. It will shut down in <b data-remote-idle-count>2 minutes</b> and its files will be deleted.</p><p class="remote-idle-actions"><button type="button" class="lab-tool remote-idle-stay" data-remote-idle-stay>I’m still working</button><button type="button" class="lab-tool" data-remote-idle-stop>Shut it down</button></p></div></div></div>';
 }
 
 export function mountLabRemote(root, {scenario, record, getState, action, onActivity = () => {}, showNotice = () => {}, checksOpen, verifyEveryMs = 15000}) {
@@ -296,6 +305,25 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
     verifyTimer = setInterval(() => {if (session && phase === 'ready' && !doc.hidden) session.verify();}, Math.max(4000, Number(verifyEveryMs) || 15000));
   }
 
+  // “Are you still working?”: the service warns before it shuts down an idle
+  // machine. One click, or any typing or mouse use on the machine, keeps it.
+  const idleBox = $('[data-remote-idle]'), idleCount = $('[data-remote-idle-count]');
+  let idleTimer = null, idleLeft = 0, idleFocus = null;
+  const idleWords = seconds => seconds >= 90 ? Math.round(seconds / 60) + ' minutes' : seconds === 1 ? '1 second' : seconds + ' seconds';
+  function showIdle(seconds) {
+    clearInterval(idleTimer); idleTimer = null;
+    if (!idleBox) return;
+    if (!(seconds > 0)) {
+      if (!idleBox.hidden) {idleBox.hidden = true; try {idleFocus?.focus?.({preventScroll:true});} catch {} idleFocus = null;}
+      return;
+    }
+    idleLeft = seconds; idleCount.textContent = idleWords(idleLeft);
+    if (idleBox.hidden) {idleFocus = doc.activeElement; idleBox.hidden = false; $('[data-remote-idle-stay]').focus({preventScroll:true});}
+    idleTimer = setInterval(() => {idleLeft = Math.max(0, idleLeft - 1); idleCount.textContent = idleLeft ? idleWords(idleLeft) : 'a moment'; if (!idleLeft) {clearInterval(idleTimer); idleTimer = null;}}, 1000);
+  }
+  listen($('[data-remote-idle-stay]'), 'click', () => {session?.keepAlive(); showIdle(0); statusNode.textContent = 'Thanks. The machine stays on.';});
+  listen($('[data-remote-idle-stop]'), 'click', () => $('[data-remote-stop]').click());
+
   // Desktop toolbar
   listen($('[data-remote-view]'), 'click', () => setTextMode(!textMode));
   listen($('[data-remote-clipboard-toggle]'), 'click', event => {const panel = $('[data-remote-clipboard]'); panel.hidden = !panel.hidden; event.currentTarget.setAttribute('aria-expanded', String(!panel.hidden)); if (!panel.hidden) {clipboardText.value = machineClipboard.slice(0, 20000); clipboardText.focus({preventScroll:true});}});
@@ -331,21 +359,33 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
     else {try {win.navigator?.keyboard?.unlock?.();} catch {}}
   });
 
-  function start() {
+  let starting = false;
+  async function start() {
     if (!labId) {setStatus('unavailable', 'This lab is not hosted on the terminal service.'); return;}
+    if (starting) return;
+    // Bot check: when the service asks for it, the browser passes the site's
+    // Turnstile check once before a machine is started.
+    let humanToken = '';
+    const check = remoteHumanCheck();
+    if (check.required) {
+      starting = true; setStatus('connecting', 'Checking that you are not a robot…');
+      try {humanToken = await requestTurnstileToken({sitekey:check.sitekey, action:'machine', signal, document:doc, window:win}) || '';} finally {starting = false;}
+      if (signal.aborted) return;
+      if (!humanToken) {setStatus('error', 'The “not a robot” check could not finish, so no machine was started. Check that challenges.cloudflare.com is not blocked, reload the page and try again.'); return;}
+    }
     let url;
     try {url = remoteSocketUrl(config.base, doc.defaultView?.location);} catch (error) {setStatus('error', error.message); return;}
     try {
       // Tell the service how large the lab area is, so a desktop machine is created to fit it.
       const area = host.getBoundingClientRect(), scale = desktopScale(area);
-      session = createRemoteSession({url, labId, screen:{width:Math.round(area.width * scale), height:Math.round(area.height * scale)},
+      session = createRemoteSession({url, labId, humanToken, onIdle:showIdle, screen:{width:Math.round(area.width * scale), height:Math.round(area.height * scale)},
         onStatus:(next, message) => setStatus(next, message),
         onOutput:data => write(data),
         onShell,
         onReady:state => {if (state.desktop) state.desktop.reach = state.reach; $('[data-remote-limits]').textContent = state.limits ? 'Machine limits: ' + state.limits.memory + ' memory · ' + state.limits.cpus + ' CPU · ' + Math.round(state.limits.inactivityTimeoutSeconds / 60) + ' min idle timeout.' : ''; onActivity({type:'remote', ready:true}); if (state.desktop) void mountDesktop(state.desktop); else {view = 'terminal'; void mountTerminal().then(() => {if (term && session) session.resize(term.cols, term.rows);});}},
         onMilestones:(list, allDone) => {milestones = list; complete = allDone; renderMilestones(); if (body.classList.contains('checks-hidden')) showChecks(false); if (allDone && phase === 'ready') statusNode.textContent = 'Every lab check passed on the machine.'; onActivity({type:'remote', milestones:list.length, complete:allDone});},
-        onError:(message, code) => {if (code === 'shell_unavailable') {onShell('closed'); showNotice('The text terminal could not open on this machine.'); return;} showNotice(message); if (code === 'sandbox_unavailable' || code === 'capacity_reached') setStatus('error', message);},
-        onClose:() => {session = null; closeDesktop(); showDesktopTools(false); if (phase !== 'ended') setStatus('closed', 'Disconnected from the lab machine.');}
+        onError:(message, code) => {if (code === 'shell_unavailable') {onShell('closed'); showNotice('The text terminal could not open on this machine.'); return;} showNotice(message); if (['sandbox_unavailable', 'capacity_reached', 'daily_limit_reached', 'human_check_required', 'human_check_failed'].includes(code)) setStatus('error', message);},
+        onClose:() => {session = null; showIdle(0); closeDesktop(); showDesktopTools(false); if (phase !== 'ended') setStatus('closed', 'Disconnected from the lab machine.');}
       });
     } catch (error) {setStatus('error', error.message); return;}
     setStatus('connecting', 'Connecting to the lab machine…');
@@ -360,8 +400,8 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
   showChecks(typeof checksOpen === 'boolean' ? checksOpen : root.getBoundingClientRect().width >= 980);
   listen(toggle, 'click', () => showChecks(body.classList.contains('checks-hidden')));
   listen($('[data-remote-start]'), 'click', start);
-  listen($('[data-remote-verify]'), 'click', () => {if (session?.verify()) {verified = true; onActivity({type:'remote', verified:true}); setStatus('ready', 'Checking your work on the machine…'); setTimeout(() => {if (phase === 'ready') setStatus('ready', complete ? 'Every lab check passed on the machine.' : 'Checks updated. Finish the remaining steps, then check again.');}, 400);}});
-  listen($('[data-remote-stop]'), 'click', () => {if (isFullscreen()) doc.exitFullscreen?.().catch?.(() => {}); session?.close(); session = null; closeDesktop(); showDesktopTools(false); setStatus('closed', 'Machine stopped. Start machine opens a fresh one.');});
+  listen($('[data-remote-verify]'), 'click', () => {if (session?.verify()) {session.keepAlive(); verified = true; onActivity({type:'remote', verified:true}); setStatus('ready', 'Checking your work on the machine…'); setTimeout(() => {if (phase === 'ready') setStatus('ready', complete ? 'Every lab check passed on the machine.' : 'Checks updated. Finish the remaining steps, then check again.');}, 400);}});
+  listen($('[data-remote-stop]'), 'click', () => {showIdle(0); if (isFullscreen()) doc.exitFullscreen?.().catch?.(() => {}); session?.close(); session = null; closeDesktop(); showDesktopTools(false); setStatus('closed', 'Machine stopped. Start machine opens a fresh one.');});
   listen(host, 'click', event => {if (event.target.closest?.('button, a, input, textarea')) return; if (textMode || view === 'terminal') {term?.focus(); fallback?.input.focus({preventScroll:true});} else try {rfb?.focus({preventScroll:true});} catch {}});
   return {
     refresh() {},
@@ -370,7 +410,7 @@ export function mountLabRemote(root, {scenario, record, getState, action, onActi
     notify() {},
     hasUnsavedDraft:() => false,
     remoteState:() => ({active:true, labId, phase, typed, verified, complete, view, milestones:milestones.map(item => ({...item}))}),
-    dispose() {controller.abort(); resizeObserver?.disconnect(); closeDesktop(); session?.close(); term?.dispose?.(); term = null; session = null; try {if (isFullscreen()) doc.exitFullscreen?.();} catch {}}
+    dispose() {controller.abort(); clearInterval(idleTimer); resizeObserver?.disconnect(); closeDesktop(); session?.close(); term?.dispose?.(); term = null; session = null; try {if (isFullscreen()) doc.exitFullscreen?.();} catch {}}
   };
 }
 
