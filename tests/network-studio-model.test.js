@@ -157,3 +157,37 @@ test('a shorter path through an end device does not hide a healthy forwarding al
  state=act(state,'select-target',{id:'d5'});
  const result=evaluateNetworkStudio(state);assert.equal(result.ok,true);assert.deepEqual(result.path,['d1','d4','d3','d5']);
 });
+
+test('several messages can be tested at the same time, each with its own result', async () => {
+  const {evaluateNetworkStudioTests, NETWORK_STUDIO_EXTRA_TESTS} = await import('../src/network-studio-model.js');
+  let state = initialNetworkStudioState();
+  const act = (name, value) => {const result = applyNetworkStudioAction(state, name, value); state = result.state; return result;};
+  assert.deepEqual(state.tests, []); assert.equal(evaluateNetworkStudioTests(state).length, 1, 'the main message is always message 1');
+  assert.match(act('add-test').message, /Message 2 added/u);
+  assert.deepEqual(state.tests, [{id:'t1', source:'', target:''}]); assert.equal(evaluateNetworkStudioTests(state)[1].result.status, 'incomplete');
+  act('select-source', {id:'d5', test:'t1'}); act('select-target', {id:'d4', test:'t1'});
+  assert.deepEqual([state.source, state.target], ['d1', 'd4'], 'choosing ends for message 2 leaves message 1 alone');
+  let [one, two] = evaluateNetworkStudioTests(state);
+  assert.deepEqual([one.n, one.result.ok, two.n, two.result.ok], [1, true, 2, true]);
+  assert.deepEqual(two.result.path, ['d5', 'd2', 'd3', 'd4']); assert.deepEqual(evaluateNetworkStudio(state).path, ['d1', 'd2', 'd3', 'd4'], 'the single-message check is unchanged');
+  // One change, two different outcomes: the printer is cut off, the PC is not.
+  act('disconnect', {id:'l4'}); [one, two] = evaluateNetworkStudioTests(state);
+  assert.deepEqual([one.result.ok, two.result.ok, two.result.failureKind, two.result.failedAt], [true, false, 'cable', 'd5']);
+  act('connect', {from:'d5', fromPort:0, to:'d2', toPort:2}); act('power-device', {id:'d3', powered:false}); [one, two] = evaluateNetworkStudioTests(state);
+  assert.deepEqual([one.result.ok, two.result.ok, one.result.failedAt, two.result.failedAt], [false, false, 'd3', 'd3'], 'a shared device stops both');
+  act('power-device', {id:'d3', powered:true});
+  assert.match(act('promote-test', {test:'t1'}).message, /Message 1 is the one Packet Simulator traces/u);
+  assert.deepEqual([state.source, state.target, state.tests[0]], ['d5', 'd4', {id:'t1', source:'d1', target:'d4'}]);
+  act('add-test'); act('add-test');
+  assert.equal(state.tests.length, NETWORK_STUDIO_EXTRA_TESTS); assert.equal(act('add-test').changed, false, 'four messages at most');
+  assert.equal(act('promote-test', {test:'t2'}).changed, false, 'a message without both ends cannot become message 1');
+  assert.equal(act('select-source', {id:'d9', test:'t1'}).changed, false); assert.equal(act('select-source', {id:'d1', test:'t9'}).changed, false);
+  act('remove-device', {id:'d1'}); assert.equal(state.tests[0].source, '', 'removing a device clears it from every message');
+  assert.match(act('remove-test', {test:'t2'}).message, /Message 3 removed/u); assert.deepEqual(state.tests.map(item => item.id), ['t1', 't3']);
+  assert.equal(act('select-source', {id:'', test:'t3'}).changed, false, 'already not chosen');
+  // Saved or shared layouts: junk messages are dropped, unknown devices become "not chosen".
+  const loaded = normalizeNetworkStudioState({...initialNetworkStudioState(), tests:[{id:'t1', source:'d1', target:'d99'}, {id:'t1', source:'d1', target:'d4'}, {id:'<x>', source:'d1', target:'d4'}, null, {id:'t2', source:'d2', target:'d5'}, {id:'t3'}, {id:'t4'}, {id:'t5'}]});
+  assert.deepEqual(loaded.tests, [{id:'t1', source:'d1', target:''}, {id:'t2', source:'d2', target:'d5'}, {id:'t3', source:'', target:''}]);
+  assert.deepEqual(normalizeNetworkStudioState({...initialNetworkStudioState(), tests:'x'}).tests, []);
+  assert.deepEqual(applyNetworkStudioAction(state, 'reset', {template:'classroom'}).state.tests, [], 'a fresh layout starts with one message');
+});

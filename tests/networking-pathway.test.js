@@ -242,7 +242,7 @@ test('build: /networking is the application shell on the pathway route, with sho
   assert.equal(entryScripts(shell).split('\n').length, 1);
   assert.throws(() => renderNetworkingShell('<html lang="fr">'), /reviewed markup/u);
   assert.deepEqual(APP_SHELL_PAGES, ['networking.html']); assert.ok(PUBLIC_LANDING_PAGES.includes('lessons/networking-fair.html'));
-  assert.equal(NETWORKING_REDIRECTS.length, 13);
+  assert.equal(NETWORKING_REDIRECTS.length, 17, 'twelve missions, the capstone, the packet tracer and three Packet Simulator links');
   assert.deepEqual(NETWORKING_REDIRECTS.find(([from]) => from === '/networking/frozen-robot-cam'), ['/networking/frozen-robot-cam', '/networking#lab/FAIR-204/request']);
   for (const [, to] of NETWORKING_REDIRECTS) assert.notEqual(routeAccess(learningRoute(to.slice('/networking'.length))), 'unknown', to);
   assert.equal(Object.keys(FAIR_SLUGS).every(slug => /^[a-z0-9-]{3,40}$/u.test(slug)), true);

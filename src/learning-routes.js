@@ -23,8 +23,14 @@ export function learningRoute(hash) {
   }
   // The Networking pathway hub, with an optional grade band, and its one sub-page: the shared capstone.
   if(page==='networking'){
-    if(path.split('/').length>2||(id!==undefined&&id!=='opening-day'))return {page:'unknown',id:undefined,mode:'guided',sequence:null};
+    if(path.split('/').length>2||(id!==undefined&&!['opening-day','trace','simulator'].includes(id)))return {page:'unknown',id:undefined,mode:'guided',sequence:null};
     if(['7-8','9-10','11-12'].includes(params.get('band')))route.band=params.get('band');
+    // Packet Simulator: which way in, which starter layout, and the mission step to return to. Links never carry a layout or a result.
+    if(id==='simulator'){
+      route.start=params.get('start')==='guide'?'guide':'build';
+      if(['blank','booth','booth-router','wifi','guest','current'].includes(params.get('starter')))route.starter=params.get('starter');
+      if(/^FAIR-\d{3}\.(?:request|workbench|explain)(?:\.(?:guided|independent|challenge))?$/.test(params.get('from')||''))route.from=params.get('from');
+    }
   }
   if(page==='lab')route.section=Math.max(1,['request','workbench','explain'].indexOf(step)+1);
   return route;
