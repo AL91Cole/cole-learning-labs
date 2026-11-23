@@ -43,3 +43,18 @@ test('wire drawing uses actual finite port centers and rejects invalid geometry'
 test('mount is harmless on a host that has already been removed',()=>{
   const cleanup=mountNetworkStudio({querySelector:()=>null});assert.equal(typeof cleanup,'function');cleanup();
 });
+
+test('Network Studio lists more messages with their own controls, results and routes', async () => {
+  const {renderNetworkStudio} = await import('../src/network-studio.js');
+  const {initialNetworkStudioState, applyNetworkStudioAction} = await import('../src/network-studio-model.js');
+  const one = renderNetworkStudio(initialNetworkStudioState());
+  assert.match(one, /More messages at the same time<\/h2><span>1 of 4 messages/u); assert.match(one, /data-ns-add-test data-ns-key="add-test">\+ Add another message/u); assert.equal(one.includes('Other messages'), false);
+  let state = initialNetworkStudioState();
+  for (const [name, value] of [['add-test'], ['select-source', {id:'d5', test:'t1'}], ['select-target', {id:'d4', test:'t1'}], ['add-test'], ['disconnect', {id:'l4'}]]) state = applyNetworkStudioAction(state, name, value).state;
+  const html = renderNetworkStudio(state);
+  assert.match(html, /<span>3 of 4 messages/u); assert.match(html, /<b>Message 1: <\/b>|<b>Message 1: PC 1 → Server 4<\/b>/u);
+  assert.match(html, /data-ns-endpoint="source" data-ns-test="t1" data-ns-key="t1-source" aria-label="Message 2 sender"/u);
+  assert.match(html, /data-ns-more="t1"><div class="ns-result-heading"><h3>Message 2: Printer 5 → Server 4<\/h3><span class="ns-result-badge">! Cannot deliver/u);
+  assert.match(html, /data-ns-more="t2"><div class="ns-result-heading"><h3>Message 3: not chosen yet<\/h3><span class="ns-result-badge">Choose two devices/u);
+  assert.match(html, /data-ns-promote="t2" data-ns-key="t2-promote" disabled/u); assert.match(html, /aria-label="Remove message 2">Remove/u);
+});

@@ -29,8 +29,8 @@ export const networkDeviceLabel=(value,type,id)=>typeof value==='string'&&DEVICE
 const node=(id,type,x,y)=>({id,type,label:labelFor(type,id),x,y,powered:true});
 const cable=(id,from,fromPort,to,toPort)=>({id,from,fromPort,to,toPort});
 export function initialNetworkStudioState(template='classroom'){
- if(template==='blank')return {version:1,template:'blank',devices:[],links:[],source:'',target:'',nextDeviceId:1,nextLinkId:1,runs:0};
- return {version:1,template:'classroom',devices:[node('d1','pc',12,18),node('d2','switch',37,50),node('d3','router',63,50),node('d4','server',88,18),node('d5','printer',88,82)],links:[cable('l1','d1',0,'d2',0),cable('l2','d2',1,'d3',0),cable('l3','d3',1,'d4',0),cable('l4','d2',2,'d5',0)],source:'d1',target:'d4',nextDeviceId:6,nextLinkId:5,runs:0};
+ if(template==='blank')return {version:1,template:'blank',devices:[],links:[],source:'',target:'',tests:[],nextDeviceId:1,nextLinkId:1,runs:0};
+ return {version:1,template:'classroom',devices:[node('d1','pc',12,18),node('d2','switch',37,50),node('d3','router',63,50),node('d4','server',88,18),node('d5','printer',88,82)],links:[cable('l1','d1',0,'d2',0),cable('l2','d2',1,'d3',0),cable('l3','d3',1,'d4',0),cable('l4','d2',2,'d5',0)],source:'d1',target:'d4',tests:[],nextDeviceId:6,nextLinkId:5,runs:0};
 }
 const portKey=(id,port)=>`${id}:${port}`;
 const pairKey=(from,to)=>[from,to].sort().join(':');
@@ -38,6 +38,9 @@ function validPorts(link,devices){
  const a=devices.find(item=>item.id===link.from),b=devices.find(item=>item.id===link.to);
  return !!a&&!!b&&a.id!==b.id&&Number.isInteger(link.fromPort)&&link.fromPort>=0&&link.fromPort<TYPES.get(a.type).ports&&Number.isInteger(link.toPort)&&link.toPort>=0&&link.toPort<TYPES.get(b.type).ports;
 }
+/** The main message plus up to three more can be tested at the same time. */
+export const NETWORK_STUDIO_EXTRA_TESTS=3;
+const TEST_ID=/^t[1-9]\d{0,3}$/u;
 export function normalizeNetworkStudioState(saved){
  if(!record(saved))return initialNetworkStudioState();
  const template=data(saved,'template')==='blank'?'blank':'classroom';
@@ -68,6 +71,13 @@ export function normalizeNetworkStudioState(saved){
  const source=data(saved,'source'),target=data(saved,'target');
  state.source=typeof source==='string'&&seen.has(source)?source:'';
  state.target=typeof target==='string'&&seen.has(target)?target:'';
+ // Extra messages tested beside the main one. Each is a sender and a destination; unknown devices become "not chosen".
+ const rawTests=data(saved,'tests'),testIds=new Set();
+ if(Array.isArray(rawTests))for(let index=0;index<rawTests.length&&state.tests.length<NETWORK_STUDIO_EXTRA_TESTS;index++){
+  const raw=Object.getOwnPropertyDescriptor(rawTests,String(index))?.value,id=data(raw,'id'),from=data(raw,'source'),to=data(raw,'target');
+  if(typeof id!=='string'||!TEST_ID.test(id)||testIds.has(id))continue;
+  testIds.add(id);state.tests.push({id,source:typeof from==='string'&&seen.has(from)?from:'',target:typeof to==='string'&&seen.has(to)?to:''});
+ }
  const nextDevice=Math.max(0,...state.devices.map(item=>idNumber(item.id)))+1;
  const nextLink=Math.max(0,...state.links.map(item=>idNumber(item.id)))+1;
  state.nextDeviceId=Math.max(nextDevice,integer(data(saved,'nextDeviceId'),1,10000,nextDevice));
@@ -98,6 +108,7 @@ export function applyNetworkStudioAction(saved,action,value){
   state.devices=state.devices.filter(item=>item.id!==id);
   state.links=state.links.filter(link=>link.from!==id&&link.to!==id);
   if(state.source===id)state.source='';if(state.target===id)state.target='';
+  for(const item of state.tests){if(item.source===id)item.source='';if(item.target===id)item.target='';}
   kind='topology';topologyChanged=true;message=`${device.label} and its attached cables removed.`;
  }else if(action==='move-device'){
   const device=find(),x=data(value,'x'),y=data(value,'y');
@@ -122,9 +133,28 @@ export function applyNetworkStudioAction(saved,action,value){
   if(!device||typeof powered!=='boolean')return {state,changed:false,topologyChanged:false,message:'Choose a device power setting.',kind};
   device.powered=powered;kind='topology';topologyChanged=true;message=`${device.label} powered ${powered?'on':'off'}.`;
  }else if(action==='select-source'||action==='select-target'){
-  if(!find())return {state,changed:false,topologyChanged:false,message:'Choose a device in this layout.',kind};
-  state[action==='select-source'?'source':'target']=id;
-  kind='endpoint';message=`Test ${action==='select-source'?'source':'destination'} selected.`;
+  const testId=data(value,'test'),extra=testId===undefined?null:state.tests.find(item=>item.id===testId),field=action==='select-source'?'source':'target';
+  if(testId!==undefined&&!extra)return {state,changed:false,topologyChanged:false,message:'Choose a message in this list.',kind};
+  // An extra message may be set back to "not chosen"; the main one always names a device.
+  if(!find()&&!(extra&&id===''))return {state,changed:false,topologyChanged:false,message:'Choose a device in this layout.',kind};
+  (extra||state)[field]=id;
+  kind='endpoint';message=extra?`Message ${state.tests.indexOf(extra)+2} ${field==='source'?'sender':'destination'} selected.`:`Test ${field==='source'?'source':'destination'} selected.`;
+ }else if(action==='add-test'){
+  if(state.tests.length>=NETWORK_STUDIO_EXTRA_TESTS)return {state,changed:false,topologyChanged:false,message:`This workbench tests up to ${NETWORK_STUDIO_EXTRA_TESTS+1} messages at once. Remove one first.`,kind};
+  if(state.devices.length<2)return {state,changed:false,topologyChanged:false,message:'Add two devices before testing another message.',kind};
+  const next=Math.max(0,...state.tests.map(item=>idNumber(item.id)))+1;
+  state.tests.push({id:`t${next}`,source:'',target:''});
+  kind='endpoint';message=`Message ${state.tests.length+1} added. Choose its sender and destination.`;
+ }else if(action==='remove-test'){
+  const index=state.tests.findIndex(item=>item.id===data(value,'test'));
+  if(index<0)return {state,changed:false,topologyChanged:false,message:'Choose a message to remove.',kind};
+  state.tests.splice(index,1);kind='endpoint';message=`Message ${index+2} removed.`;
+ }else if(action==='promote-test'){
+  const extra=state.tests.find(item=>item.id===data(value,'test'));
+  if(!extra)return {state,changed:false,topologyChanged:false,message:'Choose a message in this list.',kind};
+  if(!extra.source||!extra.target)return {state,changed:false,topologyChanged:false,message:'Choose a sender and a destination for that message first.',kind};
+  [state.source,extra.source]=[extra.source,state.source];[state.target,extra.target]=[extra.target,state.target];
+  kind='endpoint';message='Messages swapped. Message 1 is the one Packet Simulator traces.';
  }else if(action==='run'){
   state.runs=Math.min(100000,state.runs+1);kind='test';message=evaluateNetworkStudio(state).message;
  }else if(action==='reset'){
@@ -157,9 +187,14 @@ function trace(parents,source,target){
  return {path,links};
 }
 
-export function evaluateNetworkStudio(saved){
- const state=normalizeNetworkStudioState(saved),nodes=new Map(state.devices.map(device=>[device.id,device]));
- const source=nodes.get(state.source),target=nodes.get(state.target),selected=!!source&&!!target&&source.id!==target.id;
+/** Every message being tested, main one first, each with its own result. */
+export function evaluateNetworkStudioTests(saved){
+ const state=normalizeNetworkStudioState(saved);
+ return [{id:'main',source:state.source,target:state.target},...state.tests].map((item,index)=>({id:item.id,n:index+1,source:item.source,target:item.target,result:evaluateNetworkStudio(state,item)}));
+}
+export function evaluateNetworkStudio(saved,pair=null){
+ const state=normalizeNetworkStudioState(saved),nodes=new Map(state.devices.map(device=>[device.id,device])),ends=pair||state;
+ const source=nodes.get(ends.source),target=nodes.get(ends.target),selected=!!source&&!!target&&source.id!==target.id;
  const powered=selected&&source.powered&&target.powered;
  const physical=selected?search(state,source.id,target.id,false):null;
  const active=selected?search(state,source.id,target.id,true):null;

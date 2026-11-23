@@ -76,6 +76,8 @@ It is practice: public in both release modes, loaded as its own route chunk, kep
 
 `/networking/simulator`, `/networking/trace`, `#networking/trace` and `#studio/network` keep working. Network Studio supplies the editable layout (`src/network-studio-model.js`: devices, ports, cables, power); the simulator (`src/packet-sim-model.js`, page `src/packet-sim.js`) adds addresses, Wi-Fi joins, a guest policy and the packet. Both pages edit the same in-memory layout, so a layout changed in the Studio can be traced, and the reverse.
 
+**Several messages at once (Network Studio).** The Studio tests up to four sender and destination pairs at the same time (`tests` in the layout, `evaluateNetworkStudioTests`). Each has its own result and route, each animated packet carries its message number, and one change (a pulled cable, a powered-off router) can be seen to stop one message and not another. Message 1 is the pair the Packet Simulator traces; “Swap with message 1” chooses which.
+
 **The result is derived from the build.** `simulatePacket(layout, net)` returns numbered events and one outcome. The map, the text view, the numbered list and the result all read those same events. A failed run names the device where the packet stopped, the reason, and one question to test next. Outcome kinds are kept apart: `link` (cable, power or Wi-Fi), `lookup` (the name question was not answered, so no packet was sent), `policy` (the gateway dropped it), `expired` (hop allowance), `address`. Changing a cable, power, Wi-Fi join, address setting, policy, endpoint, test or hop allowance marks the last run “previous evidence”; stepping, replaying or moving a device does not send a packet.
 
 Starters and what each band checks (ticked from the learner’s own runs, in `simChecks`):

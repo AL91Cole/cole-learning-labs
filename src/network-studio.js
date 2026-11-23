@@ -1,5 +1,5 @@
 import {renderLearningBrief} from './activity-guidance.js?release=20261107-tech-team';
-import {NETWORK_DEVICE_TYPES,initialNetworkStudioState,normalizeNetworkStudioState,applyNetworkStudioAction,evaluateNetworkStudio} from './network-studio-model.js?release=20261107-tech-team';
+import {NETWORK_DEVICE_TYPES,initialNetworkStudioState,normalizeNetworkStudioState,applyNetworkStudioAction,evaluateNetworkStudio,evaluateNetworkStudioTests,NETWORK_STUDIO_EXTRA_TESTS} from './network-studio-model.js?release=20261107-tech-team';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const specFor=type=>NETWORK_DEVICE_TYPES.find(item=>item.id===type);
 const titleFor=(state,id)=>state.devices.find(device=>device.id===id)?.label||'Device';
@@ -25,9 +25,19 @@ function deviceMarkup(state,selected,pending) {
     }).join('')}</div></div>`;
   }).join('');
 }
-function resultMarkup(state,result) {
+const badgeFor=result=>result.ok?'✓ Connected':result.status==='incomplete'?'Choose two devices':'! Cannot deliver';
+function messagesMarkup(state,tests) {
+  const extras=tests.slice(1),devices=state.devices,full=extras.length>=NETWORK_STUDIO_EXTRA_TESTS;
+  const pick=(test,field)=>`<label>${field==='source'?'From':'To'}<select data-ns-endpoint="${field}" data-ns-test="${test.id}" data-ns-key="${test.id}-${field}" aria-label="Message ${test.n} ${field==='source'?'sender':'destination'}"><option value="">Choose device</option>${devices.map(device=>`<option value="${device.id}"${test[field]===device.id?' selected':''}>${esc(device.label)}</option>`).join('')}</select></label>`;
+  return `<section class="ns-messages" aria-labelledby="ns-messages-title"><div class="ns-toolbar-heading"><h2 id="ns-messages-title">More messages at the same time</h2><span>${tests.length} of ${NETWORK_STUDIO_EXTRA_TESTS+1} messages</span></div><p>Message 1 uses From and To above. Add another sender and destination to compare paths on the same network. Each packet carries its message number.</p>${extras.length?`<ol class="ns-message-list" start="2">${extras.map(test=>`<li class="ns-message ns-result-${test.result.status}" data-ns-message-row="${test.id}"><b>Message ${test.n}</b>${pick(test,'source')}${pick(test,'target')}<span class="ns-result-badge">${badgeFor(test.result)}</span><button type="button" data-ns-promote="${test.id}" data-ns-key="${test.id}-promote"${test.source&&test.target?'':' disabled'} title="Message 1 is the one Packet Simulator traces">Swap with message 1</button><button type="button" class="ns-danger" data-ns-remove-test="${test.id}" data-ns-key="${test.id}-remove" aria-label="Remove message ${test.n}">Remove</button></li>`).join('')}</ol>`:''}<button type="button" data-ns-add-test data-ns-key="add-test"${full||devices.length<2?' disabled':''}>+ Add another message</button></section>`;
+}
+function moreResultsMarkup(state,tests) {
+  const extras=tests.slice(1);if(!extras.length) return '';
+  return `<section class="ns-results ns-more-results" aria-labelledby="ns-more-title"><h2 id="ns-more-title">Other messages</h2>${extras.map(test=>{const path=test.result.status==='incomplete'?[]:test.result.path.map(id=>titleFor(state,id));return `<div class="ns-more ns-result-${test.result.status}" data-ns-more="${test.id}"><div class="ns-result-heading"><h3>Message ${test.n}: ${test.source&&test.target?esc(titleFor(state,test.source))+' → '+esc(titleFor(state,test.target)):'not chosen yet'}</h3><span class="ns-result-badge">${badgeFor(test.result)}</span></div><p>${esc(test.result.message)}</p>${path.length?`<div class="ns-route"><ol aria-label="Message ${test.n} route">${path.map((label,index)=>`<li><span>${index+1}</span>${esc(label)}</li>`).join('')}</ol></div>`:''}</div>`;}).join('')}</section>`;
+}
+function resultMarkup(state,result,many=false) {
   const path=result.path.map(id=>titleFor(state,id));
-  return `<section class="ns-results ns-result-${result.status}" aria-labelledby="ns-results-title"><div class="ns-result-heading"><h2 id="ns-results-title">Live connection check</h2><span class="ns-result-badge">${result.ok?'✓ Connected':result.status==='incomplete'?'Choose two devices':'! Cannot deliver'}</span></div><p class="ns-selected-pair"><b>${esc(titleFor(state,state.source))} → ${esc(titleFor(state,state.target))}</b></p><p data-ns-live-result>${esc(result.message)}</p><ol class="ns-checks">${result.checks.map(check=>`<li class="${check.ok?'ns-check-pass':'ns-check-fail'}"><span aria-hidden="true">${check.ok?'✓':'!'}</span>${esc(check.label)}</li>`).join('')}</ol><div class="ns-route"><b>Packet route</b><ol aria-label="Packet route">${path.length?path.map((label,index)=>`<li><span>${index+1}</span>${esc(label)}</li>`).join(''):'<li>Choose a source and destination.</li>'}</ol></div><p class="ns-simulation-note">This models cables, power, and which devices can forward a packet. It sends no real network traffic.</p></section>`;
+  return `<section class="ns-results ns-result-${result.status}" aria-labelledby="ns-results-title"><div class="ns-result-heading"><h2 id="ns-results-title">Live connection check</h2><span class="ns-result-badge">${badgeFor(result)}</span></div><p class="ns-selected-pair"><b>${many?'Message 1: ':''}${esc(titleFor(state,state.source))} → ${esc(titleFor(state,state.target))}</b></p><p data-ns-live-result>${esc(result.message)}</p><ol class="ns-checks">${result.checks.map(check=>`<li class="${check.ok?'ns-check-pass':'ns-check-fail'}"><span aria-hidden="true">${check.ok?'✓':'!'}</span>${esc(check.label)}</li>`).join('')}</ol><div class="ns-route"><b>Packet route</b><ol aria-label="Packet route">${path.length?path.map((label,index)=>`<li><span>${index+1}</span>${esc(label)}</li>`).join(''):'<li>Choose a source and destination.</li>'}</ol></div><p class="ns-simulation-note">This models cables, power, and which devices can forward a packet. It sends no real network traffic.</p></section>`;
 }
 function inspectorMarkup(state,selected) {
   const device=state.devices.find(item=>item.id===selected);
@@ -36,9 +46,9 @@ function inspectorMarkup(state,selected) {
   return `<section class="ns-inspector" aria-labelledby="ns-selected-title"><div class="ns-inspector-heading"><h2 id="ns-selected-title">${esc(device.label)}</h2><span>${esc(spec.label)} · ${spec.ports} ${spec.ports===1?'port':'ports'}</span></div><p>${esc(spec.description)}</p><div class="ns-device-actions"><button type="button" data-ns-power="${device.id}" data-ns-key="power-${device.id}" aria-pressed="${device.powered}">Power ${device.powered?'on':'off'}</button><button type="button" data-ns-remove="${device.id}" data-ns-key="remove-${device.id}" class="ns-danger">Remove device</button></div><fieldset class="ns-movement"><legend>Move device</legend><button type="button" data-ns-move="up" data-ns-key="move-${device.id}-up" aria-label="Move ${esc(device.label)} up">↑</button><button type="button" data-ns-move="left" data-ns-key="move-${device.id}-left" aria-label="Move ${esc(device.label)} left">←</button><button type="button" data-ns-move="down" data-ns-key="move-${device.id}-down" aria-label="Move ${esc(device.label)} down">↓</button><button type="button" data-ns-move="right" data-ns-key="move-${device.id}-right" aria-label="Move ${esc(device.label)} right">→</button></fieldset><details class="ns-cable-list"><summary>Cables (${links.length})</summary>${links.length?links.map(link=>`<div><span>${esc(titleFor(state,link.from))} P${link.fromPort+1} ↔ ${esc(titleFor(state,link.to))} P${link.toPort+1}</span><button type="button" data-ns-disconnect="${link.id}" data-ns-key="cable-${link.id}">Unplug</button></div>`).join(''):'<p>No cables. Select two free ports on different devices to connect them.</p>'}</details></section>`;
 }
 function bodyMarkup(state,selected,pending,options={}) {
-  const result=evaluateNetworkStudio(state),devices=state.devices;
+  const tests=evaluateNetworkStudioTests(state),result=tests[0].result,devices=state.devices;
   const endpoints=field=>`<label>${field==='source'?'From':'To'}<select data-ns-endpoint="${field}" data-ns-key="${field}"><option value="">Choose device</option>${devices.map(device=>`<option value="${device.id}"${state[field]===device.id?' selected':''}>${esc(device.label)}</option>`).join('')}</select></label>`;
-  return `<section class="ns-palette" aria-labelledby="ns-palette-title"><div class="ns-toolbar-heading"><h2 id="ns-palette-title">Add a device</h2><span>${devices.length}/12 devices · ${state.links.length}/24 cables</span></div><div>${NETWORK_DEVICE_TYPES.map(type=>`<button type="button" data-ns-add="${type.id}" data-ns-key="add-${type.id}"${devices.length>=12?' disabled':''}><span aria-hidden="true">${iconFor(type.id)}</span>${esc(type.label)}<small>${type.ports} ${type.ports===1?'port':'ports'}</small></button>`).join('')}</div></section><div class="ns-topbar">${endpoints('source')}${endpoints('target')}<button type="button" class="ns-send" data-ns-run data-ns-key="send">▶ Send packet</button><button type="button" data-ns-pause data-ns-key="pause" disabled>Pause</button><button type="button" data-ns-replay data-ns-key="replay">Replay</button><label class="ns-auto"><input type="checkbox" data-ns-auto${options.auto!==false?' checked':''}> Animate changes</label></div><p class="ns-interaction-help">Drag devices. Select two free ports to connect them. Select a used port or cable to unplug it.</p><p class="ns-action-status" data-ns-message role="status">${esc(options.message||'Select a device or start building.')}</p><div class="ns-layout"><section class="ns-diagram-panel" aria-label="Your network"><div class="ns-viewport" tabindex="0" aria-label="Scrollable network diagram"><div class="ns-canvas" data-ns-canvas><svg class="ns-wires" data-ns-wires aria-label="Network cables"></svg><div class="ns-devices" data-ns-devices>${deviceMarkup(state,selected,pending)}</div><div class="ns-empty"${devices.length?' hidden':''}>Your network starts here.<br>Add a device above.</div></div></div><div class="ns-packet-state"><span class="ns-packet-key" aria-hidden="true"></span><p data-ns-animation-status role="status">${options.reduced?'Reduced motion: follow the numbered packet route below.':'Ready. A dot follows the cables; green means delivery and reply.'}</p></div><details class="ns-help"><summary>Connection tips &amp; keyboard controls</summary><p>PCs, servers, and printers are endpoints. Use switches, routers, or access points to pass packets between devices. A cable needs a free port at each end.</p><p>Tab to a device and press Enter to select it. Use the Move buttons or arrow keys while its device button is focused. Tab to ports and press Enter to connect or unplug.</p><p>Changing the network updates the check immediately. Moving a device only changes the drawing. Work stays here until this page closes.</p></details></section><aside class="ns-sidebar">${inspectorMarkup(state,selected)}${resultMarkup(state,result)}</aside></div><div class="ns-bottom-actions"><button type="button" data-ns-reset="blank" data-ns-key="reset-blank">Clear &amp; start empty</button><button type="button" data-ns-reset="classroom" data-ns-key="reset-classroom">Load classroom network</button><span>This is a teaching model, not a full network emulator.</span></div>`;
+  return `<section class="ns-palette" aria-labelledby="ns-palette-title"><div class="ns-toolbar-heading"><h2 id="ns-palette-title">Add a device</h2><span>${devices.length}/12 devices · ${state.links.length}/24 cables</span></div><div>${NETWORK_DEVICE_TYPES.map(type=>`<button type="button" data-ns-add="${type.id}" data-ns-key="add-${type.id}"${devices.length>=12?' disabled':''}><span aria-hidden="true">${iconFor(type.id)}</span>${esc(type.label)}<small>${type.ports} ${type.ports===1?'port':'ports'}</small></button>`).join('')}</div></section><div class="ns-topbar">${endpoints('source')}${endpoints('target')}<button type="button" class="ns-send" data-ns-run data-ns-key="send">▶ Send packet</button><button type="button" data-ns-pause data-ns-key="pause" disabled>Pause</button><button type="button" data-ns-replay data-ns-key="replay">Replay</button><label class="ns-auto"><input type="checkbox" data-ns-auto${options.auto!==false?' checked':''}> Animate changes</label></div>${messagesMarkup(state,tests)}<p class="ns-interaction-help">Drag devices. Select two free ports to connect them. Select a used port or cable to unplug it.</p><p class="ns-action-status" data-ns-message role="status">${esc(options.message||'Select a device or start building.')}</p><div class="ns-layout"><section class="ns-diagram-panel" aria-label="Your network"><div class="ns-viewport" tabindex="0" aria-label="Scrollable network diagram"><div class="ns-canvas" data-ns-canvas><svg class="ns-wires" data-ns-wires aria-label="Network cables"></svg><div class="ns-devices" data-ns-devices>${deviceMarkup(state,selected,pending)}</div><div class="ns-empty"${devices.length?' hidden':''}>Your network starts here.<br>Add a device above.</div></div></div><div class="ns-packet-state"><span class="ns-packet-key" aria-hidden="true"></span><p data-ns-animation-status role="status">${options.reduced?'Reduced motion: follow the numbered packet route below.':'Ready. A dot follows the cables; green means delivery and reply.'}</p></div><details class="ns-help"><summary>Connection tips &amp; keyboard controls</summary><p>PCs, servers, and printers are endpoints. Use switches, routers, or access points to pass packets between devices. A cable needs a free port at each end.</p><p>Tab to a device and press Enter to select it. Use the Move buttons or arrow keys while its device button is focused. Tab to ports and press Enter to connect or unplug.</p><p>Changing the network updates the check immediately. Moving a device only changes the drawing. Work stays here until this page closes.</p></details></section><aside class="ns-sidebar">${inspectorMarkup(state,selected)}${resultMarkup(state,result,tests.length>1)}${moreResultsMarkup(state,tests)}</aside></div><div class="ns-bottom-actions"><button type="button" data-ns-reset="blank" data-ns-key="reset-blank">Clear &amp; start empty</button><button type="button" data-ns-reset="classroom" data-ns-key="reset-classroom">Load classroom network</button><span>This is a teaching model, not a full network emulator.</span></div>`;
 }
 export function renderNetworkStudio(saved) {
   const state=normalizeNetworkStudioState(saved);
@@ -54,7 +64,7 @@ export function mountNetworkStudio(root,{getState=()=>null,onChange=()=>{}}={}) 
   const announce=text=>{const output=find('[data-ns-message]');if(output) output.textContent=text;};
   const packetMessage=text=>{const output=find('[data-ns-animation-status]');if(output) output.textContent=text;};
   function stopAnimation(message) {
-    win.cancelAnimationFrame(frame);frame=0;animation=null;find('[data-ns-packet]')?.remove();find('[data-ns-failure]')?.remove();
+    win.cancelAnimationFrame(frame);frame=0;animation=null;for(const node of host.querySelectorAll('[data-ns-packet],[data-ns-failure]')) node.remove();
     const pause=find('[data-ns-pause]');if(pause){pause.disabled=true;pause.textContent='Pause';}
     for(const node of host.querySelectorAll('.ns-failure-device')) node.classList.remove('ns-failure-device');
     if(message) packetMessage(message);
@@ -70,10 +80,11 @@ export function mountNetworkStudio(root,{getState=()=>null,onChange=()=>{}}={}) 
   function drawWires() {
     const svg=find('[data-ns-wires]'),canvas=find('[data-ns-canvas]');if(!svg||!canvas) return;
     const bounds=canvas.getBoundingClientRect();svg.setAttribute('viewBox',`0 0 ${bounds.width} ${bounds.height}`);svg.replaceChildren();wirePaths.clear();
-    const result=evaluateNetworkStudio(state),route=new Set(result.links);
+    const tests=evaluateNetworkStudioTests(state),result=tests[0].result,route=new Set(result.links),others=new Map();
+    for(const test of tests.slice(1)) if(test.result.status!=='incomplete') for(const id of test.result.links) others.set(id,(others.get(id)??true)&&test.result.ok);
     for(const link of state.links) {
       const path=networkStudioWirePath(pointFor(link.from,link.fromPort),pointFor(link.to,link.toPort));if(!path) continue;
-      const group=svgElement('g',{'class':'ns-wire'+(route.has(link.id)?(result.ok?' ns-wire-pass':' ns-wire-error'):'')}),line=svgElement('path',{d:path,'class':'ns-wire-line'}),hit=svgElement('path',{d:path,'class':'ns-wire-hit','data-ns-disconnect':link.id});
+      const group=svgElement('g',{'class':'ns-wire'+(route.has(link.id)?(result.ok?' ns-wire-pass':' ns-wire-error'):others.has(link.id)?(others.get(link.id)?' ns-wire-pass ns-wire-extra':' ns-wire-error ns-wire-extra'):'')}),line=svgElement('path',{d:path,'class':'ns-wire-line'}),hit=svgElement('path',{d:path,'class':'ns-wire-hit','data-ns-disconnect':link.id});
       const title=svgElement('title');title.textContent=`Unplug ${titleFor(state,link.from)} port ${link.fromPort+1} to ${titleFor(state,link.to)} port ${link.toPort+1}`;
       hit.append(title);group.append(line,hit);svg.append(group);wirePaths.set(link.id,{element:line,link});
     }
@@ -87,27 +98,44 @@ export function mountNetworkStudio(root,{getState=()=>null,onChange=()=>{}}={}) 
     if(win.ResizeObserver&&canvas) {let first=true;resizeObserver=new win.ResizeObserver(()=>{if(first){first=false;return;}drawWires();});resizeObserver.observe(canvas);}
     if(key) host.querySelector(`[data-ns-key="${key}"]`)?.focus({preventScroll:true});
   }
-  function showFailure(result) {
+  function showFailure(result,quiet=false) {
     find(`[data-ns-device="${result.failedAt}"]`)?.classList.add('ns-failure-device');
     const device=find(`[data-ns-device="${result.failedAt}"] .ns-device-face`),canvas=find('[data-ns-canvas]'),svg=find('[data-ns-wires]');
     if(device&&canvas&&svg) {const bounds=device.getBoundingClientRect(),origin=canvas.getBoundingClientRect();svg.append(svgElement('circle',{cx:bounds.left-origin.left+bounds.width/2,cy:bounds.top-origin.top+bounds.height/2,r:30,'class':'ns-failure','data-ns-failure':''}));}
-    packetMessage('Delivery failed. '+result.message);
+    if(!quiet) packetMessage('Delivery failed. '+result.message);
   }
   function startAnimation() {
-    stopAnimation();const result=evaluateNetworkStudio(state),plan=networkStudioPacketPlan(result);
-    if(reduced()) {if(!result.ok) showFailure(result);packetMessage((result.ok?'Delivered and reply returned. ':'Delivery failed. ')+result.message+' Follow the numbered route. Animation is off for reduced motion.');return;}
-    if(!plan.length) {showFailure(result);return;}
-    const svg=find('[data-ns-wires]'),dot=svgElement('circle',{r:7,'class':'ns-packet','data-ns-packet':''});svg.append(dot);
-    animation={plan,index:0,elapsed:0,last:0,paused:false,dot,result};
+    stopAnimation();
+    // Every chosen message travels at the same time; message 1 always runs so an unfinished choice still gets its explanation.
+    const tests=evaluateNetworkStudioTests(state).filter(test=>test.n===1||test.result.status!=='incomplete'),many=tests.length>1;
+    const summary=()=>tests.filter(test=>test.result.ok).length+' of '+tests.length+' messages delivered. '+tests.map(test=>'Message '+test.n+' ('+titleFor(state,test.source)+' → '+titleFor(state,test.target)+'): '+(test.result.ok?'delivered, reply returned.':'stopped at '+titleFor(state,test.result.failedAt)+'.')).join(' ');
+    if(reduced()) {
+      for(const test of tests) if(!test.result.ok) showFailure(test.result,many);
+      const result=tests[0].result;packetMessage(many?summary()+' Follow the numbered routes. Animation is off for reduced motion.':(result.ok?'Delivered and reply returned. ':'Delivery failed. ')+result.message+' Follow the numbered route. Animation is off for reduced motion.');return;
+    }
+    const svg=find('[data-ns-wires]'),runners=tests.map(test=>({n:test.n,result:test.result,source:test.source,plan:networkStudioPacketPlan(test.result),index:0,elapsed:0,last:0,done:false,dot:null,circle:null}));
+    for(const runner of runners) {
+      if(!runner.plan.length) {showFailure(runner.result,many);runner.done=true;continue;}
+      runner.dot=svgElement('g',{'class':'ns-packet-group','data-ns-packet':String(runner.n)});runner.circle=svgElement('circle',{r:many?10:7,'class':'ns-packet'});runner.dot.append(runner.circle);
+      if(many) {const label=svgElement('text',{'class':'ns-packet-number','text-anchor':'middle',dy:'.35em'});label.textContent=String(runner.n);runner.dot.append(label);}
+      svg.append(runner.dot);
+    }
+    if(runners.every(runner=>runner.done)) {if(many) packetMessage(summary());return;}
+    animation={runners,paused:false};
     const pause=find('[data-ns-pause]');if(pause) pause.disabled=false;
+    if(many) packetMessage(runners.length+' messages are travelling at the same time. Each dot carries its message number.');
     function tick(now) {
       if(disposed||!animation||animation.paused) return;
-      const current=animation,step=current.plan[current.index],wire=wirePaths.get(step.linkId);if(!wire) {stopAnimation('A cable changed. Send the packet again.');return;}
-      if(!current.last) {current.last=now;packetMessage(`${step.phase==='reply'?'Reply':'Request'}: ${titleFor(state,step.from)} → ${titleFor(state,step.to)}`);}
-      current.elapsed+=Math.min(80,Math.max(0,now-current.last));current.last=now;
-      const distance=wire.element.getTotalLength(),duration=Math.max(450,Math.min(900,distance*2)),progress=Math.min(1,current.elapsed/duration),forward=wire.link.from===step.from,point=wire.element.getPointAtLength(distance*(forward?(step.ok===false?progress*.82:progress):1-(step.ok===false?progress*.82:progress)));
-      dot.setAttribute('cx',point.x);dot.setAttribute('cy',point.y);dot.setAttribute('class','ns-packet'+(step.ok===false?' ns-packet-failure':step.phase==='reply'?' ns-packet-reply':''));
-      if(progress>=1) {current.index++;current.elapsed=0;current.last=0;if(current.index>=current.plan.length) {animation=null;frame=0;if(pause){pause.disabled=true;pause.textContent='Pause';}if(result.ok) packetMessage('Delivered. The reply returned to '+titleFor(state,state.source)+'.');else {dot.remove();showFailure(result);}return;}}
+      for(const current of animation.runners) {
+        if(current.done) continue;
+        const step=current.plan[current.index],wire=wirePaths.get(step.linkId);if(!wire) {stopAnimation('A cable changed. Send the packet again.');return;}
+        if(!current.last) {current.last=now;if(!many) packetMessage(`${step.phase==='reply'?'Reply':'Request'}: ${titleFor(state,step.from)} → ${titleFor(state,step.to)}`);}
+        current.elapsed+=Math.min(80,Math.max(0,now-current.last));current.last=now;
+        const distance=wire.element.getTotalLength(),duration=Math.max(450,Math.min(900,distance*2)),progress=Math.min(1,current.elapsed/duration),forward=wire.link.from===step.from,point=wire.element.getPointAtLength(distance*(forward?(step.ok===false?progress*.82:progress):1-(step.ok===false?progress*.82:progress)));
+        current.dot.setAttribute('transform',`translate(${point.x} ${point.y})`);current.circle.setAttribute('class','ns-packet'+(step.ok===false?' ns-packet-failure':step.phase==='reply'?' ns-packet-reply':''));
+        if(progress>=1) {current.index++;current.elapsed=0;current.last=0;if(current.index>=current.plan.length) {current.done=true;if(!current.result.ok) {current.dot.remove();showFailure(current.result,many);}else if(!many) packetMessage('Delivered. The reply returned to '+titleFor(state,current.source)+'.');}}
+      }
+      if(animation.runners.every(runner=>runner.done)) {animation=null;frame=0;if(pause){pause.disabled=true;pause.textContent='Pause';}if(many) packetMessage(summary());return;}
       frame=win.requestAnimationFrame(tick);
     }
     animation.tick=tick;frame=win.requestAnimationFrame(tick);
@@ -143,13 +171,16 @@ export function mountNetworkStudio(root,{getState=()=>null,onChange=()=>{}}={}) 
     if(node.hasAttribute('data-ns-remove')) {act('remove-device',{id:node.dataset.nsRemove});find('[data-ns-add]')?.focus({preventScroll:true});return;}
     if(node.hasAttribute('data-ns-power')) {const device=state.devices.find(item=>item.id===node.dataset.nsPower);if(device) act('power-device',{id:device.id,powered:!device.powered});return;}
     if(node.hasAttribute('data-ns-move')) {moveSelected(node.dataset.nsMove);return;}
+    if(node.hasAttribute('data-ns-add-test')) {act('add-test');return;}
+    if(node.hasAttribute('data-ns-remove-test')) {act('remove-test',{test:node.dataset.nsRemoveTest});find('[data-ns-add-test]')?.focus({preventScroll:true});return;}
+    if(node.hasAttribute('data-ns-promote')) {act('promote-test',{test:node.dataset.nsPromote});return;}
     if(node.hasAttribute('data-ns-run')) {act('run');return;}
     if(node.hasAttribute('data-ns-replay')) {startAnimation();return;}
-    if(node.hasAttribute('data-ns-pause')&&animation) {animation.paused=!animation.paused;node.textContent=animation.paused?'Resume':'Pause';if(animation.paused) {win.cancelAnimationFrame(frame);frame=0;packetMessage('Packet paused. Choose Resume or Replay.');}else {animation.last=0;frame=win.requestAnimationFrame(animation.tick);}return;}
+    if(node.hasAttribute('data-ns-pause')&&animation) {animation.paused=!animation.paused;node.textContent=animation.paused?'Resume':'Pause';if(animation.paused) {win.cancelAnimationFrame(frame);frame=0;packetMessage('Packet paused. Choose Resume or Replay.');}else {for(const runner of animation.runners) runner.last=0;frame=win.requestAnimationFrame(animation.tick);}return;}
     if(node.hasAttribute('data-ns-reset')) {selected=null;act('reset',{template:node.dataset.nsReset});}
   });
   listen(host,'change',event=>{
-    if(event.target.hasAttribute('data-ns-endpoint')) act(event.target.dataset.nsEndpoint==='source'?'select-source':'select-target',{id:event.target.value});
+    if(event.target.hasAttribute('data-ns-endpoint')) act(event.target.dataset.nsEndpoint==='source'?'select-source':'select-target',event.target.dataset.nsTest?{id:event.target.value,test:event.target.dataset.nsTest}:{id:event.target.value});
     if(event.target.hasAttribute('data-ns-auto')) {auto=event.target.checked;announce(auto?'Network changes will animate.':'Automatic animation off. Use Send packet or Replay.');}
   });
   listen(host,'keydown',event=>{
