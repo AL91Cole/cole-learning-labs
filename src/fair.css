@@ -134,6 +134,23 @@
 :root[data-contrast=high] :is(.fair-band,.fair-card){border-color:#000;color:#000}
 :root[data-contrast=high] .fair-card-facts dt{color:#000}
 
+/* Trace a packet */
+.trace-layout{display:grid;gap:14px;margin-top:18px}
+.trace-controls{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.trace-stepper .button:disabled{opacity:.55;cursor:not-allowed}
+.fair-panel .trace-step-title{margin:0;font-size:1.2rem;letter-spacing:0;text-transform:none;color:#152b3d}
+.trace-now .eyebrow{margin:0}
+.trace-now{display:grid;gap:10px;padding:12px 14px;border:2px solid #0b5f8a;border-radius:10px;background:#f6fafd}
+.trace-result[data-outcome="delivered"]{border-color:#17694f;background:#e9f7f1}
+.trace-result:not([data-outcome="delivered"]){border-color:#8a5a0a;background:#fdf4e2;border-style:dashed}
+.trace-feedback{margin:14px 0;padding:10px 14px;border:1px solid #c3cfd8;border-left:5px solid #2f7fd6;border-radius:8px;background:#fff;color:#152b3d;font-size:.96rem;line-height:1.5}
+.trace-feedback[data-kind="warning"]{border-left-color:#8a5a0a}
+.trace-feedback[data-kind="success"]{border-left-color:#17694f}
+.trace-words{margin:0 0 40px}
+.trace-words summary{cursor:pointer;font-weight:700;min-height:32px}
+.fair-log li[aria-current="step"]{font-weight:700}
+:root[data-contrast=high] .trace-page :is(.fair-panel,.fair-control,.fair-predict,.fair-readings th,.fair-readings td,.trace-now,.trace-feedback){border-color:#000;color:#000}
+
 /* Print: one document with the brief, the setup, the readings, the evidence and the decision. */
 @media print{
   body.lab-view :is(.site-header,.site-footer,#access-tools,.skip-link,#notice){display:none!important}

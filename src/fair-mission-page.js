@@ -12,7 +12,8 @@ import {labPageHash, learningModes} from './learning-routes.js?release=20261107-
 import {FAIR_BANDS, FAIR_CAPSTONE, FAIR_FOLLOW_UPS, fairBandMissions} from './fair-catalog.js?release=20261107-tech-team';
 import {DECISIONS, HANDOFF_MINIMUM, applyFairAction, fairCompletion, fairMission, fairReport, fairView} from './fair-missions.js?release=20261107-tech-team';
 import {ROLLBACK_OPTIONS, applyCapstoneAction, capstoneCompletion, capstoneReport, capstoneStatusText, capstoneView} from './fair-capstone.js?release=20261107-tech-team';
-export {fairReport, capstoneReport};
+import {fairMapHTML, fairMapText} from './fair-map.js?release=20261107-tech-team';
+export {fairReport, capstoneReport, fairMapHTML, fairMapText};
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 export const FAIR_STEPS = Object.freeze({introduction:'Get the brief', demonstration:'Try it · worked example', applied:'Try it · your test', challenge:'Prove it'});
@@ -20,18 +21,6 @@ const STATION_TEXT = Object.freeze({offline:['○', 'Station offline', 'No test 
 const statusWord = ok => ok === null ? 'For comparison' : ok ? 'Meets target' : 'Misses target';
 const svg = path => '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">' + path + '</svg>';
 const ICONS = Object.freeze({gear:svg('<circle cx="10" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.3 4.3l1.8 1.8M13.9 13.9l1.8 1.8M4.3 15.7l1.8-1.8M13.9 6.1l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'), doc:svg('<path d="M5 2h7l4 4v12H5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 2v4h4M8 10h5M8 13h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'), exit:svg('<path d="M8 3H4v14h4M12 6l4 4-4 4M16 10H8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'), print:svg('<path d="M6 7V3h8v4M6 14H3V8h14v6h-3M6 12h8v5H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>')});
-
-/** The fair map: a picture of the present setup. The text view beside it says the same thing. */
-export function fairMapHTML(scene, title) {
-  const at = Object.fromEntries(scene.nodes.map(([id, , x, y]) => [id, [x, y]]));
-  const links = scene.links.filter(([a, b]) => at[a] && at[b]).map(([a, b, label]) => '<line x1="' + at[a][0] + '" y1="' + at[a][1] + '" x2="' + at[b][0] + '" y2="' + at[b][1] + '"/>' + (label ? '<text class="fair-map-link" x="' + (at[a][0] + at[b][0]) / 2 + '" y="' + ((at[a][1] + at[b][1]) / 2 - 8) + '" text-anchor="middle">' + esc(label) + '</text>' : '')).join('');
-  const nodes = scene.nodes.map(([, label, x, y, state = '']) => {const shown = label.length > 25 ? label.slice(0, 24) + '…' : label, half = Math.min(88, Math.max(46, shown.length * 3.9 + 12)); return '<g class="fair-map-node' + (state ? ' is-' + state : '') + '"><rect x="' + (x - half) + '" y="' + (y - 20) + '" width="' + half * 2 + '" height="40" rx="8"/><text x="' + x + '" y="' + (y + 5) + '" text-anchor="middle">' + esc(shown) + '</text></g>';}).join('');
-  return '<svg class="fair-map" viewBox="-30 0 660 260" role="img" aria-label="' + esc(title) + '. The text view below lists the same devices and connections."><g class="fair-map-links">' + links + '</g>' + nodes + '</svg>';
-}
-export function fairMapText(scene) {
-  const name = Object.fromEntries(scene.nodes.map(([id, label]) => [id, label])), state = {on:' (active)', off:' (off or not in use)', warn:' (check this)'};
-  return '<ul class="fair-text-map">' + scene.nodes.map(([, label, , , mark = '']) => '<li>' + esc(label + (state[mark] || '')) + '</li>').join('') + scene.links.filter(([a, b]) => name[a] && name[b]).map(([a, b, label]) => '<li>' + esc(name[a] + ' connects to ' + name[b] + (label ? ' (' + label + ')' : '')) + '</li>').join('') + '</ul>';
-}
 
 function readingTable(item, view) {
   const reading = item.reading, baseline = view.baseline && view.mission.baseline.test === item.id ? view.baseline : null, prior = item.prior;

@@ -60,7 +60,8 @@ test('every reviewed source runtime stays local and excludes the retired graphic
   // The real-machine cost guards (the “Are you still working?” prompt, the human check before a
   // machine starts, and learner wording for the new refusals) add about 5 KB of source and raise
   // this cap from 2,020,000.
-  assert.ok(bytes<2_026_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
+  // The packet tracer (model, page and its route chunk) adds about 21 KB of source and raises this cap from 2,026,000.
+  assert.ok(bytes<2_052_000,`Runtime module graph must remain lightweight (${bytes} bytes)`);
 });
 
 test('member implementation modules remain reviewed source without becoming standalone public assets',()=>{

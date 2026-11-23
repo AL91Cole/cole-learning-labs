@@ -23,7 +23,7 @@ export function learningRoute(hash) {
   }
   // The Networking pathway hub, with an optional grade band, and its one sub-page: the shared capstone.
   if(page==='networking'){
-    if(path.split('/').length>2||(id!==undefined&&id!=='opening-day'))return {page:'unknown',id:undefined,mode:'guided',sequence:null};
+    if(path.split('/').length>2||(id!==undefined&&!['opening-day','trace'].includes(id)))return {page:'unknown',id:undefined,mode:'guided',sequence:null};
     if(['7-8','9-10','11-12'].includes(params.get('band')))route.band=params.get('band');
   }
   if(page==='lab')route.section=Math.max(1,['request','workbench','explain'].indexOf(step)+1);

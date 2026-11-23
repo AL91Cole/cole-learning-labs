@@ -43,7 +43,7 @@ export const FAIR_SLUGS = Object.freeze(Object.fromEntries([...FAIR_CATALOG.map(
 // Where each mission points next. Original investigations and games keep their own ids and routes.
 export const FAIR_FOLLOW_UPS = Object.freeze({
   'FAIR-208':[['#arcade/gateway-garden', 'Gateway Garden', 'game']],
-  'FAIR-215':[['#lab/NET-207', 'NET-207 · Follow a Classroom Message', 'investigation'], ['#arcade/hop-count-hike', 'Hop Count Hike', 'game']],
+  'FAIR-215':[['#lab/NET-207', 'NET-207 · Follow a Classroom Message', 'investigation'], ['#networking/trace', 'Trace a packet', 'practice'], ['#arcade/hop-count-hike', 'Hop Count Hike', 'game']],
   'FAIR-204':[['#practice/NET-204', 'Wireless practice workbench', 'practice']],
   'FAIR-217':[['#studio/network', 'Network Studio', 'studio']],
   'FAIR-201':[['#practice/NET-201', 'Addressing practice workbench', 'practice']],

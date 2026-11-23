@@ -57,6 +57,12 @@ Values the brief did not give were chosen to follow the same pattern and should 
 - Commentary: priority alone 0.8% and 32 ms; rescheduling alone 2% and 30 ms.
 - The changed condition in each mission where the brief named none: Ben unplugs (booth), a second photo to a backup wall, the scoreboard moves to a new server, the judges take `.71`, a third counter sample (160 → 175), the show runs long, an overnight firewall change, and a failed install.
 
+## Trace a packet
+
+`#networking/trace` (`/networking/trace`) is a small hop-by-hop packet tracer on the fair’s fictional network, written for this site. A learner picks a destination (same network, another network by address or by name, or a blocked one), can change the cable, the gateway setting, the name server setting and the starting hop allowance, predicts the outcome, sends one packet and steps through each device. Every step says what the device does and shows the frame addresses, the IP addresses and the hop allowance beside what left the laptop. Seven “things to try” tick themselves when a packet does them.
+
+It is practice: public in both release modes, loaded as its own route chunk, kept only in the page’s memory, cleared with the session, and never part of a mission’s completion. The model (`src/packet-trace-model.js`) has 64 setups, all covered by `tests/packet-trace.test.js`. It simplifies on purpose: one router, no address translation, the “who has this address?” exchange and the name lookup are each told in a single step, and return traffic is not shown.
+
 ## Release modes
 
 - **Open** (current `PUBLIC_LAB_ACCESS`): the hub, all twelve missions, the capstone and `networking-handout.html` are published. Mission code downloads with the investigation route, not with the home page.

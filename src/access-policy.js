@@ -55,7 +55,8 @@ export function routeAccess(route){
   if(page==='labs')return noId||topics.has(id)?'public':'unknown';
   if(page==='learn')return foundationIds.has(id)?'public':'unknown';
   if(page==='linux')return noId||linuxIds.has(id)?'public':'unknown';
-  if(page==='networking')return noId?'public':id==='opening-day'?'member':'unknown';
+  // The pathway hub and the packet tracer (a practice tool with no mission content) are public.
+  if(page==='networking')return noId||id==='trace'?'public':id==='opening-day'?'member':'unknown';
   if(page==='lab')return catalogue.has(id)?(isFreeLab(id)?'public':'member'):fairIds.has(id)?(freeFairIds.has(id)?'public':'member'):'unknown';
   if(page==='practice'){
     const lab=catalogue.get(id);

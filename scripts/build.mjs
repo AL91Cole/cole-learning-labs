@@ -43,7 +43,7 @@ export const PUBLIC_LANDING_PAGES = Object.freeze([
 // built home page, so they always load the same entry script and styles as the home page.
 export const APP_SHELL_PAGES = Object.freeze([NETWORKING_SHELL_PAGE]);
 // Short teacher assignment addresses: /networking/<slug> forwards to that mission in the shell.
-export const NETWORKING_REDIRECTS = Object.freeze(Object.entries(FAIR_SLUGS).map(([slug, hash]) => Object.freeze(['/networking/' + slug, '/networking' + hash])));
+export const NETWORKING_REDIRECTS = Object.freeze([...Object.entries(FAIR_SLUGS).map(([slug, hash]) => Object.freeze(['/networking/' + slug, '/networking' + hash])), Object.freeze(['/networking/trace', '/networking#networking/trace'])]);
 // A new public file needs an explicit review here. Never publish the checkout root.
 export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/turnstile-client.js', 'src/receipt-schema.js', 'src/lab-telemetry.js', 'src/receipt-verifier.js', 'src/receipt-verifier.css',
@@ -77,7 +77,7 @@ export const PUBLIC_SOURCE_FILES = Object.freeze([
   'src/secure-reports.css', 'src/accessibility.css',
   'src/classroom-portal.css', 'src/hardware.css', 'src/school.css', 'src/styles.css', 'src/workspaces.css',
   'src/access-policy.js', 'src/lab-catalog.js', 'src/owner-preview.js',
-  'src/fair-catalog.js', 'src/fair-missions.js', 'src/fair-capstone.js', 'src/fair-mission-page.js', 'src/networking-pathway.js', 'src/fair.css',
+  'src/fair-map.js', 'src/packet-trace-model.js', 'src/packet-trace.js', 'src/lazy-tracer.js', 'src/fair-catalog.js', 'src/fair-missions.js', 'src/fair-capstone.js', 'src/fair-mission-page.js', 'src/networking-pathway.js', 'src/fair.css',
   'src/learning-routes.js', 'src/home-entries.js', 'src/sandbox-starters.js', 'src/coding-studio-model.js', 'src/display-menu.js', 'src/read-aloud.js', 'src/session-modes.js',
   'src/record-engines.js', 'src/classroom-session.js', 'src/foundation-catalog.js', 'src/coding-scenarios.js', 'src/expanded-scenarios.js', 'src/network-scenarios.js',
   'src/part-art.js', ...Object.values(PART_ART),
