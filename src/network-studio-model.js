@@ -23,6 +23,9 @@ function place(point,others,fallback){
  return grid.filter(candidate=>!overlaps(candidate,others)).sort((a,b)=>(a.x-point.x)**2+(a.y-point.y)**2-((b.x-point.x)**2+(b.y-point.y)**2))[0]??fallback;
 }
 const labelFor=(type,id)=>`${TYPES.get(type).label} ${idNumber(id)}`;
+// A starter layout may name its devices ("Photo kiosk"). A name is plain words only; anything else falls back to the default.
+const DEVICE_LABEL=/^[A-Za-z0-9][A-Za-z0-9 '\u2019-]{0,23}$/u;
+export const networkDeviceLabel=(value,type,id)=>typeof value==='string'&&DEVICE_LABEL.test(value.trim())?value.trim():labelFor(type,id);
 const node=(id,type,x,y)=>({id,type,label:labelFor(type,id),x,y,powered:true});
 const cable=(id,from,fromPort,to,toPort)=>({id,from,fromPort,to,toPort});
 export function initialNetworkStudioState(template='classroom'){
@@ -51,7 +54,7 @@ export function normalizeNetworkStudioState(saved){
   const supplied={x:clamp(data(raw,'x'),12,88,fallback?.x??12),y:clamp(data(raw,'y'),18,82,fallback?.y??18)};
   if(overlaps(supplied,state.devices)&&!fallback)continue;
   const point=place(supplied,state.devices,fallback??supplied);
-  state.devices.push({...node(id,type,point.x,point.y),powered:data(raw,'powered')!==false});seen.add(id);
+  state.devices.push({...node(id,type,point.x,point.y),label:networkDeviceLabel(data(raw,'label'),type,id),powered:data(raw,'powered')!==false});seen.add(id);
  }
  const ports=new Set(),pairs=new Set(),linkIds=new Set();
  for(let index=0;index<rawLinks.length;index++){

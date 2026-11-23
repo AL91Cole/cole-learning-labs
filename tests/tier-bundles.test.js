@@ -64,7 +64,7 @@ test('public artifact contains reviewed starter cases but excludes paid authored
   // mission page (about 51 KB) now ship in this artifact. No other mission model does.
   // then to 1,220,000 for the packet tracer, a public practice tool (about 24 KB in this unsplit measure;
   // the published build serves it as its own route chunk).
-  assert.ok(result.javascript.length<1_220_000,'The compiled public application must stay within its reviewed size budget.');
+  assert.ok(result.javascript.length<1_286_000,'The compiled public application must stay within its reviewed size budget.');
   assert.deepEqual(result.metadata.filter(row=>row.access==='free').map(row=>row.id),FREE_LAB_IDS);
   for(const row of result.metadata)assert.deepEqual(Object.keys(row).sort(),['access','grade','id','minutes','title','track']);
   assert.ok(javascript.includes('The monitor has power and its input is set to HDMI.'));

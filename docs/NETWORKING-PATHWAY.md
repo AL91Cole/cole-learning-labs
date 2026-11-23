@@ -63,10 +63,39 @@ Values the brief did not give were chosen to follow the same pattern and should 
 
 It is practice: public in both release modes, loaded as its own route chunk, kept only in the page’s memory, cleared with the session, and never part of a mission’s completion. The model (`src/packet-trace-model.js`) has 64 setups, all covered by `tests/packet-trace.test.js`. It simplifies on purpose: one router, no address translation, the “who has this address?” exchange and the name lookup are each told in a single step, and return traffic is not shown.
 
+## Packet Simulator
+
+`#networking/simulator` is where a learner builds part of the fair network, sends one packet and explains why it arrived or stopped. It is this site’s own design, wording, drawing and code. Two starting choices are on the hub, and each has a refreshable link a teacher can share:
+
+| Start | Hash link | Short link |
+| --- | --- | --- |
+| Guide my first packet | `#networking/simulator?start=guide` | `/networking/first-packet` |
+| Build my own network | `#networking/simulator?start=build` | `/networking/build` |
+| A named starter | `#networking/simulator?start=build&starter=<blank\|booth\|booth-router\|wifi\|guest>` | — |
+| The layout open in Network Studio | `#networking/simulator?start=build&starter=current` | — |
+
+`/networking/simulator`, `/networking/trace`, `#networking/trace` and `#studio/network` keep working. Network Studio supplies the editable layout (`src/network-studio-model.js`: devices, ports, cables, power); the simulator (`src/packet-sim-model.js`, page `src/packet-sim.js`) adds addresses, Wi-Fi joins, a guest policy and the packet. Both pages edit the same in-memory layout, so a layout changed in the Studio can be traced, and the reverse.
+
+**The result is derived from the build.** `simulatePacket(layout, net)` returns numbered events and one outcome. The map, the text view, the numbered list and the result all read those same events. A failed run names the device where the packet stopped, the reason, and one question to test next. Outcome kinds are kept apart: `link` (cable, power or Wi-Fi), `lookup` (the name question was not answered, so no packet was sent), `policy` (the gateway dropped it), `expired` (hop allowance), `address`. Changing a cable, power, Wi-Fi join, address setting, policy, endpoint, test or hop allowance marks the last run “previous evidence”; stepping, replaying or moving a device does not send a packet.
+
+Starters and what each band checks (ticked from the learner’s own runs, in `simChecks`):
+
+| Band | Starter | Evidence |
+| --- | --- | --- |
+| 7–8 | `booth`, `booth-router` | Deliver to the photo kiosk; reach the scoreboard through the router; with the switch–router cable out, the kiosk is still reached and the scoreboard is not, and the trace shows the last successful step. |
+| 9–10 | `wifi` | Join and leave the fair Wi-Fi; test the scoreboard by address, then by name; with a wrong name-server address the address test still works and the name test stops at the lookup; restoring it makes the name test pass. |
+| 11–12 | `guest` | Two subnets and a gateway policy tested as the same guest: scoreboard opens, staff files are blocked, blocking both fails; with “Show packet details”, frame addresses change at the router, the destination IP does not, and TTL drops only there. |
+
+`FAIR_SIM_STARTERS` links the sticker booth, winning photo and guest scores missions to their starter from each section, with `from=<FAIR id>.<step>.<mode>` so “Back to your mission” returns to the same step.
+
+**Simplifications, stated to learners where they matter.** Addresses are filled in automatically (`10.40.<network>.<device>`, /24) and are shown only when a starter uses them. A network is everything joined without crossing a router. A device keeps the address of the last network it was joined to, so an unplugged cable shows as a link problem. Routers know the networks they and their neighbouring routers touch; there are no routing protocols, VLANs, NAT or ARP caches. The guest policy applies to computers crossing a router. Name lookup needs a server labelled “Name server”.
+
+**Practice, not assessment.** The simulator is public in both release modes, downloads as part of the tracer’s route chunk, keeps its state only in the page’s memory, clears with the session, sends nothing, and never reads or writes a mission record. The mission report therefore reflects only assessed mission work. Controls are native buttons, selects, radios and checkboxes; cables are made by choosing two labeled ports; with reduced motion the Play control is absent and every step is taken by hand.
+
 ## Release modes
 
 - **Open** (current `PUBLIC_LAB_ACCESS`): the hub, all twelve missions, the capstone and `networking-handout.html` are published. Mission code downloads with the investigation route, not with the home page.
-- **Preview**: the hub, the teaching notes and one free sample mission stay public: `FAIR-204` The frozen robot cam (`FREE_FAIR_IDS` in `src/fair-catalog.js`). `scripts/tier-bundles.mjs` compiles `fair-missions.js` down to that one mission’s model and replaces `fair-capstone.js` with an empty stub. Every other mission link and the capstone show the membership notice, only the free mission’s record is read or written, the hub’s start button goes to the free mission, and `/networking-handout` and the evidence-cards PDF stay withheld.
+- **Preview**: the hub, the packet tracer, the Packet Simulator, the teaching notes and one free sample mission stay public: `FAIR-204` The frozen robot cam (`FREE_FAIR_IDS` in `src/fair-catalog.js`). `scripts/tier-bundles.mjs` compiles `fair-missions.js` down to that one mission’s model and replaces `fair-capstone.js` with an empty stub. Every other mission link and the capstone show the membership notice, only the free mission’s record is read or written, the hub’s start button goes to the free mission, and `/networking-handout` and the evidence-cards PDF stay withheld.
 
 Missions register nothing with the reach, receipt or improvement services, so the pathway adds no data flow.
 

@@ -9,7 +9,7 @@
 // with a keyboard, touch and a screen reader. Nothing is dragged and nothing depends on colour.
 import {GUIDE_SECTIONS} from './lab-guide.js?release=20261107-tech-team';
 import {labPageHash, learningModes} from './learning-routes.js?release=20261107-tech-team';
-import {FAIR_BANDS, FAIR_CAPSTONE, FAIR_FOLLOW_UPS, fairBandMissions} from './fair-catalog.js?release=20261107-tech-team';
+import {FAIR_BANDS, FAIR_CAPSTONE, FAIR_FOLLOW_UPS, FAIR_SIM_STARTERS, fairBandMissions} from './fair-catalog.js?release=20261107-tech-team';
 import {DECISIONS, HANDOFF_MINIMUM, applyFairAction, fairCompletion, fairMission, fairReport, fairView} from './fair-missions.js?release=20261107-tech-team';
 import {ROLLBACK_OPTIONS, applyCapstoneAction, capstoneCompletion, capstoneReport, capstoneStatusText, capstoneView} from './fair-capstone.js?release=20261107-tech-team';
 import {fairMapHTML, fairMapText} from './fair-map.js?release=20261107-tech-team';
@@ -84,7 +84,9 @@ function sectionBodies(view, record, mode, guide) {
     (mode === 'challenge' ? '<label class="lab-field" for="fair-challenge">Challenge: name another possible cause, and the reading that would tell the two apart.<textarea id="fair-challenge" rows="3" maxlength="2000" data-fair-text="reflection">' + esc(record.reflection) + '</textarea></label>' : '') +
     '<section class="case-panel guide-finish"><p id="finish-status" class="step-progress" role="status" data-fair-finish-status></p><button class="button" id="finish-lab" type="button" data-key="finish">Hand off &amp; open report</button><p class="save-status"></p></section>' +
     (record.closed && completion.ready ? '<nav class="fair-next" aria-label="What next"><h3>What next</h3><ul>' + nextLinks(mission).map(([href, label]) => '<li><a class="text-link" href="' + esc(href) + '">' + esc(label) + ' →</a></li>').join('') + '</ul></nav>' : '');
-  return {introduction, demonstration, applied, challenge};
+  // A matching Packet Simulator starter, with the way back to this same step. Practice there is not mission evidence.
+  const starter = FAIR_SIM_STARTERS[mission.id], practice = step => starter ? '<p class="fair-practice"><a class="text-link" data-fair-sim href="#networking/simulator?start=build&amp;starter=' + starter + '&amp;from=' + mission.id + '.' + step + '.' + mode + '">Practise this in Packet Simulator →</a> <span class="panel-help">Free practice. It does not count toward this mission.</span></p>' : '';
+  return {introduction:introduction + practice('request'), demonstration:demonstration + practice('request'), applied:applied + practice('workbench'), challenge:challenge + practice('explain')};
 }
 function nextLinks(mission) {
   const band = fairBandMissions(mission.band), next = band[band.findIndex(item => item.id === mission.id) + 1];

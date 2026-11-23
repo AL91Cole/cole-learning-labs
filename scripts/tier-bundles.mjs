@@ -41,12 +41,7 @@ const publicStubs=Object.freeze({
   'network-studio.js':{
     networkStudioPacketPlan:'()=>[]',networkStudioWirePath:'()=>""',renderNetworkStudio:unavailable,mountNetworkStudio:emptyMount
   },
-  'network-studio-model.js':{
-    NETWORK_STUDIO_LIMITS:'Object.freeze({})',NETWORK_DEVICE_TYPES:'Object.freeze([])',
-    initialNetworkStudioState:emptyState,normalizeNetworkStudioState:emptyState,
-    applyNetworkStudioAction:'()=>({state:null,message:"Membership required."})',
-    evaluateNetworkStudio:'()=>({ok:false})',networkStudioHasWork:falseValue
-  },
+  // network-studio-model.js is delivered whole: the free Packet Simulator traces Network Studio layouts.
   'capstone.js':{
     CAPSTONE_STAGES:'Object.freeze([])',capstoneHandoff:emptyState,writeCapstoneHandoff:noOperation,
     capstoneProgress:'()=>({complete:false})',capstoneReport:unavailable,renderCapstone:unavailable,mountCapstone:emptyMount

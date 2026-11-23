@@ -103,6 +103,6 @@ test('the tracer is a public route with its own small chunk in both release mode
     const built = await bundleTier(options), entry = Buffer.from(built.javascript).toString('utf8'), chunk = built.chunks.find(item => /lazy-tracer-/u.test(item.filename));
     assert.ok(chunk, 'the tracer downloads when its page is opened'); assert.ok(Buffer.from(chunk.javascript).toString('utf8').includes('Send the packet'));
     assert.equal(entry.includes('The gateway opens the frame'), false, 'the model stays out of the home page bundle');
-    assert.ok(chunk.javascript.length < 40_000);
+    assert.ok(chunk.javascript.length < 76_000, 'the tracer and the Packet Simulator share this chunk');
   }
 });
